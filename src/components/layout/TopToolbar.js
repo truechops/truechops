@@ -73,18 +73,6 @@ export default function Header() {
   const { setNavOpen } = sideNavActions;
   const dispatch = useDispatch();const [menuSheetOpen, setMenuSheetOpen] = useState(false);
 
-  useState(() => {
-    if (router.pathname === "/library") {
-      setTabIndex(1);
-    } else if (router.pathname === "/discover") {
-      setTabIndex(2);
-    } else if (router.pathname === "/signup") {
-      setTabIndex(3);
-    } else if (router.pathname === "/login") {
-      setTabIndex(4);
-    }
-  }, [router]);
-
   const getToolbarContent = () => {
     if (router.pathname === "/") {
       return <ComposeToolbarItems />;

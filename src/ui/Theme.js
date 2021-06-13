@@ -1,19 +1,15 @@
 import { createMuiTheme } from "@material-ui/core/styles";
 
-const dtBlue = "#0c043d";
-const dtRed = "##960909";
+const primary = "#1c0000";
+const secondary = "#960909";
 
 export default createMuiTheme({
   palette: {
-    common: {
-      blue: `${dtBlue}`,
-      red: `${dtRed}`,
-    },
     primary: {
-      main: `${dtBlue}`,
+      main: `${primary}`,
     },
     secondary: {
-      main: `${dtRed}`,
+      main: `${secondary}`,
     },
   },
   typography: {
