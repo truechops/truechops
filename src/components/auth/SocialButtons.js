@@ -7,7 +7,7 @@ import useAuthStyles from "./auth-styles";
 export default function SocialButtons(props) {
   const classes = useAuthStyles();
   return (
-    <div className={classes.loginButtonsContainer}>
+      <>
       <div className={classes.loginButton}>
         <FacebookLoginButton
           style={{ fontSize: props.fontSize }}
@@ -22,6 +22,6 @@ export default function SocialButtons(props) {
           onClick={props.google.onClickHandler}
         />
       </div>
-    </div>
+      </>
   );
 }

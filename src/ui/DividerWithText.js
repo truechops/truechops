@@ -8,7 +8,7 @@ const useStyles = makeStyles(theme => ({
     margin: 'auto',
     marginTop: 15,
     marginBottom: 15,
-    width: 500
+    width: 300
   },
   border: {
     borderBottom: "2px solid lightgray",

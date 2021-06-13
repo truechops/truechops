@@ -45,7 +45,8 @@ export default function SignUp() {
     setError,
     facebookText: 'Sign Up With Facebook',
     googleText: 'Sign Up With Google',
-    emailHeading: 'Sign Up By E-mail'
+    emailHeading: 'Sign Up By E-mail',
+    continueText: 'Continue'
   });
 
   const handleRegistrationAndLogin = async (email, password) => {

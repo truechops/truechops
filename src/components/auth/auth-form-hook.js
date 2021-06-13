@@ -15,7 +15,7 @@ export default function AuthForm(props) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const { isSignUp, error, setError, facebookText, googleText, emailHeading } = props;
+  const { isSignUp, error, setError, facebookText, googleText, emailHeading, continueText } = props;
   let continueEnabled = !!email && !!password;
   const router = useRouter();
   const dispatch = useDispatch();
@@ -181,7 +181,7 @@ export default function AuthForm(props) {
     </>
   );
 
-  const emailPasswordFields = (
+  const emailAuthFields = (
     <>
       <TextField
         id="email"
@@ -221,6 +221,17 @@ export default function AuthForm(props) {
         />
       )}
       {passwordsDontMatchErrorMessage}
+      <div className={classes.continueButton}>
+        <Button
+          type="submit"
+          fullWidth
+          variant="outlined"
+          color="primary"
+          disabled={!continueEnabled}
+        >
+          {continueText}
+        </Button>
+      </div>
     </>
   );
 
@@ -246,19 +257,8 @@ export default function AuthForm(props) {
       <div className={classes.emailAuthContainer}>
         <h3 className={classes.signUpHeading}>{emailHeading}</h3>
         {isSignUp && nameFields}
-        {emailPasswordFields}
+        {emailAuthFields}
         {socialButtons}
-      </div>
-      <div className={classes.continueButton}>
-        <Button
-          type="submit"
-          fullWidth
-          variant="outlined"
-          color="primary"
-          disabled={!continueEnabled}
-        >
-          Continue
-        </Button>
       </div>
     </form>
   );

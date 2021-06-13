@@ -2,7 +2,7 @@ import { makeStyles } from "@material-ui/core/styles";
 
 const useStyles = makeStyles((theme) => ({
   emailAuthContainer: {
-    width: 500,
+    width: 325,
     margin: "auto",
     display: "flex",
     flexDirection: "column",
@@ -20,24 +20,25 @@ const useStyles = makeStyles((theme) => ({
   },
   signUpHeading: {
     textAlign: "center",
-    marginTop: 50,
+    marginTop: 20,
     marginBottom: 11,
   },
   loginButton: {
     width: 240,
     margin: "auto",
-    marginBottom: 20,
     display: "block",
   },
   continueButton: {
     textAlign: "center",
     width: 250,
     margin: "auto",
+    marginTop: 25
   },
   loginButtonsContainer: {
-    width: 500,
+    width: 325,
     margin: "auto",
     display: "flex",
+    alignItems: 'vertical',
     marginBottom: 25,
   },
 }));

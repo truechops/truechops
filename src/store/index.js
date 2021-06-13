@@ -1,9 +1,11 @@
 import {configureStore} from '@reduxjs/toolkit';
 import realmReducer from './realm-app';
+import navReducer from './navigation';
 
 const store = configureStore({
     reducer: {
-        realm: realmReducer
+        realm: realmReducer,
+        nav: navReducer
     }
 })
 

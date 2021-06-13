@@ -34,7 +34,8 @@ export default function Login() {
     setError,
     facebookText: "Log In With Facebook",
     googleText: "Log In With Google",
-    emailHeading: 'Log In by E-mail'
+    emailHeading: 'Log In by E-mail',
+    continueText: 'Log In'
   });
 
   const classes = useAuthStyles();
