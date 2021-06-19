@@ -1,6 +1,7 @@
 import { useRouter } from "next/router";
 import { useSelector, useDispatch } from "react-redux";
-import { sideNavActions } from '../../store/navigation';
+import { sideNavActions } from "../../store/navigation";
+import { logout } from '../../store/realm-app';
 
 import React from "react";
 import { makeStyles } from "@material-ui/core/styles";
@@ -10,12 +11,7 @@ import Divider from "@material-ui/core/Divider";
 import ListItem from "@material-ui/core/ListItem";
 import ListItemText from "@material-ui/core/ListItemText";
 
-import {
-  FaDrum,
-  FaUsers,
-  FaTools,
-  FaSearch
-} from "react-icons/fa";
+import { FaDrum, FaUsers, FaTools, FaSearch, FaUserTie } from "react-icons/fa";
 import { ImBooks } from "react-icons/im";
 
 export default function Navigation() {
@@ -31,19 +27,24 @@ export default function Navigation() {
     },
     drawerIcon: {
       marginRight: theme.spacing(2.5),
-    }
+    },
   }));
   const classes = useStyles();
   const router = useRouter();
   const currentUser = useSelector((state) => state.realm.currentUser);
-  const sideNavOpen = useSelector(state => state.nav.sideNavOpen);
-  const { setNavOpen } = sideNavActions
+  const sideNavOpen = useSelector((state) => state.nav.sideNavOpen);
+  const { setNavOpen } = sideNavActions;
   const dispatch = useDispatch();
 
   const navigationHandler = (url) => {
     router.push(url);
     dispatch(setNavOpen(false));
   };
+
+  const logoutHandler = () => {
+    dispatch(logout());
+    router.push("/");
+  }
 
   const iconSize = 24;
 
@@ -59,7 +60,11 @@ export default function Navigation() {
     >
       <Divider />
       <List>
-        <ListItem button key="compose" onClick={navigationHandler.bind(null, "/")}>
+        <ListItem
+          button
+          key="compose"
+          onClick={navigationHandler.bind(null, "/")}
+        >
           <FaDrum className={classes.drawerIcon} size={iconSize} />
           <ListItemText primary="compose" />
         </ListItem>
@@ -67,7 +72,11 @@ export default function Navigation() {
           <ImBooks className={classes.drawerIcon} size={iconSize} />
           <ListItemText primary="my libary" />
         </ListItem>
-        <ListItem onClick={navigationHandler.bind(null, '/discover')} button key="discover">
+        <ListItem
+          onClick={navigationHandler.bind(null, "/discover")}
+          button
+          key="discover"
+        >
           <FaUsers className={classes.drawerIcon} size={iconSize} />
           <ListItemText primary="discover" />
         </ListItem>
@@ -97,6 +106,28 @@ export default function Navigation() {
               key="Log In"
             >
               <ListItemText primary="Log In" />
+            </ListItem>
+          </List>
+        </>
+      )}
+      {currentUser && (
+        <>
+          <Divider />
+          <List>
+          <ListItem
+              onClick={navigationHandler.bind(null, "/profile")}
+              button
+              key="Profile"
+            >
+              <FaUserTie className={classes.drawerIcon} size={iconSize} />
+              <ListItemText primary="Profile" />
+            </ListItem>
+            <ListItem
+              onClick={logoutHandler}
+              button
+              key="Log Out"
+            >
+              <ListItemText primary="Log Out" />
             </ListItem>
           </List>
         </>

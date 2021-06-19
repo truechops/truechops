@@ -38,9 +38,6 @@ function ElevationScroll(props) {
 const drawerWidth = 256;
 
 const useStyles = makeStyles((theme) => ({
-  root: {
-    display: "flex",
-  },
   appBar: {
     transition: theme.transitions.create(["margin", "width"], {
       easing: theme.transitions.easing.sharp,
@@ -55,14 +52,15 @@ const useStyles = makeStyles((theme) => ({
       duration: theme.transitions.duration.enteringScreen,
     }),
   },
+  toolbar: {
+    minHeight: 55,
+  },
   drawerHeader: {
     display: "flex",
     alignItems: "center",
     padding: theme.spacing(0, 1),
-    // necessary for content to be below app bar
-    ...theme.mixins.toolbar,
-    justifyContent: "flex-end",
-  }
+    height: 55,
+  },
 }));
 
 export default function Header() {
@@ -71,7 +69,8 @@ export default function Header() {
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const { setNavOpen } = sideNavActions;
-  const dispatch = useDispatch();const [menuSheetOpen, setMenuSheetOpen] = useState(false);
+  const dispatch = useDispatch();
+  const [menuSheetOpen, setMenuSheetOpen] = useState(false);
 
   const getToolbarContent = () => {
     if (router.pathname === "/") {
@@ -83,60 +82,57 @@ export default function Header() {
     let content = null;
     if (router.pathname === "/") {
       content = <ComposeSideSheetItems />;
-    } 
+    }
 
     if (content != null) {
-      return <>
-        <Drawer
-          anchor="right"
-          open={sheetOpen}
-          onClose={() => setSheetOpen(false)}
-        >
-          {content}
-        </Drawer>
-        <IconButton
-          color="inherit"
-          aria-label="open more information"
-          onClick={() => setSheetOpen(true)}
-          edge="end"
-        >
-          <CgArrowLeftR />
-        </IconButton>
-      </>;
+      return (
+        <>
+          <Drawer
+            anchor="right"
+            open={sheetOpen}
+            onClose={() => setSheetOpen(false)}
+          >
+            {content}
+          </Drawer>
+          <IconButton
+            color="inherit"
+            aria-label="open more information"
+            onClick={() => setSheetOpen(true)}
+            edge="end"
+          >
+            <CgArrowLeftR />
+          </IconButton>
+        </>
+      );
     } else {
-      console.log('what');
+      console.log("what");
       return null;
     }
   };
 
   return (
-    <ElevationScroll>
-      <div className={classes.root}>
-        <CssBaseline />
-        <AppBar
-          position="fixed"
-          className={clsx(classes.appBar, {
-            [classes.appBarShift]: menuSheetOpen,
-          })}
-        >
-          <Toolbar>
-            <IconButton
-              color="inherit"
-              aria-label="open drawer"
-              onClick={() => dispatch(setNavOpen(true))}
-              edge="start"
-            >
-              <GiHamburgerMenu />
-            </IconButton>
-            {getToolbarContent()}
-            {getSideSheetContent()}
-            
-          </Toolbar>
-          
-        </AppBar>
-        
-        <div className={classes.drawerHeader} />
-      </div>
-    </ElevationScroll>
+    <>
+      <CssBaseline />
+      <AppBar
+        position="fixed"
+        className={clsx(classes.appBar, {
+          [classes.appBarShift]: menuSheetOpen,
+        })}
+      >
+        <Toolbar className={classes.toolbar}>
+          <IconButton
+            color="inherit"
+            aria-label="open drawer"
+            onClick={() => dispatch(setNavOpen(true))}
+            edge="start"
+          >
+            <GiHamburgerMenu />
+          </IconButton>
+          {getToolbarContent()}
+          {getSideSheetContent()}
+        </Toolbar>
+      </AppBar>
+      <div className={classes.drawerHeader} />
+    </>
   );
 }

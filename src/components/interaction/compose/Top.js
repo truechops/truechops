@@ -13,20 +13,20 @@ import {
 } from "react-icons/fa";
 
 export default function Top() {
-    const topToolbarSize = 20;
+  const topToolbarSize = 20;
   return (
     <>
       <div style={{ width: "auto", margin: "auto" }}>
         <IconButton
           color="inherit"
-          aria-label="open drawer"
+          aria-label="undo"
           onClick={() => alert("undo!")}
         >
           <FaUndo size={topToolbarSize} />
         </IconButton>
         <IconButton
           color="inherit"
-          aria-label="open drawer"
+          aria-label="redo"
           onClick={() => alert("redo!")}
         >
           <FaRedo size={topToolbarSize} />
@@ -34,32 +34,32 @@ export default function Top() {
         <IconButton
           color="inherit"
           aria-label="open drawer"
+          onClick={() => alert("tools!")}
+        >
+          <FaTools />
+        </IconButton>
+        <IconButton
+          color="inherit"
+          aria-label="play"
           onClick={() => alert("play!")}
         >
           <FaPlay size={topToolbarSize} />
         </IconButton>
         <IconButton
           color="inherit"
-          aria-label="open drawer"
+          aria-label="save"
           onClick={() => alert("save!")}
         >
           <FaSave size={topToolbarSize} />
         </IconButton>
         <IconButton
           color="inherit"
-          aria-label="open drawer"
+          aria-label="link"
           onClick={() => alert("link!")}
         >
           <FaLink size={topToolbarSize} />
         </IconButton>
       </div>
-      <IconButton
-        color="inherit"
-        aria-label="open drawer"
-        onClick={() => alert("tools!")}
-      >
-        <FaTools />
-      </IconButton>
     </>
   );
 }
