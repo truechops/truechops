@@ -6,7 +6,7 @@ import { useDispatch} from "react-redux";
 import * as Realm from "realm-web";
 import { login } from "../../store/realm-app";
 import { useRouter } from 'next/router';
-import DividerWithText from "../../ui/DividerWithText";
+import DividerWithText from "../ui/DividerWithText";
 import SocialButtons from './SocialButtons';
 
 export default function AuthForm(props) {

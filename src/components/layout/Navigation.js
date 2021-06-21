@@ -1,7 +1,7 @@
 import { useRouter } from "next/router";
 import { useSelector, useDispatch } from "react-redux";
 import { sideNavActions } from "../../store/navigation";
-import { logout } from '../../store/realm-app';
+import { logout } from "../../store/realm-app";
 
 import React from "react";
 import { makeStyles } from "@material-ui/core/styles";
@@ -44,7 +44,7 @@ export default function Navigation() {
   const logoutHandler = () => {
     dispatch(logout());
     router.push("/");
-  }
+  };
 
   const iconSize = 24;
 
@@ -68,7 +68,11 @@ export default function Navigation() {
           <FaDrum className={classes.drawerIcon} size={iconSize} />
           <ListItemText primary="compose" />
         </ListItem>
-        <ListItem button key="my library">
+        <ListItem
+          button
+          key="my library"
+          onClick={navigationHandler.bind(null, "/library")}
+        >
           <ImBooks className={classes.drawerIcon} size={iconSize} />
           <ListItemText primary="my libary" />
         </ListItem>
@@ -80,11 +84,11 @@ export default function Navigation() {
           <FaUsers className={classes.drawerIcon} size={iconSize} />
           <ListItemText primary="discover" />
         </ListItem>
-        <ListItem button key="mods">
+        <ListItem button key="mods" onClick={navigationHandler.bind(null, "/mods")}>
           <FaTools className={classes.drawerIcon} size={iconSize} />
           <ListItemText primary="mods" />
         </ListItem>
-        <ListItem button key="search">
+        <ListItem button key="search" onClick={navigationHandler.bind(null, "/search")}>
           <FaSearch className={classes.drawerIcon} size={iconSize} />
           <ListItemText primary="search" />
         </ListItem>
@@ -114,7 +118,7 @@ export default function Navigation() {
         <>
           <Divider />
           <List>
-          <ListItem
+            <ListItem
               onClick={navigationHandler.bind(null, "/profile")}
               button
               key="Profile"
@@ -122,11 +126,7 @@ export default function Navigation() {
               <FaUserTie className={classes.drawerIcon} size={iconSize} />
               <ListItemText primary="Profile" />
             </ListItem>
-            <ListItem
-              onClick={logoutHandler}
-              button
-              key="Log Out"
-            >
+            <ListItem onClick={logoutHandler} button key="Log Out">
               <ListItemText primary="Log Out" />
             </ListItem>
           </List>

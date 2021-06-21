@@ -1,18 +1,14 @@
-import { useState, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useState } from "react";
+import { useSelector } from "react-redux";
 import useAuthStyles from "./auth-styles";
-import { useRouter } from "next/router";
 import useAuthFormHook from "./auth-form-hook";
 import CircularProgress from "@material-ui/core/CircularProgress";
 
 export default function SignUp() {
-  const dispatch = useDispatch();
   const app = useSelector((state) => state.realm.app);
   const [emailSent, setEmailSent] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [error, setError] = useState({});
-
-  const router = useRouter();
 
   const onSubmitEmailAuthHandler = async (
     firstName,

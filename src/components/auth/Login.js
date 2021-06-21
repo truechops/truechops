@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import * as Realm from "realm-web";
 import { login } from "../../store/realm-app";
-import DividerWithText from "../../ui/DividerWithText";
+import DividerWithText from "../ui/DividerWithText";
 import useAuthStyles from "./auth-styles";
 import SocialButtons from "./SocialButtons";
 import useAuthFormHook from "./auth-form-hook";

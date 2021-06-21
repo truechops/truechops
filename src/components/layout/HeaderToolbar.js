@@ -1,13 +1,11 @@
-import { cloneElement, useState } from "react";
-import useScrollTrigger from "@material-ui/core/useScrollTrigger";
+import { useState } from "react";
 import { useRouter } from "next/router";
 import { useDispatch } from "react-redux";
 import { sideNavActions } from "../../store/navigation";
-import ComposeToolbarItems from "../interaction/compose/Top";
+import ComposeToolbarItems from "../compose/TopToolbar";
 import ComposeSideSheetItems from "../interaction/compose/Side";
 
 import React from "react";
-import clsx from "clsx";
 import { makeStyles } from "@material-ui/core/styles";
 import Drawer from "@material-ui/core/Drawer";
 import CssBaseline from "@material-ui/core/CssBaseline";
@@ -22,18 +20,6 @@ import { CgArrowLeftR } from "react-icons/cg";
 //   "7VD37OIZBX",
 //   "075e3727b35d845338b30a28b5a54562"
 // );
-
-function ElevationScroll(props) {
-  const { children } = props;
-  const trigger = useScrollTrigger({
-    disableHysteresis: true,
-    threshold: 0,
-  });
-
-  return cloneElement(children, {
-    elevation: trigger ? 4 : 0,
-  });
-}
 
 const drawerWidth = 256;
 
@@ -52,14 +38,11 @@ const useStyles = makeStyles((theme) => ({
       duration: theme.transitions.duration.enteringScreen,
     }),
   },
-  toolbar: {
-    minHeight: 55,
-  },
   drawerHeader: {
     display: "flex",
     alignItems: "center",
     padding: theme.spacing(0, 1),
-    height: 55,
+    height: theme.mixins.toolbar.minHeight,
   },
 }));
 
@@ -70,7 +53,6 @@ export default function Header() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const { setNavOpen } = sideNavActions;
   const dispatch = useDispatch();
-  const [menuSheetOpen, setMenuSheetOpen] = useState(false);
 
   const getToolbarContent = () => {
     if (router.pathname === "/") {
@@ -105,7 +87,6 @@ export default function Header() {
         </>
       );
     } else {
-      console.log("what");
       return null;
     }
   };
@@ -115,9 +96,6 @@ export default function Header() {
       <CssBaseline />
       <AppBar
         position="fixed"
-        className={clsx(classes.appBar, {
-          [classes.appBarShift]: menuSheetOpen,
-        })}
       >
         <Toolbar className={classes.toolbar}>
           <IconButton
