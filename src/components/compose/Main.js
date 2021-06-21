@@ -59,16 +59,16 @@ export default function Main() {
       paddingTop: theme.mixins.toolbar.minHeight,
       flexDirection: "column",
       display: "flex",
-      height: "100vh"
+      height: "100%"
     },
     score: {
       position: "fixed",
       [theme.breakpoints.down("xs")]: {
-        height: `calc(100vh - ${calculateButtonsHeight(theme, true)}px)`,
+        height: `calc(100% - ${calculateButtonsHeight(theme, true)}px)`,
         top: calculateButtonsHeight(theme, true),
       },
       [theme.breakpoints.up("sm")]: {
-        height: `calc(100vh - ${calculateButtonsHeight(theme, false)}px)`,
+        height: `calc(100% - ${calculateButtonsHeight(theme, false)}px)`,
         top: calculateButtonsHeight(theme, false),
       },
       overflow: "auto",
@@ -80,7 +80,7 @@ export default function Main() {
 
   return (
     <main>
-      <div className={classes.root} style={{height: '-webkit-fill-available'}}>
+      <div className={classes.root}>
         <div className={classes.buttons}>
           <Buttons selectedTab={selectedTab} onTabSelected={onTabSelected} />
         </div>
