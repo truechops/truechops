@@ -59,7 +59,7 @@ export default function Main() {
       paddingTop: theme.mixins.toolbar.minHeight,
       flexDirection: "column",
       display: "flex",
-      height: "100vh",
+      height: "100vh"
     },
     score: {
       position: "fixed",
@@ -80,7 +80,7 @@ export default function Main() {
 
   return (
     <main>
-      <div className={classes.root}>
+      <div className={classes.root} style={{height: '-webkit-fill-available'}}>
         <div className={classes.buttons}>
           <Buttons selectedTab={selectedTab} onTabSelected={onTabSelected} />
         </div>
