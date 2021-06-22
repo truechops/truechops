@@ -5,6 +5,15 @@ import Image from '../ui/Image';
 
 import { makeStyles } from "@material-ui/core/styles";
 
+const durationLookup = {
+  "whole" : 1,
+  "half" : 2,
+  "quarter" : 4,
+  "eighth" : 8,
+  "sixteenth" : 16,
+  "thirtysecond" : 32
+}
+
 const useTabStyles = makeStyles((theme) => ({
     chips: {
       display: "flex",
@@ -28,7 +37,7 @@ const useTabStyles = makeStyles((theme) => ({
     },
   }));
 
-export default function useComposeButtons() {
+export default function useComposeButtons(modifyNoteHandler) {
     const [kickSelected, setKickSelected] = useState(false);
     const [snareSelected, setSnareSelected] = useState(false);
     const [hatSelected, setHatSelected] = useState(false);
@@ -41,8 +50,8 @@ export default function useComposeButtons() {
     const [dotSelected, setDotSelected] = useState(false);
 
     const classes = useTabStyles();
-      const ComposeButton = (src, className) => (
-        <Button key={Math.random().toString()} variant="outlined" className={classes.noteButton}>
+      const ComposeButton = (src, className, onClick) => (
+        <Button onClick={onClick} key={Math.random().toString()} variant="outlined" className={classes.noteButton}>
           <Icon>
             <Image src={src} className={className} />
           </Icon>
@@ -70,7 +79,8 @@ export default function useComposeButtons() {
         "thirtysecond"
       ].map((noteFileName) => 
         ComposeButton(`/icons/notes/${noteFileName}.svg`, 
-                      "whole" === noteFileName ? classes.wholeNoteImageIcon : classes.imageIcon))
+                      "whole" === noteFileName ? classes.wholeNoteImageIcon : classes.imageIcon,
+                      modifyNoteHandler.bind(null, durationLookup[noteFileName])))
     
       const noteButtonsRow2Mobile = [
         "wholeRest",
@@ -80,7 +90,8 @@ export default function useComposeButtons() {
         "sixteenthRest",
         "thirtysecondRest"
       ].map(noteFileName => ComposeButton(`/icons/notes/${noteFileName}.svg`, 
-                    ["wholeRest", "halfRest"].includes(noteFileName) ? classes.wholeNoteImageIcon : classes.imageIcon))
+                    ["wholeRest", "halfRest"].includes(noteFileName) ? classes.wholeNoteImageIcon : classes.imageIcon,
+                    modifyNoteHandler.bind(null, durationLookup[noteFileName.replace('Rest', '')])))
     
         const tupletButtons = ["3:2","3:2"].map(tupletText => <Button key={Math.random().toString()} variant="outlined" className={classes.noteButton}>
                                                             {tupletText}
@@ -94,7 +105,8 @@ export default function useComposeButtons() {
         "halfRest",
         "wholeRest",
       ].map(noteFileName => ComposeButton(`/icons/notes/${noteFileName}.svg`, 
-                    ["wholeRest", "halfRest"].includes(noteFileName) ? classes.wholeNoteImageIcon : classes.imageIcon))
+                    ["wholeRest", "halfRest"].includes(noteFileName) ? classes.wholeNoteImageIcon : classes.imageIcon,
+                    modifyNoteHandler.bind(null, durationLookup[noteFileName.replace('Rest', '')])))
     
       const dotChip = (
         <Chip

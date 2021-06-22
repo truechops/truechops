@@ -6,6 +6,8 @@ import Box from "@material-ui/core/Box";
 import { Hidden } from "@material-ui/core";
 import useButtonsHook from "./buttons-hook";
 import InstrumentHelpPopover from "./InstrumentHelpPopover";
+import { scoreActions } from '../../store/score';
+import { useDispatch } from 'react-redux';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -52,6 +54,14 @@ function a11yProps(index) {
 export default function Buttons(props) {
   const { selectedTab, onTabSelected } = props;
   const classes = useTabStyles();
+  const dispatch = useDispatch();
+  const { modifyNote } = scoreActions;
+
+  function modifyNoteHandler(noteValue)
+  {
+      dispatch(modifyNote(noteValue));
+  }
+  
   const {
     measureButtons,
     ornamentButtons,
@@ -61,7 +71,7 @@ export default function Buttons(props) {
     noteButtonsRow2Mobile,
     noteButtonsRow2Desktop,
     tupletButtons,
-  } = useButtonsHook();
+  } = useButtonsHook(modifyNoteHandler);
 
   const ButtonsRow = ({ children }) => {
     return (
