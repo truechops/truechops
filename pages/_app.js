@@ -8,6 +8,7 @@ import Navigation from "../src/components/layout/Navigation";
 import { Provider } from "react-redux";
 import store from "../src/store/index";
 import RealmApolloProvider from "../src/providers/RealmApolloProvider";
+import { ToneContextProvider } from "../src/store/tone-context";
 
 export default function MyApp(props) {
   const { Component, pageProps } = props;
@@ -29,16 +30,18 @@ export default function MyApp(props) {
           content="minimum-scale=1, initial-scale=1, width=device-width"
         />
       </Head>
-      <Provider store={store}>
-        <RealmApolloProvider>
-          <ThemeProvider theme={Theme}>
-            <CssBaseline />
-            <HeaderToolbar/>
-            <Navigation />
-            <Component {...pageProps} />
-          </ThemeProvider>
-        </RealmApolloProvider>
-      </Provider>
+      <ToneContextProvider>
+        <Provider store={store}>
+          <RealmApolloProvider>
+            <ThemeProvider theme={Theme}>
+              <CssBaseline />
+              <HeaderToolbar />
+              <Navigation />
+              <Component {...pageProps} />
+            </ThemeProvider>
+          </RealmApolloProvider>
+        </Provider>
+      </ToneContextProvider>
     </>
   );
 }

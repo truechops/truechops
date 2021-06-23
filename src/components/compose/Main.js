@@ -1,12 +1,12 @@
 import Buttons from "./Buttons";
-import dynamic from "next/dynamic";
 import { makeStyles } from "@material-ui/core/styles";
 import { useState } from "react";
+import { useSelector } from 'react-redux';
+import Score from "./Score";
 
 export default function Main() {
-  const DynamicScoreComponent = dynamic(() => import("./Score"), {
-    ssr: false,
-  });
+
+  const score = useSelector((state) => state.score.score);
 
   const [selectedTab, setSelectedTab] = useState(1);
   const [tabPanelHidden, setTabPanelHidden] = useState(false);
@@ -85,7 +85,7 @@ export default function Main() {
           <Buttons selectedTab={selectedTab} onTabSelected={onTabSelected} />
         </div>
         <div className={classes.score}>
-          <DynamicScoreComponent />
+          <Score score={score} selectedTab={selectedTab}/>
         </div>
       </div>
     </main>

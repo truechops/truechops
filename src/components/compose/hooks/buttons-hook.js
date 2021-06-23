@@ -1,17 +1,20 @@
 import { Button, Icon } from "@material-ui/core";
 import Chip from "@material-ui/core/Chip";
 import { useState } from 'react';
-import Image from '../ui/Image';
+import Image from '../../ui/Image';
 
 import { makeStyles } from "@material-ui/core/styles";
+import { useSelector, useDispatch } from 'react-redux';
+import { scoreActions } from '../../../store/score';
+import useMeasureFns from './measure-hook';
 
 const durationLookup = {
-  "whole" : 1,
-  "half" : 2,
-  "quarter" : 4,
+  "whole" : 64,
+  "half" : 32,
+  "quarter" : 16,
   "eighth" : 8,
-  "sixteenth" : 16,
-  "thirtysecond" : 32
+  "sixteenth" : 4,
+  "thirtysecond" : 2
 }
 
 const useTabStyles = makeStyles((theme) => ({
@@ -38,16 +41,18 @@ const useTabStyles = makeStyles((theme) => ({
   }));
 
 export default function useComposeButtons(modifyNoteHandler) {
-    const [kickSelected, setKickSelected] = useState(false);
-    const [snareSelected, setSnareSelected] = useState(false);
-    const [hatSelected, setHatSelected] = useState(false);
-    const [tom1Selected, setTom1Selected] = useState(false);
-    const [tom2Selected, setTom2Selected] = useState(false);
-    const [tom3Selected, setTom3Selected] = useState(false);
-    const [tom4Selected, setTom4Selected] = useState(false);
-    const [rideSelected, setRideSelected] = useState(false);
-    const [hatFootSelected, setHatFootSelected] = useState(false);
-    const [dotSelected, setDotSelected] = useState(false);
+    const kickSelected = useSelector(state => state.score.kickSelected);
+    const snareSelected = useSelector(state => state.score.snareSelected);
+    const hatSelected = useSelector(state => state.score.hiHatSelected);
+    const tom1Selected = useSelector(state => state.score.tom1Selected);
+    const tom2Selected = useSelector(state => state.score.tom2Selected);
+    const tom3Selected = useSelector(state => state.score.tom3Selected);
+    const tom4Selected = useSelector(state => state.score.tom4Selected);
+    const rideSelected = useSelector(state => state.score.rideSelected);
+    const hatFootSelected = useSelector(state => state.score.hiHatFootSelected);
+    const dotSelected = useSelector(state => state.score.dotSelected);
+    const dispatch = useDispatch();
+    const { addMeasure, deleteMeasure } = useMeasureFns();
 
     const classes = useTabStyles();
       const ComposeButton = (src, className, onClick) => (
@@ -110,7 +115,7 @@ export default function useComposeButtons(modifyNoteHandler) {
     
       const dotChip = (
         <Chip
-          onClick={() => setDotSelected((selected) => !selected)}
+          onClick={() => dispatch(scoreActions.toggleDotSelected())}
           className={classes.chip}
           label="."
           clickable
@@ -122,27 +127,27 @@ export default function useComposeButtons(modifyNoteHandler) {
     
       const instrumentsRow1 = [
         {
-          onClick: () => setKickSelected((selected) => !selected),
+          onClick: () => dispatch(scoreActions.toggleKickSelected()),
           label: "K",
           variant: kickSelected ? "default" : "outlined",
         },
         {
-          onClick: () => setSnareSelected((selected) => !selected),
+          onClick: () => dispatch(scoreActions.toggleSnareSelected()),
           label: "S",
           variant: snareSelected ? "default" : "outlined",
         },
         {
-          onClick: () => setHatSelected((selected) => !selected),
+          onClick: () => dispatch(scoreActions.toggleHiHatSelected()),
           label: "HH",
           variant: hatSelected ? "default" : "outlined",
         },
         {
-          onClick: () => setRideSelected((selected) => !selected),
+          onClick: () => dispatch(scoreActions.toggleRideSelected()),
           label: "R",
           variant: rideSelected ? "default" : "outlined",
         },
         {
-          onClick: () => setHatFootSelected((selected) => !selected),
+          onClick: () => dispatch(scoreActions.toggleHiHatFootSelected()),
           label: "HF",
           variant: hatFootSelected ? "default" : "outlined",
         },
@@ -150,22 +155,22 @@ export default function useComposeButtons(modifyNoteHandler) {
     
       const instrumentsRow2 = [
         {
-          onClick: () => setTom1Selected((selected) => !selected),
+          onClick: () => dispatch(scoreActions.toggleTom1Selected()),
           label: "T1",
           variant: tom1Selected ? "default" : "outlined",
         },
         {
-          onClick: () => setTom2Selected((selected) => !selected),
+          onClick: () => dispatch(scoreActions.toggleTom2Selected()),
           label: "T2",
           variant: tom2Selected ? "default" : "outlined",
         },
         {
-          onClick: () => setTom3Selected((selected) => !selected),
+          onClick: () => dispatch(scoreActions.toggleTom3Selected()),
           label: "T3",
           variant: tom3Selected ? "default" : "outlined",
         },
         {
-          onClick: () => setTom4Selected((selected) => !selected),
+          onClick: () => dispatch(scoreActions.toggleTom4Selected()),
           label: "T4",
           variant: tom4Selected ? "default" : "outlined",
         },
@@ -185,13 +190,14 @@ export default function useComposeButtons(modifyNoteHandler) {
       ));
     
       const measureButtons = [
-        "addMeasure",
-        "deleteMeasure",
-        "leftRepeat",
-        "rightRepeat",
-        "repeatMeasure"
-      ].map((ornament) => (
-        ComposeButton(`/icons/measure/${ornament}.svg`, classes.imageIcon)
+        { icon: "plusLeft", callback: addMeasure.bind(null, false) },
+        { icon: "plusRight", callback: addMeasure.bind(null, true) },
+        { icon: "deleteMeasure", callback: deleteMeasure },
+        { icon: "leftRepeat", callback: () => alert('left repeat') },
+        { icon: "rightRepeat", callback: () => alert('right repeat') },
+        { icon: "repeatMeasure", callback: () => alert('repeat measure') },
+      ].map((props) => (
+        ComposeButton(`/icons/measure/${props.icon}.svg`, classes.imageIcon, props.callback)
       ));
 
       return {

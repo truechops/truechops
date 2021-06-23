@@ -5,7 +5,17 @@ export default function Index() {
     { ssr: false }
   )
 
+  const DynamicScore = dynamic(
+    () => import('../src/components/compose/Score'),
+    { ssr: false }
+  )
+
   return (
+    <>
+
     <DynamicMain />
+    
+
+    </>
   );
 }

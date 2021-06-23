@@ -4,10 +4,10 @@ import Tab from "@material-ui/core/Tab";
 import Typography from "@material-ui/core/Typography";
 import Box from "@material-ui/core/Box";
 import { Hidden } from "@material-ui/core";
-import useButtonsHook from "./buttons-hook";
+import useButtonsHook from "./hooks/buttons-hook";
 import InstrumentHelpPopover from "./InstrumentHelpPopover";
-import { scoreActions } from '../../store/score';
-import { useDispatch } from 'react-redux';
+import { scoreActions } from "../../store/score";
+import { useDispatch } from "react-redux";
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -57,11 +57,12 @@ export default function Buttons(props) {
   const dispatch = useDispatch();
   const { modifyNote } = scoreActions;
 
-  function modifyNoteHandler(noteValue)
-  {
-      dispatch(modifyNote(noteValue));
+  function modifyNoteHandler(noteValue) {
+    dispatch(
+      modifyNote(noteValue)
+    );
   }
-  
+
   const {
     measureButtons,
     ornamentButtons,
@@ -74,13 +75,7 @@ export default function Buttons(props) {
   } = useButtonsHook(modifyNoteHandler);
 
   const ButtonsRow = ({ children }) => {
-    return (
-      <div
-        className={classes.buttonsRow}
-      >
-        {children}
-      </div>
-    );
+    return <div className={classes.buttonsRow}>{children}</div>;
   };
 
   return (

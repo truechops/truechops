@@ -1,18 +1,15 @@
 import Vex from "vexflow";
 import VexFlowInteraction from "./VexFlowInteraction";
-
-const noteHeadTypeLookup = {
-  drumset: {
-    E5: "x2",
-  },
-};
+import { getNote } from "../helpers/score";
+import { GiConsoleController } from "react-icons/gi";
 
 const VF = Vex.Flow;
 const SPACE_BETWEEN_GRAND_STAVES = 222;
 const PADDING_TOP = 50;
 const FORMAT_PADDING = 13;
+const MIN_BAR_SIZE = 225;
 
-export function drawScore(score, selectedNote, noteSelectedCallback, windowWidth) {
+export function initialize() {
   // Create an SVG renderer and attach it to the DIV element named "vf".
   const renderer = new VF.Renderer(
     document.getElementById("vexflow"),
@@ -23,12 +20,22 @@ export function drawScore(score, selectedNote, noteSelectedCallback, windowWidth
   const context = renderer.getContext();
   context.setFont("Arial", 10, "").setBackgroundFillStyle("#eed");
 
+  return {renderer, context};
+}
+
+export function drawScore(
+  renderer,
+  context,
+  score,
+  selectedNote,
+  noteSelectedCallback,
+  windowWidth
+) {
   let { measures } = score;
   const { tempo } = score;
   const spb = 60 / tempo;
   context.clear();
   let systemWidth = 0;
-
   const { loopTimeDuration, measurePartsArray, toneJsNotes } = getMeasureData(
     measures,
     spb
@@ -46,7 +53,7 @@ export function drawScore(score, selectedNote, noteSelectedCallback, windowWidth
     voices.map((v) => formatter.joinVoices(v));
 
     let minTotalWidth = Math.ceil(
-      Math.max(formatter.preCalculateMinTotalWidth(voices.flat()), 100)
+      Math.max(formatter.preCalculateMinTotalWidth(voices.flat()), MIN_BAR_SIZE)
     );
 
     systemWidth = minTotalWidth + FORMAT_PADDING;
@@ -76,7 +83,14 @@ export function drawScore(score, selectedNote, noteSelectedCallback, windowWidth
   }
 
   if (barRenderData.length) {
-    renderStaves(barRenderData, 0, row, context, selectedNote, noteSelectedCallback);
+    renderStaves(
+      barRenderData,
+      0,
+      row,
+      context,
+      selectedNote,
+      noteSelectedCallback
+    );
   }
 
   renderer.resize(windowWidth, SPACE_BETWEEN_GRAND_STAVES * (row + 1));
@@ -116,16 +130,24 @@ function getMeasureData(measures, spb) {
         notes.forEach((note, noteIndex) => {
           const noteSecondsDuration = (spb * 4) / note.duration;
 
-          for (const tjsNote of note.notes) {
-            toneJsNotes.push({
-              time: time,
-              note: tjsNote,
-              velocity: 1,
-              instrument,
-            });
+          if(note.notes.length) {
+            for (const tjsNote of note.notes) {
+              toneJsNotes.push({
+                time,
+                note: tjsNote,
+                velocity: 1,
+                instrument,
+              });
+            }
+          } else {
+            toneJsNotes.push({});
           }
 
-          const n = getNote(note, instrument);
+          const n = getNote(
+            VF.StaveNote.prototype.constructor,
+            note,
+            instrument
+          );
           n.noteIndex = noteIndex;
           n.voiceIndex = voiceIndex;
           n.partIndex = partIndex;
@@ -167,23 +189,6 @@ function getMeasureData(measures, spb) {
   });
 
   return { measurePartsArray, loopTimeDuration, toneJsNotes };
-}
-
-function getNote(note, instrument) {
-  return new VF.StaveNote({
-    clef: "percussion",
-    keys: note.notes.map((n) => {
-      const noteHead =
-        noteHeadTypeLookup[instrument] != null
-          ? noteHeadTypeLookup[instrument][n] != null
-            ? "/" + noteHeadTypeLookup[instrument][n]
-            : ""
-          : "";
-
-      return `${n[0]}/${n[1]}${noteHead}`;
-    }),
-    duration: note.duration.toString(),
-  });
 }
 
 function renderStaves(
@@ -243,12 +248,11 @@ function renderStaves(
       const interaction = new VexFlowInteraction(context.svg);
       const events = ["touchStart", "touchEnd"];
       notes[0].forEach((note, noteIndex) => {
-        
         // highlight the note if it selected
-        if (
+        if (selectedNote && 
           note.measureIndex === selectedNote.measureIndex &&
           note.partIndex === selectedNote.partIndex &&
-          note.voiceIndex === selectedNote.voiceIndex && 
+          note.voiceIndex === selectedNote.voiceIndex &&
           noteIndex === selectedNote.noteIndex
         ) {
           note.setStyle({ fillStyle: "#00FF00" });
