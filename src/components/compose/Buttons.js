@@ -8,6 +8,8 @@ import useButtonsHook from "./hooks/buttons-hook";
 import InstrumentHelpPopover from "./InstrumentHelpPopover";
 import { scoreActions } from "../../store/score";
 import { useDispatch } from "react-redux";
+import EighthNoteIcon from "../../../icons/notes/eighth.svg";
+import SvgIcon from "@material-ui/core/SvgIcon";
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -57,9 +59,9 @@ export default function Buttons(props) {
   const dispatch = useDispatch();
   const { modifyNote } = scoreActions;
 
-  function modifyNoteHandler(noteValue) {
+  function modifyNoteHandler(value, isRest) {
     dispatch(
-      modifyNote(noteValue)
+      modifyNote({value, isRest})
     );
   }
 

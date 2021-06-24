@@ -2,6 +2,7 @@ import Vex from "vexflow";
 import VexFlowInteraction from "./VexFlowInteraction";
 import { getNote } from "../helpers/score";
 import { GiConsoleController } from "react-icons/gi";
+import _ from 'lodash';
 
 const VF = Vex.Flow;
 const SPACE_BETWEEN_GRAND_STAVES = 222;
@@ -29,14 +30,15 @@ export function drawScore(
   score,
   selectedNote,
   noteSelectedCallback,
-  windowWidth
+  windowWidth,
+  repeat
 ) {
   let { measures } = score;
   const { tempo } = score;
   const spb = 60 / tempo;
   context.clear();
   let systemWidth = 0;
-  const { loopTimeDuration, measurePartsArray, toneJsNotes } = getMeasureData(
+  const { measurePartsArray, toneJs, loopTimeDuration } = getMeasureData(
     measures,
     spb
   );
@@ -65,7 +67,8 @@ export function drawScore(
         row,
         context,
         selectedNote,
-        noteSelectedCallback
+        noteSelectedCallback,
+        repeat
       );
       barRenderData = [];
       width = 0;
@@ -89,18 +92,26 @@ export function drawScore(
       row,
       context,
       selectedNote,
-      noteSelectedCallback
+      noteSelectedCallback,
+      repeat
     );
   }
 
   renderer.resize(windowWidth, SPACE_BETWEEN_GRAND_STAVES * (row + 1));
 
-  return { toneJsNotes, loopTimeDuration };
+  return { toneJs, loopTimeDuration };
 }
 
 function getMeasureData(measures, spb) {
   const measurePartsArray = [];
   let toneJsNotes = [];
+
+  const toneJs = {
+    notes: [],
+    duration: 0,
+    numMeasures: measures.length
+  }
+
   let measureStartingTime = 0;
   let measureTimeLength = 0;
   let loopTimeDuration = 0;
@@ -188,7 +199,10 @@ function getMeasureData(measures, spb) {
     measurePartsArray.push(measureParts);
   });
 
-  return { measurePartsArray, loopTimeDuration, toneJsNotes };
+  toneJs.notes = toneJsNotes;
+  toneJs.duration = loopTimeDuration;
+
+  return { measurePartsArray, loopTimeDuration, toneJs };
 }
 
 function renderStaves(
@@ -197,7 +211,8 @@ function renderStaves(
   row,
   context,
   selectedNote,
-  noteSelectedCallback
+  noteSelectedCallback,
+  repeat
 ) {
   const barWidths = barRenderData.map((renderDataBar) => renderDataBar.width);
 
@@ -208,7 +223,11 @@ function renderStaves(
     remainingWidth
   );
 
-  let x = row === 0 ? 100 : 0;
+  let x = 0;
+  
+  if(row === 0 && barRenderData[0].parts.length > 1) {
+      x = 100;
+  }
 
   barRenderData.forEach((renderData, measureIndex) => {
     const { parts, width, firstMeasure } = renderData;
@@ -223,6 +242,14 @@ function renderStaves(
         systemWidth
       );
 
+      if(repeat.start === measureIndex) {
+        stave.setBegBarType(VF.Barline.type.REPEAT_BEGIN);
+      }
+      
+      if(repeat.end === measureIndex) {
+        stave.setEndBarType(VF.Barline.type.REPEAT_END);
+      }
+
       const { voices, notes, beams, instrument } = part;
       var formatter = new VF.Formatter();
 
@@ -230,7 +257,12 @@ function renderStaves(
       if (firstMeasure) {
         // Add a clef and time signature.
         stave.addTimeSignature("4/4");
-        stave.setText(instrument, Vex.Flow.Modifier.Position.LEFT);
+
+        //We don't need the measure label if it is the only instrument in the score.
+        if(parts.length > 1) {
+          stave.setText(instrument, Vex.Flow.Modifier.Position.LEFT);
+        }
+
         widthDiff = stave.getNoteStartX() - stave.getX();
       }
 
@@ -246,10 +278,10 @@ function renderStaves(
         vfBeams.map((beam) => beam.setContext(context).draw())
       );
       const interaction = new VexFlowInteraction(context.svg);
-      const events = ["touchStart", "touchEnd"];
+      const events = ["touchStart"];
       notes[0].forEach((note, noteIndex) => {
         // highlight the note if it selected
-        if (selectedNote && 
+        if (!_.isEmpty(selectedNote) && 
           note.measureIndex === selectedNote.measureIndex &&
           note.partIndex === selectedNote.partIndex &&
           note.voiceIndex === selectedNote.voiceIndex &&

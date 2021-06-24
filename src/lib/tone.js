@@ -11,16 +11,17 @@ export function setSamplers(setSamplerIn, tenorsSamplerIn)
   tenorsSampler = tenorsSamplerIn;
 }
 
-export function update(toneJsNotes, loopTimeDuration) {
+export function update(toneJsData, repeat, startStop) {
   if (part) {
     part.dispose();
   }
 
+  let counter = 0;
   part = new Tone.Part((time, value) => {
     if (value) {
       if (value.instrument === "drumset") {
         // the value is an object which contains both the note and the velocity
-        setSampler.triggerAttackRelease(value.note, "8n", time, value.velocity);
+        setSampler.triggerAttackRelease(value.note, "4", time, value.velocity);
       } else if (value.instrument === "tenors") {
         // the value is an object which contains both the note and the velocity
         tenorsSampler.triggerAttackRelease(
@@ -32,14 +33,27 @@ export function update(toneJsNotes, loopTimeDuration) {
       }
     } else {
       //It's a rest
-      console.log('rest!');
     }
-  }, toneJsNotes);
+
+    if(++counter === toneJsData.notes.length && !part.loop) {
+      startStop();
+    }
+  }, toneJsData.notes);
 
   part.start(0);
-  part.loopStart = 0;
-  part.loopEnd = loopTimeDuration;
-  part.loop = true;
+
+  if(repeat.start != -1 && repeat.end != -1) {
+
+    const numMeasures = toneJsData.numMeasures;
+    const durationPerMeasure = toneJsData.duration / numMeasures;
+    part.loopStart = durationPerMeasure * repeat.start;
+    part.loopEnd = durationPerMeasure * (repeat.end + 1);
+    part.loop = true;
+
+    console.log('start: ' + part.loopStart);
+    console.log('end: ' + part.loopEnd);
+    console.log('loop: ' + part.loop);
+  }
 
   // if(isInitial) {
   //   Tone.Transport.scheduleRepeat((time) => {
@@ -83,6 +97,7 @@ export function update(toneJsNotes, loopTimeDuration) {
 }
 
 export async function start() {
+  console.log('start');
   await Tone.start();
   Tone.Transport.start();
 }

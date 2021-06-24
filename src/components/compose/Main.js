@@ -85,7 +85,7 @@ export default function Main() {
           <Buttons selectedTab={selectedTab} onTabSelected={onTabSelected} />
         </div>
         <div className={classes.score}>
-          <Score score={score} selectedTab={selectedTab}/>
+          <Score score={score} selectedTab={selectedTab} tabPanelHidden={tabPanelHidden}/>
         </div>
       </div>
     </main>

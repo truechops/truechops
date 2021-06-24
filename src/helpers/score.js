@@ -1,6 +1,8 @@
 const noteHeadTypeLookup = {
   drumset: {
     E5: "x2",
+    F5: 'x2',
+    D4: 'x2'
   },
 };
 
@@ -19,7 +21,7 @@ export function getNote(staveNoteConstructor, note, instrument) {
           return `${n[0]}/${n[1]}${noteHead}`;
         })
       : ["r/4"],
-    duration: `${note.duration.toString() + (!note.notes.length ? "r" : "")}`,
+    duration: `${note.duration.toString() + (!note.notes.length ? "r" : "")}`
   });
 }
 

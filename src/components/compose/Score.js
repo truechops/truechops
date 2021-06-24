@@ -10,12 +10,11 @@ export default function Score(props) {
   const dispatch = useDispatch();
   const { selectNote } = scoreActions;
   const selectedNote = useSelector((state) => state.score.selectedNote);
-  const [setSampler, setSetSampler] = useState();
-  const [tenorsSampler, setTenorsSampler] = useState();
-  const { score } = props;
-  const [isLoading, setIsLoading] = useState(true);
+  const repeat = useSelector((state) => state.score.repeat);
 
-  const prevToneJsNotesRef = useRef();
+  const { score } = props;
+
+  const prevToneJsRef = useRef();
 
   const updateDimensions = () => {
     setWindowWidth(window.innerWidth);
@@ -25,6 +24,7 @@ export default function Score(props) {
 
   const noteSelectedCallback = useCallback(
     (note) => {
+      console.log('note selected callback!');
       dispatch(
         selectNote({
           measureIndex: note.measureIndex,
@@ -39,25 +39,22 @@ export default function Score(props) {
 
   useEffect(() => {
     const { renderer, context } = initialize();
-    const { toneJsNotes, loopTimeDuration } = drawScore(
+    const { toneJs, loopTimeDuration } = drawScore(
       renderer,
       context,
       score,
       selectedNote,
       noteSelectedCallback,
-      windowWidth
+      windowWidth,
+      repeat
     );
     
-    if(!prevToneJsNotesRef.current || !_.isEqual(toneJsNotes, prevToneJsNotesRef.current))
+    if(!prevToneJsRef.current || !_.isEqual(toneJs, prevToneJsRef.current))
     {
-      console.log('tonejs upate');
-        dispatch(scoreActions.updateToneJs({ notes: toneJsNotes, loopTimeDuration }));
-    } else {
-      console.log(JSON.stringify(toneJsNotes));
-    }
-
-      prevToneJsNotesRef.current = toneJsNotes;
-  }, [windowWidth, score, noteSelectedCallback, selectedNote, dispatch, props.selectedTab]);
+        dispatch(scoreActions.updateToneJs(toneJs));
+    } 
+      prevToneJsRef.current = toneJs;
+  }, [windowWidth, score, noteSelectedCallback, selectedNote, repeat, dispatch, props.selectedTab, props.tabPanelHidden]);
 
   return (
     <div className="vexflow-wrapper">

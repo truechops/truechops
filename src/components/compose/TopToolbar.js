@@ -1,11 +1,16 @@
 //import { makeStyles } from "@material-ui/styles";
 
-import { useState, useContext, useEffect } from "react";
+import { useState, useContext, useEffect, useCallback } from "react";
 import IconButton from "@material-ui/core/IconButton";
-import { start as startToneJs, stop as stopToneJs, update as updateToneJs, setSamplers } from "../../lib/tone";
+import {
+  start as startToneJs,
+  stop as stopToneJs,
+  update as updateToneJs,
+  setSamplers,
+} from "../../lib/tone";
 import { useTheme } from "@material-ui/core/styles";
-import ToneContext from '../../store/tone-context';
-import { useSelector } from 'react-redux';
+import ToneContext from "../../store/tone-context";
+import { useSelector, useDispatch } from "react-redux";
 
 import {
   FaTools,
@@ -16,22 +21,25 @@ import {
   FaSave,
   FaLink,
 } from "react-icons/fa";
+import { scoreActions } from "../../store/score";
 
 export default function TopToolbar() {
   const theme = useTheme();
-  const { notes : toneJsNotes, loopTimeDuration } = useSelector(state => state.score.toneJs);
+  const toneJsData = useSelector((state) => state.score.toneJs);
   const { setSampler, tenorsSampler } = useContext(ToneContext);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const isPlaying = useSelector((state) => state.score.isPlaying);
+  const repeat = useSelector((state) => state.score.repeat);
+  const dispatch = useDispatch();
 
-  async function startStop() {
+  const startStop = useCallback(() => {
     if (!isPlaying) {
-       startToneJs();
+      startToneJs();
     } else {
       stopToneJs();
     }
 
-    setIsPlaying((isPlaying) => !isPlaying);
-  }
+    dispatch(scoreActions.toggleIsPlaying());
+  }, [dispatch, isPlaying]);
 
   //Set the tonejs samplers, which come from ToneContext
   useEffect(() => {
@@ -39,11 +47,11 @@ export default function TopToolbar() {
   }, [setSampler, tenorsSampler]);
 
   useEffect(() => {
-      console.log('update tonejs');
-      updateToneJs(toneJsNotes, loopTimeDuration)
-  }, [toneJsNotes, loopTimeDuration])
+    console.log("update tonejs");
+    updateToneJs(toneJsData, repeat, startStop);
+  }, [toneJsData, repeat, startStop]);
 
-  const iconSize = theme.compose.topToolbar.iconSize;
+  const iconSize = theme.buttons.topToolbar.iconSize;
   return (
     <>
       <div style={{ width: "auto", margin: "auto" }}>
@@ -68,13 +76,7 @@ export default function TopToolbar() {
         >
           <FaTools />
         </IconButton>
-        <IconButton
-          color="inherit"
-          aria-label="play"
-          onClick={
-            startStop
-          }
-        >
+        <IconButton color="inherit" aria-label="play" onClick={startStop}>
           {!isPlaying ? <FaPlay size={iconSize} /> : <FaStop size={iconSize} />}
         </IconButton>
         <IconButton

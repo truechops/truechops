@@ -38,11 +38,44 @@ export default createMuiTheme({
         minHeight: 32,
       },
     },
+    MuiButton: {
+      root: {
+        margin: "0 5px",
+        minWidth: 34,
+        borderRadius: "50rem",
+        padding: "3px 11px",
+        marginLeft: spacing,
+      },
+      outlined: {
+        padding: "5x 11px"
+      }
+    },
   },
-  compose: {
+  buttons: {
+    root: {
+      "&:hover": {
+        backgroundColor: "red",
+      },
+    },
     topToolbar: {
       iconSize: 20
     },
+    svg: {
+      root: {
+        height: 50,
+        width: 50
+      },
+      htmlColor: {
+        selected: 'white',
+        notSelected: primary
+      }
+    },
+    selected: {
+      backgroundColor: primary,
+      color: 'white'
+    }
+  },
+  compose: {
     buttons: {
       row: {
         marginBottom: spacing,
@@ -58,12 +91,13 @@ export default createMuiTheme({
         minWidth: 34,
         borderRadius: "50rem",
         padding: "3px 11px",
-        marginLeft: spacing
+        marginLeft: spacing,
+        //height: 32
       },
       wholeNote: {
         bottom: 10,
         height: 13,
-        width: 13
+        width: 13,
       },
       chip: {
         margin: "0 5px",
