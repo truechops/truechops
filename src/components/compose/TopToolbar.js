@@ -7,7 +7,7 @@ import { update as updateToneJs, setSamplers } from "../../lib/tone";
 import { useTheme } from "@material-ui/core/styles";
 import ToneContext from "../../store/tone-context";
 import { connect, useDispatch } from "react-redux";
-import { getToneJs } from "../../store/score";
+import { getToneJs, scoreActions } from "../../store/score";
 
 import _ from "lodash";
 
@@ -20,7 +20,6 @@ import {
   FaSave,
   FaLink,
 } from "react-icons/fa";
-import { scoreActions } from "../../store/score";
 
 export function TopToolbar(props) {
   const { setSampler, tenorsSampler } = useContext(ToneContext);
@@ -85,7 +84,7 @@ export function TopToolbar(props) {
         <IconButton
           color="inherit"
           aria-label="open drawer"
-          onClick={() => alert("tools!")}
+          onClick={props.shuffleNotes}
         >
           <FaTools />
         </IconButton>
@@ -122,6 +121,7 @@ const mapStateToProps = (state) => {
 const mapDispatchToProps = (dispatch) => {
   return {
     startStop: () => dispatch(scoreActions.startStop()),
+    shuffleNotes: () => dispatch(scoreActions.shuffleNotes())
   };
 };
 

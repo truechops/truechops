@@ -150,6 +150,16 @@ const scoreSlice = createSlice({
         );
       }
     },
+    shuffleNotes(state) {
+      state.score.measures.forEach((measure, measureIndex) => {
+        measure.parts.forEach((part, partIndex) => {
+          part.voices.forEach((voice, voiceIndex) => {
+            state.score.measures[measureIndex].parts[partIndex].voices[voiceIndex].notes = 
+            _.shuffle(state.score.measures[measureIndex].parts[partIndex].voices[voiceIndex].notes)
+          })
+        })
+      })
+    },
     //When user modifies a note in the score. Ex: 8th note to 16th note
     modifyNote(state, action) {
       const { voices, value, isRest } = action.payload;
