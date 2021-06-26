@@ -35,7 +35,7 @@ export default function MouseOverPopover() {
         onMouseEnter={handlePopoverOpen}
         onMouseLeave={handlePopoverClose}
       >
-        <BiHelpCircle/>
+        <BiHelpCircle size={20}/>
       </div>
       <Popover
         id="mouse-over-popover"

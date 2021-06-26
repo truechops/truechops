@@ -1,5 +1,5 @@
 import { getPowersOf2 } from "../helpers/math";
-import _ from 'lodash';
+import _ from "lodash";
 
 //Translates the toneJs duration to the score duration
 const vfDurationToTCDuration = {
@@ -20,10 +20,10 @@ const tcDurationToVfDuration = {
   2: 32,
 };
 
-export function modifyNote(state, value, isRest) {
-  const { score, selectedNote } = state;
-
-  let { measureIndex, partIndex, voiceIndex, noteIndex } = selectedNote;
+export function modifyNote(state, voices, value, isRest) {
+  let { measureIndex, partIndex, voiceIndex } = state.selectedNote;
+  let noteIndex = state.selectedNote.noteIndex;
+  const score = state.score;
   const notes =
     score.measures[measureIndex].parts[partIndex].voices[voiceIndex].notes;
   const note = notes[noteIndex];
@@ -46,15 +46,13 @@ export function modifyNote(state, value, isRest) {
   let notesToDelete = 1;
   let newNotes = [];
   newNotes.push({
-    notes: isRest ? [] : getSelectedInstrumentNotes(state),
+    notes: isRest ? [] : getSelectedInstrumentNotes(voices),
     duration: tcDurationToVfDuration[value],
     velocity: note.velocity,
   });
 
   if (value < selectedDuration) {
-    const remainingDurations = getPowersOf2(
-      selectedDuration - value
-    );
+    const remainingDurations = getPowersOf2(selectedDuration - value);
 
     //Map powers of two numbers to 'rest' notes that fill up the empty space left by the smaller note
     remainingDurations.reduce((result, duration) => {
@@ -100,27 +98,21 @@ export function modifyNote(state, value, isRest) {
   }
 
   notes.splice(noteIndex, notesToDelete, ...newNotes);
-
-  //Increment the note index so that the user can easily continue editing
-  if (noteIndex + 1 >= notes.length) {
-    //End of the measure
-    if (measureIndex + 1 < score.measures.length) {
-      //Go the next measure
-      state.selectedNote.measureIndex++;
-      state.selectedNote.noteIndex = 0;
-    }
-  } else {
-    //Highlight the next note in the measure
-    state.selectedNote.noteIndex++;
-  }
+  incrementSelectedNote(notes, score.measures, state.selectedNote);
 }
 
 export function toggleOrnament(state, ornament) {
   const { partIndex, measureIndex, voiceIndex, noteIndex } = state.selectedNote;
 
-  if (!(partIndex && measureIndex && voiceIndex && noteIndex)) {
+  if (
+    !(partIndex >= 0 && measureIndex >= 0 && voiceIndex >= 0 && noteIndex >= 0)
+  ) {
     return;
   }
+
+  const notes =
+    state.score.measures[measureIndex].parts[partIndex].voices[voiceIndex]
+      .notes;
 
   const measures = state.score.measures;
   if (measures && measures.length > 0) {
@@ -135,17 +127,38 @@ export function toggleOrnament(state, ornament) {
             if (note.ornaments) {
               let ornaments = note.ornaments;
               if (ornaments.includes(ornament)) {
-                ornaments.replace(ornament, "");
+                note.ornaments = note.ornaments.replace(ornament, "");
               } else {
-                ornaments.concat(ornament);
+                note.ornaments = note.ornaments.concat(ornament);
               }
             } else {
               note.ornaments = ornament;
             }
+
+            incrementSelectedNote(
+              notes,
+              state.score.measures,
+              state.selectedNote
+            );
           }
         }
       }
     }
+  }
+}
+
+function incrementSelectedNote(notes, measures, selectedNote) {
+  //Increment the note index so that the user can easily continue editing
+  if (selectedNote.noteIndex + 1 >= notes.length) {
+    //End of the measure
+    if (selectedNote.measureIndex + 1 < measures.length) {
+      //Go the next measure
+      selectedNote.measureIndex++;
+      selectedNote.noteIndex = 0;
+    }
+  } else {
+    //Highlight the next note in the measure
+    selectedNote.noteIndex = selectedNote.noteIndex + 1;
   }
 }
 
@@ -155,49 +168,49 @@ export function setRepeat(state, startOrEnd) {
   //make sure a measure is selected
   if (!_.isEmpty(selectedNote) && selectedNote.measureIndex >= 0) {
     if (selectedNote.measureIndex === state.repeat[startOrEnd]) {
-      state.repeat[startOrEnd] = -1
+      state.repeat[startOrEnd] = -1;
     } else {
       state.repeat[startOrEnd] = selectedNote.measureIndex;
     }
   }
 }
 
-function getSelectedInstrumentNotes(state) {
+function getSelectedInstrumentNotes(voices) {
   let notes = [];
 
-  if (state.kickSelected) {
+  if (voices.kickSelected) {
     notes.push("F4");
   }
 
-  if (state.snareSelected) {
+  if (voices.snareSelected) {
     notes.push("C5");
   }
 
-  if (state.hiHatSelected) {
+  if (voices.hiHatSelected) {
     notes.push("E5");
   }
 
-  if (state.rideSelected) {
+  if (voices.rideSelected) {
     notes.push("F5");
   }
 
-  if (state.hiHatFootSelected) {
+  if (voices.hiHatFootSelected) {
     notes.push("D4");
   }
 
-  if (state.tom1Selected) {
+  if (voices.tom1Selected) {
     notes.push("D5");
   }
 
-  if (state.tom2Selected) {
+  if (voices.tom2Selected) {
     notes.push("B4");
   }
 
-  if (state.tom3Selected) {
+  if (voices.tom3Selected) {
     notes.push("A4");
   }
 
-  if (state.tom4Selected) {
+  if (voices.tom4Selected) {
     notes.push("G4");
   }
 

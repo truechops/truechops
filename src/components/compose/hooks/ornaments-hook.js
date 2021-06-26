@@ -1,36 +1,41 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { scoreActions } from '../../../store/score';
 
-export default function useMeasureFns() 
+export default function useOrnamentsFns() 
 {
-    const { partIndex, measureIndex, noteIndex } = useSelector(state => state.score.selectedNote);
+    const selectedNote = useSelector(state => state.scoreAux.selectedNote);
     const dispatch = useDispatch();
     
     return {
-        addMeasure: addMeasure.bind(null, dispatch, partIndex, measureIndex, noteIndex),
-        deleteMeasure: deleteMeasure.bind(null, dispatch, partIndex, measureIndex, noteIndex),
-        setRepeatStart: setRepeatStart.bind(null, dispatch, partIndex, measureIndex, noteIndex),
-        setRepeatEnd: setRepeatEnd.bind(null, dispatch, partIndex, measureIndex, noteIndex),
-        toggleRepeatEnabled: toggleRepeatEnabled.bind(null, dispatch, partIndex, measureIndex, noteIndex)
+        toggleAccent: toggleAccent.bind(null, dispatch, selectedNote),
+        toggleFlam: toggleFlam.bind(null, dispatch, selectedNote),
+        toggleDiddle: toggleDiddle.bind(null, dispatch, selectedNote),
+        toggleCheese: toggleCheese.bind(null, dispatch, selectedNote),
+        toggleLeftSticking: toggleLeftSticking.bind(null, dispatch, selectedNote),
+        toggleRightSticking: toggleRightSticking.bind(null, dispatch, selectedNote)
     }
 }
 
-function addMeasure(dispatch, partIndex, measureIndex, noteIndex) {
-    dispatch(scoreActions.addMeasure({ index, isRight}));
+function toggleAccent(dispatch, selectedNote) {
+    dispatch(scoreActions.toggleAccent(selectedNote));
 }
 
-function deleteMeasure(dispatch, partIndex, measureIndex, noteIndex) {
-    dispatch(scoreActions.deleteMeasure(index));
+function toggleFlam(dispatch, selectedNote) {
+    dispatch(scoreActions.toggleFlam(selectedNote));
 }
 
-function setRepeatStart(dispatch, partIndex, measureIndex, noteIndex) {
-    dispatch(scoreActions.setRepeatStart(index));
+function toggleDiddle(dispatch, selectedNote) {
+    dispatch(scoreActions.toggleDiddle(selectedNote));
 }
 
-function setRepeatEnd(dispatch, partIndex, measureIndex, noteIndex) {
-    dispatch(scoreActions.setRepeatEnd(index));
+function toggleCheese(dispatch, selectedNote) {
+    dispatch(scoreActions.toggleCheese(selectedNote));
 }
 
-function toggleRepeatEnabled(dispatch, partIndex, measureIndex, noteIndex) {
-    dispatch(scoreActions.toggleRepeatEnabled());
+function toggleLeftSticking(dispatch, selectedNote) {
+    dispatch(scoreActions.toggleLeftSticking(selectedNote));
+}
+
+function toggleRightSticking(dispatch, selectedNote) {
+    dispatch(scoreActions.toggleRightSticking(selectedNote));
 }

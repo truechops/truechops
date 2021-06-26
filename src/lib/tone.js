@@ -11,7 +11,7 @@ export function setSamplers(setSamplerIn, tenorsSamplerIn)
   tenorsSampler = tenorsSamplerIn;
 }
 
-export function update(toneJsData, repeat, startStop) {
+export function update(toneJsData, repeat, toggleIsPlaying) {
   if (part) {
     part.dispose();
   }
@@ -36,7 +36,7 @@ export function update(toneJsData, repeat, startStop) {
     }
 
     if(++counter === toneJsData.notes.length && !part.loop) {
-      startStop();
+      toggleIsPlaying();
     }
   }, toneJsData.notes);
 
@@ -49,10 +49,6 @@ export function update(toneJsData, repeat, startStop) {
     part.loopStart = durationPerMeasure * repeat.start;
     part.loopEnd = durationPerMeasure * (repeat.end + 1);
     part.loop = true;
-
-    console.log('start: ' + part.loopStart);
-    console.log('end: ' + part.loopEnd);
-    console.log('loop: ' + part.loop);
   }
 
   // if(isInitial) {
@@ -97,7 +93,6 @@ export function update(toneJsData, repeat, startStop) {
 }
 
 export async function start() {
-  console.log('start');
   await Tone.start();
   Tone.Transport.start();
 }

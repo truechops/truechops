@@ -1,0 +1,47 @@
+//from https://stackoverflow.com/questions/61263663/actions-in-multiple-slices-in-redux-toolkit
+
+import { createSlice } from '@reduxjs/toolkit';
+import { LOGOUT_USER } from '../redux/actions';
+
+class CrudReducerFactory {
+  constructor(slice, state = null, initialState = {}) {
+    state = state || slice;
+
+    this.initialState = initialState;
+
+    const reducerResult = createSlice({
+      name: slice,
+      initialState: initialState[state],
+      reducers: this._generateReducers(),
+
+      extraReducers: (builder) => {
+        builder.addCase(LOGOUT_USER, (state, action) => {
+          return { ...this.initialState };
+        });
+      },
+    });
+
+    this.reducer = reducerResult.reducer;
+    this.actions = reducerResult.actions;
+  }
+
+  _generateReducers = () => {
+    return {
+      // Create One
+      requestCreateOne: (state, action) => {
+        state.isLoading = true;
+      },
+      requestCreateOneSuccess: (state, action) => {
+        state.isLoading = false;
+        state.one = action.payload;
+      },
+      requestCreateOneError: (state, action) => {
+        state.isLoading = false;
+      },
+      
+      // ...snip...
+    };
+  };
+}
+
+export default CrudReducerFactory;

@@ -1,16 +1,16 @@
 //import { makeStyles } from "@material-ui/styles";
 
-import { useState, useContext, useEffect, useCallback } from "react";
+import { useContext, useEffect } from "react";
+import { ActionCreators } from "redux-undo";
 import IconButton from "@material-ui/core/IconButton";
 import {
-  start as startToneJs,
-  stop as stopToneJs,
   update as updateToneJs,
   setSamplers,
 } from "../../lib/tone";
 import { useTheme } from "@material-ui/core/styles";
 import ToneContext from "../../store/tone-context";
-import { useSelector, useDispatch } from "react-redux";
+import { connect, useDispatch } from "react-redux";
+import { getToneJs } from "../../store/score";
 
 import {
   FaTools,
@@ -23,23 +23,14 @@ import {
 } from "react-icons/fa";
 import { scoreActions } from "../../store/score";
 
-export default function TopToolbar() {
-  const theme = useTheme();
-  const toneJsData = useSelector((state) => state.score.toneJs);
+export function TopToolbar(props) {
   const { setSampler, tenorsSampler } = useContext(ToneContext);
-  const isPlaying = useSelector((state) => state.score.isPlaying);
-  const repeat = useSelector((state) => state.score.repeat);
+  const theme = useTheme();
   const dispatch = useDispatch();
-
-  const startStop = useCallback(() => {
-    if (!isPlaying) {
-      startToneJs();
-    } else {
-      stopToneJs();
-    }
-
-    dispatch(scoreActions.toggleIsPlaying());
-  }, [dispatch, isPlaying]);
+  const isPlaying = props.isPlaying;
+  const toneJs = props.toneJs;
+  const repeat = props.repeat;
+  const startStop = props.startStop;
 
   //Set the tonejs samplers, which come from ToneContext
   useEffect(() => {
@@ -47,9 +38,8 @@ export default function TopToolbar() {
   }, [setSampler, tenorsSampler]);
 
   useEffect(() => {
-    console.log("update tonejs");
-    updateToneJs(toneJsData, repeat, startStop);
-  }, [toneJsData, repeat, startStop]);
+    updateToneJs(toneJs, repeat, startStop);
+  }, [toneJs, repeat, startStop]);
 
   const iconSize = theme.buttons.topToolbar.iconSize;
   return (
@@ -58,14 +48,14 @@ export default function TopToolbar() {
         <IconButton
           color="inherit"
           aria-label="undo"
-          onClick={() => alert("undo!")}
+          onClick={() => dispatch(ActionCreators.undo())}
         >
           <FaUndo size={iconSize} />
         </IconButton>
         <IconButton
           color="inherit"
           aria-label="redo"
-          onClick={() => alert("redo!")}
+          onClick={() => dispatch(ActionCreators.redo())}
         >
           <FaRedo size={iconSize} />
         </IconButton>
@@ -97,3 +87,24 @@ export default function TopToolbar() {
     </>
   );
 }
+
+const mapDispatchToProps = (dispatch) => {
+  return {
+    startStop: () => dispatch(scoreActions.startStop())
+  }
+}
+
+const mapStateToProps = (state) => {
+  return {
+    isPlaying: state.score.present.isPlaying,
+    repeat: state.score.present.repeat,
+    toneJs: getToneJs(state.score.present),
+  };
+};
+
+const ConnectedTopToolbar = connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(TopToolbar);
+
+export default ConnectedTopToolbar;

@@ -1,20 +1,15 @@
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { drawScore, initialize } from "../../lib/vexflow";
-import { setupPlayback, setup as setupToneJs } from "../../lib/tone";
 import { useSelector, useDispatch } from "react-redux";
 import { scoreActions } from "../../store/score";
-import _ from 'lodash';
 
 export default function Score(props) {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const dispatch = useDispatch();
-  const { selectNote } = scoreActions;
-  const selectedNote = useSelector((state) => state.score.selectedNote);
-  const repeat = useSelector((state) => state.score.repeat);
-
-  const { score } = props;
-
-  const prevToneJsRef = useRef();
+  const selectNote = scoreActions.selectNote;
+  const selectedNote = useSelector((state) => state.score.present.selectedNote);
+  const repeat = useSelector((state) => state.score.present.repeat);
+  const score = useSelector(state => state.score.present.score);
 
   const updateDimensions = () => {
     setWindowWidth(window.innerWidth);
@@ -24,7 +19,6 @@ export default function Score(props) {
 
   const noteSelectedCallback = useCallback(
     (note) => {
-      console.log('note selected callback!');
       dispatch(
         selectNote({
           measureIndex: note.measureIndex,
@@ -39,7 +33,7 @@ export default function Score(props) {
 
   useEffect(() => {
     const { renderer, context } = initialize();
-    const { toneJs, loopTimeDuration } = drawScore(
+    drawScore(
       renderer,
       context,
       score,
@@ -48,12 +42,6 @@ export default function Score(props) {
       windowWidth,
       repeat
     );
-    
-    if(!prevToneJsRef.current || !_.isEqual(toneJs, prevToneJsRef.current))
-    {
-        dispatch(scoreActions.updateToneJs(toneJs));
-    } 
-      prevToneJsRef.current = toneJs;
   }, [windowWidth, score, noteSelectedCallback, selectedNote, repeat, dispatch, props.selectedTab, props.tabPanelHidden]);
 
   return (

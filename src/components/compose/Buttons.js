@@ -6,10 +6,12 @@ import Box from "@material-ui/core/Box";
 import { Hidden } from "@material-ui/core";
 import useButtonsHook from "./hooks/buttons-hook";
 import InstrumentHelpPopover from "./InstrumentHelpPopover";
-import { scoreActions } from "../../store/score";
-import { useDispatch } from "react-redux";
+import { scoreActions, getSelectedScoreNote } from "../../store/score";
+import { scoreAuxActions } from "../../store/scoreAux";
+import { useDispatch, connect, useSelector } from "react-redux";
 import EighthNoteIcon from "../../../icons/notes/eighth.svg";
 import SvgIcon from "@material-ui/core/SvgIcon";
+
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -53,16 +55,18 @@ function a11yProps(index) {
   };
 }
 
-export default function Buttons(props) {
+export function Buttons(props) {
   const { selectedTab, onTabSelected } = props;
   const classes = useTabStyles();
-  const dispatch = useDispatch();
-  const { modifyNote } = scoreActions;
+  const modifyNote = props.modifyNote;
+  const isPlaying = props.isPlaying;
+  const voices = props.voices;
+  const dotSelected = props.dotSelected;
+  const repeat = props.repeat;
+  const selectedNote = props.selectedNote;
 
   function modifyNoteHandler(value, isRest) {
-    dispatch(
-      modifyNote({value, isRest})
-    );
+      modifyNote(voices, value, isRest)
   }
 
   const {
@@ -74,8 +78,7 @@ export default function Buttons(props) {
     noteButtonsRow2Mobile,
     noteButtonsRow2Desktop,
     tupletButtons,
-  } = useButtonsHook(modifyNoteHandler);
-
+  } = useButtonsHook(modifyNoteHandler, isPlaying, voices, dotSelected, repeat, selectedNote, props.selectedScoreNote);
   const ButtonsRow = ({ children }) => {
     return <div className={classes.buttonsRow}>{children}</div>;
   };
@@ -143,3 +146,28 @@ export default function Buttons(props) {
     </>
   );
 }
+
+const mapStateToProps = (state) => {
+  return {
+    isPlaying: state.score.present.isPlaying,
+    repeat: state.score.present.repeat,
+    selectedNote: state.score.present.selectedNote,
+    score: state.score.present.score,
+    voices: state.scoreAux.voices,
+    dotSelected: state.scoreAux.dotSelected,
+    selectedScoreNote: getSelectedScoreNote(state.score.present)
+  }
+}
+
+const mapDispatchToProps = (dispatch) => {
+  return {
+    modifyNote: (voices, value, isRest) => dispatch(scoreActions.modifyNote({voices, value, isRest}))
+  }
+}
+
+const ConnectedButtons = connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(Buttons)
+
+export default ConnectedButtons;

@@ -1,8 +1,7 @@
 import Vex from "vexflow";
 import VexFlowInteraction from "./VexFlowInteraction";
 import { getNote } from "../helpers/score";
-import { GiConsoleController } from "react-icons/gi";
-import _ from 'lodash';
+import _ from "lodash";
 
 const VF = Vex.Flow;
 const SPACE_BETWEEN_GRAND_STAVES = 222;
@@ -19,9 +18,10 @@ export function initialize() {
   // Configure the rendering context.
 
   const context = renderer.getContext();
+  context.scale(0.75, 0.75);
   context.setFont("Arial", 10, "").setBackgroundFillStyle("#eed");
 
-  return {renderer, context};
+  return { renderer, context };
 }
 
 export function drawScore(
@@ -34,14 +34,9 @@ export function drawScore(
   repeat
 ) {
   let { measures } = score;
-  const { tempo } = score;
-  const spb = 60 / tempo;
   context.clear();
   let systemWidth = 0;
-  const { measurePartsArray, toneJs, loopTimeDuration } = getMeasureData(
-    measures,
-    spb
-  );
+  const measurePartsArray = getMeasureData(measures);
 
   let barRenderData = [];
   let width = 100;
@@ -59,21 +54,20 @@ export function drawScore(
     );
 
     systemWidth = minTotalWidth + FORMAT_PADDING;
-
-    if (width + systemWidth > windowWidth) {
-      renderStaves(
-        barRenderData,
-        windowWidth - width,
-        row,
-        context,
-        selectedNote,
-        noteSelectedCallback,
-        repeat
-      );
-      barRenderData = [];
-      width = 0;
-      row += 1;
-    }
+    // if (width + systemWidth > windowWidth) {
+    //   renderStaves(
+    //     barRenderData,
+    //     windowWidth - width,
+    //     row,
+    //     context,
+    //     selectedNote,
+    //     noteSelectedCallback,
+    //     repeat
+    //   );
+    //   barRenderData = [];
+    //   width = 0;
+    //   row += 1;
+    // }
 
     barRenderData.push({
       parts: measureParts,
@@ -96,33 +90,15 @@ export function drawScore(
       repeat
     );
   }
-
   renderer.resize(windowWidth, SPACE_BETWEEN_GRAND_STAVES * (row + 1));
-
-  return { toneJs, loopTimeDuration };
 }
 
-function getMeasureData(measures, spb) {
+function getMeasureData(measures) {
   const measurePartsArray = [];
-  let toneJsNotes = [];
 
-  const toneJs = {
-    notes: [],
-    duration: 0,
-    numMeasures: measures.length
-  }
-
-  let measureStartingTime = 0;
-  let measureTimeLength = 0;
-  let loopTimeDuration = 0;
   measures.forEach((measure, measureIndex) => {
-    loopTimeDuration += measure.timeSig.num * spb;
-
-    measureStartingTime += measureTimeLength;
-    measureTimeLength = 0;
     const { parts } = measure;
     let measureParts = [];
-    let firstPart = true;
     parts.forEach((part, partIndex) => {
       let partData = {
         voices: [],
@@ -130,7 +106,6 @@ function getMeasureData(measures, spb) {
       };
 
       const { voices, instrument } = part;
-      let time = measureStartingTime;
 
       let vfVoices = [];
       let vfVoiceBeams = [];
@@ -139,37 +114,79 @@ function getMeasureData(measures, spb) {
         const { notes } = voice;
         var vfNotes = [];
         notes.forEach((note, noteIndex) => {
-          const noteSecondsDuration = (spb * 4) / note.duration;
-
-          if(note.notes.length) {
-            for (const tjsNote of note.notes) {
-              toneJsNotes.push({
-                time,
-                note: tjsNote,
-                velocity: 1,
-                instrument,
-              });
-            }
-          } else {
-            toneJsNotes.push({});
-          }
-
           const n = getNote(
             VF.StaveNote.prototype.constructor,
             note,
             instrument
           );
+
+          if (note.ornaments) {
+            if (note.ornaments.includes("c")) {
+              let tremolo = new VF.Tremolo(1);
+              n.addArticulation(0, tremolo);
+
+              n.addModifier(
+                0,
+                new VF.GraceNoteGroup([
+                  new VF.GraceNote({
+                    keys: ["C/5"],
+                    duration: "8",
+                    slash: true,
+                  }),
+                ])
+              );
+            }
+
+            //diddle - add tremolo
+            if (note.ornaments.includes("d")) {
+              let tremolo = new VF.Tremolo(1);
+              n.addArticulation(0, tremolo);
+            }
+
+            //flam - add grace note
+            if (note.ornaments.includes("f")) {
+              n.addModifier(
+                0,
+                new VF.GraceNoteGroup([
+                  new VF.GraceNote({
+                    keys: ["C/5"],
+                    duration: "8",
+                    slash: true,
+                  }),
+                ])
+              );
+            }
+
+            //accent
+            if (note.ornaments.includes("a")) {
+              n.addArticulation(0, new VF.Articulation("a>").setPosition(3));
+            }
+
+            //right sticking - add 'R' annotation
+            if (note.ornaments.includes("r")) {
+              const annotation = new VF.Annotation("R");
+              annotation.setVerticalJustification(
+                VF.Annotation.VerticalJustify.BOTTOM
+              );
+
+              n.addModifier(0, annotation);
+            } else if (note.ornaments.includes("l")) {
+              //left sticking - add 'L' annotation
+              const annotation = new VF.Annotation("L");
+              annotation.setVerticalJustification(
+                VF.Annotation.VerticalJustify.BOTTOM
+              );
+
+              n.addModifier(0, annotation);
+            }
+          }
+
           n.noteIndex = noteIndex;
           n.voiceIndex = voiceIndex;
           n.partIndex = partIndex;
           n.measureIndex = measureIndex;
 
           vfNotes.push(n);
-          time += noteSecondsDuration;
-
-          if (firstPart) {
-            measureTimeLength += noteSecondsDuration;
-          }
         });
 
         // Create a voice in 4/4 and add the notes from above
@@ -192,17 +209,12 @@ function getMeasureData(measures, spb) {
         beams: vfVoiceBeams,
         instrument,
       });
-
-      firstPart = false;
     });
 
     measurePartsArray.push(measureParts);
   });
 
-  toneJs.notes = toneJsNotes;
-  toneJs.duration = loopTimeDuration;
-
-  return { measurePartsArray, loopTimeDuration, toneJs };
+  return measurePartsArray;
 }
 
 function renderStaves(
@@ -224,9 +236,9 @@ function renderStaves(
   );
 
   let x = 0;
-  
-  if(row === 0 && barRenderData[0].parts.length > 1) {
-      x = 100;
+
+  if (row === 0 && barRenderData[0].parts.length > 1) {
+    x = 100;
   }
 
   barRenderData.forEach((renderData, measureIndex) => {
@@ -239,14 +251,17 @@ function renderStaves(
       const stave = new VF.Stave(
         x,
         partIndex * 100 + row * SPACE_BETWEEN_GRAND_STAVES,
-        systemWidth
+        systemWidth,
+        {
+          space_above_staff_ln: 6,
+        }
       );
 
-      if(repeat.start === measureIndex) {
+      if (repeat.start === measureIndex) {
         stave.setBegBarType(VF.Barline.type.REPEAT_BEGIN);
       }
-      
-      if(repeat.end === measureIndex) {
+
+      if (repeat.end === measureIndex) {
         stave.setEndBarType(VF.Barline.type.REPEAT_END);
       }
 
@@ -259,7 +274,7 @@ function renderStaves(
         stave.addTimeSignature("4/4");
 
         //We don't need the measure label if it is the only instrument in the score.
-        if(parts.length > 1) {
+        if (parts.length > 1) {
           stave.setText(instrument, Vex.Flow.Modifier.Position.LEFT);
         }
 
@@ -278,10 +293,11 @@ function renderStaves(
         vfBeams.map((beam) => beam.setContext(context).draw())
       );
       const interaction = new VexFlowInteraction(context.svg);
-      const events = ["touchStart"];
+      
       notes[0].forEach((note, noteIndex) => {
         // highlight the note if it selected
-        if (!_.isEmpty(selectedNote) && 
+        if (
+          !_.isEmpty(selectedNote) &&
           note.measureIndex === selectedNote.measureIndex &&
           note.partIndex === selectedNote.partIndex &&
           note.voiceIndex === selectedNote.voiceIndex &&
@@ -295,9 +311,12 @@ function renderStaves(
           note.attrs.el,
           interaction.svgPt
         );
+        const events = ["touchStart"];
         events.forEach((type) => {
           noteInteraction.addEventListener(type, (e, coords) => {
-            noteSelectedCallback(note, context);
+            if (e.type === 'mousedown') {
+              noteSelectedCallback(note, context);
+            }
           });
         });
       });

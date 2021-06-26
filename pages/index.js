@@ -11,11 +11,6 @@ export default function Index() {
   )
 
   return (
-    <>
-
     <DynamicMain />
-    
-
-    </>
   );
 }

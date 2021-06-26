@@ -5,9 +5,6 @@ import { useSelector } from 'react-redux';
 import Score from "./Score";
 
 export default function Main() {
-
-  const score = useSelector((state) => state.score.score);
-
   const [selectedTab, setSelectedTab] = useState(1);
   const [tabPanelHidden, setTabPanelHidden] = useState(false);
 
@@ -85,7 +82,7 @@ export default function Main() {
           <Buttons selectedTab={selectedTab} onTabSelected={onTabSelected} />
         </div>
         <div className={classes.score}>
-          <Score score={score} selectedTab={selectedTab} tabPanelHidden={tabPanelHidden}/>
+          <Score selectedTab={selectedTab} tabPanelHidden={tabPanelHidden}/>
         </div>
       </div>
     </main>
