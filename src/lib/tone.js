@@ -40,16 +40,15 @@ export function update(toneJsData, repeat, toggleIsPlaying) {
     }
   }, toneJsData.notes);
 
-  part.start(0);
-
-  if(repeat.start != -1 && repeat.end != -1) {
-
+  if('start' in repeat && 'end' in repeat) {
     const numMeasures = toneJsData.numMeasures;
     const durationPerMeasure = toneJsData.duration / numMeasures;
     part.loopStart = durationPerMeasure * repeat.start;
     part.loopEnd = durationPerMeasure * (repeat.end + 1);
     part.loop = true;
   }
+
+  part.start(0);
 
   // if(isInitial) {
   //   Tone.Transport.scheduleRepeat((time) => {

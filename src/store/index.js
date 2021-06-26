@@ -2,20 +2,20 @@ import { configureStore } from '@reduxjs/toolkit';
 import realmReducer from './realm-app';
 import navReducer from './navigation';
 import scoreReducer, { scoreActions } from './score';
-import scoreAuxReducer from './scoreAux';
-import undoable, { excludeAction } from 'redux-undo';
+import undoable, { includeAction } from 'redux-undo';
 
-const { toggleIsPlaying, selectNote, setRepeatStart, setRepeatEnd } = scoreActions;
+//These are the only actions that should trigger undo/redo.
+const includeActions = [scoreActions.toggleAccent, scoreActions.toggleFlam, scoreActions.toggleDiddle,
+                       scoreActions.toggleCheese, scoreActions.toggleLeftSticking, scoreActions.toggleRightSticking,
+                       scoreActions.addMeasure, scoreActions.deleteMeasure, scoreActions.modifyNote].map(action => action.type);
 
 const store = configureStore({
     reducer: {
         realm: realmReducer,
         nav: navReducer,
         score: undoable(scoreReducer, { 
-            filter: excludeAction([toggleIsPlaying.type, selectNote.type, 
-                                   setRepeatStart.type, setRepeatEnd.type])
-        }),
-        scoreAux: scoreAuxReducer
+            filter: includeAction(includeActions)
+        })
     }
 })
 

@@ -1,9 +1,3 @@
-import { Icon } from "@material-ui/core";
-import Chip from "@material-ui/core/Chip";
-import { useState } from "react";
-import Image from "../../ui/Image";
-import { connect } from 'react-redux'
-
 import ThirtysecondNoteIcon from "../../../../icons/notes/thirtysecond.svg";
 import SixteenthNoteIcon from "../../../../icons/notes/sixteenth.svg";
 import EighthNoteIcon from "../../../../icons/notes/eighth.svg";
@@ -33,16 +27,12 @@ import RightStickingIcon from "../../../../icons/ornaments/rightSticking.svg";
 
 import Button from "../../ui/Button";
 
-import SvgIcon from "@material-ui/core/SvgIcon";
 import SvgButton from "../../ui/SvgButton";
 
 import { makeStyles } from "@material-ui/core/styles";
-import { useSelector, useDispatch } from "react-redux";
+import { useDispatch } from "react-redux";
 import { scoreActions } from "../../../store/score";
-import { scoreAuxActions } from "../../../store/scoreAux";
-
-// import useMeasureFns from './measure-hook';
-// import useOrnamentsFns from './ornaments-hook';
+import _ from 'lodash';
 
 const durationLookup = {
   whole: 64,
@@ -82,7 +72,7 @@ const useTabStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function useComposeButtons(modifyNoteHandler, isPlaying, voices, dotSelected, repeat, selectedNote, selectedScoreNote) {
+export default function useComposeButtons(modifyNoteHandler, isPlaying, voices, dotSelected, repeat, selectedNote) {
   const kickSelected = voices.kickSelected;
   const snareSelected = voices.snareSelected;
   const hatSelected = voices.hiHatSelected;
@@ -92,7 +82,7 @@ export default function useComposeButtons(modifyNoteHandler, isPlaying, voices, 
   const tom4Selected = voices.tom4Selected;
   const rideSelected = voices.rideSelected;
   const hatFootSelected = voices.hiHatFootSelected;
-  const { measureIndex : selectedMeasureIndex, noteIndex, voiceIndex, partIndex } = selectedNote;
+  let selectedMeasureIndex = null;
 
   let accentSelected = false;
   let diddleSelected = false;
@@ -101,23 +91,16 @@ export default function useComposeButtons(modifyNoteHandler, isPlaying, voices, 
   let leftStickingSelected = false;
   let rightStickingSelected = false;
 
-  //this logic isn't very clean
-  if( selectedMeasureIndex >= 0 && partIndex >= 0 && voiceIndex >= 0 && noteIndex >= 0) {
-    accentSelected = selectedScoreNote.ornaments ? selectedScoreNote.ornaments.includes('a') : false;
-    diddleSelected = selectedScoreNote.ornaments ? selectedScoreNote.ornaments.includes('d') : false;
-    flamSelected = selectedScoreNote.ornaments ? selectedScoreNote.ornaments.includes('f') : false;
-    cheeseSelected = selectedScoreNote.ornaments ? selectedScoreNote.ornaments.includes('c') : false;
-    leftStickingSelected = selectedScoreNote.ornaments ? selectedScoreNote.ornaments.includes('l') : false;
-    rightStickingSelected = selectedScoreNote.ornaments ? selectedScoreNote.ornaments.includes('r') : false;
-  }
-
-  // const { addMeasure, deleteMeasure, setRepeatStart, setRepeatEnd } = useMeasureFns();
-  // const { toggleAccent, 
-  //         toggleFlam, 
-  //         toggleDiddle, 
-  //         toggleCheese, 
-  //         toggleLeftSticking, 
-  //         toggleRightSticking } = useOrnamentsFns();
+  //If there is a selected note
+  if(selectedNote) {
+    accentSelected = selectedNote.ornaments ? selectedNote.ornaments.includes('a') : false;
+    diddleSelected = selectedNote.ornaments ? selectedNote.ornaments.includes('d') : false;
+    flamSelected = selectedNote.ornaments ? selectedNote.ornaments.includes('f') : false;
+    cheeseSelected = selectedNote.ornaments ? selectedNote.ornaments.includes('c') : false;
+    leftStickingSelected = selectedNote.ornaments ? selectedNote.ornaments.includes('l') : false;
+    rightStickingSelected = selectedNote.ornaments ? selectedNote.ornaments.includes('r') : false;
+    selectedMeasureIndex = selectedNote.measureIndex;
+  } 
 
   const repeatStart = repeat.start;
   const repeatEnd = repeat.end;
@@ -239,27 +222,27 @@ export default function useComposeButtons(modifyNoteHandler, isPlaying, voices, 
 
   const instrumentsRow1 = [
     {
-      onClick: () => dispatch(scoreAuxActions.toggleKickSelected()),
+      onClick: () => dispatch(scoreActions.toggleKickSelected()),
       text: "K",
       selected: kickSelected,
     },
     {
-      onClick: () => dispatch(scoreAuxActions.toggleSnareSelected()),
+      onClick: () => dispatch(scoreActions.toggleSnareSelected()),
       text: "S",
       selected: snareSelected,
     },
     {
-      onClick: () => dispatch(scoreAuxActions.toggleHiHatSelected()),
+      onClick: () => dispatch(scoreActions.toggleHiHatSelected()),
       text: "HH",
       selected: hatSelected,
     },
     {
-      onClick: () => dispatch(scoreAuxActions.toggleRideSelected()),
+      onClick: () => dispatch(scoreActions.toggleRideSelected()),
       text: "R",
       selected: rideSelected,
     },
     {
-      onClick: () => dispatch(scoreAuxActions.toggleHiHatFootSelected()),
+      onClick: () => dispatch(scoreActions.toggleHiHatFootSelected()),
       text: "HF",
       selected: hatFootSelected,
     },
@@ -275,27 +258,27 @@ export default function useComposeButtons(modifyNoteHandler, isPlaying, voices, 
 
   const instrumentsRow2 = [
     {
-      onClick: () => dispatch(scoreAuxActions.toggleTom1Selected()),
+      onClick: () => dispatch(scoreActions.toggleTom1Selected()),
       text: "T1",
       selected: tom1Selected,
     },
     {
-      onClick: () => dispatch(scoreAuxActions.toggleTom2Selected()),
+      onClick: () => dispatch(scoreActions.toggleTom2Selected()),
       text: "T2",
       selected: tom2Selected,
     },
     {
-      onClick: () => dispatch(scoreAuxActions.toggleTom3Selected()),
+      onClick: () => dispatch(scoreActions.toggleTom3Selected()),
       text: "T3",
       selected: tom3Selected,
     },
     {
-      onClick: () => dispatch(scoreAuxActions.toggleTom4Selected()),
+      onClick: () => dispatch(scoreActions.toggleTom4Selected()),
       text: "T4",
       selected: tom4Selected,
     },
     {
-      onClick: () => dispatch(scoreAuxActions.toggleDotSelected()),
+      onClick: () => dispatch(scoreActions.toggleDotSelected()),
       text: ".",
       selected: dotSelected,
     },
@@ -379,14 +362,14 @@ export default function useComposeButtons(modifyNoteHandler, isPlaying, voices, 
     {
       component: RepeatStartIcon,
       onClick: () => dispatch(scoreActions.setRepeatStart()),
-      selected: selectedMeasureIndex != -1 && selectedMeasureIndex === repeatStart,
+      selected: selectedMeasureIndex != null && repeatStart != null && selectedMeasureIndex === repeatStart,
       viewBox: "0 0 68.2 52.01",
       disabled: isPlaying
     },
     {
       component: RepeatEndIcon,
       onClick: () => dispatch(scoreActions.setRepeatEnd()),
-      selected: selectedMeasureIndex != -1 && selectedMeasureIndex === repeatEnd,
+      selected: selectedMeasureIndex != null && repeatEnd != null && selectedMeasureIndex === repeatEnd,
       viewBox: "0 0 68.2 52.01",
       disabled: isPlaying
     },

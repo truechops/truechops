@@ -12,6 +12,8 @@ export const ToneContextProvider = props => {
     const [setSampler, setSetSampler] = useState();
     const [tenorsSampler, setTenorsSampler] = useState();
 
+    //This setup is done in useEffect because it cannot be done server side when the page is being built.
+    //This is because Tone.js uses calls that are only available in the browser.
     useEffect(() => {
         const setSampler = new Tone.Sampler({
             urls: {
@@ -40,12 +42,7 @@ export const ToneContextProvider = props => {
             baseUrl: `${window.location.href}samples/tenors/`,
           }).toDestination();
           setTenorsSampler(tenorsSampler);
-
-          
-        
           new Tone.PolySynth().toDestination();
-
-          
       }, []);
 
     return <ToneContext.Provider value={{

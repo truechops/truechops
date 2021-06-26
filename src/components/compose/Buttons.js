@@ -6,8 +6,7 @@ import Box from "@material-ui/core/Box";
 import { Hidden } from "@material-ui/core";
 import useButtonsHook from "./hooks/buttons-hook";
 import InstrumentHelpPopover from "./InstrumentHelpPopover";
-import { scoreActions, getSelectedScoreNote } from "../../store/score";
-import { scoreAuxActions } from "../../store/scoreAux";
+import { scoreActions, getSelectedNote } from "../../store/score";
 import { useDispatch, connect, useSelector } from "react-redux";
 import EighthNoteIcon from "../../../icons/notes/eighth.svg";
 import SvgIcon from "@material-ui/core/SvgIcon";
@@ -27,7 +26,7 @@ function TabPanel(props) {
     >
       {value === index && (
         <Box p={theme.compose.buttons.container.padding}>
-          <Typography>{children}</Typography>
+          {children}
         </Box>
       )}
     </div>
@@ -78,7 +77,7 @@ export function Buttons(props) {
     noteButtonsRow2Mobile,
     noteButtonsRow2Desktop,
     tupletButtons,
-  } = useButtonsHook(modifyNoteHandler, isPlaying, voices, dotSelected, repeat, selectedNote, props.selectedScoreNote);
+  } = useButtonsHook(modifyNoteHandler, isPlaying, voices, dotSelected, repeat, selectedNote);
   const ButtonsRow = ({ children }) => {
     return <div className={classes.buttonsRow}>{children}</div>;
   };
@@ -151,11 +150,10 @@ const mapStateToProps = (state) => {
   return {
     isPlaying: state.score.present.isPlaying,
     repeat: state.score.present.repeat,
-    selectedNote: state.score.present.selectedNote,
     score: state.score.present.score,
-    voices: state.scoreAux.voices,
-    dotSelected: state.scoreAux.dotSelected,
-    selectedScoreNote: getSelectedScoreNote(state.score.present)
+    voices: state.score.present.voices.set,
+    dotSelected: state.score.present.dotSelected,
+    selectedNote: getSelectedNote(state.score.present)
   }
 }
 

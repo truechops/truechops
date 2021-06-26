@@ -101,7 +101,7 @@ export default class SVGInteraction {
         }
       };
 
-      if (el !== window) el.addEventListener(eventType, listener);
+      if (el !== window) el.addEventListener(eventType, listener, {passive: true});
       else this[windowListeners].push([eventType, listener]);
     };
 

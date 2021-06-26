@@ -7,7 +7,7 @@ export default function Score(props) {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const dispatch = useDispatch();
   const selectNote = scoreActions.selectNote;
-  const selectedNote = useSelector((state) => state.score.present.selectedNote);
+  const selectedNoteIndex = useSelector((state) => state.score.present.selectedNoteIndex);
   const repeat = useSelector((state) => state.score.present.repeat);
   const score = useSelector(state => state.score.present.score);
 
@@ -37,12 +37,12 @@ export default function Score(props) {
       renderer,
       context,
       score,
-      selectedNote,
+      selectedNoteIndex,
       noteSelectedCallback,
       windowWidth,
       repeat
     );
-  }, [windowWidth, score, noteSelectedCallback, selectedNote, repeat, dispatch, props.selectedTab, props.tabPanelHidden]);
+  }, [windowWidth, score, noteSelectedCallback, selectedNoteIndex, repeat, dispatch, props.selectedTab, props.tabPanelHidden]);
 
   return (
     <div className="vexflow-wrapper">

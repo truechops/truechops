@@ -18,7 +18,6 @@ export function initialize() {
   // Configure the rendering context.
 
   const context = renderer.getContext();
-  context.scale(0.75, 0.75);
   context.setFont("Arial", 10, "").setBackgroundFillStyle("#eed");
 
   return { renderer, context };
@@ -28,13 +27,12 @@ export function drawScore(
   renderer,
   context,
   score,
-  selectedNote,
+  selectedNoteIndex,
   noteSelectedCallback,
   windowWidth,
   repeat
 ) {
   let { measures } = score;
-  context.clear();
   let systemWidth = 0;
   const measurePartsArray = getMeasureData(measures);
 
@@ -54,20 +52,20 @@ export function drawScore(
     );
 
     systemWidth = minTotalWidth + FORMAT_PADDING;
-    // if (width + systemWidth > windowWidth) {
-    //   renderStaves(
-    //     barRenderData,
-    //     windowWidth - width,
-    //     row,
-    //     context,
-    //     selectedNote,
-    //     noteSelectedCallback,
-    //     repeat
-    //   );
-    //   barRenderData = [];
-    //   width = 0;
-    //   row += 1;
-    // }
+    if (width + systemWidth > windowWidth) {
+      renderStaves(
+        barRenderData,
+        windowWidth - width,
+        row,
+        context,
+        selectedNoteIndex,
+        noteSelectedCallback,
+        repeat
+      );
+      barRenderData = [];
+      width = 0;
+      row += 1;
+    }
 
     barRenderData.push({
       parts: measureParts,
@@ -85,12 +83,13 @@ export function drawScore(
       0,
       row,
       context,
-      selectedNote,
+      selectedNoteIndex,
       noteSelectedCallback,
       repeat
     );
   }
   renderer.resize(windowWidth, SPACE_BETWEEN_GRAND_STAVES * (row + 1));
+  context.scale(0.75, 0.75);
 }
 
 function getMeasureData(measures) {
@@ -222,7 +221,7 @@ function renderStaves(
   remainingWidth,
   row,
   context,
-  selectedNote,
+  selectedNoteIndex,
   noteSelectedCallback,
   repeat
 ) {
@@ -297,11 +296,11 @@ function renderStaves(
       notes[0].forEach((note, noteIndex) => {
         // highlight the note if it selected
         if (
-          !_.isEmpty(selectedNote) &&
-          note.measureIndex === selectedNote.measureIndex &&
-          note.partIndex === selectedNote.partIndex &&
-          note.voiceIndex === selectedNote.voiceIndex &&
-          noteIndex === selectedNote.noteIndex
+          selectedNoteIndex &&
+          note.measureIndex === selectedNoteIndex.measureIndex &&
+          note.partIndex === selectedNoteIndex.partIndex &&
+          note.voiceIndex === selectedNoteIndex.voiceIndex &&
+          noteIndex === selectedNoteIndex.noteIndex
         ) {
           note.setStyle({ fillStyle: "#00FF00" });
           note.setContext(context).draw();
@@ -314,6 +313,10 @@ function renderStaves(
         const events = ["touchStart"];
         events.forEach((type) => {
           noteInteraction.addEventListener(type, (e, coords) => {
+
+            //Two events are fired on mobile. One with e.type === 'mousedown' and another with
+            //e.type === 'touchStart'. Desktop only fires e.type === 'mousedown'. Since we only want 
+            //this callback to fire once, we are calling out e.type === 'mousedown'.
             if (e.type === 'mousedown') {
               noteSelectedCallback(note, context);
             }

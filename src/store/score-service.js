@@ -21,8 +21,12 @@ const tcDurationToVfDuration = {
 };
 
 export function modifyNote(state, voices, value, isRest) {
-  let { measureIndex, partIndex, voiceIndex } = state.selectedNote;
-  let noteIndex = state.selectedNote.noteIndex;
+  if(!state.selectedNoteIndex) {
+    return;
+  }
+
+  let { measureIndex, partIndex, voiceIndex } = state.selectedNoteIndex;
+  let noteIndex = state.selectedNoteIndex.noteIndex;
   const score = state.score;
   const notes =
     score.measures[measureIndex].parts[partIndex].voices[voiceIndex].notes;
@@ -98,11 +102,15 @@ export function modifyNote(state, voices, value, isRest) {
   }
 
   notes.splice(noteIndex, notesToDelete, ...newNotes);
-  incrementSelectedNote(notes, score.measures, state.selectedNote);
+  incrementSelectedNote(notes, score.measures, state.selectedNoteIndex);
 }
 
 export function toggleOrnament(state, ornament) {
-  const { partIndex, measureIndex, voiceIndex, noteIndex } = state.selectedNote;
+  if(!state.selectedNoteIndex) {
+    return;
+  }
+
+  const { partIndex, measureIndex, voiceIndex, noteIndex } = state.selectedNoteIndex;
 
   if (
     !(partIndex >= 0 && measureIndex >= 0 && voiceIndex >= 0 && noteIndex >= 0)
@@ -138,7 +146,7 @@ export function toggleOrnament(state, ornament) {
             incrementSelectedNote(
               notes,
               state.score.measures,
-              state.selectedNote
+              state.selectedNoteIndex
             );
           }
         }
@@ -147,30 +155,30 @@ export function toggleOrnament(state, ornament) {
   }
 }
 
-function incrementSelectedNote(notes, measures, selectedNote) {
+function incrementSelectedNote(notes, measures, selectedNoteIndex) {
   //Increment the note index so that the user can easily continue editing
-  if (selectedNote.noteIndex + 1 >= notes.length) {
+  if (selectedNoteIndex.noteIndex + 1 >= notes.length) {
     //End of the measure
-    if (selectedNote.measureIndex + 1 < measures.length) {
+    if (selectedNoteIndex.measureIndex + 1 < measures.length) {
       //Go the next measure
-      selectedNote.measureIndex++;
-      selectedNote.noteIndex = 0;
+      selectedNoteIndex.measureIndex++;
+      selectedNoteIndex.noteIndex = 0;
     }
   } else {
     //Highlight the next note in the measure
-    selectedNote.noteIndex = selectedNote.noteIndex + 1;
+    selectedNoteIndex.noteIndex = selectedNoteIndex.noteIndex + 1;
   }
 }
 
 export function setRepeat(state, startOrEnd) {
-  const selectedNote = state.selectedNote;
+  const selectedNoteIndex = state.selectedNoteIndex;
 
   //make sure a measure is selected
-  if (!_.isEmpty(selectedNote) && selectedNote.measureIndex >= 0) {
-    if (selectedNote.measureIndex === state.repeat[startOrEnd]) {
-      state.repeat[startOrEnd] = -1;
+  if (selectedNoteIndex && selectedNoteIndex.measureIndex >= 0) {
+    if (selectedNoteIndex.measureIndex === state.repeat[startOrEnd]) {
+      _.unset(state.repeat, startOrEnd);
     } else {
-      state.repeat[startOrEnd] = selectedNote.measureIndex;
+      state.repeat[startOrEnd] = selectedNoteIndex.measureIndex;
     }
   }
 }

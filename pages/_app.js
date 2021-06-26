@@ -30,18 +30,19 @@ export default function MyApp(props) {
           content="minimum-scale=1, initial-scale=1, width=device-width"
         />
       </Head>
-      <ToneContextProvider>
+      
         <Provider store={store}>
           <RealmApolloProvider>
+          <ToneContextProvider>
             <ThemeProvider theme={Theme}>
               <CssBaseline />
               <HeaderToolbar />
               <Navigation />
               <Component {...pageProps} />
             </ThemeProvider>
+            </ToneContextProvider>
           </RealmApolloProvider>
         </Provider>
-      </ToneContextProvider>
     </>
   );
 }

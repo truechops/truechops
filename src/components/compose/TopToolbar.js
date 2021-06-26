@@ -1,16 +1,15 @@
 //import { makeStyles } from "@material-ui/styles";
 
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useRef } from "react";
 import { ActionCreators } from "redux-undo";
 import IconButton from "@material-ui/core/IconButton";
-import {
-  update as updateToneJs,
-  setSamplers,
-} from "../../lib/tone";
+import { update as updateToneJs, setSamplers } from "../../lib/tone";
 import { useTheme } from "@material-ui/core/styles";
 import ToneContext from "../../store/tone-context";
 import { connect, useDispatch } from "react-redux";
 import { getToneJs } from "../../store/score";
+
+import _ from "lodash";
 
 import {
   FaTools,
@@ -31,6 +30,7 @@ export function TopToolbar(props) {
   const toneJs = props.toneJs;
   const repeat = props.repeat;
   const startStop = props.startStop;
+  const prevRepeatRef = useRef();
 
   //Set the tonejs samplers, which come from ToneContext
   useEffect(() => {
@@ -38,7 +38,30 @@ export function TopToolbar(props) {
   }, [setSampler, tenorsSampler]);
 
   useEffect(() => {
-    updateToneJs(toneJs, repeat, startStop);
+    let doUpdateToneJs = false;
+
+    //Initial load, update tone js.
+    if(!prevRepeatRef.current) {
+      doUpdateToneJs = true;
+    }
+    else if (!_.isEqual(repeat, prevRepeatRef.current)) {
+      //If repeat information changed, only change tone js if switching from repeat to not-repeat or vice-versa.
+      if ("start" in repeat && "end" in repeat) {
+        if (repeat.start >= 0 && repeat.end >= 0) {
+          doUpdateToneJs = true;
+        }
+      } else if ("start" in prevRepeatRef.current && "end" in prevRepeatRef.current) {
+          doUpdateToneJs = true;
+      }
+    } else {
+      doUpdateToneJs = true;
+    }
+
+    if(doUpdateToneJs) {
+      updateToneJs(toneJs, repeat, startStop);
+    }
+
+    prevRepeatRef.current = repeat;
   }, [toneJs, repeat, startStop]);
 
   const iconSize = theme.buttons.topToolbar.iconSize;
@@ -88,17 +111,17 @@ export function TopToolbar(props) {
   );
 }
 
-const mapDispatchToProps = (dispatch) => {
-  return {
-    startStop: () => dispatch(scoreActions.startStop())
-  }
-}
-
 const mapStateToProps = (state) => {
   return {
     isPlaying: state.score.present.isPlaying,
     repeat: state.score.present.repeat,
     toneJs: getToneJs(state.score.present),
+  };
+};
+
+const mapDispatchToProps = (dispatch) => {
+  return {
+    startStop: () => dispatch(scoreActions.startStop()),
   };
 };
 

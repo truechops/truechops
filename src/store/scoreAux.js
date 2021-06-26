@@ -1,10 +1,4 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { scoreActions } from "./score";
-import _ from "lodash";
-
-const { modifyNote } = scoreActions;
-
-import { setRepeat } from "./score-service";
 
 const initialState = {
   voices: {
@@ -27,34 +21,34 @@ const scoreAuxSlice = createSlice({
   reducers: {
     
     toggleKickSelected(state) {
-      state.voices.kickSelected = !state.voices.kickSelected;
+      state.voices.set.kickSelected = !state.voices.set.kickSelected;
     },
     toggleSnareSelected(state) {
-      state.voices.snareSelected = !state.voices.snareSelected;
+      state.voices.set.snareSelected = !state.voices.set.snareSelected;
     },
     toggleHiHatSelected(state) {
-      state.voices.hiHatSelected = !state.voices.hiHatSelected;
+      state.voices.set.hiHatSelected = !state.voices.set.hiHatSelected;
     },
     toggleRideSelected(state) {
-      state.voices.rideSelected = !state.voices.rideSelected;
+      state.voices.set.rideSelected = !state.voices.set.rideSelected;
     },
     toggleHiHatFootSelected(state) {
-      state.voices.hiHatFootSelected = !state.voices.hiHatFootSelected;
+      state.voices.set.hiHatFootSelected = !state.voices.set.hiHatFootSelected;
     },
     toggleTom1Selected(state) {
-      state.voices.tom1Selected = !state.voices.tom1Selected;
+      state.voices.set.tom1Selected = !state.voices.set.tom1Selected;
     },
     toggleTom2Selected(state) {
-      state.voices.tom2Selected = !state.voices.tom2Selected;
+      state.voices.set.tom2Selected = !state.voices.set.tom2Selected;
     },
     toggleTom3Selected(state) {
-      state.voices.tom3Selected = !state.voices.tom3Selected;
+      state.voices.set.tom3Selected = !state.voices.set.tom3Selected;
     },
     toggleTom4Selected(state) {
-      state.voices.tom4Selected = !state.voices.tom4Selected;
+      state.voices.set.tom4Selected = !state.voices.set.tom4Selected;
     },
     toggleDotSelected(state) {
-      state.voices.dotSelected = !state.voices.dotSelected;
+      state.dotSelected = !state.dotSelected;
     },
   }
 });
