@@ -1,3 +1,5 @@
+import { GRACE_X_SHIFT } from '../../data/score-config';
+
 const noteHeadTypeLookup = {
   drumset: {
     E5: "x2",
@@ -23,6 +25,18 @@ export function getNote(staveNoteConstructor, note, instrument) {
       : ["r/4"],
     duration: `${note.duration.toString() + (!note.notes.length ? "r" : "")}`
   });
+}
+
+export function getGraceNote(graceNoteConstructor) {
+  const graceNote = new graceNoteConstructor({
+    keys: ["C/5"],
+    duration: "8",
+    slash: false
+  });
+
+  graceNote.x_shift = GRACE_X_SHIFT;
+
+  return graceNote;
 }
 
 export function getEmptyMeasure(timeSig, instruments) {

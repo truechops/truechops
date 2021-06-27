@@ -24,12 +24,13 @@ import {
 export function TopToolbar(props) {
   const { setSampler, tenorsSampler } = useContext(ToneContext);
   const theme = useTheme();
-  const dispatch = useDispatch();
   const isPlaying = props.isPlaying;
   const toneJs = props.toneJs;
   const repeat = props.repeat;
   const startStop = props.startStop;
   const prevRepeatRef = useRef();
+
+  //Key listeners: space = start/stop
 
   //Set the tonejs samplers, which come from ToneContext
   useEffect(() => {
@@ -58,7 +59,7 @@ export function TopToolbar(props) {
 
     if(doUpdateToneJs) {
       updateToneJs(toneJs, repeat, startStop);
-    }
+    } 
 
     prevRepeatRef.current = repeat;
   }, [toneJs, repeat, startStop]);
@@ -70,14 +71,14 @@ export function TopToolbar(props) {
         <IconButton
           color="inherit"
           aria-label="undo"
-          onClick={() => dispatch(ActionCreators.undo())}
+          onClick={props.undo}
         >
           <FaUndo size={iconSize} />
         </IconButton>
         <IconButton
           color="inherit"
           aria-label="redo"
-          onClick={() => dispatch(ActionCreators.redo())}
+          onClick={props.redo}
         >
           <FaRedo size={iconSize} />
         </IconButton>
@@ -121,7 +122,9 @@ const mapStateToProps = (state) => {
 const mapDispatchToProps = (dispatch) => {
   return {
     startStop: () => dispatch(scoreActions.startStop()),
-    shuffleNotes: () => dispatch(scoreActions.shuffleNotes())
+    shuffleNotes: () => dispatch(scoreActions.shuffleNotes()),
+    undo: () => dispatch(ActionCreators.undo()),
+    redo: () => dispatch(ActionCreators.redo())
   };
 };
 

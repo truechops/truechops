@@ -1,5 +1,6 @@
 import { getPowersOf2 } from "../helpers/math";
 import _ from "lodash";
+import { NON_ACCENT_VELOCITY } from "../../data/score-config";
 
 //Translates the toneJs duration to the score duration
 const vfDurationToTCDuration = {
@@ -21,7 +22,7 @@ const tcDurationToVfDuration = {
 };
 
 export function modifyNote(state, voices, value, isRest) {
-  if(!state.selectedNoteIndex) {
+  if (!state.selectedNoteIndex) {
     return;
   }
 
@@ -63,7 +64,7 @@ export function modifyNote(state, voices, value, isRest) {
       result.push({
         notes: [],
         duration: tcDurationToVfDuration[duration],
-        velocity: 1.0,
+        velocity: NON_ACCENT_VELOCITY,
       });
       return result;
     }, newNotes);
@@ -91,7 +92,7 @@ export function modifyNote(state, voices, value, isRest) {
           result.push({
             notes: note.notes,
             duration: tcDurationToVfDuration[duration],
-            velocity: 1.0,
+            velocity: NON_ACCENT_VELOCITY,
           });
           return result;
         }, newNotes);
@@ -102,15 +103,16 @@ export function modifyNote(state, voices, value, isRest) {
   }
 
   notes.splice(noteIndex, notesToDelete, ...newNotes);
-  incrementSelectedNote(notes, score.measures, state.selectedNoteIndex);
+  incDecSelectedNote(state, true);
 }
 
 export function toggleOrnament(state, ornament) {
-  if(!state.selectedNoteIndex) {
+  if (!state.selectedNoteIndex) {
     return;
   }
 
-  const { partIndex, measureIndex, voiceIndex, noteIndex } = state.selectedNoteIndex;
+  const { partIndex, measureIndex, voiceIndex, noteIndex } =
+    state.selectedNoteIndex;
 
   if (
     !(partIndex >= 0 && measureIndex >= 0 && voiceIndex >= 0 && noteIndex >= 0)
@@ -143,11 +145,7 @@ export function toggleOrnament(state, ornament) {
               note.ornaments = ornament;
             }
 
-            incrementSelectedNote(
-              notes,
-              state.score.measures,
-              state.selectedNoteIndex
-            );
+            incDecSelectedNote(state, true);
           }
         }
       }
@@ -155,18 +153,63 @@ export function toggleOrnament(state, ornament) {
   }
 }
 
-function incrementSelectedNote(notes, measures, selectedNoteIndex) {
-  //Increment the note index so that the user can easily continue editing
-  if (selectedNoteIndex.noteIndex + 1 >= notes.length) {
-    //End of the measure
-    if (selectedNoteIndex.measureIndex + 1 < measures.length) {
-      //Go the next measure
-      selectedNoteIndex.measureIndex++;
-      selectedNoteIndex.noteIndex = 0;
+export function incDecSelectedNote(state, inc) {
+  const measures = state.score.measures;
+
+  if (!_.has(state, "selectedNoteIndex")) {
+    if (inc) {
+      state.selectedNoteIndex = {
+        measureIndex: 0,
+        partIndex: 0,
+        voiceIndex: 0,
+        noteIndex: 0,
+      };
+    } else {
+      const notes = measures[measures.length - 1].parts[0].voices[0].notes;
+      state.selectedNoteIndex = {
+        measureIndex: measures.length - 1,
+        partIndex: 0,
+        voiceIndex: 0,
+        noteIndex: notes.length - 1,
+      };
     }
   } else {
-    //Highlight the next note in the measure
-    selectedNoteIndex.noteIndex = selectedNoteIndex.noteIndex + 1;
+    //Note: we can't use object destructuring to get state vars to update since destructuring creates a new object and
+    //we would be updating the new object and not the original state. That is why you see below a mix of destructing and
+    //not.
+    const selectedNoteIndex = state.selectedNoteIndex;
+    const { measureIndex, partIndex, voiceIndex, noteIndex } =
+      selectedNoteIndex;
+    const notes =
+      measures[measureIndex].parts[partIndex].voices[voiceIndex].notes;
+
+    if (inc) {
+      //Increment the note index so that the user can easily continue editing
+      if (noteIndex + 1 >= notes.length) {
+        //End of the measure
+        if (measureIndex + 1 < measures.length) {
+          //Go the next measure
+            selectedNoteIndex.measureIndex++;
+            selectedNoteIndex.noteIndex = 0;
+        }
+      } else {
+        //Highlight the next note in the measure
+        selectedNoteIndex.noteIndex = selectedNoteIndex.noteIndex + 1;
+      }
+    } else {
+      //Decrement the note index so that the user can easily continue editing
+      if (noteIndex - 1 < 0) { //before start of measure
+        if (measureIndex - 1 >= 0) {
+          //Go the next measure
+            selectedNoteIndex.measureIndex--;
+            selectedNoteIndex.noteIndex = 
+              measures[selectedNoteIndex.measureIndex].parts[partIndex].voices[voiceIndex].notes.length - 1;
+        }
+      } else {
+        //Highlight the next note in the measure
+        selectedNoteIndex.noteIndex--;
+      }
+    }
   }
 }
 

@@ -11,7 +11,7 @@ export function setSamplers(setSamplerIn, tenorsSamplerIn)
   tenorsSampler = tenorsSamplerIn;
 }
 
-export function update(toneJsData, repeat, toggleIsPlaying) {
+export function update(toneJsData, repeat, startStop) {
   if (part) {
     part.dispose();
   }
@@ -36,7 +36,7 @@ export function update(toneJsData, repeat, toggleIsPlaying) {
     }
 
     if(++counter === toneJsData.notes.length && !part.loop) {
-      toggleIsPlaying();
+      startStop();
     }
   }, toneJsData.notes);
 

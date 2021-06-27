@@ -32,16 +32,7 @@ import SvgButton from "../../ui/SvgButton";
 import { makeStyles } from "@material-ui/core/styles";
 import { useDispatch } from "react-redux";
 import { scoreActions } from "../../../store/score";
-import _ from 'lodash';
-
-const durationLookup = {
-  whole: 64,
-  half: 32,
-  quarter: 16,
-  eighth: 8,
-  sixteenth: 4,
-  thirtysecond: 2,
-};
+import { noteNameToDuration } from '../../../../data/score-config';
 
 const useTabStyles = makeStyles((theme) => ({
   chips: {
@@ -110,32 +101,32 @@ export default function useComposeButtons(modifyNoteHandler, isPlaying, voices, 
   const classes = useTabStyles();
   const noteButtonsRow1 = [
     { 
-      onClick: modifyNoteHandler.bind(null, durationLookup["whole"], false),
+      onClick: modifyNoteHandler.bind(null, noteNameToDuration["whole"], false),
       viewBox: '-12 -12 40 32',
       component: WholeNoteIcon 
     },
     { 
-      onClick: modifyNoteHandler.bind(null, durationLookup["half"], false),
+      onClick: modifyNoteHandler.bind(null, noteNameToDuration["half"], false),
       viewBox: '0 0 15.28 42.64',
       component: HalfNoteIcon 
     },
     { 
-      onClick: modifyNoteHandler.bind(null, durationLookup["quarter"], false),
+      onClick: modifyNoteHandler.bind(null, noteNameToDuration["quarter"], false),
       viewBox: '0 0 15.28 42.64',
       component: QuarterNoteIcon 
     },
     { 
-      onClick: modifyNoteHandler.bind(null, durationLookup["eighth"], false),
+      onClick: modifyNoteHandler.bind(null, noteNameToDuration["eighth"], false),
       viewBox: '0 0 29 43',
       component: EighthNoteIcon 
     },
     { 
-      onClick: modifyNoteHandler.bind(null, durationLookup["sixteenth"], false),
+      onClick: modifyNoteHandler.bind(null, noteNameToDuration["sixteenth"], false),
       viewBox: '0 0 28.43 50',
       component: SixteenthNoteIcon 
     },
     { 
-      onClick: modifyNoteHandler.bind(null, durationLookup["thirtysecond"], false),
+      onClick: modifyNoteHandler.bind(null, noteNameToDuration["thirtysecond"], false),
       viewBox: '0 0 28.43 50',
       component: ThirtysecondNoteIcon 
     },
@@ -150,32 +141,32 @@ export default function useComposeButtons(modifyNoteHandler, isPlaying, voices, 
 
   const noteButtonsRow2Mobile = [
     { 
-      onClick: modifyNoteHandler.bind(null, durationLookup["whole"], true),
+      onClick: modifyNoteHandler.bind(null, noteNameToDuration["whole"], true),
       viewBox: '-14 -12 80 40',
       component: WholeNoteRestIcon 
     },
     { 
-      onClick: modifyNoteHandler.bind(null, durationLookup["half"], true),
+      onClick: modifyNoteHandler.bind(null, noteNameToDuration["half"], true),
       viewBox: '-14 -12 80 40',
       component: HalfNoteRestIcon 
     },
     { 
-      onClick: modifyNoteHandler.bind(null, durationLookup["quarter"], true),
+      onClick: modifyNoteHandler.bind(null, noteNameToDuration["quarter"], true),
       viewBox: '0 0 16.05 43.81',
       component: QuarterNoteRestIcon 
     },
     { 
-      onClick: modifyNoteHandler.bind(null, durationLookup["eighth"], true),
+      onClick: modifyNoteHandler.bind(null, noteNameToDuration["eighth"], true),
       viewBox: '0 0 20.04 34',
       component: EighthNoteRestIcon 
     },
     { 
-      onClick: modifyNoteHandler.bind(null, durationLookup["sixteenth"], true),
+      onClick: modifyNoteHandler.bind(null, noteNameToDuration["sixteenth"], true),
       viewBox: '0 0 26.27 50',
       component: SixteenthNoteRestIcon 
     },
     { 
-      onClick: modifyNoteHandler.bind(null, durationLookup["thirtysecond"], true),
+      onClick: modifyNoteHandler.bind(null, noteNameToDuration["thirtysecond"], true),
       viewBox: '0 0 25.82 50',
       component: ThirtysecondNoteRestIcon 
     },
@@ -213,7 +204,7 @@ export default function useComposeButtons(modifyNoteHandler, isPlaying, voices, 
         : classes.imageIcon,
       modifyNoteHandler.bind(
         null,
-        durationLookup[noteFileName.replace("Rest", "")]
+        noteNameToDuration[noteFileName.replace("Rest", "")]
       )
     )
   );*/

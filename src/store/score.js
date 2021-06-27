@@ -1,21 +1,24 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { smallSinglePart as defaultScore } from "../components/compose/sample-score";
+//import { smallSinglePart as defaultScore } from "../components/compose/sample-score";
+import defaultScore from '../../data/default-score';
 import {
   modifyNote as modifyNoteService,
   toggleOrnament,
   setRepeat,
+  incDecSelectedNote
 } from "./score-service";
 import { getEmptyMeasure } from "../helpers/score";
 import _ from "lodash";
 import { createSelector } from "reselect";
 import { start as startToneJs, stop as stopToneJs } from "../lib/tone";
+import { NON_ACCENT_VELOCITY, GRACE_VELOCITY, ACCENT_VELOCITY } from '../../data/score-config';
 
-const ACCENT = "a";
-const FLAM = "f";
-const DIDDLE = "d";
-const CHEESE = "c";
-const LEFT_STICKING = "l";
-const RIGHT_STICKING = "r";
+const ACCENT = 'a';
+const FLAM = 'f';
+const DIDDLE = 'd';
+const CHEESE = 'c';
+const LEFT_STICKING = 'l';
+const RIGHT_STICKING = 'r';
 
 const initialState = {
   score: defaultScore,
@@ -81,6 +84,12 @@ const scoreSlice = createSlice({
       } else {
         state.selectedNoteIndex = { measureIndex, partIndex, voiceIndex, noteIndex };
       }
+    },
+    selectPreviousNote(state) {
+      incDecSelectedNote(state, false);
+    },
+    selectNextNote(state) {
+      incDecSelectedNote(state, true);
     },
     toggleAccent(state) {
       toggleOrnament(state, ACCENT);
@@ -254,12 +263,57 @@ export const getToneJs = createSelector([(state) => state.score], (score) => {
 
           if (note.notes.length) {
             for (const tjsNote of note.notes) {
-              toneJsNotes.push({
+              const toneJsNote = {
                 time,
                 note: tjsNote,
-                velocity: 1,
-                instrument,
-              });
+                instrument
+              };
+
+              toneJsNotes.push(toneJsNote);
+
+              //Adjust the velocity depending on if there is an accent
+              const hasOrnaments = 'ornaments' in note;
+              if(hasOrnaments) {
+                if(!note.ornaments.includes(ACCENT)) {
+                  toneJsNote.velocity = NON_ACCENT_VELOCITY;
+                } else {
+                  toneJsNote.velocity = ACCENT_VELOCITY;
+                }
+              } else {
+                toneJsNote.velocity = NON_ACCENT_VELOCITY;
+              }
+
+              const cloneNote = (note, time, velocity) => {
+                const diddleNote = _.cloneDeep(note);
+                diddleNote.time = diddleNote.time + time;
+
+                if(velocity) {
+                  diddleNote.velocity = velocity;
+                }
+
+                toneJsNotes.push(diddleNote);
+                return diddleNote;
+              }
+
+              if(hasOrnaments) {
+
+                //Add the diddle note.
+                if(note.ornaments.includes(DIDDLE)) {
+                  toneJsNotes.push(cloneNote(toneJsNote, noteSecondsDuration / 2));
+                } 
+
+                //Add the flam note
+                if(note.ornaments.includes(FLAM)) {
+                  toneJsNotes.push(cloneNote(toneJsNote, -0.0175, GRACE_VELOCITY));
+                }
+
+                if(note.ornaments.includes(CHEESE)) {
+
+                  //Add the diddle and flam notes, respectively.
+                  toneJsNotes.push(cloneNote(toneJsNote, noteSecondsDuration / 2));
+                  toneJsNotes.push(cloneNote(toneJsNote, -0.0175, GRACE_VELOCITY));
+                }
+              }
             }
           } else {
             toneJsNotes.push({});

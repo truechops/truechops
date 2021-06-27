@@ -1,6 +1,6 @@
 import Vex from "vexflow";
 import VexFlowInteraction from "./VexFlowInteraction";
-import { getNote } from "../helpers/score";
+import { getNote, getGraceNote } from "../helpers/score";
 import _ from "lodash";
 
 const VF = Vex.Flow;
@@ -127,11 +127,7 @@ function getMeasureData(measures) {
               n.addModifier(
                 0,
                 new VF.GraceNoteGroup([
-                  new VF.GraceNote({
-                    keys: ["C/5"],
-                    duration: "8",
-                    slash: true,
-                  }),
+                  getGraceNote(VF.GraceNote.prototype.constructor),
                 ])
               );
             }
@@ -147,11 +143,7 @@ function getMeasureData(measures) {
               n.addModifier(
                 0,
                 new VF.GraceNoteGroup([
-                  new VF.GraceNote({
-                    keys: ["C/5"],
-                    duration: "8",
-                    slash: true,
-                  }),
+                  getGraceNote(VF.GraceNote.prototype.constructor),
                 ])
               );
             }

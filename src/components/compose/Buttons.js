@@ -1,15 +1,12 @@
 import { makeStyles, useTheme } from "@material-ui/core/styles";
 import Tabs from "@material-ui/core/Tabs";
 import Tab from "@material-ui/core/Tab";
-import Typography from "@material-ui/core/Typography";
 import Box from "@material-ui/core/Box";
 import { Hidden } from "@material-ui/core";
 import useButtonsHook from "./hooks/buttons-hook";
 import InstrumentHelpPopover from "./InstrumentHelpPopover";
 import { scoreActions, getSelectedNote } from "../../store/score";
-import { useDispatch, connect, useSelector } from "react-redux";
-import EighthNoteIcon from "../../../icons/notes/eighth.svg";
-import SvgIcon from "@material-ui/core/SvgIcon";
+import { connect  } from "react-redux";
 
 
 function TabPanel(props) {
