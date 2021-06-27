@@ -106,7 +106,10 @@ export function modifyNote(state, voices, value, isRest) {
   incDecSelectedNote(state, true);
 }
 
-export function toggleOrnament(state, ornament) {
+//ornament - the ornament we want to remove/add.
+//clear - the ornaments we want to clear each time. Used for example when adding
+//a 'r' sticking when a 'l' sticking is already present.
+export function toggleOrnament(state, ornament, clear) {
   if (!state.selectedNoteIndex) {
     return;
   }
@@ -120,37 +123,29 @@ export function toggleOrnament(state, ornament) {
     return;
   }
 
-  const notes =
-    state.score.measures[measureIndex].parts[partIndex].voices[voiceIndex]
-      .notes;
+  let note = _.get(state.score, `measures[${measureIndex}].parts[${partIndex}].voices[${voiceIndex}].notes[${noteIndex}]`);
 
-  const measures = state.score.measures;
-  if (measures && measures.length > 0) {
-    const measure = state.score.measures[measureIndex];
-    if (measure && measure.parts && measure.parts.length > 0) {
-      const part = measure.parts[partIndex];
-      if (part && part.voices && part.voices.length > 0) {
-        const voice = part.voices[voiceIndex];
-        if (voice && voice.notes && voice.notes.length > 0) {
-          const note = voice.notes[noteIndex];
-          if (note) {
-            if (note.ornaments) {
-              let ornaments = note.ornaments;
-              if (ornaments.includes(ornament)) {
-                note.ornaments = note.ornaments.replace(ornament, "");
-              } else {
-                note.ornaments = note.ornaments.concat(ornament);
-              }
-            } else {
-              note.ornaments = ornament;
-            }
+  if(note.notes.length) {
+    let ornaments = note.ornaments;
 
-            incDecSelectedNote(state, true);
-          }
-        }
-      }
+    let newOrnaments = '';
+
+    //If no ornaments, the ornament to change will be the only one.
+    if(!ornaments) {
+      newOrnaments = ornament;
+    } else {
+
+      //First, clear out the ornament to change ('ornament' param) and additional ornaments ('clear' param). 
+      //Then, if the ornament is already in the existing ornaments, remove it. 
+      //  if the ornament is NOT already in the existing ornaments, add it.
+      newOrnaments = ornaments.replace(new RegExp(`[${ornament + (clear || '')}]`, 'g'), '').concat(ornaments.includes(ornament) ? '' : ornament);
     }
-  }
+
+    note.ornaments = newOrnaments;
+    incDecSelectedNote(state, true);
+  } else {
+    //It is a rest
+  } 
 }
 
 export function incDecSelectedNote(state, inc) {

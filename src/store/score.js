@@ -95,19 +95,19 @@ const scoreSlice = createSlice({
       toggleOrnament(state, ACCENT);
     },
     toggleLeftSticking(state) {
-      toggleOrnament(state, LEFT_STICKING);
+      toggleOrnament(state, LEFT_STICKING, RIGHT_STICKING);
     },
     toggleRightSticking(state) {
-      toggleOrnament(state, RIGHT_STICKING);
+      toggleOrnament(state, RIGHT_STICKING, LEFT_STICKING);
     },
     toggleFlam(state) {
-      toggleOrnament(state, FLAM);
+      toggleOrnament(state, FLAM, DIDDLE + CHEESE);
     },
     toggleDiddle(state) {
-      toggleOrnament(state, DIDDLE);
+      toggleOrnament(state, DIDDLE, FLAM + CHEESE);
     },
     toggleCheese(state) {
-      toggleOrnament(state, CHEESE);
+      toggleOrnament(state, CHEESE, FLAM + DIDDLE);
     },
     addMeasure(state, action) {
       if (!_.has(state, "selectedNoteIndex")) {

@@ -1,6 +1,6 @@
 import Buttons from "./Buttons";
 import { makeStyles } from "@material-ui/core/styles";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSelector } from 'react-redux';
 import Score from "./Score";
 
@@ -73,8 +73,11 @@ export default function Main() {
     },
   }));
 
-  const classes = useTabStyles();
+  useEffect(() => {
+      console.log('Score: ' + JSON.stringify(Score));
+  })
 
+  const classes = useTabStyles();
   return (
     <main>
       <div className={classes.root}>

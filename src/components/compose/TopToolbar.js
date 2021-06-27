@@ -6,7 +6,7 @@ import IconButton from "@material-ui/core/IconButton";
 import { update as updateToneJs, setSamplers } from "../../lib/tone";
 import { useTheme } from "@material-ui/core/styles";
 import ToneContext from "../../store/tone-context";
-import { connect, useDispatch } from "react-redux";
+import { connect } from "react-redux";
 import { getToneJs, scoreActions } from "../../store/score";
 
 import _ from "lodash";

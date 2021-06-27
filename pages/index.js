@@ -9,7 +9,6 @@ export default function Index() {
     () => import('../src/components/compose/Score'),
     { ssr: false }
   )
-
   return (
     <DynamicMain />
   );
