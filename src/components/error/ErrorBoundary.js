@@ -15,6 +15,10 @@ export default class ErrorBoundary extends React.Component {
     componentDidCatch(error, errorInfo) {
       // You can also log the error to an error reporting service
         //Send to GA
+        ReactGA.exception({
+            description: errorInfo.componentStack.toString(),
+            fatal: true
+          });
     }
   
     render() {
@@ -22,6 +26,8 @@ export default class ErrorBoundary extends React.Component {
         // You can render any custom fallback UI
         return <h1>Error!</h1>;
       }
+
+      
   
       return this.props.children; 
     }
