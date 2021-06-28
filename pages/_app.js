@@ -9,6 +9,7 @@ import { Provider } from "react-redux";
 import store from "../src/store/index";
 import RealmApolloProvider from "../src/providers/RealmApolloProvider";
 import { ToneContextProvider } from "../src/store/tone-context";
+import ReactGA from 'react-ga';
 
 export default function MyApp(props) {
   const { Component, pageProps } = props;
@@ -19,6 +20,11 @@ export default function MyApp(props) {
     if (jssStyles) {
       jssStyles.parentElement.removeChild(jssStyles);
     }
+
+    ReactGA.initialize('UA-146220050-1', {
+      debug: true,
+      titleCase: false
+    });
   }, []);
 
   return (

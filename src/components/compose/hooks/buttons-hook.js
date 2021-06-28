@@ -1,3 +1,5 @@
+import ReactGA from 'react-ga';
+
 import ThirtysecondNoteIcon from "../../../../icons/notes/thirtysecond.svg";
 import SixteenthNoteIcon from "../../../../icons/notes/sixteenth.svg";
 import EighthNoteIcon from "../../../../icons/notes/eighth.svg";
@@ -305,7 +307,13 @@ export default function useComposeButtons(modifyNoteHandler, isPlaying, voices, 
     },
     {
       component: FlamIcon,
-      onClick: () => dispatch(scoreActions.toggleFlam()),
+      onClick: () => {
+        ReactGA.event({
+          category: 'ornament',
+          action: 'toggle flam'
+        });
+        dispatch(scoreActions.toggleFlam())
+      },
       viewBox: "0 0 47.58 50",
       selected: flamSelected
     },

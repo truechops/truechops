@@ -1,8 +1,9 @@
 import Buttons from "./Buttons";
 import { makeStyles } from "@material-ui/core/styles";
 import { useEffect, useState } from "react";
-import { useSelector } from 'react-redux';
+import { useSelector } from "react-redux";
 import Score from "./Score";
+import ErrorBoundary from "../error/ErrorBoundary";
 
 export default function Main() {
   const [selectedTab, setSelectedTab] = useState(1);
@@ -28,7 +29,7 @@ export default function Main() {
       const numChips = selectedTab === 1 ? (isMobile ? 4 : 2) : 1;
       buttonsHeight = paddingHeight + numChips * (chipHeight + rowBottomMargin);
     } else {
-        buttonsHeight += theme.compose.score.tabsHiddenTopPadding;
+      buttonsHeight += theme.compose.score.tabsHiddenTopPadding;
     }
 
     return toolbarHeight + tabsHeight + buttonsHeight;
@@ -50,13 +51,13 @@ export default function Main() {
       position: "fixed",
       top: theme.mixins.toolbar.minHeight,
       left: "50%",
-      transform: "translateX(-50%)"
+      transform: "translateX(-50%)",
     },
     root: {
       paddingTop: theme.mixins.toolbar.minHeight,
       flexDirection: "column",
       display: "flex",
-      height: "100%"
+      height: "100%",
     },
     score: {
       position: "fixed",
@@ -73,10 +74,6 @@ export default function Main() {
     },
   }));
 
-  useEffect(() => {
-      console.log('Score: ' + JSON.stringify(Score));
-  })
-
   const classes = useTabStyles();
   return (
     <main>
@@ -85,7 +82,9 @@ export default function Main() {
           <Buttons selectedTab={selectedTab} onTabSelected={onTabSelected} />
         </div>
         <div className={classes.score}>
-          <Score selectedTab={selectedTab} tabPanelHidden={tabPanelHidden}/>
+          <ErrorBoundary>
+            <Score selectedTab={selectedTab} tabPanelHidden={tabPanelHidden} />
+          </ErrorBoundary>
         </div>
       </div>
     </main>
