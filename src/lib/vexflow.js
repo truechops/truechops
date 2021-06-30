@@ -52,7 +52,7 @@ export function drawScore(
     );
 
     systemWidth = minTotalWidth + FORMAT_PADDING;
-    if (width + systemWidth > windowWidth) {
+    if (width + systemWidth > (windowWidth * 3)) {
       renderStaves(
         barRenderData,
         windowWidth - width,
@@ -88,8 +88,8 @@ export function drawScore(
       repeat
     );
   }
-  renderer.resize(windowWidth, SPACE_BETWEEN_GRAND_STAVES * (row + 1));
-  context.scale(0.75, 0.75);
+  renderer.resize(windowWidth * 3, SPACE_BETWEEN_GRAND_STAVES * (row + 1));
+  context.scale(0.5, 0.5);
 }
 
 function getMeasureData(measures) {

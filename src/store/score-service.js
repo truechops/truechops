@@ -21,11 +21,12 @@ const tcDurationToVfDuration = {
   2: 32,
 };
 
-export function modifyNote(state, voices, value, isRest) {
+export function modifyNote(state, value, isRest) {
   if (!state.selectedNoteIndex) {
     return;
   }
 
+  const voices = state.voices;
   let { measureIndex, partIndex, voiceIndex } = state.selectedNoteIndex;
   let noteIndex = state.selectedNoteIndex.noteIndex;
   const score = state.score;

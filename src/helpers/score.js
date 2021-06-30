@@ -1,4 +1,4 @@
-import { GRACE_X_SHIFT } from '../../data/score-config';
+import { GRACE_X_SHIFT, NON_ACCENT_VELOCITY } from '../../data/score-config';
 
 const noteHeadTypeLookup = {
   drumset: {
@@ -48,22 +48,22 @@ export function getEmptyMeasure(timeSig, instruments) {
             {
               notes: [],
               duration: 4,
-              velocity: 1.0,
+              velocity: NON_ACCENT_VELOCITY,
             },
             {
               notes: [],
               duration: 4,
-              velocity: 1.0,
+              velocity: NON_ACCENT_VELOCITY,
             },
             {
               notes: [],
               duration: 4,
-              velocity: 1.0,
+              velocity: NON_ACCENT_VELOCITY,
             },
             {
               notes: [],
               duration: 4,
-              velocity: 1.0,
+              velocity: NON_ACCENT_VELOCITY,
             }
           ]
         }

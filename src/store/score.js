@@ -13,12 +13,12 @@ import { createSelector } from "reselect";
 import { start as startToneJs, stop as stopToneJs } from "../lib/tone";
 import { NON_ACCENT_VELOCITY, GRACE_VELOCITY, ACCENT_VELOCITY } from '../../data/score-config';
 
-const ACCENT = 'a';
-const FLAM = 'f';
-const DIDDLE = 'd';
-const CHEESE = 'c';
-const LEFT_STICKING = 'l';
-const RIGHT_STICKING = 'r';
+export const ACCENT = 'a';
+export const FLAM = 'f';
+export const DIDDLE = 'd';
+export const CHEESE = 'c';
+export const LEFT_STICKING = 'l';
+export const RIGHT_STICKING = 'r';
 
 const initialState = {
   score: defaultScore,
@@ -171,8 +171,8 @@ const scoreSlice = createSlice({
     },
     //When user modifies a note in the score. Ex: 8th note to 16th note
     modifyNote(state, action) {
-      const { voices, value, isRest } = action.payload;
-      modifyNoteService(state, voices, value, isRest);
+      const { value, isRest } = action.payload;
+      modifyNoteService(state, value, isRest);
     },
     toggleKickSelected(state) {
       state.voices.set.kickSelected = !state.voices.set.kickSelected;

@@ -1,4 +1,6 @@
-import ReactGA from 'react-ga';
+import ReactGA from "react-ga";
+
+import { ACCENT, FLAM, DIDDLE, CHEESE, LEFT_STICKING, RIGHT_STICKING } from '../../../store/score';
 
 import ThirtysecondNoteIcon from "../../../../icons/notes/thirtysecond.svg";
 import SixteenthNoteIcon from "../../../../icons/notes/sixteenth.svg";
@@ -34,7 +36,7 @@ import SvgButton from "../../ui/SvgButton";
 import { makeStyles } from "@material-ui/core/styles";
 import { useDispatch } from "react-redux";
 import { scoreActions } from "../../../store/score";
-import { noteNameToDuration } from '../../../../data/score-config';
+import { noteNameToDuration } from "../../../../data/score-config";
 
 const useTabStyles = makeStyles((theme) => ({
   chips: {
@@ -65,7 +67,14 @@ const useTabStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function useComposeButtons(modifyNoteHandler, isPlaying, voices, dotSelected, repeat, selectedNote) {
+export default function useComposeButtons(
+  modifyNoteHandler,
+  isPlaying,
+  voices,
+  dotSelected,
+  repeat,
+  selectedNote
+) {
   const kickSelected = voices.kickSelected;
   const snareSelected = voices.snareSelected;
   const hatSelected = voices.hiHatSelected;
@@ -85,15 +94,27 @@ export default function useComposeButtons(modifyNoteHandler, isPlaying, voices, 
   let rightStickingSelected = false;
 
   //If there is a selected note
-  if(selectedNote) {
-    accentSelected = selectedNote.ornaments ? selectedNote.ornaments.includes('a') : false;
-    diddleSelected = selectedNote.ornaments ? selectedNote.ornaments.includes('d') : false;
-    flamSelected = selectedNote.ornaments ? selectedNote.ornaments.includes('f') : false;
-    cheeseSelected = selectedNote.ornaments ? selectedNote.ornaments.includes('c') : false;
-    leftStickingSelected = selectedNote.ornaments ? selectedNote.ornaments.includes('l') : false;
-    rightStickingSelected = selectedNote.ornaments ? selectedNote.ornaments.includes('r') : false;
+  if (selectedNote) {
+    accentSelected = selectedNote.ornaments
+      ? selectedNote.ornaments.includes(ACCENT)
+      : false;
+    diddleSelected = selectedNote.ornaments
+      ? selectedNote.ornaments.includes(DIDDLE)
+      : false;
+    flamSelected = selectedNote.ornaments
+      ? selectedNote.ornaments.includes(FLAM)
+      : false;
+    cheeseSelected = selectedNote.ornaments
+      ? selectedNote.ornaments.includes(CHEESE)
+      : false;
+    leftStickingSelected = selectedNote.ornaments
+      ? selectedNote.ornaments.includes(LEFT_STICKING)
+      : false;
+    rightStickingSelected = selectedNote.ornaments
+      ? selectedNote.ornaments.includes(RIGHT_STICKING)
+      : false;
     selectedMeasureIndex = selectedNote.measureIndex;
-  } 
+  }
 
   const repeatStart = repeat.start;
   const repeatEnd = repeat.end;
@@ -102,84 +123,112 @@ export default function useComposeButtons(modifyNoteHandler, isPlaying, voices, 
 
   const classes = useTabStyles();
   const noteButtonsRow1 = [
-    { 
+    {
       onClick: modifyNoteHandler.bind(null, noteNameToDuration["whole"], false),
-      viewBox: '-12 -12 40 32',
-      component: WholeNoteIcon 
+      viewBox: "-12 -12 40 32",
+      component: WholeNoteIcon,
     },
-    { 
+    {
       onClick: modifyNoteHandler.bind(null, noteNameToDuration["half"], false),
-      viewBox: '0 0 15.28 42.64',
-      component: HalfNoteIcon 
+      viewBox: "0 0 15.28 42.64",
+      component: HalfNoteIcon,
     },
-    { 
-      onClick: modifyNoteHandler.bind(null, noteNameToDuration["quarter"], false),
-      viewBox: '0 0 15.28 42.64',
-      component: QuarterNoteIcon 
+    {
+      onClick: modifyNoteHandler.bind(
+        null,
+        noteNameToDuration["quarter"],
+        false
+      ),
+      viewBox: "0 0 15.28 42.64",
+      component: QuarterNoteIcon,
     },
-    { 
-      onClick: modifyNoteHandler.bind(null, noteNameToDuration["eighth"], false),
-      viewBox: '0 0 29 43',
-      component: EighthNoteIcon 
+    {
+      onClick: modifyNoteHandler.bind(
+        null,
+        noteNameToDuration["eighth"],
+        false
+      ),
+      viewBox: "0 0 29 43",
+      component: EighthNoteIcon,
     },
-    { 
-      onClick: modifyNoteHandler.bind(null, noteNameToDuration["sixteenth"], false),
-      viewBox: '0 0 28.43 50',
-      component: SixteenthNoteIcon 
+    {
+      onClick: modifyNoteHandler.bind(
+        null,
+        noteNameToDuration["sixteenth"],
+        false
+      ),
+      viewBox: "0 0 28.43 50",
+      component: SixteenthNoteIcon,
     },
-    { 
-      onClick: modifyNoteHandler.bind(null, noteNameToDuration["thirtysecond"], false),
-      viewBox: '0 0 28.43 50',
-      component: ThirtysecondNoteIcon 
+    {
+      onClick: modifyNoteHandler.bind(
+        null,
+        noteNameToDuration["thirtysecond"],
+        false
+      ),
+      viewBox: "0 0 28.43 50",
+      component: ThirtysecondNoteIcon,
     },
-  ].map(props =>
+  ].map((props) => (
     <SvgButton
       key={Math.random().toString()}
       onClick={props.onClick}
       viewBox={props.viewBox}
       component={props.component}
     />
-  );
+  ));
 
   const noteButtonsRow2Mobile = [
-    { 
+    {
       onClick: modifyNoteHandler.bind(null, noteNameToDuration["whole"], true),
-      viewBox: '-14 -12 80 40',
-      component: WholeNoteRestIcon 
+      viewBox: "-14 -12 80 40",
+      component: WholeNoteRestIcon,
     },
-    { 
+    {
       onClick: modifyNoteHandler.bind(null, noteNameToDuration["half"], true),
-      viewBox: '-14 -12 80 40',
-      component: HalfNoteRestIcon 
+      viewBox: "-14 -12 80 40",
+      component: HalfNoteRestIcon,
     },
-    { 
-      onClick: modifyNoteHandler.bind(null, noteNameToDuration["quarter"], true),
-      viewBox: '0 0 16.05 43.81',
-      component: QuarterNoteRestIcon 
+    {
+      onClick: modifyNoteHandler.bind(
+        null,
+        noteNameToDuration["quarter"],
+        true
+      ),
+      viewBox: "0 0 16.05 43.81",
+      component: QuarterNoteRestIcon,
     },
-    { 
+    {
       onClick: modifyNoteHandler.bind(null, noteNameToDuration["eighth"], true),
-      viewBox: '0 0 20.04 34',
-      component: EighthNoteRestIcon 
+      viewBox: "0 0 20.04 34",
+      component: EighthNoteRestIcon,
     },
-    { 
-      onClick: modifyNoteHandler.bind(null, noteNameToDuration["sixteenth"], true),
-      viewBox: '0 0 26.27 50',
-      component: SixteenthNoteRestIcon 
+    {
+      onClick: modifyNoteHandler.bind(
+        null,
+        noteNameToDuration["sixteenth"],
+        true
+      ),
+      viewBox: "0 0 26.27 50",
+      component: SixteenthNoteRestIcon,
     },
-    { 
-      onClick: modifyNoteHandler.bind(null, noteNameToDuration["thirtysecond"], true),
-      viewBox: '0 0 25.82 50',
-      component: ThirtysecondNoteRestIcon 
+    {
+      onClick: modifyNoteHandler.bind(
+        null,
+        noteNameToDuration["thirtysecond"],
+        true
+      ),
+      viewBox: "0 0 25.82 50",
+      component: ThirtysecondNoteRestIcon,
     },
-  ].map(props =>
+  ].map((props) => (
     <SvgButton
       key={Math.random().toString()}
       onClick={props.onClick}
       viewBox={props.viewBox}
       component={props.component}
     />
-  );
+  ));
 
   const tupletButtons = ["3:2", "3:2"].map((tupletText) => (
     <Button
@@ -215,27 +264,57 @@ export default function useComposeButtons(modifyNoteHandler, isPlaying, voices, 
 
   const instrumentsRow1 = [
     {
-      onClick: () => dispatch(scoreActions.toggleKickSelected()),
+      onClick: () => {
+        ReactGA.event({
+          category: "voices",
+          action: "toggle kick",
+        });
+        dispatch(scoreActions.toggleKickSelected());
+      },
       text: "K",
       selected: kickSelected,
     },
     {
-      onClick: () => dispatch(scoreActions.toggleSnareSelected()),
+      onClick: () => {
+        ReactGA.event({
+          category: "voices",
+          action: "toggle snare",
+        });
+        dispatch(scoreActions.toggleSnareSelected());
+      },
       text: "S",
       selected: snareSelected,
     },
     {
-      onClick: () => dispatch(scoreActions.toggleHiHatSelected()),
+      onClick: () => {
+        ReactGA.event({
+          category: "voices",
+          action: "toggle hihat",
+        });
+        dispatch(scoreActions.toggleHiHatSelected());
+      },
       text: "HH",
       selected: hatSelected,
     },
     {
-      onClick: () => dispatch(scoreActions.toggleRideSelected()),
+      onClick: () => {
+        ReactGA.event({
+          category: "voices",
+          action: "toggle ride",
+        });
+        dispatch(scoreActions.toggleRideSelected());
+      },
       text: "R",
       selected: rideSelected,
     },
     {
-      onClick: () => dispatch(scoreActions.toggleHiHatFootSelected()),
+      onClick: () => {
+        ReactGA.event({
+          category: "voices",
+          action: "toggle hihat foot",
+        });
+        dispatch(scoreActions.toggleHiHatFootSelected());
+      },
       text: "HF",
       selected: hatFootSelected,
     },
@@ -251,22 +330,46 @@ export default function useComposeButtons(modifyNoteHandler, isPlaying, voices, 
 
   const instrumentsRow2 = [
     {
-      onClick: () => dispatch(scoreActions.toggleTom1Selected()),
+      onClick: () => {
+        ReactGA.event({
+          category: "voices",
+          action: "toggle tom1",
+        });
+        dispatch(scoreActions.toggleTom1Selected());
+      },
       text: "T1",
       selected: tom1Selected,
     },
     {
-      onClick: () => dispatch(scoreActions.toggleTom2Selected()),
+      onClick: () => {
+        ReactGA.event({
+          category: "voices",
+          action: "toggle tom2",
+        });
+        dispatch(scoreActions.toggleTom2Selected());
+      },
       text: "T2",
       selected: tom2Selected,
     },
     {
-      onClick: () => dispatch(scoreActions.toggleTom3Selected()),
+      onClick: () => {
+        ReactGA.event({
+          category: "voices",
+          action: "toggle tom3",
+        });
+        dispatch(scoreActions.toggleTom3Selected());
+      },
       text: "T3",
       selected: tom3Selected,
     },
     {
-      onClick: () => dispatch(scoreActions.toggleTom4Selected()),
+      onClick: () => {
+        ReactGA.event({
+          category: "voices",
+          action: "toggle tom4",
+        });
+        dispatch(scoreActions.toggleTom4Selected());
+      },
       text: "T4",
       selected: tom4Selected,
     },
@@ -275,102 +378,137 @@ export default function useComposeButtons(modifyNoteHandler, isPlaying, voices, 
       text: ".",
       selected: dotSelected,
     },
-  ]
-    .map((props) => (
-      <Button
-        key={Math.random().toString()}
-        onClick={props.onClick}
-        selected={props.selected}
-      >
-        {props.text}
-      </Button>
-    ));
+  ].map((props) => (
+    <Button
+      key={Math.random().toString()}
+      onClick={props.onClick}
+      selected={props.selected}
+    >
+      {props.text}
+    </Button>
+  ));
 
   const ornamentButtons = [
     {
       component: LeftStickingIcon,
-      onClick: () => dispatch(scoreActions.toggleLeftSticking()),
+      onClick: () => {
+        ReactGA.event({
+          category: "ornament",
+          action: "toggle left sticking",
+        });
+        dispatch(scoreActions.toggleLeftSticking());
+      },
       viewBox: "0 0 39.33 50",
-      selected: leftStickingSelected
+      selected: leftStickingSelected,
     },
     {
       component: RightStickingIcon,
-      onClick: () => dispatch(scoreActions.toggleRightSticking()),
+      onClick: () => {
+        ReactGA.event({
+          category: "ornament",
+          action: "toggle right sticking",
+        });
+        dispatch(scoreActions.toggleRightSticking());
+      },
       viewBox: "0 0 39.33 49.55",
-      selected: rightStickingSelected
+      selected: rightStickingSelected,
     },
     {
       component: AccentIcon,
-      onClick: () => dispatch(scoreActions.toggleAccent()),
+      onClick: () => {
+        ReactGA.event({
+          category: "ornament",
+          action: "toggle accent",
+        });
+        dispatch(scoreActions.toggleAccent());
+      },
       viewBox: "0 0 42.39 50",
-      selected: accentSelected
+      selected: accentSelected,
     },
     {
       component: FlamIcon,
       onClick: () => {
         ReactGA.event({
-          category: 'ornament',
-          action: 'toggle flam'
+          category: "ornament",
+          action: "toggle flam",
         });
-        dispatch(scoreActions.toggleFlam())
+        dispatch(scoreActions.toggleFlam());
       },
       viewBox: "0 0 47.58 50",
-      selected: flamSelected
+      selected: flamSelected,
     },
     {
       component: DiddleIcon,
-      onClick: () => dispatch(scoreActions.toggleDiddle()),
+      onClick: () => {
+        ReactGA.event({
+          category: "ornament",
+          action: "toggle diddle",
+        });
+        dispatch(scoreActions.toggleDiddle());
+      },
       viewBox: "0 0 55.55 50",
-      selected: diddleSelected
+      selected: diddleSelected,
     },
     {
       component: CheeseIcon,
-      onClick: () => dispatch(scoreActions.toggleCheese()),
+      onClick: () => {
+        ReactGA.event({
+          category: "ornament",
+          action: "toggle cheese",
+        });
+        dispatch(scoreActions.toggleCheese());
+      },
       viewBox: "0 0 66.8 50",
-      selected: cheeseSelected
+      selected: cheeseSelected,
     },
-  ].map(props =>
-  <SvgButton
-  key={Math.random().toString()}
-  onClick={props.onClick}
-  selected={props.selected}
-  viewBox={props.viewBox}
-  component={props.component}
-/>
-  );
+  ].map((props) => (
+    <SvgButton
+      key={Math.random().toString()}
+      onClick={props.onClick}
+      selected={props.selected}
+      viewBox={props.viewBox}
+      component={props.component}
+    />
+  ));
 
   const measureButtons = [
     {
       component: AddLeftIcon,
       onClick: () => dispatch(scoreActions.addMeasure(false)),
       viewBox: "0 0 18 14",
-      disabled: isPlaying
+      disabled: isPlaying,
     },
     {
       component: AddRightIcon,
       onClick: () => dispatch(scoreActions.addMeasure(true)),
       viewBox: "0 0 18 14",
-      disabled: isPlaying
+      disabled: isPlaying,
     },
     {
       component: DeleteMeasureIcon,
       onClick: () => dispatch(scoreActions.deleteMeasure()),
       viewBox: "0 0 68.2 52.01",
-      disabled: isPlaying
+      disabled: isPlaying,
     },
     {
       component: RepeatStartIcon,
       onClick: () => dispatch(scoreActions.setRepeatStart()),
-      selected: selectedMeasureIndex != null && repeatStart != null && selectedMeasureIndex === repeatStart,
+      selected:
+        selectedMeasureIndex != null &&
+        repeatStart != null &&
+        selectedMeasureIndex === repeatStart,
       viewBox: "0 0 68.2 52.01",
-      disabled: isPlaying
+      disabled: isPlaying,
     },
     {
       component: RepeatEndIcon,
       onClick: () => dispatch(scoreActions.setRepeatEnd()),
-      selected: selectedMeasureIndex != null && repeatEnd != null && selectedMeasureIndex === repeatEnd,
+      selected:
+        selectedMeasureIndex != null &&
+        repeatEnd != null &&
+        selectedMeasureIndex === repeatEnd,
       viewBox: "0 0 68.2 52.01",
-      disabled: isPlaying
+      disabled: isPlaying,
     },
   ].map((props) => (
     <SvgButton

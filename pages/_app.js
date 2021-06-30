@@ -10,6 +10,7 @@ import store from "../src/store/index";
 import RealmApolloProvider from "../src/providers/RealmApolloProvider";
 import { ToneContextProvider } from "../src/store/tone-context";
 import ReactGA from 'react-ga';
+import ErrorBoundary from '../src/components/error/ErrorBoundary';
 
 export default function MyApp(props) {
   const { Component, pageProps } = props;
@@ -28,7 +29,7 @@ export default function MyApp(props) {
   }, []);
 
   return (
-    <>
+    <ErrorBoundary>
       <Head>
         <title>My page</title>
         <meta
@@ -49,6 +50,6 @@ export default function MyApp(props) {
             </ToneContextProvider>
           </RealmApolloProvider>
         </Provider>
-    </>
+    </ErrorBoundary>
   );
 }

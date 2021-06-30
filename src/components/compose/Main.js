@@ -2,7 +2,8 @@ import Buttons from "./Buttons";
 import { makeStyles } from "@material-ui/core/styles";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import Score from "./Score"
+import Score from "./Score";
+import ErrorBoundary from "../error/ErrorBoundary";
 
 export default function Main() {
   const [selectedTab, setSelectedTab] = useState(1);
@@ -78,10 +79,14 @@ export default function Main() {
     <main>
       <div className={classes.root}>
         <div className={classes.buttons}>
-          <Buttons selectedTab={selectedTab} onTabSelected={onTabSelected} />
+          <ErrorBoundary component="compose buttons">
+            <Buttons selectedTab={selectedTab} onTabSelected={onTabSelected} />
+          </ErrorBoundary>
         </div>
         <div className={classes.score}>
+          <ErrorBoundary component="compose">
             <Score selectedTab={selectedTab} tabPanelHidden={tabPanelHidden} />
+          </ErrorBoundary>
         </div>
       </div>
     </main>
