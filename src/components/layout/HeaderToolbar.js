@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import { useDispatch } from "react-redux";
 import { sideNavActions } from "../../store/navigation";
-import ComposeToolbarItems from "../compose/TopToolbar";
+//import ComposeToolbarItems from "../compose/TopToolbar";
 import ComposeSideSheetItems from "../interaction/compose/Side";
 
 import React from "react";
@@ -12,6 +12,9 @@ import CssBaseline from "@material-ui/core/CssBaseline";
 import AppBar from "@material-ui/core/AppBar";
 import Toolbar from "@material-ui/core/Toolbar";
 import IconButton from "@material-ui/core/IconButton";
+import ErrorBoundary from '../error/ErrorBoundary';
+
+import dynamic from 'next/dynamic';
 
 import { GiHamburgerMenu } from "react-icons/gi";
 import { CgArrowLeftR } from "react-icons/cg";
@@ -46,6 +49,9 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
+//Each page has its own top toolbar. Render it dynamically based on which page you are on. 
+const DynamicComposeTopToolbar = dynamic(() => import("../compose/TopToolbar"));
+
 export default function Header() {
   const classes = useStyles();
   const router = useRouter();
@@ -56,7 +62,9 @@ export default function Header() {
 
   const getToolbarContent = () => {
     if (router.pathname === "/") {
-      return <ComposeToolbarItems />;
+      return <ErrorBoundary component="compose toolbar">
+      <DynamicComposeTopToolbar />
+      </ErrorBoundary>;
     }
   };
 
