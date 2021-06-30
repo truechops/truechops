@@ -3,7 +3,7 @@ import { drawScore, initialize } from "../../lib/vexflow";
 import { useSelector, useDispatch } from "react-redux";
 import { scoreActions } from "../../store/score";
 import useComposeEventListeners from "./event-listeners";
-import Panzoom from "@panzoom/panzoom";
+import panzoom from "panzoom";
 
 export default function Score(props) {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -15,13 +15,37 @@ export default function Score(props) {
   const repeat = useSelector((state) => state.score.present.repeat);
   const score = useSelector((state) => state.score.present.score);
 
-  const vexFlowRef = useRef();
-
-  const panzoomRef = useRef();
-  let panzoom = panzoomRef.current
   useEffect(() => {
-    panzoom = panzoomRef.current = Panzoom(vexFlowRef.current)
-  }, [])
+    // grab the DOM SVG element that you want to be draggable/zoomable:
+    var element = document.getElementById("vexflow");
+
+    var instance = panzoom(element);
+    instance.on("panstart", function (e) {
+      console.log("panstart", e);
+      // Note: e === instance.
+    });
+
+    instance.on("pan", function (e) {
+      console.log("pan", e);
+    });
+
+    instance.on("panend", function (e) {
+      console.log("panned", e);
+    });
+
+    instance.on("zoom", function (e) {
+      console.log("zoom", e);
+    });
+
+    instance.on("zoomend", function (e) {
+      console.log("zoomed", e);
+    });
+
+    instance.on("transform", function (e) {
+      // This event will be called along with events above.
+      console.log("transform", e);
+    });
+  }, []);
 
   const updateDimensions = useCallback(() => {
     setWindowWidth(window.innerWidth);
@@ -30,21 +54,6 @@ export default function Score(props) {
   const { setup } = useComposeEventListeners();
 
   window.addEventListener("resize", updateDimensions);
-
-  useEffect(() => {
-    const elem = document.getElementById("vexflow");
-    console.log('element: ' + elem);
-    const panzoom = Panzoom(elem);
-    // panzoom.pan(10, 10);
-    // panzoom.zoom(2, { animate: true });
-  
-    // Panning and pinch zooming are bound automatically (unless disablePan is true).
-    // There are several available methods for zooming
-    // that can be bound on button clicks or mousewheel.
-    //button.addEventListener("click", panzoom.zoomIn);
-    //elem.parentElement.addEventListener("wheel", panzoom.zoomWithWheel);
-  }, [])
-  
 
   const noteSelectedCallback = useCallback(
     (note) => {
@@ -88,7 +97,7 @@ export default function Score(props) {
 
   return (
     <div className="vexflow-wrapper">
-      <div id="vexflow" key={Math.random().toString()} ref={vexFlowRef}/>
+      <div id="vexflow" key={Math.random().toString()} />
     </div>
   );
 }
