@@ -1,4 +1,4 @@
-export const NON_ACCENT_VELOCITY = 0.55;
+export const NON_ACCENT_VELOCITY = 0.5;
 export const ACCENT_VELOCITY = 1.0;
 export const GRACE_VELOCITY = 0.1;
 

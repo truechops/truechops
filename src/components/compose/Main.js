@@ -69,6 +69,7 @@ export default function Main() {
         height: `calc(100% - ${calculateButtonsHeight(theme, false)}px)`,
         top: calculateButtonsHeight(theme, false),
       },
+      width: '100%',
       overflow: "auto",
       flex: 1,
     },

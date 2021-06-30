@@ -2,12 +2,15 @@ import Vex from "vexflow";
 import VexFlowInteraction from "./VexFlowInteraction";
 import { getNote, getGraceNote } from "../helpers/score";
 import _ from "lodash";
+import { ACCENT, FLAM, DIDDLE, CHEESE, LEFT_STICKING, RIGHT_STICKING } from '../store/score';
 
 const VF = Vex.Flow;
-const SPACE_BETWEEN_GRAND_STAVES = 222;
-const PADDING_TOP = 50;
+const BASE_STAVE_SPACE = 111;
+let STAVE_SPACE = BASE_STAVE_SPACE;
+const PADDING = 50;
 const FORMAT_PADDING = 13;
 const MIN_BAR_SIZE = 225;
+const SCORE_MIN_WIDTH = 750;
 
 export function initialize() {
   // Create an SVG renderer and attach it to the DIV element named "vf".
@@ -23,6 +26,8 @@ export function initialize() {
   return { renderer, context };
 }
 
+const scale = 1;
+
 export function drawScore(
   renderer,
   context,
@@ -35,9 +40,13 @@ export function drawScore(
   let { measures } = score;
   let systemWidth = 0;
   const measurePartsArray = getMeasureData(measures);
+  let measureIndex = 0;
+  STAVE_SPACE = BASE_STAVE_SPACE * measurePartsArray[0].length;
+
+  const svgWidth = Math.max(windowWidth, SCORE_MIN_WIDTH) / scale;
 
   let barRenderData = [];
-  let width = 100;
+  let width = measurePartsArray[0].length > 1 ? 100 : 0;
   let row = 0;
   let firstMeasure = true;
   for (const measureParts of measurePartsArray) {
@@ -52,15 +61,16 @@ export function drawScore(
     );
 
     systemWidth = minTotalWidth + FORMAT_PADDING;
-    if (width + systemWidth > (windowWidth * 3)) {
+    if (width + systemWidth > (svgWidth + PADDING/** (scale * scaleWidthMultipler)*/)) {
       renderStaves(
         barRenderData,
-        windowWidth - width,
+        svgWidth - width - PADDING,
         row,
         context,
         selectedNoteIndex,
         noteSelectedCallback,
-        repeat
+        repeat,
+        measureIndex
       );
       barRenderData = [];
       width = 0;
@@ -71,10 +81,12 @@ export function drawScore(
       parts: measureParts,
       width: systemWidth + (firstMeasure ? 20 : 0),
       firstMeasure,
+      measureIndex
     });
 
     width += systemWidth + (firstMeasure ? 20 : 0);
     firstMeasure = false;
+    measureIndex++;
   }
 
   if (barRenderData.length) {
@@ -88,8 +100,8 @@ export function drawScore(
       repeat
     );
   }
-  renderer.resize(windowWidth * 3, SPACE_BETWEEN_GRAND_STAVES * (row + 1));
-  context.scale(0.5, 0.5);
+  renderer.resize(svgWidth, (STAVE_SPACE * (row + 1)) /** scale * scaleWidthMultipler*/);
+  context.scale(scale, scale);
 }
 
 function getMeasureData(measures) {
@@ -119,58 +131,7 @@ function getMeasureData(measures) {
             instrument
           );
 
-          if (note.ornaments) {
-            if (note.ornaments.includes("c")) {
-              let tremolo = new VF.Tremolo(1);
-              n.addArticulation(0, tremolo);
-
-              n.addModifier(
-                0,
-                new VF.GraceNoteGroup([
-                  getGraceNote(VF.GraceNote.prototype.constructor),
-                ])
-              );
-            }
-
-            //diddle - add tremolo
-            if (note.ornaments.includes("d")) {
-              let tremolo = new VF.Tremolo(1);
-              n.addArticulation(0, tremolo);
-            }
-
-            //flam - add grace note
-            if (note.ornaments.includes("f")) {
-              n.addModifier(
-                0,
-                new VF.GraceNoteGroup([
-                  getGraceNote(VF.GraceNote.prototype.constructor),
-                ])
-              );
-            }
-
-            //accent
-            if (note.ornaments.includes("a")) {
-              n.addArticulation(0, new VF.Articulation("a>").setPosition(3));
-            }
-
-            //right sticking - add 'R' annotation
-            if (note.ornaments.includes("r")) {
-              const annotation = new VF.Annotation("R");
-              annotation.setVerticalJustification(
-                VF.Annotation.VerticalJustify.BOTTOM
-              );
-
-              n.addModifier(0, annotation);
-            } else if (note.ornaments.includes("l")) {
-              //left sticking - add 'L' annotation
-              const annotation = new VF.Annotation("L");
-              annotation.setVerticalJustification(
-                VF.Annotation.VerticalJustify.BOTTOM
-              );
-
-              n.addModifier(0, annotation);
-            }
-          }
+          addOrnaments(note, n);
 
           n.noteIndex = noteIndex;
           n.voiceIndex = voiceIndex;
@@ -226,28 +187,30 @@ function renderStaves(
     remainingWidth
   );
 
-  let x = 0;
+  let x = PADDING / 2;
 
   if (row === 0 && barRenderData[0].parts.length > 1) {
     x = 100;
   }
 
-  barRenderData.forEach((renderData, measureIndex) => {
-    const { parts, width, firstMeasure } = renderData;
+  barRenderData.forEach((renderData, renderDataIndex) => {
+
+    const { parts, width, firstMeasure, measureIndex } = renderData;
 
     let xDiff = 0;
 
     parts.forEach((part, partIndex) => {
-      let systemWidth = width + additionalWidths[measureIndex];
+      let systemWidth = width + additionalWidths[renderDataIndex];
       const stave = new VF.Stave(
         x,
-        partIndex * 100 + row * SPACE_BETWEEN_GRAND_STAVES,
+        partIndex * 100 + row * STAVE_SPACE,
         systemWidth,
         {
           space_above_staff_ln: 6,
         }
       );
 
+      console.log("measureIndex: " + measureIndex);
       if (repeat.start === measureIndex) {
         stave.setBegBarType(VF.Barline.type.REPEAT_BEGIN);
       }
@@ -326,4 +289,60 @@ function getAdditionalWidthsForBars(widths, remainingWidth) {
   const totalWidth = widths.reduce(reducer, 0);
   const percentages = widths.map((width) => width / totalWidth);
   return percentages.map((percentage) => percentage * remainingWidth);
+}
+
+function addOrnaments(jsonNote, scoreNote) {
+
+  if (jsonNote.ornaments) {
+    if (jsonNote.ornaments.includes(CHEESE)) {
+      let tremolo = new VF.Tremolo(1);
+      scoreNote.addArticulation(0, tremolo);
+
+      scoreNote.addModifier(
+        0,
+        new VF.GraceNoteGroup([
+          getGraceNote(VF.GraceNote.prototype.constructor),
+        ])
+      );
+    }
+
+    //diddle - add tremolo
+    if (jsonNote.ornaments.includes(DIDDLE)) {
+      let tremolo = new VF.Tremolo(1);
+      scoreNote.addArticulation(0, tremolo);
+    }
+
+    //flam - add grace note
+    if (jsonNote.ornaments.includes(FLAM)) {
+      scoreNote.addModifier(
+        0,
+        new VF.GraceNoteGroup([
+          getGraceNote(VF.GraceNote.prototype.constructor),
+        ])
+      );
+    }
+
+    //accent
+    if (jsonNote.ornaments.includes(ACCENT)) {
+      scoreNote.addArticulation(0, new VF.Articulation("a>").setPosition(3));
+    }
+
+    //right sticking - add 'R' annotation
+    if (jsonNote.ornaments.includes(RIGHT_STICKING)) {
+      const annotation = new VF.Annotation("R");
+      annotation.setVerticalJustification(
+        VF.Annotation.VerticalJustify.BOTTOM
+      );
+
+      scoreNote.addModifier(0, annotation);
+    } else if (jsonNote.ornaments.includes(LEFT_STICKING)) {
+      //left sticking - add 'L' annotation
+      const annotation = new VF.Annotation("L");
+      annotation.setVerticalJustification(
+        VF.Annotation.VerticalJustify.BOTTOM
+      );
+
+      scoreNote.addModifier(0, annotation);
+    }
+  }
 }

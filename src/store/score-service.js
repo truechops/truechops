@@ -26,7 +26,7 @@ export function modifyNote(state, value, isRest) {
     return;
   }
 
-  const voices = state.voices;
+  const voices = state.voices.set;
   let { measureIndex, partIndex, voiceIndex } = state.selectedNoteIndex;
   let noteIndex = state.selectedNoteIndex.noteIndex;
   const score = state.score;
@@ -210,14 +210,19 @@ export function incDecSelectedNote(state, inc) {
 }
 
 export function setRepeat(state, startOrEnd) {
-  const selectedNoteIndex = state.selectedNoteIndex;
+  let measureIndex = 0;
 
-  //make sure a measure is selected
-  if (selectedNoteIndex && selectedNoteIndex.measureIndex >= 0) {
-    if (selectedNoteIndex.measureIndex === state.repeat[startOrEnd]) {
+  if(_.has(state, 'selectedNoteIndex')) {
+    measureIndex = state.selectedNoteIndex.measureIndex;
+  } else {
+    measureIndex = startOrEnd === 'start' ? 0 : state.score.measures.length - 1;
+  }
+
+  if (measureIndex >= 0) {
+    if (measureIndex === state.repeat[startOrEnd]) {
       _.unset(state.repeat, startOrEnd);
     } else {
-      state.repeat[startOrEnd] = selectedNoteIndex.measureIndex;
+      state.repeat[startOrEnd] = measureIndex;
     }
   }
 }
@@ -260,6 +265,8 @@ function getSelectedInstrumentNotes(voices) {
   if (voices.tom4Selected) {
     notes.push("G4");
   }
+
+  console.log("return notes: " + notes);
 
   return notes;
 }

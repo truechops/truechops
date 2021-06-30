@@ -1,17 +1,13 @@
-import { useDispatch, useSelector } from "react-redux";
 import { scoreActions } from "../../store/score";
 
-import { noteNameToDuration } from '../../../data/score-config';
+import { noteNameToDuration } from "../../../data/score-config";
 import { ActionCreators } from "redux-undo";
-import { useCallback } from "react";
-import ReactGA from 'react-ga';
+import ReactGA from "react-ga";
 
-export default function useComposeEventListeners() {
-  const dispatch = useDispatch();
-
-  const handleKeyEvents = useCallback((event) => {
+export default function addComposeEventListeners(dispatch) {
+  function handleKeyEvents(event) {
     function modifyNote(value, isRest) {
-      dispatch(scoreActions.modifyNote({ value, isRest }))
+      dispatch(scoreActions.modifyNote({ value, isRest }));
     }
 
     if (event.keyCode === 32) {
@@ -198,9 +194,6 @@ export default function useComposeEventListeners() {
       //control + y
       dispatch(ActionCreators.redo());
     }
-  }, [dispatch]);
-
-  return {
-    setup: useCallback(() => {console.log('add event listeners'); window.addEventListener("keydown", handleKeyEvents)}, [handleKeyEvents])
   }
+  window.addEventListener("keydown", handleKeyEvents);
 }

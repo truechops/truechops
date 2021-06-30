@@ -1,6 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 //import { smallSinglePart as defaultScore } from "../components/compose/sample-score";
 import defaultScore from '../../data/default-score';
+//import { smallMultiPart as defaultScore } from '../components/compose/sample-score';
 import {
   modifyNote as modifyNoteService,
   toggleOrnament,
@@ -110,12 +111,15 @@ const scoreSlice = createSlice({
       toggleOrnament(state, CHEESE, FLAM + DIDDLE);
     },
     addMeasure(state, action) {
-      if (!_.has(state, "selectedNoteIndex")) {
-        return;
+      const measures = state.score.measures;
+      const isRight = action.payload;
+      let index = 0;
+      if(!_.has(state, "selectedNoteIndex")) {
+        index = isRight ? measures.length - 1: 0;
+      } else {
+        index = state.selectedNoteIndex.measureIndex;
       }
 
-      const isRight = action.payload;
-      const index = state.selectedNoteIndex.measureIndex;
       //make sure a measure is selected
       const { timeSig, parts } = state.score.measures[index];
 
