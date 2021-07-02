@@ -57,7 +57,6 @@ export function Buttons(props) {
   const dotSelected = props.dotSelected;
   const repeat = props.repeat;
   const selectedNote = props.selectedNote;
-  console.log('dot selected!: ' + dotSelected);
 
   function modifyNoteHandler(value, isRest) {
     modifyNote(voices, value, isRest);
@@ -108,9 +107,10 @@ export function Buttons(props) {
         </TabPanel>
         <TabPanel value={selectedTab} index={1}>
           <Hidden smUp>
-            {voiceButtons.forEach((rowButtons, rowIndex) => {
+            {voiceButtons.map((rowButtons, rowIndex) => {
               let content = [];
               if (rowIndex === 0) {
+                console.log('rowIndex === 0');
                 content.push(<InstrumentHelpPopover />);
               }
 
@@ -119,9 +119,10 @@ export function Buttons(props) {
               if (rowIndex === voiceButtons.length - 1) {
                 content.push(dotButton)
                 content.push(tupletButtons);
+                console.log('last row index');
               }
 
-              return <ButtonsRow>{content}</ButtonsRow>;
+              return <ButtonsRow key={Math.random().toString()}>{content}</ButtonsRow>;
             })}
           </Hidden>
           <Hidden xsDown>
