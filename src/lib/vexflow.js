@@ -5,7 +5,7 @@ import _ from "lodash";
 import { ACCENT, FLAM, DIDDLE, CHEESE, LEFT_STICKING, RIGHT_STICKING } from '../store/score';
 
 const VF = Vex.Flow;
-const BASE_STAVE_SPACE = 111;
+const BASE_STAVE_SPACE = 125;
 let STAVE_SPACE = BASE_STAVE_SPACE;
 const PADDING = 50;
 const FORMAT_PADDING = 13;
@@ -61,7 +61,7 @@ export function drawScore(
     );
 
     systemWidth = minTotalWidth + FORMAT_PADDING;
-    if (width + systemWidth > (svgWidth + PADDING/** (scale * scaleWidthMultipler)*/)) {
+    if (width + systemWidth > (svgWidth + PADDING)) {
       renderStaves(
         barRenderData,
         svgWidth - width - PADDING,
@@ -188,11 +188,13 @@ function renderStaves(
   );
 
   let x = PADDING / 2;
+  const numParts = barRenderData[0].parts.length;
 
-  if (row === 0 && barRenderData[0].parts.length > 1) {
-    x = 100;
+  if (row === 0 && numParts > 1) {
+    x += 100;
   }
 
+  let staves = [];
   barRenderData.forEach((renderData, renderDataIndex) => {
 
     const { parts, width, firstMeasure, measureIndex } = renderData;
@@ -203,14 +205,17 @@ function renderStaves(
       let systemWidth = width + additionalWidths[renderDataIndex];
       const stave = new VF.Stave(
         x,
-        partIndex * 100 + row * STAVE_SPACE,
+        partIndex * BASE_STAVE_SPACE + row * STAVE_SPACE,
         systemWidth,
         {
           space_above_staff_ln: 6,
         }
       );
 
-      console.log("measureIndex: " + measureIndex);
+      if(renderDataIndex === 0) {
+        staves.push(stave);
+      }
+
       if (repeat.start === measureIndex) {
         stave.setBegBarType(VF.Barline.type.REPEAT_BEGIN);
       }
@@ -282,6 +287,13 @@ function renderStaves(
 
     x += xDiff;
   });
+
+  if(numParts > 1) {
+    var connector = new VF.StaveConnector(...staves);
+        connector.setType(VF.StaveConnector.type.SINGLE);
+        connector.setContext(context);
+        connector.draw();
+  }
 }
 
 function getAdditionalWidthsForBars(widths, remainingWidth) {

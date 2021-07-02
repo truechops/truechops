@@ -6,8 +6,7 @@ import { Hidden } from "@material-ui/core";
 import useButtonsHook from "./hooks/buttons-hook";
 import InstrumentHelpPopover from "./InstrumentHelpPopover";
 import { scoreActions, getSelectedNote } from "../../store/score";
-import { connect  } from "react-redux";
-
+import { connect } from "react-redux";
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -22,9 +21,7 @@ function TabPanel(props) {
       {...other}
     >
       {value === index && (
-        <Box p={theme.compose.buttons.container.padding}>
-          {children}
-        </Box>
+        <Box p={theme.compose.buttons.container.padding}>{children}</Box>
       )}
     </div>
   );
@@ -60,21 +57,28 @@ export function Buttons(props) {
   const dotSelected = props.dotSelected;
   const repeat = props.repeat;
   const selectedNote = props.selectedNote;
+  console.log('dot selected!: ' + dotSelected);
 
   function modifyNoteHandler(value, isRest) {
-      modifyNote(voices, value, isRest)
+    modifyNote(voices, value, isRest);
   }
 
   const {
     measureButtons,
     ornamentButtons,
-    instrumentsRow1,
-    instrumentsRow2,
+    voiceButtons,
+    dotButton,
     noteButtonsRow1,
     noteButtonsRow2Mobile,
     noteButtonsRow2Desktop,
     tupletButtons,
-  } = useButtonsHook(modifyNoteHandler, isPlaying, voices, dotSelected, repeat, selectedNote);
+  } = useButtonsHook(
+    modifyNoteHandler,
+    isPlaying,
+    dotSelected,
+    repeat,
+    selectedNote
+  );
   const ButtonsRow = ({ children }) => {
     return <div className={classes.buttonsRow}>{children}</div>;
   };
@@ -104,20 +108,27 @@ export function Buttons(props) {
         </TabPanel>
         <TabPanel value={selectedTab} index={1}>
           <Hidden smUp>
-            <ButtonsRow>
-              <InstrumentHelpPopover />
-              {instrumentsRow1}
-            </ButtonsRow>
-            <ButtonsRow>
-              {instrumentsRow2}
-              {tupletButtons}
-            </ButtonsRow>
+            {voiceButtons.forEach((rowButtons, rowIndex) => {
+              let content = [];
+              if (rowIndex === 0) {
+                content.push(<InstrumentHelpPopover />);
+              }
+
+              content.push(rowButtons);
+
+              if (rowIndex === voiceButtons.length - 1) {
+                content.push(dotButton)
+                content.push(tupletButtons);
+              }
+
+              return <ButtonsRow>{content}</ButtonsRow>;
+            })}
           </Hidden>
           <Hidden xsDown>
             <ButtonsRow>
               <InstrumentHelpPopover />
-              {instrumentsRow1}
-              {instrumentsRow2}
+              {voiceButtons.flat()}
+              {dotButton}
               {tupletButtons}
             </ButtonsRow>
           </Hidden>
@@ -148,21 +159,18 @@ const mapStateToProps = (state) => {
     isPlaying: state.score.present.isPlaying,
     repeat: state.score.present.repeat,
     score: state.score.present.score,
-    voices: state.score.present.voices.set,
     dotSelected: state.score.present.dotSelected,
-    selectedNote: getSelectedNote(state.score.present)
-  }
-}
+    selectedNote: getSelectedNote(state.score.present),
+  };
+};
 
 const mapDispatchToProps = (dispatch) => {
   return {
-    modifyNote: (voices, value, isRest) => dispatch(scoreActions.modifyNote({voices, value, isRest}))
-  }
-}
+    modifyNote: (voices, value, isRest) =>
+      dispatch(scoreActions.modifyNote({ voices, value, isRest })),
+  };
+};
 
-const ConnectedButtons = connect(
-  mapStateToProps,
-  mapDispatchToProps
-)(Buttons)
+const ConnectedButtons = connect(mapStateToProps, mapDispatchToProps)(Buttons);
 
 export default ConnectedButtons;

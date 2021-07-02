@@ -8,11 +8,11 @@ import { useTheme } from "@material-ui/core/styles";
 import ToneContext from "../../store/tone-context";
 import { connect } from "react-redux";
 import { getToneJs, scoreActions } from "../../store/score";
+import useInstruments from './hooks/instruments-hook';
 
 import _ from "lodash";
 
 import {
-  FaTools,
   FaUndo,
   FaRedo,
   FaPlay,
@@ -29,6 +29,7 @@ export function TopToolbar(props) {
   const repeat = props.repeat;
   const startStop = props.startStop;
   const prevRepeatRef = useRef();
+  const { samplerConfig } = useInstruments();
 
   //Key listeners: space = start/stop
 
@@ -82,13 +83,6 @@ export function TopToolbar(props) {
         >
           <FaRedo size={iconSize} />
         </IconButton>
-        <IconButton
-          color="inherit"
-          aria-label="open drawer"
-          onClick={props.shuffleNotes}
-        >
-          <FaTools />
-        </IconButton>
         <IconButton color="inherit" aria-label="play" onClick={startStop}>
           {!isPlaying ? <FaPlay size={iconSize} /> : <FaStop size={iconSize} />}
         </IconButton>
@@ -122,7 +116,6 @@ const mapStateToProps = (state) => {
 const mapDispatchToProps = (dispatch) => {
   return {
     startStop: () => dispatch(scoreActions.startStop()),
-    shuffleNotes: () => dispatch(scoreActions.shuffleNotes()),
     undo: () => dispatch(ActionCreators.undo()),
     redo: () => dispatch(ActionCreators.redo())
   };

@@ -75,6 +75,9 @@ export default createMuiTheme({
       color: 'white'
     }
   },
+  sidebar: {
+    width: 256
+  },
   compose: {
     buttons: {
       row: {

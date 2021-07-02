@@ -1,30 +1,35 @@
 import { createSlice } from "@reduxjs/toolkit";
 //import { smallSinglePart as defaultScore } from "../components/compose/sample-score";
-import defaultScore from '../../data/default-score';
-//import { smallMultiPart as defaultScore } from '../components/compose/sample-score';
+//import defaultScore from '../../data/default-score';
+import { smallMultiPart as defaultScore } from "../components/compose/sample-score";
 import {
   modifyNote as modifyNoteService,
   toggleOrnament,
   setRepeat,
-  incDecSelectedNote
+  incDecSelectedNote,
 } from "./score-service";
 import { getEmptyMeasure } from "../helpers/score";
 import _ from "lodash";
 import { createSelector } from "reselect";
 import { start as startToneJs, stop as stopToneJs } from "../lib/tone";
-import { NON_ACCENT_VELOCITY, GRACE_VELOCITY, ACCENT_VELOCITY } from '../../data/score-config';
+import {
+  NON_ACCENT_VELOCITY,
+  GRACE_VELOCITY,
+  ACCENT_VELOCITY,
+} from "../../data/score-config";
+import useInstruments from "../components/compose/hooks/instruments-hook";
 
-export const ACCENT = 'a';
-export const FLAM = 'f';
-export const DIDDLE = 'd';
-export const CHEESE = 'c';
-export const LEFT_STICKING = 'l';
-export const RIGHT_STICKING = 'r';
+export const ACCENT = "a";
+export const FLAM = "f";
+export const DIDDLE = "d";
+export const CHEESE = "c";
+export const LEFT_STICKING = "l";
+export const RIGHT_STICKING = "r";
 
 const initialState = {
   score: defaultScore,
   voices: {
-    set: {
+    drumset: {
       kickSelected: false,
       snareSelected: true,
       hiHatSelected: false,
@@ -35,7 +40,15 @@ const initialState = {
       tom3Selected: false,
       tom4Selected: false,
     },
+    tenors: {
+      spockSelected: false,
+      t1Selected: true,
+      t2Selected: false,
+      t3Selected: false,
+      t4Selected: false,
+    },
   },
+  selectedPartIndex: 0,
 
   /*
   selectedNoteIndex: {
@@ -83,7 +96,16 @@ const scoreSlice = createSlice({
       if (_.isEqual(action.payload, state.selectedNoteIndex)) {
         _.unset(state, "selectedNoteIndex");
       } else {
-        state.selectedNoteIndex = { measureIndex, partIndex, voiceIndex, noteIndex };
+        state.selectedNoteIndex = {
+          measureIndex,
+          partIndex,
+          voiceIndex,
+          noteIndex,
+        };
+      }
+
+      if (partIndex !== state.selectedPartIndex) {
+        state.selectedPartIndex = partIndex;
       }
     },
     selectPreviousNote(state) {
@@ -114,8 +136,8 @@ const scoreSlice = createSlice({
       const measures = state.score.measures;
       const isRight = action.payload;
       let index = 0;
-      if(!_.has(state, "selectedNoteIndex")) {
-        index = isRight ? measures.length - 1: 0;
+      if (!_.has(state, "selectedNoteIndex")) {
+        index = isRight ? measures.length - 1 : 0;
       } else {
         index = state.selectedNoteIndex.measureIndex;
       }
@@ -167,46 +189,94 @@ const scoreSlice = createSlice({
       state.score.measures.forEach((measure, measureIndex) => {
         measure.parts.forEach((part, partIndex) => {
           part.voices.forEach((voice, voiceIndex) => {
-            state.score.measures[measureIndex].parts[partIndex].voices[voiceIndex].notes = 
-            _.shuffle(state.score.measures[measureIndex].parts[partIndex].voices[voiceIndex].notes)
-          })
-        })
-      })
+            state.score.measures[measureIndex].parts[partIndex].voices[
+              voiceIndex
+            ].notes = _.shuffle(
+              state.score.measures[measureIndex].parts[partIndex].voices[
+                voiceIndex
+              ].notes
+            );
+          });
+        });
+      });
     },
     //When user modifies a note in the score. Ex: 8th note to 16th note
     modifyNote(state, action) {
       const { value, isRest } = action.payload;
-      modifyNoteService(state, value, isRest);
+      const selectedNote = getSelectedNote(state);
+
+      if (selectedNote) {
+        modifyNoteService(state, value, isRest, selectedNote);
+      }
+    },
+
+    togglePartEnabled(state, action) {
+      const instrument = action.payload;
+
+      //Loop through the measures in the score. If the measure contains a part
+      //with the given instrument, delete it. If it doesn't, add it.
+      state.score.measures.forEach(measure => {
+
+        let foundPart = false;
+        measure.parts.forEach((part, partIndex) => {
+          if(part.instrument === instrument) {
+            measure.parts.splice(partIndex, 1);
+            foundPart = true;
+          }
+        });
+
+        if(!foundPart) {
+          const emptyMeasure = getEmptyMeasure(measure.timeSig, [instrument]);
+          measure.parts = measure.parts.concat(emptyMeasure.parts);
+        }
+      });
     },
     toggleKickSelected(state) {
-      state.voices.set.kickSelected = !state.voices.set.kickSelected;
+      state.voices.drumset.kickSelected = !state.voices.drumset.kickSelected;
     },
     toggleSnareSelected(state) {
-      state.voices.set.snareSelected = !state.voices.set.snareSelected;
+      state.voices.drumset.snareSelected = !state.voices.drumset.snareSelected;
     },
     toggleHiHatSelected(state) {
-      state.voices.set.hiHatSelected = !state.voices.set.hiHatSelected;
+      state.voices.drumset.hiHatSelected = !state.voices.drumset.hiHatSelected;
     },
     toggleRideSelected(state) {
-      state.voices.set.rideSelected = !state.voices.set.rideSelected;
+      state.voices.drumset.rideSelected = !state.voices.drumset.rideSelected;
     },
     toggleHiHatFootSelected(state) {
-      state.voices.set.hiHatFootSelected = !state.voices.set.hiHatFootSelected;
+      state.voices.drumset.hiHatFootSelected =
+        !state.voices.drumset.hiHatFootSelected;
     },
     toggleTom1Selected(state) {
-      state.voices.set.tom1Selected = !state.voices.set.tom1Selected;
+      state.voices.drumset.tom1Selected = !state.voices.drumset.tom1Selected;
     },
     toggleTom2Selected(state) {
-      state.voices.set.tom2Selected = !state.voices.set.tom2Selected;
+      state.voices.drumset.tom2Selected = !state.voices.drumset.tom2Selected;
     },
     toggleTom3Selected(state) {
-      state.voices.set.tom3Selected = !state.voices.set.tom3Selected;
+      state.voices.drumset.tom3Selected = !state.voices.drumset.tom3Selected;
     },
     toggleTom4Selected(state) {
-      state.voices.set.tom4Selected = !state.voices.set.tom4Selected;
+      state.voices.drumset.tom4Selected = !state.voices.drumset.tom4Selected;
     },
     toggleDotSelected(state) {
       state.dotSelected = !state.dotSelected;
+    },
+
+    toggleSpockSelected(state) {
+      state.voices.tenors.spockSelected = !state.voices.tenors.spockSelected;
+    },
+    toggleTenor1Selected(state) {
+      state.voices.tenors.t1Selected = !state.voices.tenors.t1Selected;
+    },
+    toggleTenor2Selected(state) {
+      state.voices.tenors.t2Selected = !state.voices.tenors.t2Selected;
+    },
+    toggleTenor3Selected(state) {
+      state.voices.tenors.t3Selected = !state.voices.tenors.t3Selected;
+    },
+    toggleTenor4Selected(state) {
+      state.voices.tenors.t4Selected = !state.voices.tenors.t4Selected;
     },
   },
 });
@@ -214,19 +284,37 @@ const scoreSlice = createSlice({
 export default scoreSlice.reducer;
 export const scoreActions = scoreSlice.actions;
 
+export const getSelectedInstrument = createSelector(
+  [(state) => state.selectedPartIndex, (state) => state.score],
+  (selectedPartIndex, score) => {
+    if ((selectedPartIndex != null) & (selectedPartIndex >= 0)) {
+      return score.measures[0].parts[selectedPartIndex].instrument;
+    } else {
+      return null;
+    }
+  }
+);
+
+export const getScoreInstruments = createSelector(
+  [(state) => state.score],
+  (score) => score.measures[0].parts.map((part) => part.instrument)
+);
+
 export const getSelectedNote = createSelector(
   [(state) => state.selectedNoteIndex, (state) => state.score],
   (selectedNoteIndex, score) => {
-    if ( selectedNoteIndex ) {
-      const { measureIndex, partIndex, voiceIndex, noteIndex } = selectedNoteIndex;
+    if (selectedNoteIndex) {
+      const { measureIndex, partIndex, voiceIndex, noteIndex } =
+        selectedNoteIndex;
+      const part = score.measures[measureIndex].parts[partIndex];
 
       //We have to clone because the original object is not extensible.
-      let selectedNote = _.cloneDeep(score.measures[measureIndex].parts[partIndex].voices[voiceIndex]
-      .notes[noteIndex]);
+      let selectedNote = _.cloneDeep(part.voices[voiceIndex].notes[noteIndex]);
       selectedNote.measureIndex = measureIndex;
       selectedNote.partIndex = partIndex;
       selectedNote.voiceIndex = voiceIndex;
       selectedNote.noteIndex = noteIndex;
+      selectedNote.instrument = part.instrument;
       return selectedNote;
     } else {
       return null;
@@ -270,15 +358,15 @@ export const getToneJs = createSelector([(state) => state.score], (score) => {
               const toneJsNote = {
                 time,
                 note: tjsNote,
-                instrument
+                instrument,
               };
 
               toneJsNotes.push(toneJsNote);
 
               //Adjust the velocity depending on if there is an accent
-              const hasOrnaments = 'ornaments' in note;
-              if(hasOrnaments) {
-                if(!note.ornaments.includes(ACCENT)) {
+              const hasOrnaments = "ornaments" in note;
+              if (hasOrnaments) {
+                if (!note.ornaments.includes(ACCENT)) {
                   toneJsNote.velocity = NON_ACCENT_VELOCITY;
                 } else {
                   toneJsNote.velocity = ACCENT_VELOCITY;
@@ -291,31 +379,37 @@ export const getToneJs = createSelector([(state) => state.score], (score) => {
                 const diddleNote = _.cloneDeep(note);
                 diddleNote.time = diddleNote.time + time;
 
-                if(velocity) {
+                if (velocity) {
                   diddleNote.velocity = velocity;
                 }
 
                 toneJsNotes.push(diddleNote);
                 return diddleNote;
-              }
+              };
 
-              if(hasOrnaments) {
-
+              if (hasOrnaments) {
                 //Add the diddle note.
-                if(note.ornaments.includes(DIDDLE)) {
-                  toneJsNotes.push(cloneNote(toneJsNote, noteSecondsDuration / 2));
-                } 
-
-                //Add the flam note
-                if(note.ornaments.includes(FLAM)) {
-                  toneJsNotes.push(cloneNote(toneJsNote, -0.0175, GRACE_VELOCITY));
+                if (note.ornaments.includes(DIDDLE)) {
+                  toneJsNotes.push(
+                    cloneNote(toneJsNote, noteSecondsDuration / 2)
+                  );
                 }
 
-                if(note.ornaments.includes(CHEESE)) {
+                //Add the flam note
+                if (note.ornaments.includes(FLAM)) {
+                  toneJsNotes.push(
+                    cloneNote(toneJsNote, -0.0175, GRACE_VELOCITY)
+                  );
+                }
 
+                if (note.ornaments.includes(CHEESE)) {
                   //Add the diddle and flam notes, respectively.
-                  toneJsNotes.push(cloneNote(toneJsNote, noteSecondsDuration / 2));
-                  toneJsNotes.push(cloneNote(toneJsNote, -0.0175, GRACE_VELOCITY));
+                  toneJsNotes.push(
+                    cloneNote(toneJsNote, noteSecondsDuration / 2)
+                  );
+                  toneJsNotes.push(
+                    cloneNote(toneJsNote, -0.0175, GRACE_VELOCITY)
+                  );
                 }
               }
             }

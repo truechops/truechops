@@ -38,6 +38,8 @@ import { useDispatch } from "react-redux";
 import { scoreActions } from "../../../store/score";
 import { noteNameToDuration } from "../../../../data/score-config";
 
+import useInstruments from './instruments-hook';
+
 const useTabStyles = makeStyles((theme) => ({
   chips: {
     display: "flex",
@@ -70,20 +72,13 @@ const useTabStyles = makeStyles((theme) => ({
 export default function useComposeButtons(
   modifyNoteHandler,
   isPlaying,
-  voices,
   dotSelected,
   repeat,
   selectedNote
 ) {
-  const kickSelected = voices.kickSelected;
-  const snareSelected = voices.snareSelected;
-  const hatSelected = voices.hiHatSelected;
-  const tom1Selected = voices.tom1Selected;
-  const tom2Selected = voices.tom2Selected;
-  const tom3Selected = voices.tom3Selected;
-  const tom4Selected = voices.tom4Selected;
-  const rideSelected = voices.rideSelected;
-  const hatFootSelected = voices.hiHatFootSelected;
+  const { voiceButtons } = useInstruments();
+  const dispatch = useDispatch();
+
   let selectedMeasureIndex = null;
 
   let accentSelected = false;
@@ -118,8 +113,6 @@ export default function useComposeButtons(
 
   const repeatStart = repeat.start;
   const repeatEnd = repeat.end;
-
-  const dispatch = useDispatch();
 
   const classes = useTabStyles();
   const noteButtonsRow1 = [
@@ -240,153 +233,19 @@ export default function useComposeButtons(
     </Button>
   ));
 
-  /*const noteButtonsRow2Desktop = [
-    "thirtysecondRest",
-    "sixteenthRest",
-    "eighthRest",
-    "quarterRest",
-    "halfRest",
-    "wholeRest",
-  ].map((noteFileName) =>
-    ComposeButton(
-      `/icons/notes/${noteFileName}.svg`,
-      ["wholeRest", "halfRest"].includes(noteFileName)
-        ? classes.wholeNoteImageIcon
-        : classes.imageIcon,
-      modifyNoteHandler.bind(
-        null,
-        noteNameToDuration[noteFileName.replace("Rest", "")]
-      )
-    )
-  );*/
+  const dotButton = 
+    <Button
+      key={Math.random().toString()}
+      variant="outlined"
+      className={classes.noteButton}
+      selected={dotSelected}
+      onClick={() => dispatch(scoreActions.toggleDotSelected())}
+    >
+      .
+    </Button>
+  ;
 
   const noteButtonsRow2Desktop = noteButtonsRow2Mobile.slice().reverse();
-
-  const instrumentsRow1 = [
-    {
-      onClick: () => {
-        ReactGA.event({
-          category: "voices",
-          action: "toggle kick",
-        });
-        dispatch(scoreActions.toggleKickSelected());
-      },
-      text: "K",
-      selected: kickSelected,
-    },
-    {
-      onClick: () => {
-        ReactGA.event({
-          category: "voices",
-          action: "toggle snare",
-        });
-        dispatch(scoreActions.toggleSnareSelected());
-      },
-      text: "S",
-      selected: snareSelected,
-    },
-    {
-      onClick: () => {
-        ReactGA.event({
-          category: "voices",
-          action: "toggle hihat",
-        });
-        dispatch(scoreActions.toggleHiHatSelected());
-      },
-      text: "HH",
-      selected: hatSelected,
-    },
-    {
-      onClick: () => {
-        ReactGA.event({
-          category: "voices",
-          action: "toggle ride",
-        });
-        dispatch(scoreActions.toggleRideSelected());
-      },
-      text: "R",
-      selected: rideSelected,
-    },
-    {
-      onClick: () => {
-        ReactGA.event({
-          category: "voices",
-          action: "toggle hihat foot",
-        });
-        dispatch(scoreActions.toggleHiHatFootSelected());
-      },
-      text: "HF",
-      selected: hatFootSelected,
-    },
-  ].map((props) => (
-    <Button
-      key={Math.random().toString()}
-      onClick={props.onClick}
-      selected={props.selected}
-    >
-      {props.text}
-    </Button>
-  ));
-
-  const instrumentsRow2 = [
-    {
-      onClick: () => {
-        ReactGA.event({
-          category: "voices",
-          action: "toggle tom1",
-        });
-        dispatch(scoreActions.toggleTom1Selected());
-      },
-      text: "T1",
-      selected: tom1Selected,
-    },
-    {
-      onClick: () => {
-        ReactGA.event({
-          category: "voices",
-          action: "toggle tom2",
-        });
-        dispatch(scoreActions.toggleTom2Selected());
-      },
-      text: "T2",
-      selected: tom2Selected,
-    },
-    {
-      onClick: () => {
-        ReactGA.event({
-          category: "voices",
-          action: "toggle tom3",
-        });
-        dispatch(scoreActions.toggleTom3Selected());
-      },
-      text: "T3",
-      selected: tom3Selected,
-    },
-    {
-      onClick: () => {
-        ReactGA.event({
-          category: "voices",
-          action: "toggle tom4",
-        });
-        dispatch(scoreActions.toggleTom4Selected());
-      },
-      text: "T4",
-      selected: tom4Selected,
-    },
-    {
-      onClick: () => dispatch(scoreActions.toggleDotSelected()),
-      text: ".",
-      selected: dotSelected,
-    },
-  ].map((props) => (
-    <Button
-      key={Math.random().toString()}
-      onClick={props.onClick}
-      selected={props.selected}
-    >
-      {props.text}
-    </Button>
-  ));
 
   const ornamentButtons = [
     {
@@ -524,11 +383,11 @@ export default function useComposeButtons(
   return {
     measureButtons,
     ornamentButtons,
-    instrumentsRow1,
-    instrumentsRow2,
+    voiceButtons,
     noteButtonsRow1,
     noteButtonsRow2Mobile,
     noteButtonsRow2Desktop,
     tupletButtons,
+    dotButton
   };
 }

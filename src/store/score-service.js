@@ -21,14 +21,8 @@ const tcDurationToVfDuration = {
   2: 32,
 };
 
-export function modifyNote(state, value, isRest) {
-  if (!state.selectedNoteIndex) {
-    return;
-  }
-
-  const voices = state.voices.set;
-  let { measureIndex, partIndex, voiceIndex } = state.selectedNoteIndex;
-  let noteIndex = state.selectedNoteIndex.noteIndex;
+export function modifyNote(state, value, isRest, selectedNote) {
+  let { measureIndex, partIndex, voiceIndex, noteIndex } = selectedNote;
   const score = state.score;
   const notes =
     score.measures[measureIndex].parts[partIndex].voices[voiceIndex].notes;
@@ -52,7 +46,7 @@ export function modifyNote(state, value, isRest) {
   let notesToDelete = 1;
   let newNotes = [];
   newNotes.push({
-    notes: isRest ? [] : getSelectedInstrumentNotes(voices),
+    notes: isRest ? [] : getSelectedInstrumentNotes(state.voices, selectedNote),
     duration: tcDurationToVfDuration[value],
     velocity: note.velocity,
   });
@@ -124,29 +118,33 @@ export function toggleOrnament(state, ornament, clear) {
     return;
   }
 
-  let note = _.get(state.score, `measures[${measureIndex}].parts[${partIndex}].voices[${voiceIndex}].notes[${noteIndex}]`);
+  let note = _.get(
+    state.score,
+    `measures[${measureIndex}].parts[${partIndex}].voices[${voiceIndex}].notes[${noteIndex}]`
+  );
 
-  if(note.notes.length) {
+  if (note.notes.length) {
     let ornaments = note.ornaments;
 
-    let newOrnaments = '';
+    let newOrnaments = "";
 
     //If no ornaments, the ornament to change will be the only one.
-    if(!ornaments) {
+    if (!ornaments) {
       newOrnaments = ornament;
     } else {
-
-      //First, clear out the ornament to change ('ornament' param) and additional ornaments ('clear' param). 
-      //Then, if the ornament is already in the existing ornaments, remove it. 
+      //First, clear out the ornament to change ('ornament' param) and additional ornaments ('clear' param).
+      //Then, if the ornament is already in the existing ornaments, remove it.
       //  if the ornament is NOT already in the existing ornaments, add it.
-      newOrnaments = ornaments.replace(new RegExp(`[${ornament + (clear || '')}]`, 'g'), '').concat(ornaments.includes(ornament) ? '' : ornament);
+      newOrnaments = ornaments
+        .replace(new RegExp(`[${ornament + (clear || "")}]`, "g"), "")
+        .concat(ornaments.includes(ornament) ? "" : ornament);
     }
 
     note.ornaments = newOrnaments;
     incDecSelectedNote(state, true);
   } else {
     //It is a rest
-  } 
+  }
 }
 
 export function incDecSelectedNote(state, inc) {
@@ -185,8 +183,8 @@ export function incDecSelectedNote(state, inc) {
         //End of the measure
         if (measureIndex + 1 < measures.length) {
           //Go the next measure
-            selectedNoteIndex.measureIndex++;
-            selectedNoteIndex.noteIndex = 0;
+          selectedNoteIndex.measureIndex++;
+          selectedNoteIndex.noteIndex = 0;
         }
       } else {
         //Highlight the next note in the measure
@@ -194,12 +192,15 @@ export function incDecSelectedNote(state, inc) {
       }
     } else {
       //Decrement the note index so that the user can easily continue editing
-      if (noteIndex - 1 < 0) { //before start of measure
+      if (noteIndex - 1 < 0) {
+        //before start of measure
         if (measureIndex - 1 >= 0) {
           //Go the next measure
-            selectedNoteIndex.measureIndex--;
-            selectedNoteIndex.noteIndex = 
-              measures[selectedNoteIndex.measureIndex].parts[partIndex].voices[voiceIndex].notes.length - 1;
+          selectedNoteIndex.measureIndex--;
+          selectedNoteIndex.noteIndex =
+            measures[selectedNoteIndex.measureIndex].parts[partIndex].voices[
+              voiceIndex
+            ].notes.length - 1;
         }
       } else {
         //Highlight the next note in the measure
@@ -212,10 +213,10 @@ export function incDecSelectedNote(state, inc) {
 export function setRepeat(state, startOrEnd) {
   let measureIndex = 0;
 
-  if(_.has(state, 'selectedNoteIndex')) {
+  if (_.has(state, "selectedNoteIndex")) {
     measureIndex = state.selectedNoteIndex.measureIndex;
   } else {
-    measureIndex = startOrEnd === 'start' ? 0 : state.score.measures.length - 1;
+    measureIndex = startOrEnd === "start" ? 0 : state.score.measures.length - 1;
   }
 
   if (measureIndex >= 0) {
@@ -227,7 +228,7 @@ export function setRepeat(state, startOrEnd) {
   }
 }
 
-function getSelectedInstrumentNotes(voices) {
+function getSelectedSetNotes(voices) {
   let notes = [];
 
   if (voices.kickSelected) {
@@ -266,7 +267,39 @@ function getSelectedInstrumentNotes(voices) {
     notes.push("G4");
   }
 
-  console.log("return notes: " + notes);
+  return notes;
+}
+
+function getSelectedTenorNotes(voices) {
+  let notes = [];
+  if (voices.spockSelected) {
+    notes.push("G5");
+  }
+
+  if (voices.t1Selected) {
+    notes.push("E5");
+  }
+
+  if (voices.t2Selected) {
+    notes.push("C5");
+  }
+
+  if (voices.t3Selected) {
+    notes.push("A4");
+  }
+
+  if (voices.t4Selected) {
+    notes.push("G4");
+  }
 
   return notes;
+}
+
+function getSelectedInstrumentNotes(voices, selectedNote) {
+  const instrument = selectedNote.instrument;
+  if (instrument === "drumset") {
+    return getSelectedSetNotes(voices.drumset);
+  } else if (instrument === "tenors") {
+    return getSelectedTenorNotes(voices.tenors);
+  }
 }

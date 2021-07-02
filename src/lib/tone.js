@@ -37,6 +37,7 @@ export function update(toneJsData, repeat, startStop) {
 
     if(++counter === toneJsData.notes.length && !part.loop) {
       startStop();
+      counter = 0;
     }
   }, toneJsData.notes);
 
@@ -46,7 +47,7 @@ export function update(toneJsData, repeat, startStop) {
     part.loopStart = durationPerMeasure * repeat.start;
     part.loopEnd = durationPerMeasure * (repeat.end + 1);
     part.loop = true;
-  }
+  } 
 
   part.start(0);
 

@@ -28,15 +28,17 @@ export const ToneContextProvider = props => {
               G4: "tom4.wav"
             },
             release: 1,
-            baseUrl: `${window.location.href}samples/set/`,
+            baseUrl: `${window.location.href}samples/drumset/`,
           }).toDestination();
           setSetSampler(setSampler);
         
           const tenorsSampler = new Tone.Sampler({
             urls: {
-              C5: "1.wav",
-              E5: "2.wav",
-              F4: "3.wav",
+              G5: 'S.wav',
+              E5: "1.wav",
+              C5: "2.wav",
+              A4: "3.wav",
+              F4: '4.wav'
             },
             release: 1,
             baseUrl: `${window.location.href}samples/tenors/`,

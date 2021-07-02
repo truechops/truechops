@@ -23,7 +23,6 @@ export default function MyApp(props) {
     }
 
     ReactGA.initialize('UA-146220050-1', {
-      debug: true,
       titleCase: false
     });
   }, []);

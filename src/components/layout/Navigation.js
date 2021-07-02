@@ -19,8 +19,7 @@ export default function Navigation() {
 
   const useStyles = makeStyles((theme) => ({
     drawer: {
-      width: drawerWidth,
-      flexShrink: 0,
+      width: drawerWidth
     },
     drawerPaper: {
       width: drawerWidth,

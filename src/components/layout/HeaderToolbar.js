@@ -2,8 +2,6 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import { useDispatch } from "react-redux";
 import { sideNavActions } from "../../store/navigation";
-//import ComposeToolbarItems from "../compose/TopToolbar";
-import ComposeSideSheetItems from "../interaction/compose/Side";
 
 import React from "react";
 import { makeStyles } from "@material-ui/core/styles";
@@ -12,19 +10,17 @@ import CssBaseline from "@material-ui/core/CssBaseline";
 import AppBar from "@material-ui/core/AppBar";
 import Toolbar from "@material-ui/core/Toolbar";
 import IconButton from "@material-ui/core/IconButton";
-import ErrorBoundary from '../error/ErrorBoundary';
+import ErrorBoundary from "../error/ErrorBoundary";
 
-import dynamic from 'next/dynamic';
+import dynamic from "next/dynamic";
 
 import { GiHamburgerMenu } from "react-icons/gi";
-import { CgArrowLeftR } from "react-icons/cg";
+import { FiSettings } from 'react-icons/fi';
 
 // const searchClient = algoliasearch(
 //   "7VD37OIZBX",
 //   "075e3727b35d845338b30a28b5a54562"
 // );
-
-const drawerWidth = 256;
 
 const useStyles = makeStyles((theme) => ({
   appBar: {
@@ -33,24 +29,20 @@ const useStyles = makeStyles((theme) => ({
       duration: theme.transitions.duration.leavingScreen,
     }),
   },
-  appBarShift: {
-    width: `calc(100% - ${drawerWidth}px)`,
-    marginLeft: drawerWidth,
-    transition: theme.transitions.create(["margin", "width"], {
-      easing: theme.transitions.easing.easeOut,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
-  },
   drawerHeader: {
     display: "flex",
     alignItems: "center",
     padding: theme.spacing(0, 1),
     height: theme.mixins.toolbar.minHeight,
   },
+  sidebar: {
+    ...theme.sidebar
+  }
 }));
 
-//Each page has its own top toolbar. Render it dynamically based on which page you are on. 
+//Each page has its own top toolbar. Render it dynamically based on which page you are on.
 const DynamicComposeTopToolbar = dynamic(() => import("../compose/TopToolbar"));
+const DynamicComposeSidebar = dynamic(() => import("../compose/Sidebar"));
 
 export default function Header() {
   const classes = useStyles();
@@ -62,50 +54,28 @@ export default function Header() {
 
   const getToolbarContent = () => {
     if (router.pathname === "/") {
-      return <ErrorBoundary component="compose toolbar">
-      <DynamicComposeTopToolbar />
-      </ErrorBoundary>;
+      return (
+        <ErrorBoundary component="compose toolbar">
+          <DynamicComposeTopToolbar />
+        </ErrorBoundary>
+      );
     }
   };
 
-  const getSideSheetContent = () => {
+  const getSidebarContent = () => {
     let content = null;
     if (router.pathname === "/") {
-      content = <ComposeSideSheetItems />;
+      content = <DynamicComposeSidebar />;
     }
 
-    if (content != null) {
-      return (
-        <>
-          <Drawer
-            anchor="right"
-            open={sheetOpen}
-            onClose={() => setSheetOpen(false)}
-          >
-            {content}
-          </Drawer>
-          <IconButton
-            color="inherit"
-            aria-label="open more information"
-            onClick={() => setSheetOpen(true)}
-            edge="end"
-          >
-            <CgArrowLeftR />
-          </IconButton>
-        </>
-      );
-    } else {
-      return null;
-    }
+    return content;
   };
 
   return (
     <>
       <CssBaseline />
-      <AppBar
-        position="fixed"
-      >
-        <Toolbar className={classes.toolbar}>
+      <AppBar position="fixed">
+        <Toolbar>
           <IconButton
             color="inherit"
             aria-label="open drawer"
@@ -115,7 +85,24 @@ export default function Header() {
             <GiHamburgerMenu />
           </IconButton>
           {getToolbarContent()}
-          {getSideSheetContent()}
+
+          <Drawer
+            anchor="right"
+            open={sheetOpen}
+            onClose={() => setSheetOpen(false)}
+            className={classes.sidebar}
+            classes={{paper: classes.sidebar}}
+          >
+            {getSidebarContent()}
+          </Drawer>
+          <IconButton
+            color="inherit"
+            aria-label="open more information"
+            onClick={() => setSheetOpen(true)}
+            edge="end"
+          >
+            <FiSettings />
+          </IconButton>
         </Toolbar>
       </AppBar>
       <div className={classes.drawerHeader} />
