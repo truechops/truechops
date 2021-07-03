@@ -4,11 +4,13 @@ let part = null;
 
 let setSampler = null;
 let tenorsSampler = null;
+let snareSampler = null;
 
-export function setSamplers(setSamplerIn, tenorsSamplerIn)
+export function setSamplers(setSamplerIn, tenorsSamplerIn, snareSamplerIn)
 {
   setSampler = setSamplerIn;
   tenorsSampler = tenorsSamplerIn;
+  snareSampler = snareSamplerIn;
 }
 
 export function update(toneJsData, repeat, startStop) {
@@ -24,12 +26,9 @@ export function update(toneJsData, repeat, startStop) {
         setSampler.triggerAttackRelease(value.note, "4", time, value.velocity);
       } else if (value.instrument === "tenors") {
         // the value is an object which contains both the note and the velocity
-        tenorsSampler.triggerAttackRelease(
-          value.note,
-          "8n",
-          time,
-          value.velocity
-        );
+        tenorsSampler.triggerAttackRelease(value.note, "8n", time, value.velocity);
+      } else if(value.instrument === 'snare') {
+        snareSampler.triggerAttackRelease(value.note, "8n", time, value.velocity);
       }
     } else {
       //It's a rest

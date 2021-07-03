@@ -1,5 +1,5 @@
 import useSetVoices from "./setVoices-hook";
-//import useSnareVoices from "../src/components/compose/hooks/snareVoices-hook";
+import useSnareVoices from "./snareVoices-hook";
 import useTenorVoices from "./tenorVoices-hook";
 //import useBassVoices from "../src/components/compose/hooks/bassVoices-hook";
 //import useCrashVoices from "../src/components/compose/hooks/crashVoices-hook";
@@ -8,7 +8,7 @@ import { useSelector } from 'react-redux';
 
 export default function useInstruments() {
   const setVoices = useSetVoices();
-  //const snareVoices = useSnareVoices();
+  const snareVoices = useSnareVoices();
   const tenorVoices = useTenorVoices();
   //const bassVoices = useBassVoices();
   //const crashVoices = useCrashVoices();
@@ -24,6 +24,9 @@ export default function useInstruments() {
     tenors: {
       voiceButtons: tenorVoices,
     },
+    snare: {
+      voiceButtons: snareVoices
+    }
   };
 
   const data = instrumentData[selectedInstrument];

@@ -39,7 +39,7 @@ export function drawScore(
 ) {
   let { measures } = score;
   let systemWidth = 0;
-  const measurePartsArray = getMeasureData(measures);
+  const measurePartsArray = getMeasureData(measures, score.parts);
   let measureIndex = 0;
   STAVE_SPACE = BASE_STAVE_SPACE * measurePartsArray[0].length;
 
@@ -104,11 +104,12 @@ export function drawScore(
   context.scale(scale, scale);
 }
 
-function getMeasureData(measures) {
+function getMeasureData(measures, partConfig) {
   const measurePartsArray = [];
 
   measures.forEach((measure, measureIndex) => {
-    const { parts } = measure;
+    let { parts } = measure;
+    parts = parts.filter(part => partConfig[part.instrument].enabled);
     let measureParts = [];
     parts.forEach((part, partIndex) => {
       let partData = {
@@ -289,7 +290,8 @@ function renderStaves(
   });
 
   if(numParts > 1) {
-    var connector = new VF.StaveConnector(...staves);
+    console.log('staves length: ' + staves.length);
+    var connector = new VF.StaveConnector(staves[0], staves[staves.length - 1]);
         connector.setType(VF.StaveConnector.type.SINGLE);
         connector.setContext(context);
         connector.draw();

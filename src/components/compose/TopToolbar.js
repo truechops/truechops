@@ -22,21 +22,21 @@ import {
 } from "react-icons/fa";
 
 export function TopToolbar(props) {
-  const { setSampler, tenorsSampler } = useContext(ToneContext);
+  const { setSampler, tenorsSampler, snareSampler } = useContext(ToneContext);
   const theme = useTheme();
   const isPlaying = props.isPlaying;
   const toneJs = props.toneJs;
   const repeat = props.repeat;
   const startStop = props.startStop;
   const prevRepeatRef = useRef();
-  const { samplerConfig } = useInstruments();
+  console.log('snareSampler: ' + snareSampler);
 
   //Key listeners: space = start/stop
 
   //Set the tonejs samplers, which come from ToneContext
   useEffect(() => {
-    setSamplers(setSampler, tenorsSampler);
-  }, [setSampler, tenorsSampler]);
+    setSamplers(setSampler, tenorsSampler, snareSampler);
+  }, [setSampler, tenorsSampler, snareSampler]);
 
   useEffect(() => {
     let doUpdateToneJs = false;

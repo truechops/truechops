@@ -1,7 +1,12 @@
-import { NON_ACCENT_VELOCITY } from './score-config';
+import { NON_ACCENT_VELOCITY } from "./score-config";
 
 export default {
   tempo: 95.0,
+  parts: {
+    drumset: {
+      enabled: true
+    }
+  },
   measures: [
     {
       timeSig: {
@@ -10,7 +15,7 @@ export default {
       },
       parts: [
         {
-          instrument: "drumset",
+          instrument: 'drumset',
           voices: [
             {
               notes: [
@@ -20,20 +25,20 @@ export default {
                   velocity: NON_ACCENT_VELOCITY,
                 },
                 {
-                    notes: [],
-                    duration: 4,
-                    velocity: NON_ACCENT_VELOCITY,
-                  },
-                  {
-                    notes: [],
-                    duration: 4,
-                    velocity: NON_ACCENT_VELOCITY,
-                  },
-                  {
-                    notes: [],
-                    duration: 4,
-                    velocity: NON_ACCENT_VELOCITY,
-                  }
+                  notes: [],
+                  duration: 4,
+                  velocity: NON_ACCENT_VELOCITY,
+                },
+                {
+                  notes: [],
+                  duration: 4,
+                  velocity: NON_ACCENT_VELOCITY,
+                },
+                {
+                  notes: [],
+                  duration: 4,
+                  velocity: NON_ACCENT_VELOCITY,
+                },
               ],
             },
           ],

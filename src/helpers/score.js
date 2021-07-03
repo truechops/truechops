@@ -6,6 +6,10 @@ const noteHeadTypeLookup = {
     F5: 'x2',
     D4: 'x2'
   },
+  snare: {
+    E5: "x2",
+    F5: "x2"
+  }
 };
 
 export function getNote(staveNoteConstructor, note, instrument) {

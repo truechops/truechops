@@ -110,5 +110,10 @@ export default createMuiTheme({
     score: {
       tabsHiddenTopPadding: spacing * 2,
     },
+    sidebar: {
+      icons: {
+        size: 18
+      }
+    }
   },
 });

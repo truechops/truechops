@@ -1,5 +1,13 @@
 export const smallMultiPart = {
   tempo: 95.0,
+  parts: {
+    drumset: {
+      enabled: true
+    },
+    tenors: {
+      enabled: true
+    }
+  },
   measures: [
     {
       timeSig: {
@@ -74,19 +82,19 @@ export const smallMultiPart = {
               notes: [
                 {
                   notes: ["F4", "E5"],
-                  ornaments: 'adr',
+                  ornaments: "adr",
                   duration: 8,
                   velocity: 1.0,
                 },
                 {
                   notes: ["E5"],
-                  ornaments: 'cl',
+                  ornaments: "cl",
                   duration: 8,
                   velocity: 1.0,
                 },
                 {
                   notes: ["C5", "E5"],
-                  ornaments: 'f',
+                  ornaments: "f",
                   duration: 8,
                   velocity: 1.0,
                 },
@@ -137,6 +145,11 @@ export const smallMultiPart = {
 
 export const smallSinglePart = {
   tempo: 95.0,
+  parts: {
+    drumset: {
+      enabled: true
+    }
+  },
   measures: [
     {
       timeSig: {
@@ -203,7 +216,7 @@ export const smallSinglePart = {
             },
           ],
           tuplets: [],
-        }
+        },
       ],
     },
   ],
@@ -211,6 +224,14 @@ export const smallSinglePart = {
 
 export const large = {
   tempo: 95.0,
+  parts: {
+    drumset: {
+      enabled: true
+    },
+    tenors: {
+      enabled: true
+    }
+  },
   measures: [
     {
       timeSig: {

@@ -295,11 +295,30 @@ function getSelectedTenorNotes(voices) {
   return notes;
 }
 
+function getSelectedSnareNotes(voices) {
+  let notes = [];
+  if (voices.snareSelected) {
+    notes.push("C5");
+  }
+
+  if (voices.pingSelected) {
+    notes.push("E5");
+  }
+
+  if (voices.rimSelected) {
+    notes.push("F5");
+  }
+
+  return notes;
+}
+
 function getSelectedInstrumentNotes(voices, selectedNote) {
   const instrument = selectedNote.instrument;
   if (instrument === "drumset") {
     return getSelectedSetNotes(voices.drumset);
   } else if (instrument === "tenors") {
     return getSelectedTenorNotes(voices.tenors);
+  } else if(instrument === 'snare') {
+    return getSelectedSnareNotes(voices.snare);
   }
 }

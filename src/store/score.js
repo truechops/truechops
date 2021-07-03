@@ -40,6 +40,11 @@ const initialState = {
       tom3Selected: false,
       tom4Selected: false,
     },
+    snare: {
+      snareSelected: true,
+      pingSelected: false,
+      rimSelected: false
+    },
     tenors: {
       spockSelected: false,
       t1Selected: true,
@@ -47,6 +52,17 @@ const initialState = {
       t3Selected: false,
       t4Selected: false,
     },
+    bass: {
+      b1Selected: true,
+      b2Selected: false,
+      b3Selected: false,
+      b4Selected: false,
+      b5Selected: false
+    },
+    crash: {
+      crashSelected: true,
+      chokeSelected: false,
+    }
   },
   selectedPartIndex: 0,
 
@@ -212,24 +228,32 @@ const scoreSlice = createSlice({
 
     togglePartEnabled(state, action) {
       const instrument = action.payload;
+      state.score.parts[instrument].enabled = !state.score.parts[instrument].enabled;
+    },
+    deletePart(state, action) {
+      const instrument = action.payload;
+      _.unset(state.score.parts, instrument);
 
-      //Loop through the measures in the score. If the measure contains a part
-      //with the given instrument, delete it. If it doesn't, add it.
       state.score.measures.forEach(measure => {
-
-        let foundPart = false;
         measure.parts.forEach((part, partIndex) => {
           if(part.instrument === instrument) {
             measure.parts.splice(partIndex, 1);
-            foundPart = true;
           }
-        });
+        })
+      })
+    },
+    addPart(state, action) {
+      const instrument = action.payload;
 
-        if(!foundPart) {
-          const emptyMeasure = getEmptyMeasure(measure.timeSig, [instrument]);
-          measure.parts = measure.parts.concat(emptyMeasure.parts);
-        }
-      });
+      //Set up the top-level part config
+      state.score.parts[instrument] = {
+        enabled: true
+      };
+
+      //Add the new part to each existing measure.
+      state.score.measures.forEach(measure => {
+        measure.parts = measure.parts.concat(getEmptyMeasure(measure.timeSig, [instrument]).parts)
+      })
     },
     toggleKickSelected(state) {
       state.voices.drumset.kickSelected = !state.voices.drumset.kickSelected;
@@ -277,6 +301,16 @@ const scoreSlice = createSlice({
     },
     toggleTenor4Selected(state) {
       state.voices.tenors.t4Selected = !state.voices.tenors.t4Selected;
+    },
+
+    toggleMarchingSnareSelected(state) {
+      state.voices.snare.snareSelected = !state.voices.snare.snareSelected;
+    },
+    togglePingSelected(state) {
+      state.voices.snare.pingSelected = !state.voices.snare.pingSelected;
+    },
+    toggleRimSelected(state) {
+      state.voices.snare.rimSelected = !state.voices.snare.rimSelected;
     },
   },
 });

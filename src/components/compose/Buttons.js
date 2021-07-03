@@ -110,7 +110,6 @@ export function Buttons(props) {
             {voiceButtons.map((rowButtons, rowIndex) => {
               let content = [];
               if (rowIndex === 0) {
-                console.log('rowIndex === 0');
                 content.push(<InstrumentHelpPopover />);
               }
 
@@ -119,7 +118,6 @@ export function Buttons(props) {
               if (rowIndex === voiceButtons.length - 1) {
                 content.push(dotButton)
                 content.push(tupletButtons);
-                console.log('last row index');
               }
 
               return <ButtonsRow key={Math.random().toString()}>{content}</ButtonsRow>;

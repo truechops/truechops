@@ -11,6 +11,7 @@ const ToneContext = React.createContext({
 export const ToneContextProvider = props => {
     const [setSampler, setSetSampler] = useState();
     const [tenorsSampler, setTenorsSampler] = useState();
+    const [snareSampler, setSnareSampler] = useState();
 
     //This setup is done in useEffect because it cannot be done server side when the page is being built.
     //This is because Tone.js uses calls that are only available in the browser.
@@ -44,12 +45,25 @@ export const ToneContextProvider = props => {
             baseUrl: `${window.location.href}samples/tenors/`,
           }).toDestination();
           setTenorsSampler(tenorsSampler);
+
+          const snareSampler = new Tone.Sampler({
+            urls: {
+              C5: 'snare.wav',
+              E5: 'ping.wav',
+              F5: 'rim.wav'
+            },
+            release: 1,
+            baseUrl: `${window.location.href}samples/snare/`,
+          }).toDestination();
+          setSnareSampler(snareSampler);
+
           new Tone.PolySynth().toDestination();
       }, []);
 
     return <ToneContext.Provider value={{
         setSampler, 
-        tenorsSampler
+        tenorsSampler,
+        snareSampler
     }}>{props.children}</ToneContext.Provider>
 };
 
