@@ -59,7 +59,7 @@ const initialState = {
       b4Selected: false,
       b5Selected: false
     },
-    crash: {
+    cymbal: {
       crashSelected: true,
       chokeSelected: false,
     }
@@ -311,6 +311,29 @@ const scoreSlice = createSlice({
     },
     toggleRimSelected(state) {
       state.voices.snare.rimSelected = !state.voices.snare.rimSelected;
+    },
+
+    toggleBass1Selected(state) {
+      state.voices.bass.b1Selected = !state.voices.bass.b1Selected;
+    },
+    toggleBass2Selected(state) {
+      state.voices.bass.b2Selected = !state.voices.bass.b2Selected;
+    },
+    toggleBass3Selected(state) {
+      state.voices.bass.b3Selected = !state.voices.bass.b3Selected;
+    },
+    toggleBass4Selected(state) {
+      state.voices.bass.b4Selected = !state.voices.bass.b4Selected;
+    },
+    toggleBass5Selected(state) {
+      state.voices.bass.b5Selected = !state.voices.bass.b5Selected;
+    },
+
+    toggleCrashSelected(state) {
+      state.voices.cymbal.crashSelected = !state.voices.cymbal.crashSelected;
+    },
+    toggleChokeSelected(state) {
+      state.voices.cymbal.chokeSelected = !state.voices.cymbal.chokeSelected;
     },
   },
 });

@@ -312,6 +312,44 @@ function getSelectedSnareNotes(voices) {
   return notes;
 }
 
+function getSelectedBassNotes(voices) {
+  let notes = [];
+  if (voices.b1Selected) {
+    notes.push("G5");
+  }
+
+  if (voices.b2Selected) {
+    notes.push("E5");
+  }
+
+  if (voices.b3Selected) {
+    notes.push("C5");
+  }
+
+  if (voices.b4Selected) {
+    notes.push("A4");
+  }
+
+  if (voices.b5Selected) {
+    notes.push("F4");
+  }
+
+  return notes;
+}
+
+function getSelectedCymbalNotes(voices) {
+  let notes = [];
+  if (voices.crashSelected) {
+    notes.push("E5");
+  }
+
+  if (voices.chokeSelected) {
+    notes.push("C5");
+  }
+
+  return notes;
+}
+
 function getSelectedInstrumentNotes(voices, selectedNote) {
   const instrument = selectedNote.instrument;
   if (instrument === "drumset") {
@@ -320,5 +358,9 @@ function getSelectedInstrumentNotes(voices, selectedNote) {
     return getSelectedTenorNotes(voices.tenors);
   } else if(instrument === 'snare') {
     return getSelectedSnareNotes(voices.snare);
+  } else if(instrument === 'bass') {
+    return getSelectedBassNotes(voices.bass);
+  } else if(instrument === 'cymbal') {
+    return getSelectedCymbalNotes(voices.cymbal)
   }
 }

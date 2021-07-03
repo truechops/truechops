@@ -9,6 +9,10 @@ const noteHeadTypeLookup = {
   snare: {
     E5: "x2",
     F5: "x2"
+  },
+  cymbal: {
+    C5: 'x2',
+    E5: 'x2'
   }
 };
 
