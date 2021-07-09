@@ -20,15 +20,15 @@ export const ToneContextProvider = props => {
     useEffect(() => {
         const setSampler = new Tone.Sampler({
             urls: {
-              C5: "snare.wav",
-              E5: "hh.wav",
-              D4: 'hhf.wav',
-              F5: 'ride.wav',
-              F4: "kick.wav",
-              D5: "tom1.wav",
-              B4: "tom2.wav",
-              A4: "tom3.wav",
-              G4: "tom4.wav"
+              C5: "snare.mp3",
+              E5: "hh.mp3",
+              D4: 'hhf.mp3',
+              F5: 'ride.mp3',
+              F4: "kick.mp3",
+              D5: "tom1.mp3",
+              B4: "tom2.mp3",
+              A4: "tom3.mp3",
+              G4: "tom4.mp3"
             },
             release: 1,
             baseUrl: `./samples/drumset/`,
@@ -37,11 +37,11 @@ export const ToneContextProvider = props => {
         
           const tenorsSampler = new Tone.Sampler({
             urls: {
-              G5: 'S.wav',
-              E5: "1.wav",
-              C5: "2.wav",
-              A4: "3.wav",
-              F4: '4.wav'
+              G5: 'S.mp3',
+              E5: "1.mp3",
+              C5: "2.mp3",
+              A4: "3.mp3",
+              F4: '4.mp3'
             },
             release: 1,
             baseUrl: `./samples/tenors/`,
@@ -50,9 +50,9 @@ export const ToneContextProvider = props => {
 
           const snareSampler = new Tone.Sampler({
             urls: {
-              C5: 'snare.wav',
-              E5: 'ping.wav',
-              F5: 'rim.wav'
+              C5: 'snare.mp3',
+              E5: 'ping.mp3',
+              F5: 'rim.mp3'
             },
             release: 1,
             baseUrl: `./samples/snare/`,
@@ -61,11 +61,11 @@ export const ToneContextProvider = props => {
 
           const bassSampler = new Tone.Sampler({
             urls: {
-              G5: 'b1.wav',
-              E5: 'b2.wav',
-              C5: 'b3.wav',
-              A4: 'b4.wav',
-              F4: 'b5.wav'
+              G5: 'b1.mp3',
+              E5: 'b2.mp3',
+              C5: 'b3.mp3',
+              A4: 'b4.mp3',
+              F4: 'b5.mp3'
             },
             release: 1,
             baseUrl: `./samples/bass/`,
@@ -74,8 +74,8 @@ export const ToneContextProvider = props => {
 
           const cymbalSampler = new Tone.Sampler({
             urls: {
-              E5: 'crash.wav',
-              C5: 'choke.wav',
+              E5: 'crash.mp3',
+              C5: 'choke.mp3',
             },
             release: 1,
             baseUrl: `./samples/cymbal/`,
