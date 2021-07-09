@@ -31,7 +31,7 @@ export const ToneContextProvider = props => {
               G4: "tom4.wav"
             },
             release: 1,
-            baseUrl: `samples/drumset/`,
+            baseUrl: `./samples/drumset/`,
           }).toDestination();
           setSetSampler(setSampler);
         
@@ -44,7 +44,7 @@ export const ToneContextProvider = props => {
               F4: '4.wav'
             },
             release: 1,
-            baseUrl: `samples/tenors/`,
+            baseUrl: `./samples/tenors/`,
           }).toDestination();
           setTenorsSampler(tenorsSampler);
 
@@ -55,7 +55,7 @@ export const ToneContextProvider = props => {
               F5: 'rim.wav'
             },
             release: 1,
-            baseUrl: `samples/snare/`,
+            baseUrl: `./samples/snare/`,
           }).toDestination();
           setSnareSampler(snareSampler);
 
@@ -68,7 +68,7 @@ export const ToneContextProvider = props => {
               F4: 'b5.wav'
             },
             release: 1,
-            baseUrl: `samples/bass/`,
+            baseUrl: `./samples/bass/`,
           }).toDestination();
           setBassSampler(bassSampler);
 
@@ -78,7 +78,7 @@ export const ToneContextProvider = props => {
               C5: 'choke.wav',
             },
             release: 1,
-            baseUrl: `samples/cymbal/`,
+            baseUrl: `./samples/cymbal/`,
           }).toDestination();
           setCymbalSampler(cymbalSampler);
 
