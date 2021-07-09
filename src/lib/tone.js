@@ -3,14 +3,19 @@ import * as Tone from "tone";
 let part = null;
 
 let setSampler = null;
-let tenorsSampler = null;
 let snareSampler = null;
+let tenorsSampler = null;
+let bassSampler = null;
+let cymbalSampler = null;
 
-export function setSamplers(setSamplerIn, tenorsSamplerIn, snareSamplerIn)
+
+export function setSamplers(setSamplerIn, snareSamplerIn, tenorsSamplerIn, bassSamplerIn, cymbalSamplerIn)
 {
   setSampler = setSamplerIn;
-  tenorsSampler = tenorsSamplerIn;
   snareSampler = snareSamplerIn;
+  tenorsSampler = tenorsSamplerIn;
+  bassSampler = bassSamplerIn;
+  cymbalSampler = cymbalSamplerIn;
 }
 
 export function update(toneJsData, repeat, startStop) {
@@ -24,11 +29,15 @@ export function update(toneJsData, repeat, startStop) {
       if (value.instrument === "drumset") {
         // the value is an object which contains both the note and the velocity
         setSampler.triggerAttackRelease(value.note, "4", time, value.velocity);
-      } else if (value.instrument === "tenors") {
+      } else if (value.instrument === "snare") {
         // the value is an object which contains both the note and the velocity
-        tenorsSampler.triggerAttackRelease(value.note, "8n", time, value.velocity);
-      } else if(value.instrument === 'snare') {
         snareSampler.triggerAttackRelease(value.note, "8n", time, value.velocity);
+      } else if(value.instrument === 'tenors') {
+        tenorsSampler.triggerAttackRelease(value.note, "8n", time, value.velocity);
+      } else if(value.instrument === 'bass') {
+        bassSampler.triggerAttackRelease(value.note, "8n", time, value.velocity);
+      } else if(value.instrument === 'cymbal') {
+        cymbalSampler.triggerAttackRelease(value.note, "8n", time, value.velocity);
       }
     } else {
       //It's a rest

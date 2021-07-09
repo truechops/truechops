@@ -1,4 +1,5 @@
-import { getPowersOf2 } from "../helpers/math";
+import { getPowersOf2, getAdditionalDotDuration } from "../helpers/math";
+import { getVfDuration } from '../helpers/score';
 import _ from "lodash";
 import { NON_ACCENT_VELOCITY } from "../../data/score-config";
 
@@ -21,38 +22,54 @@ const tcDurationToVfDuration = {
   2: 32,
 };
 
-export function modifyNote(state, value, isRest, selectedNote) {
+export function modifyNote(state, newNoteValueIn, isRest, selectedNote) {
   let { measureIndex, partIndex, voiceIndex, noteIndex } = selectedNote;
   const score = state.score;
+  const dotSelected = state.dotSelected;
   const notes =
     score.measures[measureIndex].parts[partIndex].voices[voiceIndex].notes;
   const note = notes[noteIndex];
 
-  const selectedDuration = vfDurationToTCDuration[note.duration];
+  let selectedDuration = getVfDuration(note, true);
+
+  let newNoteValue = newNoteValueIn;
+
+  if (dotSelected) {
+    newNoteValue += getAdditionalDotDuration(newNoteValue, 1);
+  }
 
   //Get the note total after the note index. Lets us know if there is enough room
   //for the new note.
-  let noteTotalAfterPos = notes
-    .slice(noteIndex)
-    .reduce(
-      (total, note) => (total += vfDurationToTCDuration[note.duration]),
-      0
-    );
+  let noteTotalAfterPos = notes.slice(noteIndex).reduce((total, note) => {
+    let duration = getVfDuration(note, true);
 
-  if (selectedDuration > noteTotalAfterPos) {
+    total += duration;
+    return total;
+  }, 0);
+
+  if (newNoteValue > noteTotalAfterPos) {
     return;
   }
 
   let notesToDelete = 1;
   let newNotes = [];
-  newNotes.push({
-    notes: isRest ? [] : getSelectedInstrumentNotes(state.voices, selectedNote),
-    duration: tcDurationToVfDuration[value],
-    velocity: note.velocity,
-  });
 
-  if (value < selectedDuration) {
-    const remainingDurations = getPowersOf2(selectedDuration - value);
+  let newNote = {
+    notes: isRest ? [] : getSelectedInstrumentNotes(state.voices, selectedNote),
+
+    //Undotted duration.
+    duration: tcDurationToVfDuration[newNoteValueIn],
+    velocity: note.velocity,
+  };
+
+  if (dotSelected) {
+    newNote.dots = 1;
+  }
+
+  newNotes.push(newNote);
+
+  if (newNoteValue < selectedDuration) {
+    const remainingDurations = getPowersOf2(selectedDuration - newNoteValue);
 
     //Map powers of two numbers to 'rest' notes that fill up the empty space left by the smaller note
     remainingDurations.reduce((result, duration) => {
@@ -63,12 +80,13 @@ export function modifyNote(state, value, isRest, selectedNote) {
       });
       return result;
     }, newNotes);
-  } else if (value > selectedDuration) {
-    let remainingDuration = value - selectedDuration;
+  } else if (newNoteValue > selectedDuration) {
+    let remainingDuration = newNoteValue - selectedDuration;
 
     for (var i = noteIndex + 1; i < notes.length; i++) {
       const note = notes[i];
-      let noteDuration = vfDurationToTCDuration[note.duration];
+      let noteDuration = getVfDuration(note, true);
+
       remainingDuration -= noteDuration;
       notesToDelete++;
       if (remainingDuration === 0) {
@@ -79,13 +97,13 @@ export function modifyNote(state, value, isRest, selectedNote) {
 
         //Reduce the duration of the bigger note
         note.duration =
-          tcDurationToVfDuration[note.duration - remainingDurationAbs];
+          tcDurationToVfDuration[noteDuration - remainingDurationAbs];
         const remainingDurationRests = getPowersOf2(remainingDurationAbs);
 
         //Cut into the bigger note with rests
         remainingDurationRests.reduce((result, duration) => {
           result.push({
-            notes: note.notes,
+            notes: [],
             duration: tcDurationToVfDuration[duration],
             velocity: NON_ACCENT_VELOCITY,
           });
@@ -356,11 +374,11 @@ function getSelectedInstrumentNotes(voices, selectedNote) {
     return getSelectedSetNotes(voices.drumset);
   } else if (instrument === "tenors") {
     return getSelectedTenorNotes(voices.tenors);
-  } else if(instrument === 'snare') {
+  } else if (instrument === "snare") {
     return getSelectedSnareNotes(voices.snare);
-  } else if(instrument === 'bass') {
+  } else if (instrument === "bass") {
     return getSelectedBassNotes(voices.bass);
-  } else if(instrument === 'cymbal') {
-    return getSelectedCymbalNotes(voices.cymbal)
+  } else if (instrument === "cymbal") {
+    return getSelectedCymbalNotes(voices.cymbal);
   }
 }

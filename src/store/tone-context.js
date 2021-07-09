@@ -10,6 +10,8 @@ const ToneContext = React.createContext({
 
 export const ToneContextProvider = props => {
     const [setSampler, setSetSampler] = useState();
+    const [cymbalSampler, setCymbalSampler] = useState();
+    const [bassSampler, setBassSampler] = useState();
     const [tenorsSampler, setTenorsSampler] = useState();
     const [snareSampler, setSnareSampler] = useState();
 
@@ -57,13 +59,38 @@ export const ToneContextProvider = props => {
           }).toDestination();
           setSnareSampler(snareSampler);
 
+          const bassSampler = new Tone.Sampler({
+            urls: {
+              G5: 'b1.wav',
+              E5: 'b2.wav',
+              C5: 'b3.wav',
+              A4: 'b4.wav',
+              F4: 'b5.wav'
+            },
+            release: 1,
+            baseUrl: `${window.location.href}samples/bass/`,
+          }).toDestination();
+          setBassSampler(bassSampler);
+
+          const cymbalSampler = new Tone.Sampler({
+            urls: {
+              E5: 'crash.wav',
+              C5: 'choke.wav',
+            },
+            release: 1,
+            baseUrl: `${window.location.href}samples/cymbal/`,
+          }).toDestination();
+          setCymbalSampler(cymbalSampler);
+
           new Tone.PolySynth().toDestination();
       }, []);
 
     return <ToneContext.Provider value={{
-        setSampler, 
+        setSampler,
+        snareSampler,
         tenorsSampler,
-        snareSampler
+        bassSampler,
+        cymbalSampler
     }}>{props.children}</ToneContext.Provider>
 };
 

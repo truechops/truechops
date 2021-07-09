@@ -313,19 +313,19 @@ const scoreSlice = createSlice({
       state.voices.snare.rimSelected = !state.voices.snare.rimSelected;
     },
 
-    toggleBass1Selected(state) {
+    toggleB1Selected(state) {
       state.voices.bass.b1Selected = !state.voices.bass.b1Selected;
     },
-    toggleBass2Selected(state) {
+    toggleB2Selected(state) {
       state.voices.bass.b2Selected = !state.voices.bass.b2Selected;
     },
-    toggleBass3Selected(state) {
+    toggleB3Selected(state) {
       state.voices.bass.b3Selected = !state.voices.bass.b3Selected;
     },
-    toggleBass4Selected(state) {
+    toggleB4Selected(state) {
       state.voices.bass.b4Selected = !state.voices.bass.b4Selected;
     },
-    toggleBass5Selected(state) {
+    toggleB5Selected(state) {
       state.voices.bass.b5Selected = !state.voices.bass.b5Selected;
     },
 
@@ -408,7 +408,16 @@ export const getToneJs = createSelector([(state) => state.score], (score) => {
       voices.forEach((voice) => {
         const notes = voice.notes;
         notes.forEach((note) => {
-          const noteSecondsDuration = (spb * 4) / note.duration;
+          let noteSecondsDuration = (spb * 4) / note.duration;
+          if(note.dots) {
+            let extraDuration = noteSecondsDuration;
+
+            //Add extra time for the dots
+            for(let i = 0; i < note.dots; i++) {
+              extraDuration /= 2;
+              noteSecondsDuration += extraDuration;
+            }
+          }
 
           if (note.notes.length) {
             for (const tjsNote of note.notes) {
@@ -448,7 +457,7 @@ export const getToneJs = createSelector([(state) => state.score], (score) => {
                 //Add the diddle note.
                 if (note.ornaments.includes(DIDDLE)) {
                   toneJsNotes.push(
-                    cloneNote(toneJsNote, noteSecondsDuration / 2)
+                    cloneNote(toneJsNote, noteSecondsDuration / 2, note.velocity)
                   );
                 }
 
@@ -462,7 +471,7 @@ export const getToneJs = createSelector([(state) => state.score], (score) => {
                 if (note.ornaments.includes(CHEESE)) {
                   //Add the diddle and flam notes, respectively.
                   toneJsNotes.push(
-                    cloneNote(toneJsNote, noteSecondsDuration / 2)
+                    cloneNote(toneJsNote, noteSecondsDuration / 2, note.velocity)
                   );
                   toneJsNotes.push(
                     cloneNote(toneJsNote, -0.0175, GRACE_VELOCITY)

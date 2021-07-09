@@ -1,4 +1,5 @@
 import { GRACE_X_SHIFT, NON_ACCENT_VELOCITY } from '../../data/score-config';
+import { getAdditionalDotDuration } from './math';
 
 const noteHeadTypeLookup = {
   drumset: {
@@ -16,8 +17,18 @@ const noteHeadTypeLookup = {
   }
 };
 
+//Translates the toneJs duration to the score duration
+const vfDurationToTCDuration = {
+  1: 64,
+  2: 32,
+  4: 16,
+  8: 8,
+  16: 4,
+  32: 2,
+};
+
 export function getNote(staveNoteConstructor, note, instrument) {
-  return new staveNoteConstructor({
+ let returnNote = new staveNoteConstructor({
     clef: "percussion",
     keys: note.notes.length
       ? note.notes.map((n) => {
@@ -31,8 +42,28 @@ export function getNote(staveNoteConstructor, note, instrument) {
           return `${n[0]}/${n[1]}${noteHead}`;
         })
       : ["r/4"],
-    duration: `${note.duration.toString() + (!note.notes.length ? "r" : "")}`
+    duration: `${note.duration.toString() + (!note.notes.length ? "r" : "") + (note.dots ? 'd' : '')}`
   });
+
+  //Add dots to the note
+  const numDots = returnNote.dots != null ? returnNote.dots : 0;
+  for(var i = 0; i < numDots; i++) {
+    returnNote = returnNote.addDotToAll();
+  }
+
+  return returnNote;
+}
+
+//Get the vex flow duration value, with or without including additional duration for dots.
+export function getVfDuration(note, withDots) {
+  let selectedDuration = vfDurationToTCDuration[note.duration];
+
+  //If we want to include time for dots.
+  if (withDots && note.dots) {
+    selectedDuration += getAdditionalDotDuration(selectedDuration, note.dots);
+  }
+
+  return selectedDuration;
 }
 
 export function getGraceNote(graceNoteConstructor) {
