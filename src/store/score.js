@@ -448,8 +448,7 @@ export const getToneJs = createSelector([(state) => state.score], (score) => {
                 if (velocity) {
                   diddleNote.velocity = velocity;
                 }
-
-                toneJsNotes.push(diddleNote);
+                
                 return diddleNote;
               };
 
