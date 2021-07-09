@@ -103,6 +103,7 @@ export default function Sidebar() {
         {unusedInstruments.length > 0 && <><Select
         className={classes.select}
           value={selectedInstrument}
+          native
           onChange={onChangeInstrument}
         >
             {unusedInstruments.map(instrument => <option key={Math.random().toString()} value={instrument}>{instrument}</option>)}
