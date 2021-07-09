@@ -22,7 +22,7 @@ import {
 } from "react-icons/fa";
 
 export function TopToolbar(props) {
-  const { setSampler, snareSampler, tenorsSampler, bassSampler, cymbalSampler } = useContext(ToneContext);
+  const { setSampler, snareSampler, tenorsSampler, bassSampler, cymbalsSampler } = useContext(ToneContext);
   const theme = useTheme();
   const isPlaying = props.isPlaying;
   const toneJs = props.toneJs;
@@ -34,8 +34,8 @@ export function TopToolbar(props) {
 
   //Set the tonejs samplers, which come from ToneContext
   useEffect(() => {
-    setSamplers(setSampler, snareSampler, tenorsSampler, bassSampler, cymbalSampler);
-  }, [setSampler, snareSampler, tenorsSampler, bassSampler, cymbalSampler]);
+    setSamplers(setSampler, snareSampler, tenorsSampler, bassSampler, cymbalsSampler);
+  }, [setSampler, snareSampler, tenorsSampler, bassSampler, cymbalsSampler]);
 
   useEffect(() => {
     let doUpdateToneJs = false;

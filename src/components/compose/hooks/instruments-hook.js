@@ -102,7 +102,7 @@ export default function useInstruments() {
       voiceButtons: bassVoices,
       tooltipText: bassTooltipText
     },
-    cymbal: {
+    cymbals: {
       voiceButtons: crashVoices,
       tooltipText: cymbalTooltipText
     },

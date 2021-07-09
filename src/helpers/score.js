@@ -11,7 +11,7 @@ const noteHeadTypeLookup = {
     E5: "x2",
     F5: "x2"
   },
-  cymbal: {
+  cymbals: {
     C5: 'x2',
     E5: 'x2'
   }

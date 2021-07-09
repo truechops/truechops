@@ -36,7 +36,7 @@ export function update(toneJsData, repeat, startStop) {
         tenorsSampler.triggerAttackRelease(value.note, "8n", time, value.velocity);
       } else if(value.instrument === 'bass') {
         bassSampler.triggerAttackRelease(value.note, "8n", time, value.velocity);
-      } else if(value.instrument === 'cymbal') {
+      } else if(value.instrument === 'cymbals') {
         cymbalSampler.triggerAttackRelease(value.note, "8n", time, value.velocity);
       }
     } else {

@@ -378,7 +378,7 @@ function getSelectedInstrumentNotes(voices, selectedNote) {
     return getSelectedSnareNotes(voices.snare);
   } else if (instrument === "bass") {
     return getSelectedBassNotes(voices.bass);
-  } else if (instrument === "cymbal") {
-    return getSelectedCymbalNotes(voices.cymbal);
+  } else if (instrument === "cymbals") {
+    return getSelectedCymbalNotes(voices.cymbals);
   }
 }

@@ -59,7 +59,7 @@ const initialState = {
       b4Selected: false,
       b5Selected: false
     },
-    cymbal: {
+    cymbals: {
       crashSelected: true,
       chokeSelected: false,
     }
@@ -330,10 +330,10 @@ const scoreSlice = createSlice({
     },
 
     toggleCrashSelected(state) {
-      state.voices.cymbal.crashSelected = !state.voices.cymbal.crashSelected;
+      state.voices.cymbals.crashSelected = !state.voices.cymbals.crashSelected;
     },
     toggleChokeSelected(state) {
-      state.voices.cymbal.chokeSelected = !state.voices.cymbal.chokeSelected;
+      state.voices.cymbals.chokeSelected = !state.voices.cymbals.chokeSelected;
     },
   },
 });
@@ -448,7 +448,7 @@ export const getToneJs = createSelector([(state) => state.score], (score) => {
                 if (velocity) {
                   diddleNote.velocity = velocity;
                 }
-                
+
                 return diddleNote;
               };
 

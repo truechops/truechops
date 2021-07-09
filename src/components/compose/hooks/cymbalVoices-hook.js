@@ -4,7 +4,7 @@ import Button from "../../ui/Button";
 
 export default function useCymbalVoices() {
   const { crashSelected, chokeSelected } =
-    useSelector((state) => state.score.present.voices.cymbal);
+    useSelector((state) => state.score.present.voices.cymbals);
 
   const dispatch = useDispatch();
   const buttons = [

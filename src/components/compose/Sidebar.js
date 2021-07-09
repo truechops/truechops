@@ -1,6 +1,6 @@
 import { Switch, makeStyles, Button, Select } from "@material-ui/core";
 
-import { useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import List from "@material-ui/core/List";
 import ListItem from "@material-ui/core/ListItem";
 import ListItemSecondaryAction from "@material-ui/core/ListItemSecondaryAction";
@@ -19,6 +19,9 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: theme.palette.background.paper,
     textAlign: "center",
   },
+  trash: {
+      marginRight: theme.spacing(1)
+  },
   select: {
     textAlign: 'left'
   },
@@ -29,16 +32,27 @@ const useStyles = makeStyles((theme) => ({
 
 export default function Sidebar() {
   const classes = useStyles();
+  const unusedInstrumentsRef = useRef();
   const theme = useTheme();
   const partConfig = useSelector((state) => state.score.present.score.parts);
   const unusedInstruments = useSelector(state => Object.keys(state.score.present.voices)
                            .filter(voice => !Object.keys(partConfig).includes(voice)));
 
-  const [selectedInstrument, setSelectedInstrument] = useState(unusedInstruments.length ? unusedInstruments[0] : '');
+  const [selectedInstrument, setSelectedInstrument] = useState('');
 
   function onChangeInstrument(event) {
       setSelectedInstrument(event.target.value);
   }
+
+  useEffect(() => {
+      if(unusedInstruments.length > 0 && (!unusedInstrumentsRef.current || !_.isEqual(unusedInstrumentsRef.current, unusedInstruments))) {
+          console.log('a: ' + unusedInstruments[0]);
+        setSelectedInstrument(unusedInstruments[0]);
+
+        unusedInstrumentsRef.current = unusedInstruments;
+      }
+
+  }, [unusedInstruments])
 
   const dispatch = useDispatch();
   var instrumentConfig = [];
@@ -60,7 +74,7 @@ export default function Sidebar() {
           id={`switch-list-label-${config.label}`}
           primary={config.label}
         />
-        <Button onClick={config.onDelete}>
+        <Button className={classes.trash} onClick={config.onDelete}>
           <FaTrash size={theme.compose.sidebar.icons.size} />
         </Button>
         <ListItemSecondaryAction>
@@ -86,14 +100,10 @@ export default function Sidebar() {
       }
       className={classes.root}
     >
-        {unusedInstruments.length && <><Select
+        {unusedInstruments.length > 0 && <><Select
         className={classes.select}
           value={selectedInstrument}
           onChange={onChangeInstrument}
-        //   inputProps={{
-        //     name: 'age',
-        //     id: 'age-native-simple',
-        //   }}
         >
             {unusedInstruments.map(instrument => <option key={Math.random().toString()} value={instrument}>{instrument}</option>)}
         </Select>
