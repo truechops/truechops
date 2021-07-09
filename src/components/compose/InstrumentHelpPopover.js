@@ -2,6 +2,7 @@ import { useState } from "react";
 import Popover from "@material-ui/core/Popover";
 import { makeStyles, useTheme } from "@material-ui/core/styles";
 import { BiHelpCircle } from 'react-icons/bi';
+import useInstruments from './hooks/instruments-hook';
 
 const useStyles = makeStyles((theme) => ({
   popover: {
@@ -16,6 +17,7 @@ export default function MouseOverPopover() {
   const classes = useStyles();
   const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState(null);
+  const { tooltipText } = useInstruments();
 
   const handlePopoverOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -35,7 +37,7 @@ export default function MouseOverPopover() {
         onMouseEnter={handlePopoverOpen}
         onMouseLeave={handlePopoverClose}
       >
-        <BiHelpCircle size={20}/>
+        <BiHelpCircle size={25}/>
       </div>
       <Popover
         id="mouse-over-popover"
@@ -48,23 +50,7 @@ export default function MouseOverPopover() {
         onClose={handlePopoverClose}
         disableRestoreFocus
       >
-        K = Kick
-        <br />
-        S = Snare
-        <br />
-        HH = HiHat
-        <br />
-        R = Ride
-        <br />
-        HF = Hi Hat Foot
-        <br />
-        T1 = Tom 1 (High Tom)
-        <br />
-        T2 = Tom 2 (Middle Tom)
-        <br />
-        T3 = Tom 3 (Low Tom)
-        <br />
-        T4 = Tom 4 (Floor Tom)
+       {tooltipText}
       </Popover>
     </div>
   );
