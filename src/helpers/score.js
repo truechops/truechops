@@ -1,5 +1,6 @@
 import { GRACE_X_SHIFT, NON_ACCENT_VELOCITY } from '../../data/score-config';
-import { getAdditionalDotDuration } from './math';
+import { getAdditionalDotDuration, getPowersOf2 } from './math';
+import { tcDurationToVfDuration } from '../store/score-service';
 
 const noteHeadTypeLookup = {
   drumset: {
@@ -54,13 +55,30 @@ export function getNote(staveNoteConstructor, note, instrument) {
   return returnNote;
 }
 
-//Get the vex flow duration value, with or without including additional duration for dots.
-export function getVfDuration(note, withDots) {
-  let selectedDuration = vfDurationToTCDuration[note.duration];
+export function getRestsFromTCDuration(duration) {
+  const remainingDurations = getPowersOf2(duration);
+
+  let returnResult = [];
+    //Map powers of two numbers to 'rest' notes that fill up the empty space left by the smaller note
+    remainingDurations.reduce((result, duration) => {
+      result.push({
+        notes: [],
+        duration: tcDurationToVfDuration[duration],
+        velocity: NON_ACCENT_VELOCITY,
+      });
+      return result;
+    }, returnResult);
+
+    return returnResult;
+}
+
+//Get the TrueChops duration value, with or without including additional duration for dots.
+export function getTCDuration(duration, numDots) {
+  let selectedDuration = vfDurationToTCDuration[duration];
 
   //If we want to include time for dots.
-  if (withDots && note.dots) {
-    selectedDuration += getAdditionalDotDuration(selectedDuration, note.dots);
+  if (numDots) {
+    selectedDuration += getAdditionalDotDuration(selectedDuration, numDots);
   }
 
   return selectedDuration;

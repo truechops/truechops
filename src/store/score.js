@@ -1,7 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
-//import { smallSinglePart as defaultScore } from "../components/compose/sample-score";
+import { smallSinglePart as defaultScore } from "../components/compose/sample-score";
 //import defaultScore from '../../data/default-score';
-import { smallMultiPart as defaultScore } from "../components/compose/sample-score";
+//import { smallMultiPart as defaultScore } from "../components/compose/sample-score";
 import {
   modifyNote as modifyNoteService,
   toggleOrnament,
@@ -43,7 +43,7 @@ const initialState = {
     snare: {
       snareSelected: true,
       pingSelected: false,
-      rimSelected: false
+      rimSelected: false,
     },
     tenors: {
       spockSelected: false,
@@ -57,12 +57,12 @@ const initialState = {
       b2Selected: false,
       b3Selected: false,
       b4Selected: false,
-      b5Selected: false
+      b5Selected: false,
     },
     cymbals: {
       crashSelected: true,
       chokeSelected: false,
-    }
+    },
   },
   selectedPartIndex: 0,
 
@@ -80,6 +80,12 @@ const initialState = {
   },
 
   dotSelected: false,
+  tuplet: {
+    selected: false,
+    actual: 3,
+    normal: 2,
+    type: 8, //VF duration
+  },
   isPlaying: false,
 };
 
@@ -228,32 +234,35 @@ const scoreSlice = createSlice({
 
     togglePartEnabled(state, action) {
       const instrument = action.payload;
-      state.score.parts[instrument].enabled = !state.score.parts[instrument].enabled;
+      state.score.parts[instrument].enabled =
+        !state.score.parts[instrument].enabled;
     },
     deletePart(state, action) {
       const instrument = action.payload;
       _.unset(state.score.parts, instrument);
 
-      state.score.measures.forEach(measure => {
+      state.score.measures.forEach((measure) => {
         measure.parts.forEach((part, partIndex) => {
-          if(part.instrument === instrument) {
+          if (part.instrument === instrument) {
             measure.parts.splice(partIndex, 1);
           }
-        })
-      })
+        });
+      });
     },
     addPart(state, action) {
       const instrument = action.payload;
 
       //Set up the top-level part config
       state.score.parts[instrument] = {
-        enabled: true
+        enabled: true,
       };
 
       //Add the new part to each existing measure.
-      state.score.measures.forEach(measure => {
-        measure.parts = measure.parts.concat(getEmptyMeasure(measure.timeSig, [instrument]).parts)
-      })
+      state.score.measures.forEach((measure) => {
+        measure.parts = measure.parts.concat(
+          getEmptyMeasure(measure.timeSig, [instrument]).parts
+        );
+      });
     },
     toggleKickSelected(state) {
       state.voices.drumset.kickSelected = !state.voices.drumset.kickSelected;
@@ -285,6 +294,18 @@ const scoreSlice = createSlice({
     },
     toggleDotSelected(state) {
       state.dotSelected = !state.dotSelected;
+    },
+    toggleTupletSelected(state) {
+      state.tuplet.selected = !state.tuplet.selected;
+    },
+    changeTupletActualDuration(state, action) {
+      state.tuplet.actual = action.payload;
+    },
+    changeTupletNormalDuration(state, action) {
+      state.tuplet.normal = action.payload;
+    },
+    changeTupletType(state, action) {
+      state.tuplet.type = action.payload;
     },
 
     toggleSpockSelected(state) {
@@ -379,6 +400,7 @@ export const getSelectedNote = createSelector(
   }
 );
 
+//Get the notes for playback
 export const getToneJs = createSelector([(state) => state.score], (score) => {
   let measures = score.measures;
   const tempo = score.tempo;
@@ -407,19 +429,29 @@ export const getToneJs = createSelector([(state) => state.score], (score) => {
 
       voices.forEach((voice) => {
         const notes = voice.notes;
-        notes.forEach((note) => {
+
+        notes.forEach((note, noteIndex) => {
           let noteSecondsDuration = (spb * 4) / note.duration;
-          if(note.dots) {
+
+          const tuplets = voice.tuplets;
+          tuplets.forEach((tuplet) => {
+            if (noteIndex >= tuplet.start && noteIndex < tuplet.end) {
+              noteSecondsDuration *= tuplet.normal / tuplet.actual;
+            }
+          });
+
+          if (note.dots) {
             let extraDuration = noteSecondsDuration;
 
             //Add extra time for the dots
-            for(let i = 0; i < note.dots; i++) {
+            for (let i = 0; i < note.dots; i++) {
               extraDuration /= 2;
               noteSecondsDuration += extraDuration;
             }
           }
 
           if (note.notes.length) {
+            //Not a rest
             for (const tjsNote of note.notes) {
               const toneJsNote = {
                 time,
@@ -456,7 +488,11 @@ export const getToneJs = createSelector([(state) => state.score], (score) => {
                 //Add the diddle note.
                 if (note.ornaments.includes(DIDDLE)) {
                   toneJsNotes.push(
-                    cloneNote(toneJsNote, noteSecondsDuration / 2, note.velocity)
+                    cloneNote(
+                      toneJsNote,
+                      noteSecondsDuration / 2,
+                      note.velocity
+                    )
                   );
                 }
 
@@ -470,7 +506,11 @@ export const getToneJs = createSelector([(state) => state.score], (score) => {
                 if (note.ornaments.includes(CHEESE)) {
                   //Add the diddle and flam notes, respectively.
                   toneJsNotes.push(
-                    cloneNote(toneJsNote, noteSecondsDuration / 2, note.velocity)
+                    cloneNote(
+                      toneJsNote,
+                      noteSecondsDuration / 2,
+                      note.velocity
+                    )
                   );
                   toneJsNotes.push(
                     cloneNote(toneJsNote, -0.0175, GRACE_VELOCITY)
@@ -479,6 +519,7 @@ export const getToneJs = createSelector([(state) => state.score], (score) => {
               }
             }
           } else {
+            //rest
             toneJsNotes.push({});
           }
 

@@ -1,4 +1,7 @@
 import ReactGA from "react-ga";
+import { useState, useCallback } from 'react';
+
+import Popover from '@material-ui/core/Popover';
 
 import { ACCENT, FLAM, DIDDLE, CHEESE, LEFT_STICKING, RIGHT_STICKING } from '../../../store/score';
 
@@ -73,6 +76,7 @@ export default function useComposeButtons(
   modifyNoteHandler,
   isPlaying,
   dotSelected,
+  tupletSelected,
   repeat,
   selectedNote
 ) {
@@ -221,16 +225,6 @@ export default function useComposeButtons(
       viewBox={props.viewBox}
       component={props.component}
     />
-  ));
-
-  const tupletButtons = ["3:2", "3:2"].map((tupletText) => (
-    <Button
-      key={Math.random().toString()}
-      variant="outlined"
-      className={classes.noteButton}
-    >
-      {tupletText}
-    </Button>
   ));
 
   const dotButton = 
@@ -387,7 +381,6 @@ export default function useComposeButtons(
     noteButtonsRow1,
     noteButtonsRow2Mobile,
     noteButtonsRow2Desktop,
-    tupletButtons,
     dotButton
   };
 }

@@ -1,5 +1,5 @@
 import { getPowersOf2, getAdditionalDotDuration } from "../helpers/math";
-import { getVfDuration } from '../helpers/score';
+import { getTCDuration, getRestsFromTCDuration } from "../helpers/score";
 import _ from "lodash";
 import { NON_ACCENT_VELOCITY } from "../../data/score-config";
 
@@ -13,7 +13,7 @@ const vfDurationToTCDuration = {
   32: 2,
 };
 
-const tcDurationToVfDuration = {
+export const tcDurationToVfDuration = {
   64: 1,
   32: 2,
   16: 4,
@@ -26,26 +26,66 @@ export function modifyNote(state, newNoteValueIn, isRest, selectedNote) {
   let { measureIndex, partIndex, voiceIndex, noteIndex } = selectedNote;
   const score = state.score;
   const dotSelected = state.dotSelected;
-  const notes =
+  const measureNotes =
     score.measures[measureIndex].parts[partIndex].voices[voiceIndex].notes;
-  const note = notes[noteIndex];
+  const note = measureNotes[noteIndex];
+  const tuplet = state.tuplet;
 
-  let selectedDuration = getVfDuration(note, true);
+  let selectedDuration = getTCDuration(note.duration, note.dots);
 
   let newNoteValue = newNoteValueIn;
+
+  if (tuplet.selected) {
+    newNoteValue = tuplet.normal * getTCDuration(tuplet.type, 0);
+  }
 
   if (dotSelected) {
     newNoteValue += getAdditionalDotDuration(newNoteValue, 1);
   }
 
-  //Get the note total after the note index. Lets us know if there is enough room
-  //for the new note.
-  let noteTotalAfterPos = notes.slice(noteIndex).reduce((total, note) => {
-    let duration = getVfDuration(note, true);
+  let noteTotalAfterPos = 0;
 
-    total += duration;
-    return total;
-  }, 0);
+  let tuplets =
+    score.measures[measureIndex].parts[partIndex].voices[voiceIndex].tuplets;
+  let selectedTuplet = null;
+
+  //Used when updating tuplet start/end indices
+  let nextTupletIndex = 0;
+
+  if (tuplets.length) {
+    for (var i = 0; i < tuplets.length; i++) {
+      if (noteIndex >= tuplets[i].start && noteIndex < tuplets[i].end) {
+        selectedTuplet = tuplets[i];
+
+        //No nested tuplets.
+        if(tuplet.selected) {
+          return;
+        }
+
+        break;
+      } 
+    }
+  }
+
+  if (selectedTuplet) {
+    noteTotalAfterPos = measureNotes
+      .slice(noteIndex, selectedTuplet.end)
+      .reduce((total, note) => {
+        let duration = getTCDuration(note.duration, note.dots);
+
+        total += duration;
+        return total;
+      }, 0);
+  } else {
+    //Get the note total after the note index. Lets us know if there is enough room
+    //for the new note.
+    noteTotalAfterPos = measureNotes.slice(noteIndex).reduce((total, note) => {
+      let duration = getTCDuration(note.duration, note.dots);
+
+      total += duration;
+      return total;
+    }, 0);
+  }
 
   if (newNoteValue > noteTotalAfterPos) {
     return;
@@ -68,24 +108,39 @@ export function modifyNote(state, newNoteValueIn, isRest, selectedNote) {
 
   newNotes.push(newNote);
 
-  if (newNoteValue < selectedDuration) {
-    const remainingDurations = getPowersOf2(selectedDuration - newNoteValue);
+  // let numNewNotePushes = tuplet.selected ? tuplet.actual : 1;
 
-    //Map powers of two numbers to 'rest' notes that fill up the empty space left by the smaller note
-    remainingDurations.reduce((result, duration) => {
-      result.push({
-        notes: [],
-        duration: tcDurationToVfDuration[duration],
-        velocity: NON_ACCENT_VELOCITY,
-      });
-      return result;
-    }, newNotes);
+  // for(let i = 0 ; i < numNewNotePushes; i++) {
+  //   newNotes.push(newNote);
+  // }
+
+  let numTupletNotes = 0;
+
+  if (tuplet.selected) {
+    const singleNoteDuration = getTCDuration(tuplet.type, 0);
+    const tupletDuration = tuplet.actual * singleNoteDuration;
+
+    //The note the user wants will not work with this tuplet; return.
+    if (newNoteValueIn > tupletDuration) {
+      return;
+    }
+
+    newNotes = newNotes.concat(
+      getRestsFromTCDuration(tupletDuration - newNoteValueIn)
+    );
+    numTupletNotes = newNotes.length;
+  }
+
+  if (newNoteValue < selectedDuration) {
+    newNotes = newNotes.concat(
+      getRestsFromTCDuration(selectedDuration - newNoteValue)
+    );
   } else if (newNoteValue > selectedDuration) {
     let remainingDuration = newNoteValue - selectedDuration;
 
-    for (var i = noteIndex + 1; i < notes.length; i++) {
-      const note = notes[i];
-      let noteDuration = getVfDuration(note, true);
+    for (let j = noteIndex + 1; j < measureNotes.length; j++) {
+      const note = measureNotes[j];
+      let noteDuration = getTCDuration(note.duration, note.dots);
 
       remainingDuration -= noteDuration;
       notesToDelete++;
@@ -115,7 +170,29 @@ export function modifyNote(state, newNoteValueIn, isRest, selectedNote) {
     }
   }
 
-  notes.splice(noteIndex, notesToDelete, ...newNotes);
+  if (tuplet.selected) {
+    tuplets.push({
+      start: noteIndex,
+      end: noteIndex + numTupletNotes,
+      actual: tuplet.actual,
+      normal: tuplet.normal,
+    });
+  }
+
+  const numMoreNotes = newNotes.length - notesToDelete;
+  if (selectedTuplet) {
+    selectedTuplet.end += numMoreNotes;
+  }
+
+  //Adjust tuplet start/end after the selected tuplet
+  for (let k = 0; k < tuplets.length; k++) {
+    if(noteIndex < tuplets[k].start) {
+      tuplets[k].start += numMoreNotes;
+      tuplets[k].end += numMoreNotes;
+    }
+  }
+
+  measureNotes.splice(noteIndex, notesToDelete, ...newNotes);
   incDecSelectedNote(state, true);
 }
 

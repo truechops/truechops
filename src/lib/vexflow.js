@@ -122,8 +122,9 @@ function getMeasureData(measures, partConfig) {
       let vfVoices = [];
       let vfVoiceBeams = [];
       let vfVoiceNotes = [];
+      let vfTuplets = [];
       voices.forEach((voice, voiceIndex) => {
-        const { notes } = voice;
+        const { notes, tuplets } = voice;
         var vfNotes = [];
         notes.forEach((note, noteIndex) => {
           const n = getNote(
@@ -141,6 +142,12 @@ function getMeasureData(measures, partConfig) {
 
           vfNotes.push(n);
         });
+
+        tuplets.forEach(tuplet => {
+          vfTuplets.push(new VF.Tuplet(vfNotes.slice(tuplet.start,tuplet.end), {
+          num_notes: tuplet.actual, notes_occupied: tuplet.normal, bracketed: true
+        }));
+      });
 
         // Create a voice in 4/4 and add the notes from above
         var vfVoice = new VF.Voice({ num_beats: 4, beat_value: 4 });
@@ -160,6 +167,7 @@ function getMeasureData(measures, partConfig) {
         voices: vfVoices,
         notes: vfVoiceNotes,
         beams: vfVoiceBeams,
+        tuplets: vfTuplets,
         instrument,
       });
     });
@@ -170,6 +178,7 @@ function getMeasureData(measures, partConfig) {
   return measurePartsArray;
 }
 
+//Render the staves onto the score.
 function renderStaves(
   barRenderData,
   remainingWidth,
@@ -225,7 +234,7 @@ function renderStaves(
         stave.setEndBarType(VF.Barline.type.REPEAT_END);
       }
 
-      const { voices, notes, beams, instrument } = part;
+      const { voices, notes, beams, instrument, tuplets } = part;
       var formatter = new VF.Formatter();
 
       let widthDiff = 0;
@@ -252,6 +261,9 @@ function renderStaves(
       beams.map((vfBeams) =>
         vfBeams.map((beam) => beam.setContext(context).draw())
       );
+
+      tuplets.map(vfTuplet => vfTuplet.setContext(context).draw());
+
       const interaction = new VexFlowInteraction(context.svg);
       
       notes[0].forEach((note, noteIndex) => {
@@ -290,7 +302,6 @@ function renderStaves(
   });
 
   if(numParts > 1) {
-    console.log('staves length: ' + staves.length);
     var connector = new VF.StaveConnector(staves[0], staves[staves.length - 1]);
         connector.setType(VF.StaveConnector.type.SINGLE);
         connector.setContext(context);

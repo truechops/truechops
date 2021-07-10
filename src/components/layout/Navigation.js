@@ -75,22 +75,22 @@ export default function Navigation() {
           <ImBooks className={classes.drawerIcon} size={iconSize} />
           <ListItemText primary="my libary" />
         </ListItem>
-        <ListItem
+        {/* <ListItem
           onClick={navigationHandler.bind(null, "/discover")}
           button
           key="discover"
         >
           <FaUsers className={classes.drawerIcon} size={iconSize} />
           <ListItemText primary="discover" />
-        </ListItem>
+        </ListItem> */}
         <ListItem button key="mods" onClick={navigationHandler.bind(null, "/mods")}>
           <FaTools className={classes.drawerIcon} size={iconSize} />
           <ListItemText primary="mods" />
         </ListItem>
-        <ListItem button key="search" onClick={navigationHandler.bind(null, "/search")}>
+        {/* <ListItem button key="search" onClick={navigationHandler.bind(null, "/search")}>
           <FaSearch className={classes.drawerIcon} size={iconSize} />
           <ListItemText primary="search" />
-        </ListItem>
+        </ListItem> */}
       </List>
       {!currentUser && (
         <>
