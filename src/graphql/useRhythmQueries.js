@@ -4,24 +4,21 @@ import gql from "graphql-tag";
 
 export default function useRhythmQueries() {
   const currentUser = useSelector(state => state.realm.app.currentUser);
-  const { rhythms, loading } = useAllRhythmsForUser(currentUser);
+  const { rhythms: userRhythms, loading } = useAllRhythmsForUser(currentUser);
   return {
-    rhythms,
-    loading
+    userRhythms,
+    loading,
+    getRhythmById: getRhythmById.bind(null, currentUser)
   };
-};
+}
 
 function useAllRhythmsForUser(currentUser) {
   const { data, loading, error } = useQuery(
     gql`
       query GetAllRhythmsForUser($userId: String!) {
         rhythms(query: { _userId: $userId }) {
+          _id
           name
-          notes {
-            note,
-            time
-            velocity
-          }
         }
       }
     `,
@@ -35,4 +32,9 @@ function useAllRhythmsForUser(currentUser) {
   // Otherwise, return an empty list
   const rhythms = data?.rhythms ?? [];
   return { rhythms, loading };
+}
+
+async function getRhythmById(currentUser, rhythmId) {
+  const rhythm = await currentUser.functions.findRhythmById(rhythmId);
+  return rhythm.score;
 }

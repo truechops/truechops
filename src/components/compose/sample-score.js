@@ -178,7 +178,7 @@ export const smallSinglePart = {
                   velocity: 1.0,
                 },
                 {
-                  notes: ["C5"],
+                  notes: ["E5"],
                   duration: 16,
                   velocity: 1.0,
                 },

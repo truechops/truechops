@@ -8,7 +8,6 @@ import { useTheme } from "@material-ui/core/styles";
 import ToneContext from "../../store/tone-context";
 import { connect } from "react-redux";
 import { getToneJs, scoreActions } from "../../store/score";
-import useInstruments from './hooks/instruments-hook';
 
 import _ from "lodash";
 
@@ -20,6 +19,7 @@ import {
   FaSave,
   FaLink,
 } from "react-icons/fa";
+import useRhythmMutations from "../../graphql/useRhythmMutations";
 
 export function TopToolbar(props) {
   const { setSampler, snareSampler, tenorsSampler, bassSampler, cymbalsSampler } = useContext(ToneContext);
@@ -29,6 +29,7 @@ export function TopToolbar(props) {
   const repeat = props.repeat;
   const startStop = props.startStop;
   const prevRepeatRef = useRef();
+  const { addRhythm } = useRhythmMutations();
 
   //Key listeners: space = start/stop
 
@@ -88,7 +89,7 @@ export function TopToolbar(props) {
         <IconButton
           color="inherit"
           aria-label="save"
-          onClick={() => alert("save!")}
+          onClick={() => addRhythm(Math.random().toString())}
         >
           <FaSave size={iconSize} />
         </IconButton>

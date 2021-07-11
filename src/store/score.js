@@ -93,6 +93,12 @@ const scoreSlice = createSlice({
   name: "score",
   initialState,
   reducers: {
+    updateScore(state, action) {
+      state.score = action.payload;
+      state.repeat = {};
+      state.selectedPartIndex = 0;
+      state.selectedNoteIndex = null;
+    },
     toggleIsPlaying(state) {
       state.isPlaying = !state.isPlaying;
     },

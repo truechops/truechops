@@ -1,0 +1,153 @@
+{
+  "properties": {
+    "_userId": {
+      "bsonType": "string"
+    },
+    "_id": {
+      "bsonType": "string"
+    },
+    "name": {
+      "bsonType": "string"
+    },
+    "score": {
+      "bsonType": "object",
+      "properties": {
+        "tempo": {
+          "bsonType": "double"
+        },
+        "parts": {
+          "bsonType": "object",
+          "properties": {
+            "drumset": {
+              "bsonType": "object",
+              "properties": {
+                "enabled": {
+                  "bsonType": "bool"
+                }
+              }
+            },
+            "snare": {
+              "bsonType": "object",
+              "properties": {
+                "enabled": {
+                  "bsonType": "bool"
+                }
+              }
+            },
+            "tenors": {
+              "bsonType": "object",
+              "properties": {
+                "enabled": {
+                  "bsonType": "bool"
+                }
+              }
+            },
+            "bass": {
+              "bsonType": "object",
+              "properties": {
+                "enabled": {
+                  "bsonType": "bool"
+                }
+              }
+            },
+            "cymbals": {
+              "bsonType": "object",
+              "properties": {
+                "enabled": {
+                  "bsonType": "bool"
+                }
+              }
+            }
+          }
+        },
+        "measures": {
+          "bsonType": "array",
+          "items": {
+            "bsonType": "object",
+            "properties": {
+              "timeSig": {
+                "bsonType": "object",
+                "properties": {
+                  "num": {
+                    "bsonType": "int"
+                  },
+                  "type": {
+                    "bsonType": "int"
+                  }
+                }
+              },
+              "parts": {
+                "bsonType": "array",
+                "items": {
+                  "bsonType": "object",
+                  "properties": {
+                    "instrument": {
+                      "bsonType": "string"
+                    },
+                    "voices": {
+                      "bsonType": "array",
+                      "items": {
+                        "bsonType": "object",
+                        "properties": {
+                          "notes": {
+                            "bsonType": "array",
+                            "items": {
+                              "bsonType": "object",
+                              "properties": {
+                                "notes": {
+                                  "bsonType": "array",
+                                  "items": {
+                                    "bsonType": "string"
+                                  }
+                                },
+                                "duration": {
+                                  "bsonType": "int"
+                                },
+                                "velocity": {
+                                  "bsonType": "double"
+                                }
+                              }
+                            }
+                          },
+                          "tuplets": {
+                            "bsonType": "array",
+                            "items": {
+                              "bsonType": "object",
+                              "properties": {
+                                "start": {
+                                  "bsonType": "int"
+                                },
+                                "end": {
+                                  "bsonType": "int"
+                                },
+                                "actual": {
+                                  "bsonType": "int"
+                                },
+                                "normal": {
+                                  "bsonType": "int"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "required": [
+      "_userId",
+      "_id",
+      "name",
+      "tempo",
+      "parts",
+      "measures"
+    ],
+    "title": "Rhythm"
+  }
+}
