@@ -9,8 +9,8 @@ import { Provider } from "react-redux";
 import store from "../src/store/index";
 import RealmApolloProvider from "../src/providers/RealmApolloProvider";
 import { ToneContextProvider } from "../src/store/tone-context";
-import ReactGA from 'react-ga';
-import ErrorBoundary from '../src/components/error/ErrorBoundary';
+import ReactGA from "react-ga";
+import ErrorBoundary from "../src/components/error/ErrorBoundary";
 
 export default function MyApp(props) {
   const { Component, pageProps } = props;
@@ -22,8 +22,8 @@ export default function MyApp(props) {
       jssStyles.parentElement.removeChild(jssStyles);
     }
 
-    ReactGA.initialize('UA-146220050-1', {
-      titleCase: false
+    ReactGA.initialize("UA-146220050-1", {
+      titleCase: false,
     });
   }, []);
 
@@ -36,9 +36,9 @@ export default function MyApp(props) {
           content="minimum-scale=1, initial-scale=1, width=device-width"
         />
       </Head>
-      
-        <Provider store={store}>
-          <RealmApolloProvider>
+
+      <Provider store={store}>
+        <RealmApolloProvider>
           <ToneContextProvider>
             <ThemeProvider theme={Theme}>
               <CssBaseline />
@@ -46,9 +46,9 @@ export default function MyApp(props) {
               <Navigation />
               <Component {...pageProps} />
             </ThemeProvider>
-            </ToneContextProvider>
-          </RealmApolloProvider>
-        </Provider>
+          </ToneContextProvider>
+        </RealmApolloProvider>
+      </Provider>
     </ErrorBoundary>
   );
 }

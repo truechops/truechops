@@ -1,10 +1,11 @@
-import {useSelector} from 'react-redux';
+import { useSelector } from 'react-redux';
 import {
   ApolloClient,
   HttpLink,
   InMemoryCache,
   ApolloProvider,
 } from "@apollo/client";
+import { userRhythmsVar } from '../graphql/cache';
 
 // Create an ApolloClient that connects to the provided Realm.App's GraphQL API
 const createRealmApolloClient = (currentUser) => {
@@ -24,6 +25,7 @@ const createRealmApolloClient = (currentUser) => {
     },
   });
   const cache = new InMemoryCache();
+  console.log('new cache');
   return new ApolloClient({ link, cache });
 };
 

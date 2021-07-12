@@ -1,27 +1,18 @@
 import { useQuery } from "@apollo/client";
 import { useSelector } from 'react-redux';
-import gql from "graphql-tag";
+import { GET_ALL_USER_RHYTHMS_QUERY, GET_RHYTHM_BY_ID_QUERY } from '../../data/graphql';
 
 export default function useRhythmQueries() {
   const currentUser = useSelector(state => state.realm.app.currentUser);
-  const { rhythms: userRhythms, loading } = useAllRhythmsForUser(currentUser);
   return {
-    userRhythms,
-    loading,
-    getRhythmById: getRhythmById.bind(null, currentUser)
+    getAllUserRhythms: useAllRhythmsForUser.bind(null, currentUser),
+    useGetRhythmById
   };
 }
 
 function useAllRhythmsForUser(currentUser) {
   const { data, loading, error } = useQuery(
-    gql`
-      query GetAllRhythmsForUser($userId: String!) {
-        rhythms(query: { _userId: $userId }) {
-          _id
-          name
-        }
-      }
-    `,
+    GET_ALL_USER_RHYTHMS_QUERY,
     { variables: { userId: currentUser.id } }
   );
   if (error) {
@@ -34,7 +25,17 @@ function useAllRhythmsForUser(currentUser) {
   return { rhythms, loading };
 }
 
-async function getRhythmById(currentUser, rhythmId) {
-  const rhythm = await currentUser.functions.findRhythmById(rhythmId);
-  return rhythm.score;
+function useGetRhythmById(id) {
+  const { data, loading, error } = useQuery(
+    GET_RHYTHM_BY_ID_QUERY,
+    { variables: { id } }
+  );
+  if (error) {
+    throw new Error(`Failed to fetch tasks: ${error.message}`);
+  }
+
+  // If the query has finished, return the tasks from the result data
+  // Otherwise, return an empty list
+  const rhythm = data?.score ?? [];
+  return { rhythm, loading };
 }
