@@ -5,6 +5,7 @@ import { useSelector } from "react-redux";
 import Score from "./Score";
 import ErrorBoundary from "../error/ErrorBoundary";
 
+
 export default function Main() {
   const [selectedTab, setSelectedTab] = useState(1);
   const [tabPanelHidden, setTabPanelHidden] = useState(false);
