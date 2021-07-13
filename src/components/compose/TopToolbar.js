@@ -1,28 +1,30 @@
 //import { makeStyles } from "@material-ui/styles";
 
-import { useContext, useEffect, useRef } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { ActionCreators } from "redux-undo";
 import IconButton from "@material-ui/core/IconButton";
 import { update as updateToneJs, setSamplers } from "../../lib/tone";
 import { useTheme } from "@material-ui/core/styles";
 import ToneContext from "../../store/tone-context";
-import { connect } from "react-redux";
+import { connect, useSelector } from "react-redux";
 import { getToneJs, scoreActions } from "../../store/score";
+import Dialog from "../ui/Dialog";
+import TextField from '@material-ui/core/TextField';
 
 import _ from "lodash";
 
-import {
-  FaUndo,
-  FaRedo,
-  FaPlay,
-  FaStop,
-  FaSave,
-  FaLink,
-} from "react-icons/fa";
+import { FaUndo, FaRedo, FaPlay, FaStop, FaSave, FaLink } from "react-icons/fa";
 import useRhythmMutations from "../../graphql/useRhythmMutations";
+import SaveRhythmForm from "./SaveRhythmForm";
 
 export function TopToolbar(props) {
-  const { setSampler, snareSampler, tenorsSampler, bassSampler, cymbalsSampler } = useContext(ToneContext);
+  const {
+    setSampler,
+    snareSampler,
+    tenorsSampler,
+    bassSampler,
+    cymbalsSampler,
+  } = useContext(ToneContext);
   const theme = useTheme();
   const isPlaying = props.isPlaying;
   const toneJs = props.toneJs;
@@ -30,37 +32,61 @@ export function TopToolbar(props) {
   const startStop = props.startStop;
   const prevRepeatRef = useRef();
   const { addRhythm } = useRhythmMutations();
+  const currentUser = useSelector((state) => state.realm.currentUser);
+  const [mustBeLoggedInModalOpen, setMustBeLoggedInModalOpen] = useState(false);
+  const [saveRhythmModalOpen, setSaveRhythmModalOpen] = useState(false);
+  const [rhythmToSaveName, setRhythmToSaveName] = useState('');
+
+  function onChangeRhythmName(event) {
+    setRhythmToSaveName(event.target.value);
+  }
 
   //Key listeners: space = start/stop
 
   //Set the tonejs samplers, which come from ToneContext
   useEffect(() => {
-    setSamplers(setSampler, snareSampler, tenorsSampler, bassSampler, cymbalsSampler);
+    setSamplers(
+      setSampler,
+      snareSampler,
+      tenorsSampler,
+      bassSampler,
+      cymbalsSampler
+    );
   }, [setSampler, snareSampler, tenorsSampler, bassSampler, cymbalsSampler]);
+
+  function onSave() {
+    if (!currentUser) {
+      setMustBeLoggedInModalOpen(true);
+    } else {
+      setSaveRhythmModalOpen(true);
+    }
+  }
 
   useEffect(() => {
     let doUpdateToneJs = false;
 
     //Initial load, update tone js.
-    if(!prevRepeatRef.current) {
+    if (!prevRepeatRef.current) {
       doUpdateToneJs = true;
-    }
-    else if (!_.isEqual(repeat, prevRepeatRef.current)) {
+    } else if (!_.isEqual(repeat, prevRepeatRef.current)) {
       //If repeat information changed, only change tone js if switching from repeat to not-repeat or vice-versa.
       if ("start" in repeat && "end" in repeat) {
         if (repeat.start >= 0 && repeat.end >= 0) {
           doUpdateToneJs = true;
         }
-      } else if ("start" in prevRepeatRef.current && "end" in prevRepeatRef.current) {
-          doUpdateToneJs = true;
+      } else if (
+        "start" in prevRepeatRef.current &&
+        "end" in prevRepeatRef.current
+      ) {
+        doUpdateToneJs = true;
       }
     } else {
       doUpdateToneJs = true;
     }
 
-    if(doUpdateToneJs) {
+    if (doUpdateToneJs) {
       updateToneJs(toneJs, repeat, startStop);
-    } 
+    }
 
     prevRepeatRef.current = repeat;
   }, [toneJs, repeat, startStop]);
@@ -69,28 +95,16 @@ export function TopToolbar(props) {
   return (
     <>
       <div style={{ width: "auto", margin: "auto" }}>
-        <IconButton
-          color="inherit"
-          aria-label="undo"
-          onClick={props.undo}
-        >
+        <IconButton color="inherit" aria-label="undo" onClick={props.undo}>
           <FaUndo size={iconSize} />
         </IconButton>
-        <IconButton
-          color="inherit"
-          aria-label="redo"
-          onClick={props.redo}
-        >
+        <IconButton color="inherit" aria-label="redo" onClick={props.redo}>
           <FaRedo size={iconSize} />
         </IconButton>
         <IconButton color="inherit" aria-label="play" onClick={startStop}>
           {!isPlaying ? <FaPlay size={iconSize} /> : <FaStop size={iconSize} />}
         </IconButton>
-        <IconButton
-          color="inherit"
-          aria-label="save"
-          onClick={() => addRhythm(Math.random().toString())}
-        >
+        <IconButton color="inherit" aria-label="save" onClick={onSave}>
           <FaSave size={iconSize} />
         </IconButton>
         <IconButton
@@ -101,6 +115,29 @@ export function TopToolbar(props) {
           <FaLink size={iconSize} />
         </IconButton>
       </div>
+      <Dialog
+        onOk={setMustBeLoggedInModalOpen.bind(null, false)}
+        message="Log in to save your rhythm!"
+        isOpen={mustBeLoggedInModalOpen}
+        setIsOpen={setMustBeLoggedInModalOpen}
+      />
+
+      <Dialog
+        onOk={() => addRhythm(rhythmToSaveName)}
+        useCancel
+        disabled={!rhythmToSaveName}
+        message={<TextField
+          id="rhythm-name"
+          label="rhythm name"
+          style={{ margin: 8 }}
+          fullWidth
+          margin="normal"
+          onChange={onChangeRhythmName}
+          value={rhythmToSaveName}
+        />}
+        isOpen={saveRhythmModalOpen}
+        setIsOpen={setSaveRhythmModalOpen}
+      />
     </>
   );
 }
@@ -117,7 +154,7 @@ const mapDispatchToProps = (dispatch) => {
   return {
     startStop: () => dispatch(scoreActions.startStop()),
     undo: () => dispatch(ActionCreators.undo()),
-    redo: () => dispatch(ActionCreators.redo())
+    redo: () => dispatch(ActionCreators.redo()),
   };
 };
 

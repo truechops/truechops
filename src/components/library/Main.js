@@ -14,11 +14,18 @@ import ListItemText from "@material-ui/core/ListItemText";
 import Paper from "@material-ui/core/Paper";
 
 export default function Main() {
-  const dispatch = useDispatch();
-  const router = useRouter();
-  const userRhythms = useReactiveVar(userRhythmsVar);
   const currentUser = useSelector((state) => state.realm.currentUser);
+  const router = useRouter();
 
+  //Don't allow the user to visit this page if they are not logged in.
+  if(!currentUser) {
+    router.push('/');
+  }
+
+  const dispatch = useDispatch();
+  
+  const userRhythms = useReactiveVar(userRhythmsVar);
+  
   const useStyles = makeStyles((theme) => ({
     root: {
       width: "100%",
@@ -28,7 +35,11 @@ export default function Main() {
     },
     listItem: {
       cursor: "pointer",
+      margin: theme.spacing(1),
     },
+    listItemText: {
+      color: 'black'
+    }
   }));
 
   const classes = useStyles();
@@ -42,8 +53,11 @@ export default function Main() {
   }
 
   useEffect(() => {
-    getUserRhythms({ variables: { userId: currentUser.id } });
-  }, [getUserRhythms, currentUser.id]);
+    if(currentUser) {
+      getUserRhythms({ variables: { userId: currentUser.id } });
+    }
+    
+  }, [getUserRhythms, currentUser]);
 
   function practiceRhythm(score) {
     const omitTypename = (key, value) =>
@@ -55,15 +69,16 @@ export default function Main() {
 
   return (
     <section style={{ textAlign: "center" }}>
-      <h1>My Rhythms</h1>
-
       {userRhythms.length > 0 && (
-        <Paper className={classes.root}>
+        
           <List>
-            {userRhythms.map((rhythm) => (
-              <>
+            {userRhythms.map((rhythm, rhythmIndex) => (
+              <Paper key={`rhythm-${rhythmIndex}`} className={classes.root}>
                 <ListItem className={classes.listItem} onClick={practiceRhythm.bind(null, rhythm.score)}>
                   <ListItemText
+                  secondaryTypographyProps={{ style: {
+                    color: 'black'
+                  } }} 
                     primary={rhythm.name}
                     secondary={new Date(rhythm.date).toLocaleString("en-US", {
                       day: "numeric", // numeric, 2-digit
@@ -72,10 +87,9 @@ export default function Main() {
                     })}
                   />
                 </ListItem>
-              </>
+              </Paper>
             ))}
           </List>
-        </Paper>
       )}
 
       {userRhythms.length === 0 && <CircularProgress />}

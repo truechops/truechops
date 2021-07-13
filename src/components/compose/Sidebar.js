@@ -16,10 +16,10 @@ import React from "react";
 import DialogTitle from "@material-ui/core/DialogTitle";
 import DialogContent from "@material-ui/core/DialogContent";
 import DialogActions from "@material-ui/core/DialogActions";
-import Dialog from "@material-ui/core/Dialog";
 import RadioGroup from "@material-ui/core/RadioGroup";
 import Radio from "@material-ui/core/Radio";
 import FormControlLabel from "@material-ui/core/FormControlLabel";
+import Dialog from '../ui/Dialog';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -44,12 +44,16 @@ export default function Sidebar() {
   const unusedInstrumentsRef = useRef();
   const [modalOpen, setModalOpen] = useState(false);
   const theme = useTheme();
-  const partConfig = useSelector((state) => state.score.present.score.parts);
+  let partConfig = useSelector((state) => state.score.present.score.parts);
+  partConfig = _.omitBy(partConfig, _.isNil);
+  
   const unusedInstruments = useSelector((state) =>
     Object.keys(state.score.present.voices).filter(
       (voice) => !Object.keys(partConfig).includes(voice)
     )
   );
+
+  console.log
 
   const [instrumentToDelete, setInstrumentToDelete] = useState('');
   const [selectedInstrument, setSelectedInstrument] = useState('');
@@ -146,23 +150,10 @@ export default function Sidebar() {
         {listItems}
       </List>
 
-      <Dialog
-        maxWidth="xs"
-        aria-labelledby="confirmation-dialog-title"
-        open={modalOpen}
-      >
-        <DialogContent dividers>
-          Are you sure you want to delete the &apos;{instrumentToDelete}&apos; part?
-        </DialogContent>
-        <DialogActions>
-          <Button autoFocus onClick={setModalOpen.bind(null, false)} color="primary">
-            Cancel
-          </Button>
-          <Button onClick={deletePart.bind(null, instrumentToDelete)} color="primary">
-            Ok
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <Dialog useCancel 
+               isOpen={modalOpen} setIsOpen={setModalOpen}
+              message={`Are you sure you want to delete the '${instrumentToDelete}' part?`} 
+              onOk={deletePart.bind(null, instrumentToDelete)} /> 
     </>
   );
 }

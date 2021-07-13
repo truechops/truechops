@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import TextField from "@material-ui/core/TextField";
 import useAuthStyles from "./auth-styles";
 import Button from "@material-ui/core/Button";
@@ -23,6 +23,13 @@ export default function AuthForm(props) {
   if (isSignUp) {
     continueEnabled = continueEnabled && !!firstName && !!lastName;
   }
+
+  //Hack until react-social-login-buttons has type="button" as default 
+  // (https://github.com/MichalSzorad/react-social-login-buttons/pull/58)
+  useEffect(() => {
+    $("#facebookButton button").attr('type', 'button');
+    $("#googleButton button").attr('type', 'button');
+  }, [])
 
   const classes = useAuthStyles();
 
@@ -57,6 +64,7 @@ export default function AuthForm(props) {
 
   const googleSignInHandler = async () => {
     const redirectUri = `${window.location.origin}/oathRedirect`;
+    console.log('submitting google!');
     // Calling logIn() opens a Google authentication screen in a new window.
     try {
       await dispatch(login(Realm.Credentials.google(redirectUri)));
@@ -79,6 +87,7 @@ export default function AuthForm(props) {
 
   const onSubmitHandler = (e) => {
     e.preventDefault();
+    console.log("submitting form!!!")
 
     if (isSignUp && password != confirmPassword) {
       setError((state) => ({
@@ -189,7 +198,6 @@ export default function AuthForm(props) {
         style={{ margin: 8 }}
         fullWidth
         type="email"
-        required
         margin="normal"
         onChange={emailChangeHandler}
         value={email}

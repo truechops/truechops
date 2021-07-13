@@ -15,7 +15,9 @@ import ErrorBoundary from "../error/ErrorBoundary";
 import dynamic from "next/dynamic";
 
 import { GiHamburgerMenu } from "react-icons/gi";
-import { FiSettings } from 'react-icons/fi';
+import { FiSettings } from "react-icons/fi";
+import { Typography } from "@material-ui/core";
+import Dialog from '../ui/Dialog';
 
 // const searchClient = algoliasearch(
 //   "7VD37OIZBX",
@@ -36,8 +38,8 @@ const useStyles = makeStyles((theme) => ({
     height: theme.mixins.toolbar.minHeight,
   },
   sidebar: {
-    ...theme.sidebar
-  }
+    ...theme.sidebar,
+  },
 }));
 
 //Each page has its own top toolbar. Render it dynamically based on which page you are on.
@@ -62,6 +64,21 @@ export default function Header() {
     }
   };
 
+  const getSettingsContent = () => {
+    if (router.pathname === "/") {
+      return (
+        <IconButton
+          color="inherit"
+          aria-label="open more information"
+          onClick={() => setSheetOpen(true)}
+          edge="end"
+        >
+          <FiSettings />
+        </IconButton>
+      );
+    }
+  };
+
   const getSidebarContent = () => {
     let content = null;
     if (router.pathname === "/") {
@@ -71,11 +88,28 @@ export default function Header() {
     return content;
   };
 
+  const getTitle = () => {
+    let content = null;
+    function typographyContent(title) {
+    return <Typography style={{margin: 'auto'}} variant="h6" color="textSecondary">
+        {title}
+    </Typography>
+    }
+    if (router.pathname === "/library") {
+      content = typographyContent("Library");
+    } else if (router.pathname === "/profile") {
+      content = typographyContent("Profile");
+    }
+
+    return content;
+  }
+
   return (
     <>
       <CssBaseline />
       <AppBar position="fixed">
         <Toolbar>
+          
           <IconButton
             color="inherit"
             aria-label="open drawer"
@@ -85,24 +119,17 @@ export default function Header() {
             <GiHamburgerMenu />
           </IconButton>
           {getToolbarContent()}
-
+          {getTitle()}
           <Drawer
             anchor="right"
             open={sheetOpen}
             onClose={() => setSheetOpen(false)}
             className={classes.sidebar}
-            classes={{paper: classes.sidebar}}
+            classes={{ paper: classes.sidebar }}
           >
             {getSidebarContent()}
           </Drawer>
-          <IconButton
-            color="inherit"
-            aria-label="open more information"
-            onClick={() => setSheetOpen(true)}
-            edge="end"
-          >
-            <FiSettings />
-          </IconButton>
+          {getSettingsContent()}
         </Toolbar>
       </AppBar>
       <div className={classes.drawerHeader} />

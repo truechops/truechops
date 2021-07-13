@@ -13,6 +13,7 @@ export default createMuiTheme({
     secondary: {
       main: `${secondary}`,
     },
+    text: { secondary: "ffffff" }
   },
   mixins: {
     toolbar: {
