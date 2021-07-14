@@ -28,6 +28,7 @@ export const RIGHT_STICKING = "r";
 
 const initialState = {
   score: defaultScore,
+  name: '',
   voices: {
     drumset: {
       kickSelected: false,
@@ -94,7 +95,9 @@ const scoreSlice = createSlice({
   initialState,
   reducers: {
     updateScore(state, action) {
-      state.score = action.payload;
+      const { score, name } = action.payload;
+      state.score = score;
+      state.name = name;
       state.repeat = {};
       state.selectedPartIndex = 0;
       state.selectedNoteIndex = null;
@@ -408,6 +411,7 @@ export const getSelectedNote = createSelector(
 
 //Get the notes for playback
 export const getToneJs = createSelector([(state) => state.score], (score) => {
+  console.log('score: ' + JSON.stringify(score));
   let measures = score.measures;
   const tempo = score.tempo;
   const spb = 60 / tempo;

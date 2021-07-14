@@ -122,7 +122,8 @@ export function getEmptyMeasure(timeSig, instruments) {
               duration: 4,
               velocity: NON_ACCENT_VELOCITY,
             }
-          ]
+          ],
+          tuplets: []
         }
       ]
     }

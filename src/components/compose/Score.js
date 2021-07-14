@@ -13,6 +13,7 @@ export default function Score(props) {
   );
   const repeat = useSelector((state) => state.score.present.repeat);
   const score = useSelector((state) => state.score.present.score);
+  const name = useSelector(state => state.score.present.name);
 
   const updateDimensions = useCallback(() => {
     setWindowWidth(window.innerWidth);
@@ -62,6 +63,7 @@ export default function Score(props) {
 
   return (
     <div className="vexflow-wrapper">
+      {name && <h2 style={{textAlign: 'center', margin: 0}}>{name}</h2>}
       <div id="vexflow" key={Math.random().toString()} />
     </div>
   );

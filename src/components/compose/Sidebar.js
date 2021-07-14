@@ -13,12 +13,6 @@ import { FaTrash, FaPlus } from "react-icons/fa";
 import { useTheme } from "@material-ui/core/styles";
 
 import React from "react";
-import DialogTitle from "@material-ui/core/DialogTitle";
-import DialogContent from "@material-ui/core/DialogContent";
-import DialogActions from "@material-ui/core/DialogActions";
-import RadioGroup from "@material-ui/core/RadioGroup";
-import Radio from "@material-ui/core/Radio";
-import FormControlLabel from "@material-ui/core/FormControlLabel";
 import Dialog from '../ui/Dialog';
 
 const useStyles = makeStyles((theme) => ({
@@ -52,8 +46,6 @@ export default function Sidebar() {
       (voice) => !Object.keys(partConfig).includes(voice)
     )
   );
-
-  console.log
 
   const [instrumentToDelete, setInstrumentToDelete] = useState('');
   const [selectedInstrument, setSelectedInstrument] = useState('');
@@ -150,10 +142,15 @@ export default function Sidebar() {
         {listItems}
       </List>
 
-      <Dialog useCancel 
-               isOpen={modalOpen} setIsOpen={setModalOpen}
+      {_.size(partConfig) > 1 && <Dialog useCancel
+              isOpen={modalOpen} setIsOpen={setModalOpen}
               message={`Are you sure you want to delete the '${instrumentToDelete}' part?`} 
-              onOk={deletePart.bind(null, instrumentToDelete)} /> 
+              onOk={deletePart.bind(null, instrumentToDelete)} />}
+
+      {_.size(partConfig) === 1 && <Dialog
+               isOpen={modalOpen} setIsOpen={setModalOpen}
+              message='Add another part before deleting.'
+              onOk={setModalOpen.bind(null, false)} /> }
     </>
   );
 }

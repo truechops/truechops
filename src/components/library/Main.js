@@ -59,11 +59,11 @@ export default function Main() {
     
   }, [getUserRhythms, currentUser]);
 
-  function practiceRhythm(score) {
+  function practiceRhythm(score, name) {
     const omitTypename = (key, value) =>
       key === "__typename" ? undefined : value;
     const scrubbedScore = JSON.parse(JSON.stringify(score), omitTypename);
-    dispatch(scoreActions.updateScore(scrubbedScore));
+    dispatch(scoreActions.updateScore({ score: scrubbedScore, name }));
     router.push("/");
   }
 
@@ -74,7 +74,7 @@ export default function Main() {
           <List>
             {userRhythms.map((rhythm, rhythmIndex) => (
               <Paper key={`rhythm-${rhythmIndex}`} className={classes.root}>
-                <ListItem className={classes.listItem} onClick={practiceRhythm.bind(null, rhythm.score)}>
+                <ListItem className={classes.listItem} onClick={practiceRhythm.bind(null, rhythm.score, rhythm.name)}>
                   <ListItemText
                   secondaryTypographyProps={{ style: {
                     color: 'black'

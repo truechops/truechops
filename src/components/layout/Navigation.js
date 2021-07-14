@@ -52,7 +52,7 @@ export default function Navigation() {
       dispatch(setNavOpen(false));
       setMustBeLoggedInModalOpen(true)
     } else {
-      navigationHandler.bind(null, "/library")
+      navigationHandler("/library");
     }
   }
 
