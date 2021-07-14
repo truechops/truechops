@@ -9,13 +9,13 @@ import ToneContext from "../../store/tone-context";
 import { connect, useSelector } from "react-redux";
 import { getToneJs, scoreActions } from "../../store/score";
 import Dialog from "../ui/Dialog";
-import TextField from '@material-ui/core/TextField';
+import TextField from "@material-ui/core/TextField";
 
 import _ from "lodash";
 
 import { FaUndo, FaRedo, FaPlay, FaStop, FaSave, FaLink } from "react-icons/fa";
 import useRhythmMutations from "../../graphql/useRhythmMutations";
-import SaveRhythmForm from "./SaveRhythmForm";
+import $ from "jquery";
 
 export function TopToolbar(props) {
   const {
@@ -35,11 +35,16 @@ export function TopToolbar(props) {
   const currentUser = useSelector((state) => state.realm.currentUser);
   const [mustBeLoggedInModalOpen, setMustBeLoggedInModalOpen] = useState(false);
   const [saveRhythmModalOpen, setSaveRhythmModalOpen] = useState(false);
-  const [rhythmToSaveName, setRhythmToSaveName] = useState('');
+  const [rhythmToSaveName, setRhythmToSaveName] = useState("");
 
   function onChangeRhythmName(event) {
     setRhythmToSaveName(event.target.value);
   }
+
+  useEffect(() => {
+    console.log("fired!");
+    $("#rhythm-name").attr("onblur", "yo");
+  }, []);
 
   //Key listeners: space = start/stop
 
@@ -92,6 +97,20 @@ export function TopToolbar(props) {
   }, [toneJs, repeat, startStop]);
 
   const iconSize = theme.buttons.topToolbar.iconSize;
+
+  const rhythmNameTextField = (
+    <form>
+      <TextField
+        id="rhythm-name"
+        label="rhythm name"
+        style={{ margin: 8 }}
+        fullWidth
+        margin="normal"
+        onChange={(e) => setRhythmToSaveName(e.target.value)}
+        value={rhythmToSaveName}
+      />
+    </form>
+  );
   return (
     <>
       <div style={{ width: "auto", margin: "auto" }}>
@@ -123,18 +142,13 @@ export function TopToolbar(props) {
       />
 
       <Dialog
-        onOk={() => addRhythm(rhythmToSaveName)}
+        onOk={() => {
+          addRhythm(rhythmToSaveName);
+          setSaveRhythmModalOpen(false);
+        }}
         useCancel
         disabled={!rhythmToSaveName}
-        message={<TextField
-          id="rhythm-name"
-          label="rhythm name"
-          style={{ margin: 8 }}
-          fullWidth
-          margin="normal"
-          onChange={onChangeRhythmName}
-          value={rhythmToSaveName}
-        />}
+        message={rhythmNameTextField}
         isOpen={saveRhythmModalOpen}
         setIsOpen={setSaveRhythmModalOpen}
       />

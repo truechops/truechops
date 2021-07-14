@@ -1,5 +1,6 @@
 import TextField from "@material-ui/core/TextField";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import $ from 'jquery';
 
 export default function SaveRhythmForm(props) {
   const [rhythmName, setRhythmName] = useState("");
@@ -7,6 +8,11 @@ export default function SaveRhythmForm(props) {
   function onChangeRhythmName(event) {
     props.setRhythmName(event.target.value);
   }
+
+  useEffect(() => {
+    console.log('fired!');
+   $('#rhythm-name').attr('onblur', "yo")
+  }, []);
 
   return (
     <form onSubmit={props.onSubmitHandler.bind(null, rhythmName)}>
