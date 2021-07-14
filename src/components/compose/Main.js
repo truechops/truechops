@@ -1,9 +1,9 @@
 import Buttons from "./Buttons";
 import { makeStyles } from "@material-ui/core/styles";
-import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useState } from "react";
 import Score from "./Score";
 import ErrorBoundary from "../error/ErrorBoundary";
+import $ from 'jquery';
 
 
 export default function Main() {

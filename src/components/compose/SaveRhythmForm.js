@@ -18,6 +18,7 @@ export default function SaveRhythmForm(props) {
         required
         margin="normal"
         onChange={onChangeRhythmName}
+        onBlur={onChangeRhythmName}
         value={props.rhythmName}
       />
     </form>

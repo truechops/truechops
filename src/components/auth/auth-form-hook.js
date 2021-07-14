@@ -8,6 +8,7 @@ import { login } from "../../store/realm-app";
 import { useRouter } from 'next/router';
 import DividerWithText from "../ui/DividerWithText";
 import SocialButtons from './SocialButtons';
+import $ from 'jquery';
 
 export default function AuthForm(props) {
   const [email, setEmail] = useState("");
