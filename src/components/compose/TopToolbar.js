@@ -110,7 +110,10 @@ export function TopToolbar(props) {
         style={{ margin: 8 }}
         fullWidth
         margin="normal"
-        onChange={(e) => setRhythmToSaveName(e.target.value)}
+        onChange={(e) => {
+          alert('change!');
+          setRhythmToSaveName(e.target.value)
+        }}
         value={rhythmToSaveName}
       />
     </form>
@@ -162,7 +165,6 @@ export function TopToolbar(props) {
         }} color="primary">
             Ok
           </Button>
-          <input onChange={() => alert('change!')} type="text" />
         </DialogActions>
       </Dialog>
     </>
