@@ -162,6 +162,7 @@ export function TopToolbar(props) {
         }} color="primary">
             Ok
           </Button>
+          <input onChange={() => alert('change!')} type="text" />
         </DialogActions>
       </Dialog>
     </>
