@@ -37,18 +37,15 @@ export function TopToolbar(props) {
   const [mustBeLoggedInModalOpen, setMustBeLoggedInModalOpen] = useState(false);
   const [saveRhythmModalOpen, setSaveRhythmModalOpen] = useState(false);
   const [rhythmToSaveName, setRhythmToSaveName] = useState("");
+  
 
   function onChangeRhythmName(event) {
     setRhythmToSaveName(event.target.value);
   }
 
   useEffect(() => {
-    console.log("fired!");
-    $("#rhythm-name").on("blur", function() {
-      console.log('blur!');
-    });
-    console.log("oh ya");
-  }, []);
+    alert('rhythmToSaveName: ' + rhythmToSaveName + ' length: ' + rhythmToSaveName.length);
+  }, [rhythmToSaveName]);
 
   //Key listeners: space = start/stop
 
@@ -110,10 +107,7 @@ export function TopToolbar(props) {
         style={{ margin: 8 }}
         fullWidth
         margin="normal"
-        onChange={(e) => {
-          alert('change: ' + e.target.value);
-          setRhythmToSaveName(e.target.value)
-        }}
+        onChange={(e) => setRhythmToSaveName(e.target.value)}
         value={rhythmToSaveName}
       />
     </form>
