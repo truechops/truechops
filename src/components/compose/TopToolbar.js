@@ -111,7 +111,7 @@ export function TopToolbar(props) {
         fullWidth
         margin="normal"
         onChange={(e) => {
-          alert('change!');
+          alert('change: ' + e.target.value);
           setRhythmToSaveName(e.target.value)
         }}
         value={rhythmToSaveName}
