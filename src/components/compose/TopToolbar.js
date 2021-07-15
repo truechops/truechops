@@ -36,6 +36,7 @@ export function TopToolbar(props) {
   const [mustBeLoggedInModalOpen, setMustBeLoggedInModalOpen] = useState(false);
   const [saveRhythmModalOpen, setSaveRhythmModalOpen] = useState(false);
   const [rhythmToSaveName, setRhythmToSaveName] = useState("");
+  const rhythmToSaveNameEnabled = !!rhythmToSaveName;
 
   function onChangeRhythmName(event) {
     setRhythmToSaveName(event.target.value);
@@ -43,7 +44,10 @@ export function TopToolbar(props) {
 
   useEffect(() => {
     console.log("fired!");
-    $("#rhythm-name").attr("onblur", "yo");
+    $("#rhythm-name").on("blur", function() {
+      console.log('blur!');
+    });
+    console.log("oh ya");
   }, []);
 
   //Key listeners: space = start/stop
@@ -140,14 +144,13 @@ export function TopToolbar(props) {
         isOpen={mustBeLoggedInModalOpen}
         setIsOpen={setMustBeLoggedInModalOpen}
       />
-
       <Dialog
         onOk={() => {
           addRhythm(rhythmToSaveName);
           setSaveRhythmModalOpen(false);
         }}
         useCancel
-        disabled={!rhythmToSaveName}
+        disabled={!rhythmToSaveNameEnabled}
         message={rhythmNameTextField}
         isOpen={saveRhythmModalOpen}
         setIsOpen={setSaveRhythmModalOpen}
