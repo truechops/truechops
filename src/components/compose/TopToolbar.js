@@ -37,14 +37,13 @@ export function TopToolbar(props) {
   const [mustBeLoggedInModalOpen, setMustBeLoggedInModalOpen] = useState(false);
   const [saveRhythmModalOpen, setSaveRhythmModalOpen] = useState(false);
   const [rhythmToSaveName, setRhythmToSaveName] = useState("");
-  
 
   function onChangeRhythmName(event) {
     setRhythmToSaveName(event.target.value);
   }
 
   useEffect(() => {
-    alert('rhythmToSaveName: ' + rhythmToSaveName + ' length: ' + rhythmToSaveName.length);
+    alert('rhythmToSaveName: ' + rhythmToSaveName + ' length === 0: ' + (rhythmToSaveName.length === 0));
   }, [rhythmToSaveName]);
 
   //Key listeners: space = start/stop
