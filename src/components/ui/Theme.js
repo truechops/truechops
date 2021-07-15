@@ -13,7 +13,10 @@ export default createMuiTheme({
     secondary: {
       main: `${secondary}`,
     },
-    text: { secondary: "ffffff" }
+    text: { secondary: "ffffff" },
+    action: {
+      disabled: 'gray'
+    }
   },
   mixins: {
     toolbar: {
@@ -49,6 +52,9 @@ export default createMuiTheme({
       },
       outlined: {
         padding: "5x 11px"
+      },
+      label: {
+        //color: 'black'
       }
     },
   },

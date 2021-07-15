@@ -43,10 +43,6 @@ export function TopToolbar(props) {
     setRhythmToSaveName(event.target.value);
   }
 
-  useEffect(() => {
-    alert('rhythmToSaveName: ' + rhythmToSaveName + ' empty: ' + (rhythmToSaveEmpty));
-  }, [rhythmToSaveName, rhythmToSaveEmpty]);
-
   //Key listeners: space = start/stop
 
   //Set the tonejs samplers, which come from ToneContext
@@ -153,11 +149,10 @@ export function TopToolbar(props) {
           <Button autoFocus onClick={setSaveRhythmModalOpen.bind(null, false)} color="primary">
             Cancel
           </Button>
-          {`empty: ${rhythmToSaveEmpty}`}
           <Button disabled={rhythmToSaveEmpty} onClick={() => {
           addRhythm(rhythmToSaveName);
           setSaveRhythmModalOpen(false);
-        }} color="primary">
+        }} style={{color: rhythmToSaveEmpty ? 'gray' : 'black'}}>
             Ok
           </Button>
         </DialogActions>
