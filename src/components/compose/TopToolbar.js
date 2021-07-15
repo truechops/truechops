@@ -37,14 +37,15 @@ export function TopToolbar(props) {
   const [mustBeLoggedInModalOpen, setMustBeLoggedInModalOpen] = useState(false);
   const [saveRhythmModalOpen, setSaveRhythmModalOpen] = useState(false);
   const [rhythmToSaveName, setRhythmToSaveName] = useState("");
+  const rhythmToSaveEmpty = rhythmToSaveName.length === 0;
 
   function onChangeRhythmName(event) {
     setRhythmToSaveName(event.target.value);
   }
 
   useEffect(() => {
-    alert('rhythmToSaveName: ' + rhythmToSaveName + ' length === 0: ' + (rhythmToSaveName.length === 0));
-  }, [rhythmToSaveName]);
+    alert('rhythmToSaveName: ' + rhythmToSaveName + ' empty: ' + (rhythmToSaveEmpty));
+  }, [rhythmToSaveName, rhythmToSaveEmpty]);
 
   //Key listeners: space = start/stop
 
@@ -152,7 +153,8 @@ export function TopToolbar(props) {
           <Button autoFocus onClick={setSaveRhythmModalOpen.bind(null, false)} color="primary">
             Cancel
           </Button>
-          <Button disabled={rhythmToSaveName.length === 0} onClick={() => {
+          {`empty: ${rhythmToSaveEmpty}`}
+          <Button disabled={rhythmToSaveEmpty} onClick={() => {
           addRhythm(rhythmToSaveName);
           setSaveRhythmModalOpen(false);
         }} color="primary">
