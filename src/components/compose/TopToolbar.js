@@ -8,8 +8,9 @@ import { useTheme } from "@material-ui/core/styles";
 import ToneContext from "../../store/tone-context";
 import { connect, useSelector } from "react-redux";
 import { getToneJs, scoreActions } from "../../store/score";
-import Dialog from "../ui/Dialog";
+// import Dialog from "../ui/Dialog";
 import TextField from "@material-ui/core/TextField";
+import { DialogContent, DialogActions, Button, Dialog } from '@material-ui/core';
 
 import _ from "lodash";
 
@@ -144,16 +145,25 @@ export function TopToolbar(props) {
         setIsOpen={setMustBeLoggedInModalOpen}
       />
       <Dialog
-        onOk={() => {
+        maxWidth="xs"
+        aria-labelledby="confirmation-dialog-title"
+        open={saveRhythmModalOpen}
+      >
+        <DialogContent dividers>
+        {rhythmNameTextField}
+        </DialogContent>
+        <DialogActions>
+          <Button autoFocus onClick={setSaveRhythmModalOpen.bind(null, false)} color="primary">
+            Cancel
+          </Button>
+          <Button disabled={rhythmToSaveName.length === 0} onClick={() => {
           addRhythm(rhythmToSaveName);
           setSaveRhythmModalOpen(false);
-        }}
-        useCancel
-        disabled={rhythmToSaveName.length === 0}
-        message={rhythmNameTextField}
-        isOpen={saveRhythmModalOpen}
-        setIsOpen={setSaveRhythmModalOpen}
-      />
+        }} color="primary">
+            Ok
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }
