@@ -69,19 +69,6 @@ export function TopToolbar(props) {
     }
   }
 
-  const useStyles = makeStyles({
-    button: {
-      label: {
-        color: "blue",
-      },
-      disabled: {
-        color: "brown",
-      },
-    },
-  });
-
-  const classes = useStyles();
-
   useEffect(() => {
     let doUpdateToneJs = false;
 
@@ -175,7 +162,6 @@ export function TopToolbar(props) {
               addRhythm(rhythmToSaveName);
               setSaveRhythmModalOpen(false);
             }}
-            // classes={{ label: classes.button.label }}
           >
             Ok
           </Button>
