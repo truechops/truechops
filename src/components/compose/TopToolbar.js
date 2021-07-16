@@ -1,4 +1,4 @@
-//import { makeStyles } from "@material-ui/styles";
+import { makeStyles } from "@material-ui/styles";
 
 import { useContext, useEffect, useRef, useState } from "react";
 import { ActionCreators } from "redux-undo";
@@ -10,7 +10,12 @@ import { connect, useSelector } from "react-redux";
 import { getToneJs, scoreActions } from "../../store/score";
 // import Dialog from "../ui/Dialog";
 import TextField from "@material-ui/core/TextField";
-import { DialogContent, DialogActions, Button, Dialog } from '@material-ui/core';
+import {
+  DialogContent,
+  DialogActions,
+  Button,
+  Dialog,
+} from "@material-ui/core";
 
 import _ from "lodash";
 
@@ -63,6 +68,19 @@ export function TopToolbar(props) {
       setSaveRhythmModalOpen(true);
     }
   }
+
+  const useStyles = makeStyles({
+    button: {
+      label: {
+        color: "blue",
+      },
+      disabled: {
+        color: "brown",
+      },
+    },
+  });
+
+  const classes = useStyles();
 
   useEffect(() => {
     let doUpdateToneJs = false;
@@ -142,17 +160,23 @@ export function TopToolbar(props) {
         aria-labelledby="confirmation-dialog-title"
         open={saveRhythmModalOpen}
       >
-        <DialogContent dividers>
-        {rhythmNameTextField}
-        </DialogContent>
+        <DialogContent dividers>{rhythmNameTextField}</DialogContent>
         <DialogActions>
-          <Button autoFocus onClick={setSaveRhythmModalOpen.bind(null, false)} color="primary">
+          <Button
+            autoFocus
+            onClick={setSaveRhythmModalOpen.bind(null, false)}
+            color="primary"
+          >
             Cancel
           </Button>
-          <Button disabled={rhythmToSaveEmpty} onClick={() => {
-          addRhythm(rhythmToSaveName);
-          setSaveRhythmModalOpen(false);
-        }} style={{color: rhythmToSaveEmpty ? 'gray' : 'black'}}>
+          <Button
+            disabled={rhythmToSaveEmpty}
+            onClick={() => {
+              addRhythm(rhythmToSaveName);
+              setSaveRhythmModalOpen(false);
+            }}
+            classes={{ label: classes.button.label }}
+          >
             Ok
           </Button>
         </DialogActions>

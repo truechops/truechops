@@ -15,7 +15,7 @@ export default createMuiTheme({
     },
     text: { secondary: "ffffff" },
     action: {
-      disabled: 'gray'
+      disabled: 'lightgray'
     }
   },
   mixins: {
