@@ -108,7 +108,6 @@ export default function useInstruments() {
     },
   };
 
-  console.log('selectd instrument: ' + selectedInstrument);
   const data = instrumentData[selectedInstrument];
 
   return { voiceButtons: data.voiceButtons, tooltipText: data.tooltipText };

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import Popover from "@material-ui/core/Popover";
+import { useState, useEffect } from "react";
+import { Popover, ClickAwayListener } from "@material-ui/core";
 import { makeStyles, useTheme } from "@material-ui/core/styles";
 import { BiHelpCircle } from 'react-icons/bi';
 import useInstruments from '../hooks/instruments-hook';
@@ -30,15 +30,18 @@ export default function MouseOverPopover() {
   const open = Boolean(anchorEl);
 
   return (
-    <div>
+    
+      <>
       <div style={{marginRight: theme.compose.buttons.tooltip.marginRight}}
         aria-owns={open ? "mouse-over-popover" : undefined}
         aria-haspopup="true"
         onMouseEnter={handlePopoverOpen}
+        onClick={handlePopoverOpen}
         onMouseLeave={handlePopoverClose}
       >
         <BiHelpCircle size={25}/>
       </div>
+      
       <Popover
         id="mouse-over-popover"
         className={classes.popover}
@@ -50,8 +53,15 @@ export default function MouseOverPopover() {
         onClose={handlePopoverClose}
         disableRestoreFocus
       >
+        <ClickAwayListener onClickAway={() => {
+      setAnchorEl(null)
+      }}>
+        <div id ="instrumentTooltipText">
        {tooltipText}
+       </div>
+       </ClickAwayListener>
       </Popover>
-    </div>
+      </>
+      
   );
 }

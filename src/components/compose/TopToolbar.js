@@ -175,6 +175,10 @@ export function TopToolbar(props) {
               addRhythm(rhythmToSaveName);
               setSaveRhythmModalOpen(false);
             }}
+
+            //Even though these styles aren't used for some reason, it does seem to 
+            //prevent an ios bug where the ok button color was not getting updated from 
+            //the disabled color when it became enabled.
             classes={{ label: classes.button.label }}
           >
             Ok
