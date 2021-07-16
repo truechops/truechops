@@ -175,7 +175,7 @@ export function TopToolbar(props) {
               addRhythm(rhythmToSaveName);
               setSaveRhythmModalOpen(false);
             }}
-            classes={{ label: classes.button.label }}
+            // classes={{ label: classes.button.label }}
           >
             Ok
           </Button>
