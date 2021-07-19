@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import { useDispatch } from "react-redux";
-import { sideNavActions } from "../../store/navigation";
+import { appActions } from "../../store/app";
 
 import React from "react";
 import { makeStyles } from "@material-ui/core/styles";
@@ -51,7 +51,7 @@ export default function Header() {
   const router = useRouter();
 
   const [sheetOpen, setSheetOpen] = useState(false);
-  const { setNavOpen } = sideNavActions;
+  const { setNavOpen } = appActions;
   const dispatch = useDispatch();
 
   const getToolbarContent = () => {

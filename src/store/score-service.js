@@ -1,7 +1,7 @@
 import { getPowersOf2, getAdditionalDotDuration } from "../helpers/math";
 import { getTCDuration, getRestsFromTCDuration } from "../helpers/score";
 import _ from "lodash";
-import { NON_ACCENT_VELOCITY } from "../../data/score-config";
+import { NON_ACCENT_VELOCITY } from "../../data/score";
 
 //Translates the toneJs duration to the score duration
 const vfDurationToTCDuration = {

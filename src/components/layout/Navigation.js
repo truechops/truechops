@@ -1,6 +1,6 @@
 import { useRouter } from "next/router";
 import { useSelector, useDispatch } from "react-redux";
-import { sideNavActions } from "../../store/navigation";
+import { appActions } from "../../store/app";
 import { logout } from "../../store/realm-app";
 
 import React, { useState } from "react";
@@ -32,8 +32,8 @@ export default function Navigation() {
   const classes = useStyles();
   const router = useRouter();
   const currentUser = useSelector((state) => state.realm.currentUser);
-  const sideNavOpen = useSelector((state) => state.nav.sideNavOpen);
-  const { setNavOpen } = sideNavActions;
+  const sideNavOpen = useSelector((state) => state.app.sideNavOpen);
+  const { setNavOpen } = appActions;
   const dispatch = useDispatch();
   const [mustBeLoggedInModalOpen, setMustBeLoggedInModalOpen] = useState(false);
 

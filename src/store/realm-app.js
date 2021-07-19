@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import * as Realm from "realm-web";
-import { sideNavActions } from './navigation';
+import { appActions } from './app';
 
 const app = new Realm.App("drumtoolz-ywire");
 
@@ -32,7 +32,7 @@ export const login = (credentials) => {
 export const logout = () => {
     return async (dispatch) => {
         await app.currentUser?.logOut();
-        dispatch(sideNavActions.setNavOpen(false));
+        dispatch(appActions.setNavOpen(false));
         dispatch(realmAppSlice.actions.logout({user: app.currentUser}));
     }
 }

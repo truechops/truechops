@@ -1,4 +1,4 @@
-import { NON_ACCENT_VELOCITY } from "./score-config";
+import { NON_ACCENT_VELOCITY } from "./score";
 
 export default {
   tempo: 95.0,

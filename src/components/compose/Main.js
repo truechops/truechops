@@ -5,7 +5,6 @@ import Score from "./Score";
 import ErrorBoundary from "../error/ErrorBoundary";
 import $ from 'jquery';
 
-
 export default function Main() {
   const [selectedTab, setSelectedTab] = useState(1);
   const [tabPanelHidden, setTabPanelHidden] = useState(false);
@@ -85,7 +84,7 @@ export default function Main() {
             <Buttons selectedTab={selectedTab} onTabSelected={onTabSelected} />
           </ErrorBoundary>
         </div>
-        <div className={classes.score}>
+        <div id="score-root" className={classes.score}>
           <ErrorBoundary component="compose">
             <Score selectedTab={selectedTab} tabPanelHidden={tabPanelHidden} />
           </ErrorBoundary>

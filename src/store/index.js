@@ -1,6 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import realmReducer from './realm-app';
-import navReducer from './navigation';
+import appReducer from './app';
 import scoreReducer, { scoreActions } from './score';
 import undoable, { includeAction } from 'redux-undo';
 
@@ -12,7 +12,7 @@ const includeActions = [scoreActions.toggleAccent, scoreActions.toggleFlam, scor
 const store = configureStore({
     reducer: {
         realm: realmReducer,
-        nav: navReducer,
+        app: appReducer,
         score: undoable(scoreReducer, { 
             filter: includeAction(includeActions)
         })

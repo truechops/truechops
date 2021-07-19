@@ -5,7 +5,7 @@ import Box from "@material-ui/core/Box";
 import { Hidden } from "@material-ui/core";
 import useButtonsHook from "./hooks/buttons-hook";
 import InstrumentHelpPopover from "./popovers/InstrumentHelpPopover";
-import { scoreActions, getSelectedNote } from "../../store/score";
+import score, { scoreActions, getSelectedNote, modifyNote } from "../../store/score";
 import { connect, useDispatch, useSelector } from "react-redux";
 import Button from "../ui/Button";
 import { useState, useCallback } from "react";
@@ -205,8 +205,14 @@ const mapStateToProps = (state) => {
 
 const mapDispatchToProps = (dispatch) => {
   return {
-    modifyNote: (voices, value, isRest) =>
-      dispatch(scoreActions.modifyNote({ voices, value, isRest })),
+    modifyNote: (voices, value, isRest) => {
+      const scoreRootElement = document.getElementById('score-root');
+
+      dispatch(modifyNote({ voices, value, isRest }, {
+        top: scoreRootElement.scrollTop,
+        left: scoreRootElement.scrollLeft
+      }))
+    },
   };
 };
 

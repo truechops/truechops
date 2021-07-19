@@ -52,5 +52,5 @@ export default function useTenorVoices() {
         </Button>
       ));
 
-      return [buttons];
+      return [buttons.slice(0, 2), buttons.slice(2)];
 }

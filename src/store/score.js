@@ -15,9 +15,8 @@ import { start as startToneJs, stop as stopToneJs } from "../lib/tone";
 import {
   NON_ACCENT_VELOCITY,
   GRACE_VELOCITY,
-  ACCENT_VELOCITY,
-} from "../../data/score-config";
-import useInstruments from "../components/compose/hooks/instruments-hook";
+  ACCENT_VELOCITY
+} from "../../data/score";
 
 export const ACCENT = "a";
 export const FLAM = "f";
@@ -28,6 +27,10 @@ export const RIGHT_STICKING = "r";
 
 const initialState = {
   score: defaultScore,
+  scrollAmount: {
+    top: 0,
+    left: 0
+  },
   name: '',
   voices: {
     drumset: {
@@ -101,6 +104,9 @@ const scoreSlice = createSlice({
       state.repeat = {};
       state.selectedPartIndex = 0;
       state.selectedNoteIndex = null;
+    },
+    setScrollAmount(state, action) {
+      state.scrollAmount = action.payload;
     },
     toggleIsPlaying(state) {
       state.isPlaying = !state.isPlaying;
@@ -411,7 +417,6 @@ export const getSelectedNote = createSelector(
 
 //Get the notes for playback
 export const getToneJs = createSelector([(state) => state.score], (score) => {
-  console.log('score: ' + JSON.stringify(score));
   let measures = score.measures;
   const tempo = score.tempo;
   const spb = 60 / tempo;
@@ -548,3 +553,24 @@ export const getToneJs = createSelector([(state) => state.score], (score) => {
 
   return toneJs;
 });
+
+export const selectNote = (note, scrollAmount) => {
+  return async (dispatch) => {
+    dispatch(
+      scoreActions.selectNote({
+        measureIndex: note.measureIndex,
+        partIndex: note.partIndex,
+        voiceIndex: note.voiceIndex,
+        noteIndex: note.noteIndex,
+      })
+    );
+    dispatch(scoreActions.setScrollAmount(scrollAmount));
+  }
+}
+
+export const modifyNote = (noteData, scrollAmount) => {
+  return async (dispatch) => {
+    dispatch(scoreActions.modifyNote(noteData));
+    dispatch(scoreActions.setScrollAmount(scrollAmount));
+  }
+}
