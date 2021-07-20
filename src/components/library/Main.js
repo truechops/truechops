@@ -12,6 +12,7 @@ import List from "@material-ui/core/List";
 import ListItem from "@material-ui/core/ListItem";
 import ListItemText from "@material-ui/core/ListItemText";
 import Paper from "@material-ui/core/Paper";
+import { DEFAULT_TEMPO } from '../../../data/score';
 
 export default function Main() {
   const currentUser = useSelector((state) => state.realm.currentUser);
@@ -24,7 +25,8 @@ export default function Main() {
 
   const dispatch = useDispatch();
   
-  const userRhythms = useReactiveVar(userRhythmsVar);
+  let userRhythmsReactiveVar = useReactiveVar(userRhythmsVar);
+  let userRhythms = userRhythmsReactiveVar.slice();
   
   const useStyles = makeStyles((theme) => ({
     root: {
@@ -59,13 +61,17 @@ export default function Main() {
     
   }, [getUserRhythms, currentUser]);
 
-  function practiceRhythm(score, name) {
+  function practiceRhythm(score, name, tempo) {
     const omitTypename = (key, value) =>
       key === "__typename" ? undefined : value;
     const scrubbedScore = JSON.parse(JSON.stringify(score), omitTypename);
-    dispatch(scoreActions.updateScore({ score: scrubbedScore, name }));
+    dispatch(scoreActions.updateScore({ score: scrubbedScore, name, tempo }));
     router.push("/");
   }
+
+  //The rhythms coming back from mongodb are in ascending order. This makes sure the saved
+  //rhythms are in descending order.
+  userRhythms.sort(() => -1);
 
   return (
     <section style={{ textAlign: "center" }}>
@@ -74,7 +80,7 @@ export default function Main() {
           <List>
             {userRhythms.map((rhythm, rhythmIndex) => (
               <Paper key={`rhythm-${rhythmIndex}`} className={classes.root}>
-                <ListItem className={classes.listItem} onClick={practiceRhythm.bind(null, rhythm.score, rhythm.name)}>
+                <ListItem className={classes.listItem} onClick={practiceRhythm.bind(null, rhythm.score, rhythm.name, rhythm.tempo ?? DEFAULT_TEMPO )}>
                   <ListItemText
                   secondaryTypographyProps={{ style: {
                     color: 'black'

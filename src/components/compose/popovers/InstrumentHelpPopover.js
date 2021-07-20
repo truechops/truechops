@@ -33,7 +33,7 @@ export default function MouseOverPopover() {
     
       <>
       <div style={{marginRight: theme.compose.buttons.tooltip.marginRight}}
-        aria-owns={open ? "mouse-over-popover" : undefined}
+        aria-owns={open ? "instrument-help-popover" : undefined}
         aria-haspopup="true"
         onMouseEnter={handlePopoverOpen}
         onClick={handlePopoverOpen}
@@ -43,7 +43,7 @@ export default function MouseOverPopover() {
       </div>
       
       <Popover
-        id="mouse-over-popover"
+        id="instrument-help-popover"
         className={classes.popover}
         classes={{
           paper: classes.paper

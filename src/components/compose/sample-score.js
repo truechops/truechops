@@ -1,5 +1,4 @@
 export const smallMultiPart = {
-  tempo: 95.0,
   parts: {
     drumset: {
       enabled: true
@@ -144,7 +143,6 @@ export const smallMultiPart = {
 };
 
 export const smallSinglePart = {
-  tempo: 95.0,
   parts: {
     drumset: {
       enabled: true
@@ -223,7 +221,6 @@ export const smallSinglePart = {
 };
 
 export const large = {
-  tempo: 95.0,
   parts: {
     drumset: {
       enabled: true

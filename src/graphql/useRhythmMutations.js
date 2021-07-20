@@ -6,13 +6,14 @@ import { ADD_RHYTHM_MUTATION, RHYTHM_FRAGMENT } from '../../data/graphql';
 export default function useRhythmMutations() {
   const currentUser = useSelector((state) => state.realm.currentUser);
   const score = useSelector(state => state.score.present.score);
+  const tempo = useSelector(state => state.score.present.tempo);
 
   return {
-    addRhythm: useAddRhythm(currentUser, score),
+    addRhythm: useAddRhythm(currentUser, score, tempo),
   };
 }
 
-function useAddRhythm(currentUser, score) {
+function useAddRhythm(currentUser, score, tempo) {
   const [addRhythmMutation] = useMutation(ADD_RHYTHM_MUTATION, {
     // Manually save added Tasks into the Apollo cache so that Task queries automatically update
     // For details, refer to https://www.apollographql.com/docs/react/data/mutations/#making-all-other-cache-updates
@@ -40,6 +41,7 @@ function useAddRhythm(currentUser, score) {
           name,
           date: new Date(),
           score,
+          tempo
         },
       },
     });

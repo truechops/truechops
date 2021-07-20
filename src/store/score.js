@@ -15,7 +15,8 @@ import { start as startToneJs, stop as stopToneJs } from "../lib/tone";
 import {
   NON_ACCENT_VELOCITY,
   GRACE_VELOCITY,
-  ACCENT_VELOCITY
+  ACCENT_VELOCITY,
+  DEFAULT_TEMPO
 } from "../../data/score";
 
 export const ACCENT = "a";
@@ -26,6 +27,7 @@ export const LEFT_STICKING = "l";
 export const RIGHT_STICKING = "r";
 
 const initialState = {
+  tempo: DEFAULT_TEMPO,
   score: defaultScore,
   scrollAmount: {
     top: 0,
@@ -98,12 +100,16 @@ const scoreSlice = createSlice({
   initialState,
   reducers: {
     updateScore(state, action) {
-      const { score, name } = action.payload;
+      const { score, name, tempo } = action.payload;
       state.score = score;
       state.name = name;
+      state.tempo = tempo;
       state.repeat = {};
       state.selectedPartIndex = 0;
       state.selectedNoteIndex = null;
+    },
+    updateTempo(state, action) {
+      state.tempo = action.payload;
     },
     setScrollAmount(state, action) {
       state.scrollAmount = action.payload;
@@ -416,9 +422,8 @@ export const getSelectedNote = createSelector(
 );
 
 //Get the notes for playback
-export const getToneJs = createSelector([(state) => state.score], (score) => {
+export const getToneJs = createSelector([(state) => state.score, state => state.tempo], (score, tempo) => {
   let measures = score.measures;
-  const tempo = score.tempo;
   const spb = 60 / tempo;
   let toneJsNotes = [];
 

@@ -6,8 +6,8 @@ export const RHYTHM_SCHEMA = `
 	_userId
 	name
     date
+    tempo
     score {
-        tempo
         parts {
             drumset {
                 enabled

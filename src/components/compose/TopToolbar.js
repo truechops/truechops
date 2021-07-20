@@ -15,13 +15,16 @@ import {
   DialogActions,
   Button,
   Dialog,
+  SvgIcon,
 } from "@material-ui/core";
 
 import _ from "lodash";
 
 import { FaUndo, FaRedo, FaPlay, FaStop, FaSave, FaLink } from "react-icons/fa";
+import { GiMetronome } from 'react-icons/gi';
 import useRhythmMutations from "../../graphql/useRhythmMutations";
-import $ from "jquery";
+import MetronomeIcon from "../../../icons/metronome.svg";
+import MetronomePopover from "./popovers/MetronomePopover";
 
 export function TopToolbar(props) {
   const {
@@ -44,9 +47,15 @@ export function TopToolbar(props) {
   const [rhythmToSaveName, setRhythmToSaveName] = useState("");
   const rhythmToSaveEmpty = rhythmToSaveName.length === 0;
 
-  function onChangeRhythmName(event) {
-    setRhythmToSaveName(event.target.value);
-  }
+  const [metronomeAnchorEl, setMetronomeAnchorEl] = useState(null);
+
+  const handleMetronomePopoverOpen = (event) => {
+    setMetronomeAnchorEl(event.currentTarget);
+  };
+
+  const handleMetronomePopoverClose = () => {
+    setMetronomeAnchorEl(null);
+  };
 
   //Key listeners: space = start/stop
 
@@ -135,6 +144,13 @@ export function TopToolbar(props) {
         <IconButton color="inherit" aria-label="redo" onClick={props.redo}>
           <FaRedo size={iconSize} />
         </IconButton>
+        <IconButton
+          color="inherit"
+          aria-label="metronome"
+          onClick={handleMetronomePopoverOpen}
+        >
+          <GiMetronome size={iconSize + 6} />
+        </IconButton>
         <IconButton color="inherit" aria-label="play" onClick={startStop}>
           {!isPlaying ? <FaPlay size={iconSize} /> : <FaStop size={iconSize} />}
         </IconButton>
@@ -174,10 +190,10 @@ export function TopToolbar(props) {
             onClick={() => {
               addRhythm(rhythmToSaveName);
               setSaveRhythmModalOpen(false);
+              setRhythmToSaveName('');
             }}
-
-            //Even though these styles aren't used for some reason, it does seem to 
-            //prevent an ios bug where the ok button color was not getting updated from 
+            //Even though these styles aren't used for some reason, it does seem to
+            //prevent an ios bug where the ok button color was not getting updated from
             //the disabled color when it became enabled.
             classes={{ label: classes.button.label }}
           >
@@ -185,6 +201,8 @@ export function TopToolbar(props) {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <MetronomePopover anchorEl={metronomeAnchorEl} handlePopoverClose={handleMetronomePopoverClose} />
     </>
   );
 }

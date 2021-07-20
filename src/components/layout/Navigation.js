@@ -95,10 +95,12 @@ export default function Navigation() {
           <FaUsers className={classes.drawerIcon} size={iconSize} />
           <ListItemText primary="discover" />
         </ListItem> */}
-        <ListItem button key="mods" onClick={navigationHandler.bind(null, "/mods")}>
+
+        {/* <ListItem button key="mods" onClick={navigationHandler.bind(null, "/mods")}>
           <FaTools className={classes.drawerIcon} size={iconSize} />
           <ListItemText primary="mods" />
-        </ListItem>
+        </ListItem> */}
+
         {/* <ListItem button key="search" onClick={navigationHandler.bind(null, "/search")}>
           <FaSearch className={classes.drawerIcon} size={iconSize} />
           <ListItemText primary="search" />
@@ -129,14 +131,14 @@ export default function Navigation() {
         <>
           <Divider />
           <List>
-            <ListItem
+            {/* <ListItem
               onClick={navigationHandler.bind(null, "/profile")}
               button
               key="Profile"
             >
               <FaUserTie className={classes.drawerIcon} size={iconSize} />
               <ListItemText primary="Profile" />
-            </ListItem>
+            </ListItem> */}
             <ListItem onClick={logoutHandler} button key="Log Out">
               <ListItemText primary="Log Out" />
             </ListItem>
