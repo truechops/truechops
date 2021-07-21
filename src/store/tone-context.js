@@ -19,6 +19,7 @@ export const ToneContextProvider = props => {
     //This is because Tone.js uses calls that are only available in the browser.
     useEffect(() => {
       const origin = window.location.origin;
+      console.log('origin: ' + origin);
         const setSampler = new Tone.Sampler({
             urls: {
               C5: "snare.mp3",
@@ -56,7 +57,7 @@ export const ToneContextProvider = props => {
               F5: 'rim.mp3'
             },
             release: 1,
-            baseUrl: `${origin}samples/snare/`,
+            baseUrl: `${origin}/samples/snare/`,
           }).toDestination();
           setSnareSampler(snareSampler);
 
