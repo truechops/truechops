@@ -9,14 +9,18 @@ import { getToneJs, scoreActions } from "../../store/score";
 import Dialog from "../ui/Dialog";
 import TextField from "@material-ui/core/TextField";
 
+import { copyToClipboard } from '../../helpers/browser';
+
 import _ from "lodash";
 
 import { FaUndo, FaRedo, FaPlay, FaStop, FaSave, FaLink } from "react-icons/fa";
+import { FiCopy } from 'react-icons/fi';
 import { GiMetronome } from "react-icons/gi";
 import useRhythmMutations from "../../graphql/rhythm/useRhythmMutations";
 import useLinkMutations from "../../graphql/link/useLinkMutations";
 import MetronomeIcon from "../../../icons/metronome.svg";
 import MetronomePopover from "./popovers/MetronomePopover";
+import SvgButton from "../ui/SvgButton";
 
 export function TopToolbar(props) {
   const {
@@ -27,6 +31,7 @@ export function TopToolbar(props) {
     cymbalsSampler,
   } = useContext(ToneContext);
   const theme = useTheme();
+  const iconSize = theme.buttons.topToolbar.iconSize;
   const isPlaying = props.isPlaying;
   const toneJs = props.toneJs;
   const repeat = props.repeat;
@@ -44,6 +49,20 @@ export function TopToolbar(props) {
   const [rhythmLink, setRhythmLink] = useState('');
 
   const [metronomeAnchorEl, setMetronomeAnchorEl] = useState(null);
+
+  function rhythmLinkDialogContents(link) {
+    return <>
+      {rhythmLink}
+      <IconButton
+          style={{marginLeft: 8}}
+          color="inherit"
+          aria-label="copy-to-clipboard"
+          onClick={() => copyToClipboard(link)}
+        >
+          <FiCopy size={iconSize} />
+        </IconButton>
+    </>
+  }
 
   const handleMetronomePopoverOpen = (event) => {
     setMetronomeAnchorEl(event.currentTarget);
@@ -124,7 +143,7 @@ export function TopToolbar(props) {
     prevRepeatRef.current = repeat;
   }, [toneJs, repeat, startStop]);
 
-  const iconSize = theme.buttons.topToolbar.iconSize;
+  
 
   const rhythmNameTextField = (
     <form>
@@ -189,7 +208,7 @@ export function TopToolbar(props) {
 
       <Dialog
         onOk={() => setRhythmLink('')}
-        message={rhythmLink}
+        message={rhythmLinkDialogContents(rhythmLink)}
         isOpen={rhythmLink.length > 0}
       />
 
