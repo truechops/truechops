@@ -1,7 +1,7 @@
 import { ObjectId } from "bson";
 import { useMutation, } from "@apollo/client";
 import { useSelector } from "react-redux";
-import { ADD_RHYTHM_MUTATION, RHYTHM_FRAGMENT } from '../../data/graphql';
+import { ADD_RHYTHM_MUTATION, RHYTHM_FRAGMENT } from '../../../consts/gql/graphql';
 
 export default function useRhythmMutations() {
   const currentUser = useSelector((state) => state.realm.currentUser);
@@ -32,8 +32,8 @@ function useAddRhythm(currentUser, score, tempo) {
     },
   });
 
-  const addRhythm = async (name) => {
-    const { addedRhythm } = await addRhythmMutation({
+  const addRhythm = async (name, type) => {
+    const { data: { addedRhythm } } = await addRhythmMutation({
       variables: {
         rhythm: {
           _id: new ObjectId(),
@@ -41,11 +41,17 @@ function useAddRhythm(currentUser, score, tempo) {
           name,
           date: new Date(),
           score,
-          tempo
+          tempo,
+          type
         },
       },
     });
-    return addedRhythm;
+
+    const omitTypename = (key, value) =>
+    key === "__typename" ? undefined : value;
+    const scrubbedRhythm = JSON.parse(JSON.stringify(addedRhythm), omitTypename);
+console.log('scrubbedRhythm: ' + JSON.stringify(scrubbedRhythm));
+    return scrubbedRhythm;
   };
 
   return addRhythm;

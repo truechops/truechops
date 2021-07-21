@@ -7,7 +7,7 @@ import Input from '@material-ui/core/Input';
 import { Popover } from '@material-ui/core';
 import { scoreActions } from '../../../store/score';
 import { useDispatch, useSelector } from 'react-redux';
-import { MIN_TEMPO, MAX_TEMPO } from '../../../../data/score';
+import { MIN_TEMPO, MAX_TEMPO } from '../../../../consts/score';
 
 const useStyles = makeStyles(theme => ({
   root: {

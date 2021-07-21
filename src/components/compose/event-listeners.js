@@ -1,6 +1,6 @@
 import { scoreActions } from "../../store/score";
 
-import { noteNameToDuration } from "../../../data/score";
+import { noteNameToDuration } from "../../../consts/score";
 import { ActionCreators } from "redux-undo";
 import ReactGA from "react-ga";
 

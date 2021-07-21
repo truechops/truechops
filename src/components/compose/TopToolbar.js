@@ -1,5 +1,3 @@
-import { makeStyles } from "@material-ui/styles";
-
 import { useContext, useEffect, useRef, useState } from "react";
 import { ActionCreators } from "redux-undo";
 import IconButton from "@material-ui/core/IconButton";
@@ -8,21 +6,15 @@ import { useTheme } from "@material-ui/core/styles";
 import ToneContext from "../../store/tone-context";
 import { connect, useSelector } from "react-redux";
 import { getToneJs, scoreActions } from "../../store/score";
-// import Dialog from "../ui/Dialog";
+import Dialog from "../ui/Dialog";
 import TextField from "@material-ui/core/TextField";
-import {
-  DialogContent,
-  DialogActions,
-  Button,
-  Dialog,
-  SvgIcon,
-} from "@material-ui/core";
 
 import _ from "lodash";
 
 import { FaUndo, FaRedo, FaPlay, FaStop, FaSave, FaLink } from "react-icons/fa";
-import { GiMetronome } from 'react-icons/gi';
-import useRhythmMutations from "../../graphql/useRhythmMutations";
+import { GiMetronome } from "react-icons/gi";
+import useRhythmMutations from "../../graphql/rhythm/useRhythmMutations";
+import useLinkMutations from "../../graphql/link/useLinkMutations";
 import MetronomeIcon from "../../../icons/metronome.svg";
 import MetronomePopover from "./popovers/MetronomePopover";
 
@@ -40,12 +32,16 @@ export function TopToolbar(props) {
   const repeat = props.repeat;
   const startStop = props.startStop;
   const prevRepeatRef = useRef();
-  const { addRhythm } = useRhythmMutations();
+  const { addRhythm: addRhythmMutation } = useRhythmMutations();
+  const { addLink: addLinkMutation } = useLinkMutations();
+
   const currentUser = useSelector((state) => state.realm.currentUser);
   const [mustBeLoggedInModalOpen, setMustBeLoggedInModalOpen] = useState(false);
   const [saveRhythmModalOpen, setSaveRhythmModalOpen] = useState(false);
+  const [addLinkModalOpen, setAddLinkModalOpen] = useState(false);
   const [rhythmToSaveName, setRhythmToSaveName] = useState("");
   const rhythmToSaveEmpty = rhythmToSaveName.length === 0;
+  const [rhythmLink, setRhythmLink] = useState('');
 
   const [metronomeAnchorEl, setMetronomeAnchorEl] = useState(null);
 
@@ -56,6 +52,23 @@ export function TopToolbar(props) {
   const handleMetronomePopoverClose = () => {
     setMetronomeAnchorEl(null);
   };
+
+  function addRhythm() {
+    addRhythmMutation(rhythmToSaveName, "saved");
+    setSaveRhythmModalOpen(false);
+    setRhythmToSaveName("");
+  }
+
+  async function addLink() {
+    const { _id } = await addRhythmMutation(rhythmToSaveName, "link");
+
+    //What if this fails?
+    const { _id: linkId } = await addLinkMutation("rhythm", _id);
+
+    setAddLinkModalOpen(false);
+    setRhythmToSaveName("");
+    setRhythmLink(`https://truechops.com/r/${linkId}`);
+  }
 
   //Key listeners: space = start/stop
 
@@ -78,18 +91,9 @@ export function TopToolbar(props) {
     }
   }
 
-  const useStyles = makeStyles({
-    button: {
-      label: {
-        color: "blue",
-      },
-      disabled: {
-        color: "brown",
-      },
-    },
-  });
-
-  const classes = useStyles();
+  function onAddLink() {
+    setAddLinkModalOpen(true);
+  }
 
   useEffect(() => {
     let doUpdateToneJs = false;
@@ -157,52 +161,42 @@ export function TopToolbar(props) {
         <IconButton color="inherit" aria-label="save" onClick={onSave}>
           <FaSave size={iconSize} />
         </IconButton>
-        <IconButton
-          color="inherit"
-          aria-label="link"
-          onClick={() => alert("link!")}
-        >
+        <IconButton color="inherit" aria-label="link" onClick={onAddLink}>
           <FaLink size={iconSize} />
         </IconButton>
       </div>
       <Dialog
+        isOpen={saveRhythmModalOpen}
+        message={rhythmNameTextField}
+        onOk={addRhythm}
+        onCancel={() => setSaveRhythmModalOpen(false)}
+        okDisabled={rhythmToSaveEmpty}
+      />
+
+      <Dialog
+        isOpen={addLinkModalOpen}
+        message={rhythmNameTextField}
+        onOk={addLink}
+        onCancel={() => setAddLinkModalOpen(false)}
+        okDisabled={rhythmToSaveEmpty}
+      />
+
+      <Dialog
         onOk={setMustBeLoggedInModalOpen.bind(null, false)}
         message="Log in to save your rhythm!"
         isOpen={mustBeLoggedInModalOpen}
-        setIsOpen={setMustBeLoggedInModalOpen}
       />
-      <Dialog
-        maxWidth="xs"
-        aria-labelledby="confirmation-dialog-title"
-        open={saveRhythmModalOpen}
-      >
-        <DialogContent dividers>{rhythmNameTextField}</DialogContent>
-        <DialogActions>
-          <Button
-            autoFocus
-            onClick={setSaveRhythmModalOpen.bind(null, false)}
-            color="primary"
-          >
-            Cancel
-          </Button>
-          <Button
-            disabled={rhythmToSaveEmpty}
-            onClick={() => {
-              addRhythm(rhythmToSaveName);
-              setSaveRhythmModalOpen(false);
-              setRhythmToSaveName('');
-            }}
-            //Even though these styles aren't used for some reason, it does seem to
-            //prevent an ios bug where the ok button color was not getting updated from
-            //the disabled color when it became enabled.
-            classes={{ label: classes.button.label }}
-          >
-            Ok
-          </Button>
-        </DialogActions>
-      </Dialog>
 
-      <MetronomePopover anchorEl={metronomeAnchorEl} handlePopoverClose={handleMetronomePopoverClose} />
+      <Dialog
+        onOk={() => setRhythmLink('')}
+        message={rhythmLink}
+        isOpen={rhythmLink.length > 0}
+      />
+
+      <MetronomePopover
+        anchorEl={metronomeAnchorEl}
+        handlePopoverClose={handleMetronomePopoverClose}
+      />
     </>
   );
 }

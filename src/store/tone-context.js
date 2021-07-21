@@ -18,6 +18,7 @@ export const ToneContextProvider = props => {
     //This setup is done in useEffect because it cannot be done server side when the page is being built.
     //This is because Tone.js uses calls that are only available in the browser.
     useEffect(() => {
+      const origin = window.location.origin;
         const setSampler = new Tone.Sampler({
             urls: {
               C5: "snare.mp3",
@@ -31,7 +32,7 @@ export const ToneContextProvider = props => {
               G4: "tom4.mp3"
             },
             release: 1,
-            baseUrl: `./samples/drumset/`,
+            baseUrl: `${origin}/samples/drumset/`,
           }).toDestination();
           setSetSampler(setSampler);
         
@@ -44,7 +45,7 @@ export const ToneContextProvider = props => {
               F4: '4.mp3'
             },
             release: 1,
-            baseUrl: `./samples/tenors/`,
+            baseUrl: `${origin}/samples/tenors/`,
           }).toDestination();
           setTenorsSampler(tenorsSampler);
 
@@ -55,7 +56,7 @@ export const ToneContextProvider = props => {
               F5: 'rim.mp3'
             },
             release: 1,
-            baseUrl: `./samples/snare/`,
+            baseUrl: `${origin}samples/snare/`,
           }).toDestination();
           setSnareSampler(snareSampler);
 
@@ -68,7 +69,7 @@ export const ToneContextProvider = props => {
               F4: 'b5.mp3'
             },
             release: 1,
-            baseUrl: `./samples/bass/`,
+            baseUrl: `${origin}/samples/bass/`,
           }).toDestination();
           setBassSampler(bassSampler);
 
@@ -78,7 +79,7 @@ export const ToneContextProvider = props => {
               C5: 'choke.mp3',
             },
             release: 1,
-            baseUrl: `./samples/cymbals/`,
+            baseUrl: `${origin}/samples/cymbals/`,
           }).toDestination();
           setCymbalsSampler(cymbalsSampler);
 

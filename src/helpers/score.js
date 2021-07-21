@@ -1,4 +1,4 @@
-import { GRACE_X_SHIFT, NON_ACCENT_VELOCITY } from '../../data/score';
+import { GRACE_X_SHIFT, NON_ACCENT_VELOCITY } from '../../consts/score';
 import { getAdditionalDotDuration, getPowersOf2 } from './math';
 import { tcDurationToVfDuration } from '../store/score-service';
 

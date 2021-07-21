@@ -1,8 +1,21 @@
 import { Dialog, DialogContent, DialogActions, Button} from '@material-ui/core';
-import { useState } from 'react';
+import { makeStyles } from "@material-ui/styles";
 
-export default function useDialog(props) 
+export default function TCDialog(props) 
 {
+  const useStyles = makeStyles({
+    button: {
+      label: {
+        color: "blue",
+      },
+      disabled: {
+        color: "brown",
+      },
+    },
+  });
+
+  const classes = useStyles();
+
     return <Dialog
         maxWidth="xs"
         aria-labelledby="confirmation-dialog-title"
@@ -12,10 +25,16 @@ export default function useDialog(props)
           {props.message}
         </DialogContent>
         <DialogActions>
-          {props.useCancel && <Button autoFocus onClick={props.setIsOpen.bind(null, false)} color="primary">
+          {props.onCancel && <Button autoFocus onClick={props.onCancel} color="primary">
             Cancel
           </Button>}
-          <Button disabled={props.disabled} onClick={props.onOk} color="primary">
+          <Button disabled={props.okDisabled} onClick={props.onOk} color="primary"
+          
+          //Even though these styles aren't used for some reason, it does seem to
+            //prevent an ios bug where the ok button color was not getting updated from
+            //the disabled color when it became enabled.
+            classes={{ label: classes.button.label }}
+          >
             Ok
           </Button>
         </DialogActions>

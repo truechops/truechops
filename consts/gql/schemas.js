@@ -1,5 +1,3 @@
-import gql from "graphql-tag";
-
 export const RHYTHM_SCHEMA = `
     _id
     __typename
@@ -7,6 +5,7 @@ export const RHYTHM_SCHEMA = `
 	name
     date
     tempo
+    type
     score {
         parts {
             drumset {
@@ -50,32 +49,8 @@ export const RHYTHM_SCHEMA = `
     } 
 `;
 
-export const GET_RHYTHM_BY_ID_QUERY = gql`
-    query GetRhythmById($id: String!) {
-        getRhythmById(input: $id) {
-            ${RHYTHM_SCHEMA}
-        }
-    }
+export const LINK_SCHEMA = `
+    _id
+    type
+    value
 `;
-
-export const GET_ALL_USER_RHYTHMS_QUERY = gql`
-    query GetAllRhythmsForUser($userId: String!) {
-        rhythms(query: { _userId: $userId }) {
-            ${RHYTHM_SCHEMA}
-        }
-    }
-`;
-
-export const ADD_RHYTHM_MUTATION = gql`
-    mutation AddRhythm($rhythm: RhythmInsertInput!) {
-        addedRhythm: insertOneRhythm(data: $rhythm) {
-            ${RHYTHM_SCHEMA}
-        }
-    }
-`
-
-export const RHYTHM_FRAGMENT = gql`
-    fragment RhythmFragment on Rhythm {
-        ${RHYTHM_SCHEMA}
-    }
-`
