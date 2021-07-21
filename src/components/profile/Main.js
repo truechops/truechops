@@ -1,8 +1,4 @@
-import { useEffect, useState } from "react";
-import rhythmMutations from "../../graphql/rhythm/useRhythmMutations";
-import rhythmQueries from "../../graphql/useRhythmQueries";
 import algoliasearch from 'algoliasearch';
-import {InstantSearch, Hits} from 'react-instantsearch-dom';
 import { useSelector } from 'react-redux';
 import { useRouter } from 'next/router';
 
