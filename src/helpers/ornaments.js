@@ -1,5 +1,5 @@
 export function toggleOrnament(note, ornament) {
-  if ("ornaments" in note) {
+  if (note.ornaments) {
     if (ornament)
       if (note.ornaments.includes(ornament)) {
         note.ornaments = note.ornaments.replace(ornament, "");

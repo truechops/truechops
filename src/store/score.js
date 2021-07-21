@@ -482,7 +482,7 @@ export const getToneJs = createSelector([(state) => state.score, state => state.
               toneJsNotes.push(toneJsNote);
 
               //Adjust the velocity depending on if there is an accent
-              const hasOrnaments = "ornaments" in note;
+              const hasOrnaments = note.ornaments;
               if (hasOrnaments) {
                 if (!note.ornaments.includes(ACCENT)) {
                   toneJsNote.velocity = NON_ACCENT_VELOCITY;
