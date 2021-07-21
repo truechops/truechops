@@ -34,6 +34,7 @@ export const RHYTHM_SCHEMA = `
                 voices {
                     notes {
                         notes
+                        ornaments
                         velocity
                         duration
                     }
