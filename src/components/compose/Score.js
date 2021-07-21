@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { drawScore, initialize } from "../../lib/vexflow";
 import { useSelector, useDispatch } from "react-redux";
 import { scoreActions, selectNote } from "../../store/score";
-import addComposeEventListeners from "./event-listeners";
 
 export default function Score(props) {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -39,10 +38,6 @@ export default function Score(props) {
     },
     [dispatch]
   );
-
-  useEffect(() => {
-    addComposeEventListeners(dispatch);
-  }, [dispatch]);
 
   useEffect(() => {
     const { renderer, context } = initialize();

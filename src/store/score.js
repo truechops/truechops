@@ -424,6 +424,7 @@ export const getSelectedNote = createSelector(
 //Get the notes for playback
 export const getToneJs = createSelector([(state) => state.score, state => state.tempo], (score, tempo) => {
   let measures = score.measures;
+  const partConfig = score.parts;
   const spb = 60 / tempo;
   let toneJsNotes = [];
 
@@ -441,8 +442,11 @@ export const getToneJs = createSelector([(state) => state.score, state => state.
 
     measureStartingTime += measureTimeLength;
     measureTimeLength = 0;
-    const parts = measure.parts;
+    let parts = measure.parts;
     let firstPart = true;
+
+    parts = parts.filter(part => partConfig[part.instrument].enabled);
+
     parts.forEach((part) => {
       const { voices, instrument } = part;
       let time = measureStartingTime;

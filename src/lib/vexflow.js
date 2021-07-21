@@ -109,6 +109,8 @@ function getMeasureData(measures, partConfig) {
 
   measures.forEach((measure, measureIndex) => {
     let { parts } = measure;
+
+    //Only render instruments that are enabled.
     parts = parts.filter(part => partConfig[part.instrument].enabled);
     let measureParts = [];
     parts.forEach((part, partIndex) => {

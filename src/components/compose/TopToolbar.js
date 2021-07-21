@@ -1,10 +1,10 @@
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState, useCallback } from "react";
 import { ActionCreators } from "redux-undo";
 import IconButton from "@material-ui/core/IconButton";
 import { update as updateToneJs, setSamplers } from "../../lib/tone";
 import { useTheme } from "@material-ui/core/styles";
 import ToneContext from "../../store/tone-context";
-import { connect, useSelector } from "react-redux";
+import { connect, useSelector, useDispatch } from "react-redux";
 import { getToneJs, scoreActions } from "../../store/score";
 import Dialog from "../ui/Dialog";
 import TextField from "@material-ui/core/TextField";
@@ -18,9 +18,8 @@ import { FiCopy } from 'react-icons/fi';
 import { GiMetronome } from "react-icons/gi";
 import useRhythmMutations from "../../graphql/rhythm/useRhythmMutations";
 import useLinkMutations from "../../graphql/link/useLinkMutations";
-import MetronomeIcon from "../../../icons/metronome.svg";
 import MetronomePopover from "./popovers/MetronomePopover";
-import SvgButton from "../ui/SvgButton";
+import addComposeEventListeners from "./event-listeners";
 
 export function TopToolbar(props) {
   const {
@@ -40,6 +39,8 @@ export function TopToolbar(props) {
   const { addRhythm: addRhythmMutation } = useRhythmMutations();
   const { addLink: addLinkMutation } = useLinkMutations();
 
+  const dispatch = useDispatch();
+
   const currentUser = useSelector((state) => state.realm.currentUser);
   const [mustBeLoggedInModalOpen, setMustBeLoggedInModalOpen] = useState(false);
   const [saveRhythmModalOpen, setSaveRhythmModalOpen] = useState(false);
@@ -49,6 +50,22 @@ export function TopToolbar(props) {
   const [rhythmLink, setRhythmLink] = useState('');
 
   const [metronomeAnchorEl, setMetronomeAnchorEl] = useState(null);
+
+  let eventListenersEnabledRef = useRef();
+  eventListenersEnabledRef.current = !addLinkModalOpen && !saveRhythmModalOpen && !mustBeLoggedInModalOpen;
+  
+  //Only execute events if modals are not open. This prevents, for example, ornaments from being added
+  //to the score while the user is typing in the rhythm name. Ex: they might type in 'c' for cheese or 
+  //'d' for diddle.
+  const eventHandler = useCallback((callback) => {
+    if(eventListenersEnabledRef.current) {
+      callback();
+    } 
+  }, []);
+
+  useEffect(() => {
+    addComposeEventListeners(dispatch, eventHandler);
+  }, [dispatch, eventHandler]);
 
   function rhythmLinkDialogContents(link) {
     return <>
