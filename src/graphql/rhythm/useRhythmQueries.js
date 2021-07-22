@@ -1,6 +1,6 @@
 import { useQuery } from "@apollo/client";
 import { useSelector } from 'react-redux';
-import { GET_ALL_USER_RHYTHMS_QUERY, GET_RHYTHM_BY_ID_QUERY } from '../../../consts/gql/graphql';
+import { GET_ALL_USER_SAVED_RHYTHMS_QUERY, GET_RHYTHM_BY_ID_QUERY } from '../../consts/gql/graphql';
 
 export default function useRhythmQueries() {
   const currentUser = useSelector(state => state.realm.app.currentUser);
@@ -12,7 +12,7 @@ export default function useRhythmQueries() {
 
 function useAllRhythmsForUser(currentUser) {
   const { data, loading, error } = useQuery(
-    GET_ALL_USER_RHYTHMS_QUERY,
+    GET_ALL_USER_SAVED_RHYTHMS_QUERY,
     { variables: { userId: currentUser.id } }
   );
   if (error) {

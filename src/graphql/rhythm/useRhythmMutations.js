@@ -1,12 +1,12 @@
 import { ObjectId } from "bson";
-import { useMutation, } from "@apollo/client";
+import { useMutation } from "@apollo/client";
 import { useSelector } from "react-redux";
-import { ADD_RHYTHM_MUTATION, RHYTHM_FRAGMENT } from '../../../consts/gql/graphql';
+import { ADD_RHYTHM_MUTATION, RHYTHM_FRAGMENT } from "../../consts/gql/graphql";
 
 export default function useRhythmMutations() {
   const currentUser = useSelector((state) => state.realm.currentUser);
-  const score = useSelector(state => state.score.present.score);
-  const tempo = useSelector(state => state.score.present.tempo);
+  const score = useSelector((state) => state.score.present.score);
+  const tempo = useSelector((state) => state.score.present.tempo);
 
   return {
     addRhythm: useAddRhythm(currentUser, score, tempo),
@@ -33,25 +33,29 @@ function useAddRhythm(currentUser, score, tempo) {
   });
 
   const addRhythm = async (name, type) => {
-    const { data: { addedRhythm } } = await addRhythmMutation({
-      variables: {
-        rhythm: {
-          _id: new ObjectId(),
-          _userId: currentUser.id,
-          name,
-          date: new Date(),
-          score,
-          tempo,
-          type
+    try {
+      const {
+        data: { addedRhythm }
+      } = await addRhythmMutation({
+        variables: {
+          rhythm: {
+            _id: new ObjectId(),
+            _userId: currentUser.id,
+            name,
+            date: new Date(),
+            score,
+            tempo,
+            type,
+          },
         },
-      },
-    });
+      });
 
-    const omitTypename = (key, value) =>
-    key === "__typename" ? undefined : value;
-    const scrubbedRhythm = JSON.parse(JSON.stringify(addedRhythm), omitTypename);
-console.log('scrubbedRhythm: ' + JSON.stringify(scrubbedRhythm));
-    return scrubbedRhythm;
+      return addedRhythm;
+    } catch (err) {
+      console.log("problem saving rhythm: " + err);
+    }
+
+    return null;
   };
 
   return addRhythm;

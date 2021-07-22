@@ -17,7 +17,7 @@ import {
   GRACE_VELOCITY,
   ACCENT_VELOCITY,
   DEFAULT_TEMPO
-} from "../../consts/score";
+} from "../consts/score";
 
 export const ACCENT = "a";
 export const FLAM = "f";

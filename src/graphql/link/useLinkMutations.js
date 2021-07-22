@@ -1,15 +1,21 @@
-import { useMutation, } from "@apollo/client";
-import { ADD_LINK_MUTATION, LINK_FRAGMENT } from '../../../consts/gql/graphql';
-import { getLinkKey } from '../../helpers/link';
+import { useMutation } from "@apollo/client";
+import { GET_RHYTHM_LINK, LINK_FRAGMENT } from "../../consts/gql/graphql";
+import { LINK_TYPES } from '../../consts/db';
+import { useSelector } from 'react-redux';
+import { ObjectId } from "bson";
 
 export default function useLinkMutations() {
+  const currentUser = useSelector((state) => state.realm.currentUser);
+  const score = useSelector((state) => state.score.present.score);
+  const tempo = useSelector((state) => state.score.present.tempo);
+
   return {
-    addLink: useAddLink()
+    getRhythmLink: useGetRhythmLink(currentUser, score, tempo)
   };
 }
 
-function useAddLink() {
-  const [addLinkMutation] = useMutation(ADD_LINK_MUTATION, {
+function useGetRhythmLink(currentUser, score, tempo) {
+  const [addLinkMutation] = useMutation(GET_RHYTHM_LINK, {
     // Manually save added Tasks into the Apollo cache so that Task queries automatically update
     // For details, refer to https://www.apollographql.com/docs/react/data/mutations/#making-all-other-cache-updates
     update: (cache, { data: { addedLink } }) => {
@@ -27,18 +33,30 @@ function useAddLink() {
     },
   });
 
-  const addLink = async (type, value) => {
-    const { data: { addedLink } } = await addLinkMutation({
-      variables: {
-        link: {
-          _id: getLinkKey(),
-          type,
-          value
+  const getLink = async (name) => {
+    try {
+      const {
+        data: { addedLink },
+      } = await addLinkMutation({
+        variables: {
+          rhythm: {
+            _id: new ObjectId(),
+            _userId: currentUser.id,
+            name,
+            date: new Date(),
+            score,
+            tempo,
+            type: LINK_TYPES.rhythm,
+          },
         },
-      },
-    });
-    return addedLink;
+      });
+      return addedLink;
+    } catch (err) {
+      console.log("Problem adding link: " + err);
+    }
+
+    return null;
   };
 
-  return addLink;
+  return getLink;
 }

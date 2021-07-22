@@ -1,4 +1,4 @@
-import { LINK_KEY_LENGTH } from '../../consts/link';
+import { LINK_KEY_LENGTH } from '../consts/link';
 
 export function getLinkKey() {
   var result = "";

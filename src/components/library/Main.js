@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { scoreActions } from "../../store/score";
 import { useRouter } from "next/router";
 import { useLazyQuery, useReactiveVar } from "@apollo/client";
-import { GET_ALL_USER_RHYTHMS_QUERY } from "../../../consts/gql/graphql";
+import { GET_ALL_USER_SAVED_RHYTHMS_QUERY } from "../../consts/gql/graphql";
 import { userRhythmsVar } from "../../graphql/cache";
 import { CircularProgress } from "@material-ui/core";
 import { makeStyles } from "@material-ui/styles";
@@ -12,7 +12,7 @@ import List from "@material-ui/core/List";
 import ListItem from "@material-ui/core/ListItem";
 import ListItemText from "@material-ui/core/ListItemText";
 import Paper from "@material-ui/core/Paper";
-import { DEFAULT_TEMPO } from '../../../consts/score';
+import { DEFAULT_TEMPO } from '../../consts/score';
 
 import { scrubTypename } from '../../helpers/mongodb';
 
@@ -49,7 +49,7 @@ export default function Main() {
   const classes = useStyles();
 
   const [getUserRhythms, { data: userRhythmsData }] = useLazyQuery(
-    GET_ALL_USER_RHYTHMS_QUERY
+    GET_ALL_USER_SAVED_RHYTHMS_QUERY
   );
 
   if (userRhythmsData) {

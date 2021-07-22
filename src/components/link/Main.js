@@ -1,9 +1,9 @@
 import Rhythm from "./Rhythm";
+import { LINK_TYPES } from '../../consts/db';
 
 export default function Link({ linkId, linkType }) {
   let linkPage = null;
-  console.log('linkType: ' + linkType);
-  if (linkType === "rhythm") {
+  if (linkType === LINK_TYPES.rhythm) {
     linkPage = <Rhythm linkId={linkId} />;
   }
 

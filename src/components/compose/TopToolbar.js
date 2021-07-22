@@ -8,13 +8,15 @@ import { connect, useSelector, useDispatch } from "react-redux";
 import { getToneJs, scoreActions } from "../../store/score";
 import Dialog from "../ui/Dialog";
 import TextField from "@material-ui/core/TextField";
+import { LINK_TYPES, RHYTHM_TYPES } from "../../consts/db";
+import ReactGA from "react-ga";
 
-import { copyToClipboard } from '../../helpers/browser';
+import { copyToClipboard } from "../../helpers/browser";
 
 import _ from "lodash";
 
 import { FaUndo, FaRedo, FaPlay, FaStop, FaSave, FaLink } from "react-icons/fa";
-import { FiCopy } from 'react-icons/fi';
+import { FiCopy } from "react-icons/fi";
 import { GiMetronome } from "react-icons/gi";
 import useRhythmMutations from "../../graphql/rhythm/useRhythmMutations";
 import useLinkMutations from "../../graphql/link/useLinkMutations";
@@ -37,30 +39,35 @@ export function TopToolbar(props) {
   const startStop = props.startStop;
   const prevRepeatRef = useRef();
   const { addRhythm: addRhythmMutation } = useRhythmMutations();
-  const { addLink: addLinkMutation } = useLinkMutations();
+  const { getRhythmLink } = useLinkMutations();
 
   const dispatch = useDispatch();
 
   const currentUser = useSelector((state) => state.realm.currentUser);
-  const [mustBeLoggedInModalOpen, setMustBeLoggedInModalOpen] = useState(false);
+  const [logInToSaveRhythmModalOpen, setLogInToSaveRhythmModalOpen] =
+    useState(false);
+  const [logInToAddLinkModalOpen, setLogInToAddLinkModalOpen] = useState(false);
   const [saveRhythmModalOpen, setSaveRhythmModalOpen] = useState(false);
   const [addLinkModalOpen, setAddLinkModalOpen] = useState(false);
   const [rhythmToSaveName, setRhythmToSaveName] = useState("");
   const rhythmToSaveEmpty = rhythmToSaveName.length === 0;
-  const [rhythmLink, setRhythmLink] = useState('');
+  const [rhythmLink, setRhythmLink] = useState("");
 
   const [metronomeAnchorEl, setMetronomeAnchorEl] = useState(null);
+  const [errorAddingRhythm, setErrorAddingRhythm] = useState(false);
+  const [errorAddingLink, setErrorAddingLink] = useState(false);
 
   let eventListenersEnabledRef = useRef();
-  eventListenersEnabledRef.current = !addLinkModalOpen && !saveRhythmModalOpen && !mustBeLoggedInModalOpen;
-  
+  eventListenersEnabledRef.current =
+    !addLinkModalOpen && !saveRhythmModalOpen && !logInToSaveRhythmModalOpen;
+
   //Only execute events if modals are not open. This prevents, for example, ornaments from being added
-  //to the score while the user is typing in the rhythm name. Ex: they might type in 'c' for cheese or 
+  //to the score while the user is typing in the rhythm name. Ex: they might type in 'c' for cheese or
   //'d' for diddle.
   const eventHandler = useCallback((callback) => {
-    if(eventListenersEnabledRef.current) {
+    if (eventListenersEnabledRef.current) {
       callback();
-    } 
+    }
   }, []);
 
   useEffect(() => {
@@ -68,17 +75,19 @@ export function TopToolbar(props) {
   }, [dispatch, eventHandler]);
 
   function rhythmLinkDialogContents(link) {
-    return <>
-      {rhythmLink}
-      <IconButton
-          style={{marginLeft: 8}}
+    return (
+      <>
+        <span id="rhythmLink">{rhythmLink}</span>
+        <IconButton
+          style={{ marginLeft: 8 }}
           color="inherit"
           aria-label="copy-to-clipboard"
           onClick={() => copyToClipboard(link)}
         >
           <FiCopy size={iconSize} />
         </IconButton>
-    </>
+      </>
+    );
   }
 
   const handleMetronomePopoverOpen = (event) => {
@@ -89,21 +98,54 @@ export function TopToolbar(props) {
     setMetronomeAnchorEl(null);
   };
 
-  function addRhythm() {
-    addRhythmMutation(rhythmToSaveName, "saved");
+  function onSave() {
+    if (!currentUser) {
+      setLogInToSaveRhythmModalOpen(true);
+    } else {
+      setSaveRhythmModalOpen(true);
+    }
+  }
+
+  //Show the add link modal if the user is logged in. Else, prompt them to log in via modal.
+  function onAddLink() {
+    if (!currentUser) {
+      setLogInToAddLinkModalOpen(true);
+    } else {
+      setAddLinkModalOpen(true);
+    }
+  }
+
+  async function addRhythm() {
+    const addedRhythm = await addRhythmMutation(
+      rhythmToSaveName,
+      RHYTHM_TYPES.saved
+    );
+    if (!addedRhythm) {
+      setErrorAddingRhythm(true);
+      ReactGA.event({
+        category: "exception",
+        action: "save rhythm",
+      });
+    }
+
     setSaveRhythmModalOpen(false);
     setRhythmToSaveName("");
   }
 
   async function addLink() {
-    const { _id } = await addRhythmMutation(rhythmToSaveName, "link");
-
-    //What if this fails?
-    const { _id: linkId } = await addLinkMutation("rhythm", _id);
+    const link = await getRhythmLink(rhythmToSaveName);
+    if (!link) {
+      setErrorAddingLink(true);
+      ReactGA.event({
+        category: "exception",
+        action: "generate rhythm link",
+      });
+    } else {
+      setRhythmLink(`https://truechops.com/r/${link}`);
+    }
 
     setAddLinkModalOpen(false);
     setRhythmToSaveName("");
-    setRhythmLink(`https://truechops.com/r/${linkId}`);
   }
 
   //Key listeners: space = start/stop
@@ -118,18 +160,6 @@ export function TopToolbar(props) {
       cymbalsSampler
     );
   }, [setSampler, snareSampler, tenorsSampler, bassSampler, cymbalsSampler]);
-
-  function onSave() {
-    if (!currentUser) {
-      setMustBeLoggedInModalOpen(true);
-    } else {
-      setSaveRhythmModalOpen(true);
-    }
-  }
-
-  function onAddLink() {
-    setAddLinkModalOpen(true);
-  }
 
   useEffect(() => {
     let doUpdateToneJs = false;
@@ -160,8 +190,6 @@ export function TopToolbar(props) {
     prevRepeatRef.current = repeat;
   }, [toneJs, repeat, startStop]);
 
-  
-
   const rhythmNameTextField = (
     <form>
       <TextField
@@ -175,6 +203,37 @@ export function TopToolbar(props) {
       />
     </form>
   );
+
+  const errorDialogs = [
+    {
+      onOk: () => setLogInToSaveRhythmModalOpen(false),
+      message: "Log in to save your rhythm!",
+      isOpen: logInToSaveRhythmModalOpen,
+    },
+    {
+      onOk: () => setLogInToAddLinkModalOpen(false),
+      message: "Log in to add a link!",
+      isOpen: logInToAddLinkModalOpen,
+    },
+    {
+      onOk: () => setErrorAddingLink(false),
+      message: "Unable to generate link. Please try again later.",
+      isOpen: errorAddingLink,
+    },
+    {
+      onOk: () => setErrorAddingRhythm(false),
+      message: "Unable to save rhythm. Please try again later.",
+      isOpen: errorAddingRhythm,
+    },
+  ].map((props) => (
+    <Dialog
+      key={Math.random().toString()}
+      onOk={props.onOk}
+      message={props.message}
+      isOpen={props.isOpen}
+    />
+  ));
+
   return (
     <>
       <div style={{ width: "auto", margin: "auto" }}>
@@ -217,14 +276,10 @@ export function TopToolbar(props) {
         okDisabled={rhythmToSaveEmpty}
       />
 
-      <Dialog
-        onOk={setMustBeLoggedInModalOpen.bind(null, false)}
-        message="Log in to save your rhythm!"
-        isOpen={mustBeLoggedInModalOpen}
-      />
+      {errorDialogs}
 
       <Dialog
-        onOk={() => setRhythmLink('')}
+        onOk={() => setRhythmLink("")}
         message={rhythmLinkDialogContents(rhythmLink)}
         isOpen={rhythmLink.length > 0}
       />

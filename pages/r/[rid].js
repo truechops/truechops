@@ -1,5 +1,6 @@
 import { useRouter } from 'next/router'
 import dynamic from 'next/dynamic'
+import { LINK_TYPES } from '../../src/consts/db';
 
 export default function Link() {
     const DynamicMain = dynamic(
@@ -10,5 +11,5 @@ export default function Link() {
   const router = useRouter();
   const { rid } = router.query;
 
-  return <DynamicMain linkId={rid} linkType="rhythm"/>
+  return <DynamicMain linkId={rid} linkType={ LINK_TYPES.rhythm }/>
 }

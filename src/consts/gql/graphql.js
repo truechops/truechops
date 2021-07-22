@@ -9,9 +9,9 @@ export const GET_RHYTHM_BY_ID_QUERY = gql`
     }
 `;
 
-export const GET_ALL_USER_RHYTHMS_QUERY = gql`
-    query GetAllRhythmsForUser($userId: String!) {
-        rhythms(query: { _userId: $userId }) {
+export const GET_ALL_USER_SAVED_RHYTHMS_QUERY = gql`
+    query GetAllSavedRhythmsForUser($userId: String!) {
+        rhythms(query: { _userId: $userId, type: "saved" }) {
             ${RHYTHM_SCHEMA}
         }
     }
@@ -50,5 +50,11 @@ export const GET_LINK_RHYTHM_BY_ID_QUERY = gql`
         getLinkRhythmById(input: $id) {
             ${RHYTHM_SCHEMA}
         }
+    }
+`;
+
+export const GET_RHYTHM_LINK = gql`
+    mutation GetRhythmLink($rhythm: RhythmInsertInput!) {
+        addedLink: getRhythmLink(input: $rhythm)
     }
 `;

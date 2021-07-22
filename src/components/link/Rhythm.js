@@ -6,7 +6,7 @@ import { scoreActions } from "../../store/score";
 import { useLazyQuery } from "@apollo/client";
 
 import { scrubTypename } from "../../helpers/mongodb";
-import { GET_LINK_RHYTHM_BY_ID_QUERY } from '../../../consts/gql/graphql';
+import { GET_LINK_RHYTHM_BY_ID_QUERY } from '../../consts/gql/graphql';
 import { useEffect } from 'react';
 
 export default function RhythmLink({ linkId }) {

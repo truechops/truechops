@@ -1,24 +1,34 @@
 import { useQuery } from "@apollo/client";
-import { GET_LINK_RHYTHM_BY_ID_QUERY, GET_RHYTHM_BY_ID_QUERY } from '../../../consts/gql/graphql';
+import { GET_RHYTHM_LINK } from "../../consts/gql/graphql";
+import { useSelector } from "react-redux";
+import { ObjectId } from "bson";
+import { LINK_TYPES } from "../../consts/db";
 
 export default function useLinkQueries() {
+  const currentUser = useSelector((state) => state.realm.currentUser);
+  const score = useSelector((state) => state.score.present.score);
+  const tempo = useSelector((state) => state.score.present.tempo);
+
   return {
-    getLinkRhythmById: useGetLinkRhythmById
+    getRhythmLink: useGetRhythmLink.bind(null, currentUser, score, tempo),
   };
 }
 
-function useGetLinkRhythmById(id) {
-  const { data, loading, error } = useQuery(
-    GET_LINK_RHYTHM_BY_ID_QUERY,
-    { variables: { id } }
-  );
-  if (error) {
-    console.log('error');
-    throw new Error(`Failed to fetch tasks: ${error.message}`);
-  }
-  console.log('link data: ' + JSON.stringify(data));
-  // If the query has finished, return the tasks from the result data
-  // Otherwise, return an empty list
-  const rhythm = data?.getLinkRhythmById ?? [];
-  return { rhythm, loading };
+function useGetRhythmLink(currentUser, score, tempo, name) {
+  const { data, loading, error } = useQuery(GET_RHYTHM_LINK, {
+    variables: {
+      rhythm: {
+        _id: new ObjectId(),
+        _userId: currentUser.id,
+        name,
+        date: new Date(),
+        score,
+        tempo,
+        type: LINK_TYPES.rhythm,
+      },
+    },
+  });
+
+  const link = data ?? [];
+  return { link, loading, error };
 }

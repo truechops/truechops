@@ -39,7 +39,7 @@ import SvgButton from "../../ui/SvgButton";
 import { makeStyles } from "@material-ui/core/styles";
 import { useDispatch } from "react-redux";
 import { scoreActions } from "../../../store/score";
-import { noteNameToDuration } from "../../../../consts/score";
+import { noteNameToDuration } from "../../../consts/score";
 
 import useInstruments from './instruments-hook';
 
