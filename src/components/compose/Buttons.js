@@ -80,8 +80,8 @@ export function Buttons(props) {
   const [tupletPickerAnchorEl, setTupletPickerAnchorEl] = useState();
   const tupletPickerOpen = Boolean(tupletPickerAnchorEl);
 
-  function modifyNoteHandler(value, isRest) {
-    modifyNote(voices, value, isRest);
+  function modifyNoteHandler(type, isRest) {
+    modifyNote(voices, type, isRest);
   }
 
   const handleTupletPickerClick = () => {
@@ -129,7 +129,7 @@ export function Buttons(props) {
           label="Ornaments"
           {...a11yProps(2)}
         />
-        <Tab key={"compose-button-tabs-mods"} label="Mods" {...a11yProps(3)} />
+        <Tab key={"compose-button-tabs-mods"} label="Mutate" {...a11yProps(3)} />
       </Tabs>
       <div id="composeButtonsTabPanel" style={{ margin: "auto" }}>
         <TabPanel value={selectedTab} index={0}>
@@ -185,7 +185,7 @@ export function Buttons(props) {
           <ButtonsRow>{ornamentButtons}</ButtonsRow>
         </TabPanel>
         <TabPanel value={selectedTab} index={3}>
-          Mods
+          <Button onClick={() => dispatch(scoreActions.mutateNotes())}>Mutate</Button>
         </TabPanel>
       </div>
     </>
@@ -205,10 +205,11 @@ const mapStateToProps = (state) => {
 
 const mapDispatchToProps = (dispatch) => {
   return {
-    modifyNote: (voices, value, isRest) => {
+    modifyNote: (voices, type, isRest) => {
+      console.log('modifyNote dispatthToProps: ' + type);
       const scoreRootElement = document.getElementById('score-root');
 
-      dispatch(modifyNote({ voices, value, isRest }, {
+      dispatch(modifyNote({ voices, type, isRest }, {
         top: scoreRootElement.scrollTop,
         left: scoreRootElement.scrollLeft
       }))

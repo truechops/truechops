@@ -11,7 +11,13 @@ webpack build optimization
 only load samplers when they are needed
 hiding parts should silence those parts in playback
 separate mongodb test environment
-deactivate key listeners when saving rhythm (so f's don't activate flams)
-add copy button on generated link dialog
-pressing space after closing save rhythm dialog will both play back the score and also open the save rhythm dialog
+
+ornaments not always deactivated when in generate link modal.
+    -generate link
+    -click copy
+    -close modal
+    -generate another link (ornaments will not be disabled)
+
 message indicating supported browsers
+some sort of licensing system to prevent cloning environment and making another site
+tooltips on hover

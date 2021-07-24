@@ -7,7 +7,8 @@ import {
   toggleOrnament,
   setRepeat,
   incDecSelectedNote,
-} from "./score-service";
+} from "./services/score-service";
+import { mutate } from './services/mutate-service';
 import { getEmptyMeasure } from "../helpers/score";
 import _ from "lodash";
 import { createSelector } from "reselect";
@@ -16,7 +17,8 @@ import {
   NON_ACCENT_VELOCITY,
   GRACE_VELOCITY,
   ACCENT_VELOCITY,
-  DEFAULT_TEMPO
+  DEFAULT_TEMPO,
+  NOTE_CONFIG
 } from "../consts/score";
 
 export const ACCENT = "a";
@@ -243,13 +245,28 @@ const scoreSlice = createSlice({
         });
       });
     },
+    mutateNotes(state) {
+      let modifiers = [];
+      modifiers.push({
+        type: 'swap',
+        context: 'F4',
+        config: {
+            grid: 32,
+            probability: 0.25,
+            swapWithRests: true
+        }
+    });
+
+      mutate(state.score, modifiers);
+    },
     //When user modifies a note in the score. Ex: 8th note to 16th note
     modifyNote(state, action) {
-      const { value, isRest } = action.payload;
+      const { type, isRest } = action.payload;
+      let duration = NOTE_CONFIG[type].duration;
       const selectedNote = getSelectedNote(state);
 
       if (selectedNote) {
-        modifyNoteService(state, value, isRest, selectedNote);
+        modifyNoteService(state, duration, isRest, selectedNote);
       }
     },
 
@@ -579,6 +596,7 @@ export const selectNote = (note, scrollAmount) => {
 
 export const modifyNote = (noteData, scrollAmount) => {
   return async (dispatch) => {
+    console.log('dispatching note data: ' + JSON.stringify(noteData));
     dispatch(scoreActions.modifyNote(noteData));
     dispatch(scoreActions.setScrollAmount(scrollAmount));
   }

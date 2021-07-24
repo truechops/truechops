@@ -39,7 +39,6 @@ import SvgButton from "../../ui/SvgButton";
 import { makeStyles } from "@material-ui/core/styles";
 import { useDispatch } from "react-redux";
 import { scoreActions } from "../../../store/score";
-import { noteNameToDuration } from "../../../consts/score";
 
 import useInstruments from './instruments-hook';
 
@@ -121,19 +120,19 @@ export default function useComposeButtons(
   const classes = useTabStyles();
   const noteButtonsRow1 = [
     {
-      onClick: modifyNoteHandler.bind(null, noteNameToDuration["whole"], false),
+      onClick: modifyNoteHandler.bind(null, "whole", false),
       viewBox: "-12 -12 40 32",
       component: WholeNoteIcon,
     },
     {
-      onClick: modifyNoteHandler.bind(null, noteNameToDuration["half"], false),
+      onClick: modifyNoteHandler.bind(null, "half", false),
       viewBox: "0 0 15.28 42.64",
       component: HalfNoteIcon,
     },
     {
       onClick: modifyNoteHandler.bind(
         null,
-        noteNameToDuration["quarter"],
+        "quarter",
         false
       ),
       viewBox: "0 0 15.28 42.64",
@@ -142,7 +141,7 @@ export default function useComposeButtons(
     {
       onClick: modifyNoteHandler.bind(
         null,
-        noteNameToDuration["eighth"],
+        "eighth",
         false
       ),
       viewBox: "0 0 29 43",
@@ -151,7 +150,7 @@ export default function useComposeButtons(
     {
       onClick: modifyNoteHandler.bind(
         null,
-        noteNameToDuration["sixteenth"],
+        "sixteenth",
         false
       ),
       viewBox: "0 0 28.43 50",
@@ -160,7 +159,7 @@ export default function useComposeButtons(
     {
       onClick: modifyNoteHandler.bind(
         null,
-        noteNameToDuration["thirtysecond"],
+        "thirtysecond",
         false
       ),
       viewBox: "0 0 28.43 50",
@@ -177,33 +176,33 @@ export default function useComposeButtons(
 
   const noteButtonsRow2Mobile = [
     {
-      onClick: modifyNoteHandler.bind(null, noteNameToDuration["whole"], true),
+      onClick: modifyNoteHandler.bind(null, "whole", true),
       viewBox: "-14 -12 80 40",
       component: WholeNoteRestIcon,
     },
     {
-      onClick: modifyNoteHandler.bind(null, noteNameToDuration["half"], true),
+      onClick: modifyNoteHandler.bind(null, "half", true),
       viewBox: "-14 -12 80 40",
       component: HalfNoteRestIcon,
     },
     {
       onClick: modifyNoteHandler.bind(
         null,
-        noteNameToDuration["quarter"],
+        "quarter",
         true
       ),
       viewBox: "0 0 16.05 43.81",
       component: QuarterNoteRestIcon,
     },
     {
-      onClick: modifyNoteHandler.bind(null, noteNameToDuration["eighth"], true),
+      onClick: modifyNoteHandler.bind(null, "eighth", true),
       viewBox: "0 0 20.04 34",
       component: EighthNoteRestIcon,
     },
     {
       onClick: modifyNoteHandler.bind(
         null,
-        noteNameToDuration["sixteenth"],
+        "sixteenth",
         true
       ),
       viewBox: "0 0 26.27 50",
@@ -212,7 +211,7 @@ export default function useComposeButtons(
     {
       onClick: modifyNoteHandler.bind(
         null,
-        noteNameToDuration["thirtysecond"],
+        "thirtysecond",
         true
       ),
       viewBox: "0 0 25.82 50",

@@ -1,6 +1,7 @@
 import Vex from "vexflow";
 import VexFlowInteraction from "./VexFlowInteraction";
 import { getNote, getGraceNote } from "../helpers/score";
+import { NOTE_HIGHLIGHT_COLOR } from '../consts/score';
 import _ from "lodash";
 import { ACCENT, FLAM, DIDDLE, CHEESE, LEFT_STICKING, RIGHT_STICKING } from '../store/score';
 
@@ -277,7 +278,7 @@ function renderStaves(
           note.voiceIndex === selectedNoteIndex.voiceIndex &&
           noteIndex === selectedNoteIndex.noteIndex
         ) {
-          note.setStyle({ fillStyle: "#00FF00" });
+          note.setStyle({ fillStyle: NOTE_HIGHLIGHT_COLOR });
           note.setContext(context).draw();
         }
 

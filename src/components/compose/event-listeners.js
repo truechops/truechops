@@ -1,6 +1,5 @@
 import { scoreActions } from "../../store/score";
 
-import { noteNameToDuration } from "../../consts/score";
 import { ActionCreators } from "redux-undo";
 import ReactGA from "react-ga";
 
@@ -12,8 +11,8 @@ import ReactGA from "react-ga";
  */
 export default function addComposeEventListeners(dispatch, eventHandler) {
   function handleKeyEvents(event) {
-    function modifyNote(value, isRest) {
-      dispatch(scoreActions.modifyNote({ value, isRest }));
+    function modifyNote(type, isRest) {
+      dispatch(scoreActions.modifyNote({ type, isRest }));
     }
 
     if (event.keyCode === 32) {
@@ -70,7 +69,11 @@ export default function addComposeEventListeners(dispatch, eventHandler) {
       });
 
       //'a' for accent
-      eventHandler(() => dispatch(scoreActions.toggleAccent()));
+      eventHandler(() => {
+        console.log('did accent!');
+        dispatch(scoreActions.toggleAccent());
+      }
+        );
     } else if (event.keyCode === 49) {
       ReactGA.event({
         category: "shortcuts",
@@ -78,7 +81,7 @@ export default function addComposeEventListeners(dispatch, eventHandler) {
       });
 
       //'1' for quarter note
-      eventHandler(() => modifyNote(noteNameToDuration["quarter"], false));
+      eventHandler(() => modifyNote("quarter", false));
     } else if (event.keyCode === 50) {
       ReactGA.event({
         category: "shortcuts",
@@ -86,7 +89,7 @@ export default function addComposeEventListeners(dispatch, eventHandler) {
       });
 
       //'2' for eighth note
-      eventHandler(() => modifyNote(noteNameToDuration["eighth"], false));
+      eventHandler(() => modifyNote("eighth", false));
     } else if (event.keyCode === 51) {
       ReactGA.event({
         category: "shortcuts",
@@ -94,7 +97,7 @@ export default function addComposeEventListeners(dispatch, eventHandler) {
       });
 
       //'3' for sixteenth note
-      eventHandler(() => modifyNote(noteNameToDuration["sixteenth"], false));
+      eventHandler(() => modifyNote("sixteenth", false));
     } else if (event.keyCode === 52) {
       ReactGA.event({
         category: "shortcuts",
@@ -102,7 +105,7 @@ export default function addComposeEventListeners(dispatch, eventHandler) {
       });
 
       //'4' for sixteenth note
-      eventHandler(() => modifyNote(noteNameToDuration["thirtysecond"], false));
+      eventHandler(() => modifyNote("thirtysecond", false));
     } else if (event.keyCode === 53) {
       ReactGA.event({
         category: "shortcuts",
@@ -110,7 +113,7 @@ export default function addComposeEventListeners(dispatch, eventHandler) {
       });
 
       //'5' for quarter rest
-      eventHandler(() => modifyNote(noteNameToDuration["quarter"], true));
+      eventHandler(() => modifyNote("quarter", true));
     } else if (event.keyCode === 54) {
       ReactGA.event({
         category: "shortcuts",
@@ -118,7 +121,7 @@ export default function addComposeEventListeners(dispatch, eventHandler) {
       });
 
       //'6' for eighth rest
-      eventHandler(() => modifyNote(noteNameToDuration["eighth"], true));
+      eventHandler(() => modifyNote("eighth", true));
     } else if (event.keyCode === 55) {
       ReactGA.event({
         category: "shortcuts",
@@ -126,7 +129,7 @@ export default function addComposeEventListeners(dispatch, eventHandler) {
       });
 
       //'7' for sixteenth rest
-      eventHandler(() => modifyNote(noteNameToDuration["sixteenth"], true));
+      eventHandler(() => modifyNote("sixteenth", true));
     } else if (event.keyCode === 56) {
       ReactGA.event({
         category: "shortcuts",
@@ -134,7 +137,7 @@ export default function addComposeEventListeners(dispatch, eventHandler) {
       });
 
       //'8' for thirtysecond rest
-      eventHandler(() => modifyNote(noteNameToDuration["thirtysecond"], true));
+      eventHandler(() => modifyNote("thirtysecond", true));
     } else if (event.keyCode === 57) {
       ReactGA.event({
         category: "shortcuts",
@@ -142,7 +145,7 @@ export default function addComposeEventListeners(dispatch, eventHandler) {
       });
 
       //'9' for whole note
-      eventHandler(() => modifyNote(noteNameToDuration["whole"], false));
+      eventHandler(() => modifyNote("whole", false));
     } else if (event.keyCode === 48) {
       ReactGA.event({
         category: "shortcuts",
@@ -150,7 +153,7 @@ export default function addComposeEventListeners(dispatch, eventHandler) {
       });
 
       //'0 for half note
-      eventHandler(() => modifyNote(noteNameToDuration["half"], false));
+      eventHandler(() => modifyNote("half", false));
     } else if (event.keyCode === 189) {
       ReactGA.event({
         category: "shortcuts",
@@ -158,7 +161,7 @@ export default function addComposeEventListeners(dispatch, eventHandler) {
       });
 
       //'-' for whole note rest
-      eventHandler(() => modifyNote(noteNameToDuration["whole"], true));
+      eventHandler(() => modifyNote("whole", true));
     } else if (event.keyCode === 187) {
       ReactGA.event({
         category: "shortcuts",
@@ -166,7 +169,7 @@ export default function addComposeEventListeners(dispatch, eventHandler) {
       });
 
       //'=' for whalf note rest
-      eventHandler(() => modifyNote(noteNameToDuration["half"], true));
+      eventHandler(() => modifyNote("half", true));
     } else if (event.keyCode === 37) {
       ReactGA.event({
         category: "shortcuts",

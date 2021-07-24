@@ -1,26 +1,7 @@
-import { getPowersOf2, getAdditionalDotDuration } from "../helpers/math";
-import { getTCDuration, getRestsFromTCDuration } from "../helpers/score";
+import { getPowersOf2, getAdditionalDotDuration } from "../../helpers/math";
+import { getTCDurationSingle, getRestsFromTCDuration } from "../../helpers/score";
 import _ from "lodash";
-import { NON_ACCENT_VELOCITY } from "../consts/score";
-
-//Translates the toneJs duration to the score duration
-const vfDurationToTCDuration = {
-  1: 64,
-  2: 32,
-  4: 16,
-  8: 8,
-  16: 4,
-  32: 2,
-};
-
-export const tcDurationToVfDuration = {
-  64: 1,
-  32: 2,
-  16: 4,
-  8: 8,
-  4: 16,
-  2: 32,
-};
+import { NON_ACCENT_VELOCITY, tcDurationToVfDuration } from "../../consts/score";
 
 export function modifyNote(state, newNoteValueIn, isRest, selectedNote) {
   let { measureIndex, partIndex, voiceIndex, noteIndex } = selectedNote;
@@ -31,12 +12,12 @@ export function modifyNote(state, newNoteValueIn, isRest, selectedNote) {
   const note = measureNotes[noteIndex];
   const tuplet = state.tuplet;
 
-  let selectedDuration = getTCDuration(note.duration, note.dots);
+  let selectedDuration = getTCDurationSingle(note.duration, note.dots);
 
   let newNoteValue = newNoteValueIn;
 
   if (tuplet.selected) {
-    newNoteValue = tuplet.normal * getTCDuration(tuplet.type, 0);
+    newNoteValue = tuplet.normal * getTCDurationSingle(tuplet.type, 0);
   }
 
   if (dotSelected) {
@@ -71,7 +52,7 @@ export function modifyNote(state, newNoteValueIn, isRest, selectedNote) {
     noteTotalAfterPos = measureNotes
       .slice(noteIndex, selectedTuplet.end)
       .reduce((total, note) => {
-        let duration = getTCDuration(note.duration, note.dots);
+        let duration = getTCDurationSingle(note.duration, note.dots);
 
         total += duration;
         return total;
@@ -80,7 +61,7 @@ export function modifyNote(state, newNoteValueIn, isRest, selectedNote) {
     //Get the note total after the note index. Lets us know if there is enough room
     //for the new note.
     noteTotalAfterPos = measureNotes.slice(noteIndex).reduce((total, note) => {
-      let duration = getTCDuration(note.duration, note.dots);
+      let duration = getTCDurationSingle(note.duration, note.dots);
 
       total += duration;
       return total;
@@ -117,7 +98,7 @@ export function modifyNote(state, newNoteValueIn, isRest, selectedNote) {
   let numTupletNotes = 0;
 
   if (tuplet.selected) {
-    const singleNoteDuration = getTCDuration(tuplet.type, 0);
+    const singleNoteDuration = getTCDurationSingle(tuplet.type, 0);
     const tupletDuration = tuplet.actual * singleNoteDuration;
 
     //The note the user wants will not work with this tuplet; return.
@@ -140,7 +121,7 @@ export function modifyNote(state, newNoteValueIn, isRest, selectedNote) {
 
     for (let j = noteIndex + 1; j < measureNotes.length; j++) {
       const note = measureNotes[j];
-      let noteDuration = getTCDuration(note.duration, note.dots);
+      let noteDuration = getTCDurationSingle(note.duration, note.dots);
 
       remainingDuration -= noteDuration;
       notesToDelete++;

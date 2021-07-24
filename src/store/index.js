@@ -8,7 +8,8 @@ import undoable, { includeAction } from 'redux-undo';
 const includeActions = [scoreActions.toggleAccent, scoreActions.toggleFlam, scoreActions.toggleDiddle,
                        scoreActions.toggleCheese, scoreActions.toggleLeftSticking, scoreActions.toggleRightSticking,
                        scoreActions.addMeasure, scoreActions.deleteMeasure, scoreActions.modifyNote,
-                       scoreActions.updateScore, scoreActions.togglePartEnabled, scoreActions.deletePart, scoreActions.addPart,
+                       scoreActions.updateScore, scoreActions.togglePartEnabled, scoreActions.deletePart, 
+                       scoreActions.addPart, scoreActions.mutateNotes
                     ].map(action => action.type);
 
 const store = configureStore({

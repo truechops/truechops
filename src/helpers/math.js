@@ -12,6 +12,11 @@ export function getPowersOf2(num) {
       }, []) //get powers of two
   }
 
+  export function isPowerOf2(n)
+  {
+    return n && (n & (n - 1)) === 0
+  }
+
   /**
    * Return the additional time (seconds or TrueChops grid time)
    * @param duration
