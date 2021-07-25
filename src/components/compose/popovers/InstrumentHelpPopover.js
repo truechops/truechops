@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Popover, ClickAwayListener } from "@material-ui/core";
 import { makeStyles, useTheme } from "@material-ui/core/styles";
 import { BiHelpCircle } from 'react-icons/bi';
-import useInstruments from '../hooks/instruments-hook';
+import useInstruments from '../buttons/instruments-hook';
 
 const useStyles = makeStyles((theme) => ({
   popover: {

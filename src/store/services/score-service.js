@@ -4,6 +4,7 @@ import _ from "lodash";
 import { NON_ACCENT_VELOCITY, tcDurationToVfDuration } from "../../consts/score";
 
 export function modifyNote(state, newNoteValueIn, isRest, selectedNote) {
+  console.log('duration: ' + newNoteValueIn);
   let { measureIndex, partIndex, voiceIndex, noteIndex } = selectedNote;
   const score = state.score;
   const dotSelected = state.dotSelected;

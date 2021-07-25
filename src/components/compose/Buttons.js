@@ -3,13 +3,15 @@ import Tabs from "@material-ui/core/Tabs";
 import Tab from "@material-ui/core/Tab";
 import Box from "@material-ui/core/Box";
 import { Hidden } from "@material-ui/core";
-import useButtonsHook from "./hooks/buttons-hook";
+import useButtonsHook from "./buttons/buttons-hook";
 import InstrumentHelpPopover from "./popovers/InstrumentHelpPopover";
-import score, { scoreActions, getSelectedNote, modifyNote } from "../../store/score";
+import { scoreActions, getSelectedNote, modifyNote } from "../../store/score";
 import { connect, useDispatch, useSelector } from "react-redux";
 import Button from "../ui/Button";
 import { useState, useCallback } from "react";
 import TupletPickerPopover from "./popovers/TupletPickerPopover";
+import { Select, FormHelperText, FormControl } from "@material-ui/core";
+import MutateButtons from './buttons/mutate/MutateButtons';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -51,16 +53,16 @@ function a11yProps(index) {
   };
 }
 
-const ComposeButton = 
-  (props) => 
-    <Button
-      variant="outlined"
-      className={props.className}
-      selected={props.selected}
-      onClick={props.onClick}
-    >
-      {props.text}
-    </Button>
+const ComposeButton = (props) => (
+  <Button
+    variant="outlined"
+    className={props.className}
+    selected={props.selected}
+    onClick={props.onClick}
+  >
+    {props.text}
+  </Button>
+);
 
 export function Buttons(props) {
   const { selectedTab, onTabSelected } = props;
@@ -74,8 +76,12 @@ export function Buttons(props) {
   const selectedNote = props.selectedNote;
   const dispatch = useDispatch();
 
-  const tupletActualDuration = useSelector(state => state.score.present.tuplet.actual);
-  const tupletNormalDuration = useSelector(state => state.score.present.tuplet.normal);
+  const tupletActualDuration = useSelector(
+    (state) => state.score.present.tuplet.actual
+  );
+  const tupletNormalDuration = useSelector(
+    (state) => state.score.present.tuplet.normal
+  );
 
   const [tupletPickerAnchorEl, setTupletPickerAnchorEl] = useState();
   const tupletPickerOpen = Boolean(tupletPickerAnchorEl);
@@ -85,7 +91,7 @@ export function Buttons(props) {
   }
 
   const handleTupletPickerClick = () => {
-    setTupletPickerAnchorEl(document.getElementById('compose-notes-tab-panel'));
+    setTupletPickerAnchorEl(document.getElementById("compose-notes-tab-panel"));
   };
 
   const handleTupletPickerClose = () => {
@@ -108,9 +114,12 @@ export function Buttons(props) {
     repeat,
     selectedNote
   );
-  const ButtonsRow = useCallback(({ children }) => {
-    return <div className={classes.buttonsRow}>{children}</div>;
-  }, [classes.buttonsRow]);
+  const ButtonsRow = useCallback(
+    ({ children }) => {
+      return <div className={classes.buttonsRow}>{children}</div>;
+    },
+    [classes.buttonsRow]
+  );
 
   return (
     <>
@@ -122,14 +131,26 @@ export function Buttons(props) {
         variant={"scrollable"}
         scrollButtons={"auto"}
       >
-        <Tab key={"compose-button-tabs-measure"} label="Measure" {...a11yProps(0)} />
-        <Tab key={"compose-button-tabs-notes"} label="Notes" {...a11yProps(1)} />
+        <Tab
+          key={"compose-button-tabs-measure"}
+          label="Measure"
+          {...a11yProps(0)}
+        />
+        <Tab
+          key={"compose-button-tabs-notes"}
+          label="Notes"
+          {...a11yProps(1)}
+        />
         <Tab
           key={"compose-button-tabs-ornaments"}
           label="Ornaments"
           {...a11yProps(2)}
         />
-        <Tab key={"compose-button-tabs-mods"} label="Mutate" {...a11yProps(3)} />
+        <Tab
+          key={"compose-button-tabs-mods"}
+          label="Mutate"
+          {...a11yProps(3)}
+        />
       </Tabs>
       <div id="composeButtonsTabPanel" style={{ margin: "auto" }}>
         <TabPanel value={selectedTab} index={0}>
@@ -147,8 +168,21 @@ export function Buttons(props) {
 
               if (rowIndex === voiceButtons.length - 1) {
                 content.push(dotButton);
-                content.push(<ComposeButton text={`${tupletActualDuration}:${tupletNormalDuration}`} onClick={handleTupletPickerClick} />);
-                content.push(<ComposeButton text={`${tupletActualDuration}:${tupletNormalDuration}`} selected={tupletSelected} onClick={() => dispatch(scoreActions.toggleTupletSelected())} />);
+                content.push(
+                  <ComposeButton
+                    text={`${tupletActualDuration}:${tupletNormalDuration}`}
+                    onClick={handleTupletPickerClick}
+                  />
+                );
+                content.push(
+                  <ComposeButton
+                    text={`${tupletActualDuration}:${tupletNormalDuration}`}
+                    selected={tupletSelected}
+                    onClick={() =>
+                      dispatch(scoreActions.toggleTupletSelected())
+                    }
+                  />
+                );
               }
 
               return (
@@ -163,8 +197,15 @@ export function Buttons(props) {
               <InstrumentHelpPopover />
               {voiceButtons.flat()}
               {dotButton}
-              <ComposeButton text={`${tupletActualDuration}:${tupletNormalDuration}`} onClick={handleTupletPickerClick} />
-              <ComposeButton text={`${tupletActualDuration}:${tupletNormalDuration}`} selected={tupletSelected} onClick={() => dispatch(scoreActions.toggleTupletSelected())} />
+              <ComposeButton
+                text={`${tupletActualDuration}:${tupletNormalDuration}`}
+                onClick={handleTupletPickerClick}
+              />
+              <ComposeButton
+                text={`${tupletActualDuration}:${tupletNormalDuration}`}
+                selected={tupletSelected}
+                onClick={() => dispatch(scoreActions.toggleTupletSelected())}
+              />
             </ButtonsRow>
           </Hidden>
           <Hidden smUp>
@@ -177,15 +218,17 @@ export function Buttons(props) {
               {noteButtonsRow2Desktop}
             </ButtonsRow>
           </Hidden>
-          <TupletPickerPopover tupletPickerOpen={tupletPickerOpen}
-                               tupletPickerAnchorEl={tupletPickerAnchorEl}
-                               handleTupletPickerClose={handleTupletPickerClose} />
+          <TupletPickerPopover
+            tupletPickerOpen={tupletPickerOpen}
+            tupletPickerAnchorEl={tupletPickerAnchorEl}
+            handleTupletPickerClose={handleTupletPickerClose}
+          />
         </TabPanel>
         <TabPanel value={selectedTab} index={2}>
           <ButtonsRow>{ornamentButtons}</ButtonsRow>
         </TabPanel>
-        <TabPanel value={selectedTab} index={3}>
-          <Button onClick={() => dispatch(scoreActions.mutateNotes())}>Mutate</Button>
+        <TabPanel style={{margin: 'auto'}} value={selectedTab} index={3}>
+          <MutateButtons />
         </TabPanel>
       </div>
     </>
@@ -206,13 +249,18 @@ const mapStateToProps = (state) => {
 const mapDispatchToProps = (dispatch) => {
   return {
     modifyNote: (voices, type, isRest) => {
-      console.log('modifyNote dispatthToProps: ' + type);
-      const scoreRootElement = document.getElementById('score-root');
+      console.log("modifyNote dispatthToProps: " + type);
+      const scoreRootElement = document.getElementById("score-root");
 
-      dispatch(modifyNote({ voices, type, isRest }, {
-        top: scoreRootElement.scrollTop,
-        left: scoreRootElement.scrollLeft
-      }))
+      dispatch(
+        modifyNote(
+          { voices, type, isRest },
+          {
+            top: scoreRootElement.scrollTop,
+            left: scoreRootElement.scrollLeft,
+          }
+        )
+      );
     },
   };
 };

@@ -1,6 +1,6 @@
 import { useDispatch, useSelector } from 'react-redux';
-import { scoreActions } from '../../../store/score';
-import Button from '../../ui/Button';
+import { scoreActions } from '../../../../store/score';
+import Button from '../../../ui/Button';
 
 export default function useSetVoices() {
     const { kickSelected,

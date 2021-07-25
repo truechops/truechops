@@ -1,17 +1,16 @@
 /**
  * Mutates the score with different mutate types:
- *   swap: swap different positions in the score given a swap grid and probability. 
+ *   swap: swap different positions in the score given a swap grid and probability.
  */
 
-import { duration } from "@material-ui/core";
 import _ from "lodash";
 import {
   vfDurationToTcDuration,
-  tcDurationToVfDuration,
   NON_ACCENT_VELOCITY,
-} from "../../consts/score";
+} from "../../../consts/score";
 
-import { getVFDurations } from "../../helpers/score";
+import { getVFDurations } from "../../../helpers/score";
+import swap from "./types/swap";
 
 /**
  *
@@ -35,12 +34,12 @@ import { getVFDurations } from "../../helpers/score";
  */
 
 //Assuming only one part for now.
-export function mutate(score, modifiers) {
-  let voiceNoteArrays = convertToVoiceNoteArrays(score);
+export async function mutate(score, modifiers, numRepeats) {
+  let voiceNoteArrays = convertToVoiceNoteArrays(score, numRepeats);
   let mutateAllConfig = null;
 
   modifiers = modifiers.filter((modifier) => {
-    if (modifier.context === "all") {
+    if (modifier.context === "All") {
       mutateAllConfig = _.cloneDeep(modifier);
       return false;
     } else {
@@ -51,50 +50,72 @@ export function mutate(score, modifiers) {
   for (const modifier of modifiers) {
     const { context, type, config } = modifier;
 
+    let mutateCallback = getMutateCallback(type);
+
     let measureNoteArrays = voiceNoteArrays[context];
     for (let measureNotes of measureNoteArrays) {
-      if (type === "swap") {
-        swap(config, measureNotes);
-      }
+      _mutate(mutateCallback, config, measureNotes);
     }
   }
 
   let mergedVoiceNoteArray = mergeVoiceNoteArrays(voiceNoteArrays);
 
   if (mutateAllConfig) {
-    let mutateFn = null;
     let { type, config } = mutateAllConfig;
+    let mutateCallback = getMutateCallback(type);
 
-    if(type === 'swap') {
-      mutateFn = swap.bind(null, config)
-    }
-    if (mutateAllConfig.type === "swap") {
-      mergedVoiceNoteArray.forEach((measureNotes) => {
-        mutateFn(measureNotes);
-      });
-    }
+    mergedVoiceNoteArray.forEach((measureNotes) => {
+      _mutate(mutateCallback, config, measureNotes);
+    });
   }
 
   updateScore(score, mergedVoiceNoteArray);
 }
 
-function getModifiableIndices(grid, length) {
-  let modifiableIndices = [];
-  let tcDuration = vfDurationToTcDuration[grid];
-  let numIndices = length / tcDuration;
-  for (let i = 0; i < numIndices; i++) {
-    modifiableIndices.push(tcDuration * i);
-  }
+function _mutate(mutateCallback, config, notes) {
+  const modifiableNotes = getModifiableNotes(notes, config.grid);
+  mutateCallback(config, modifiableNotes);
 
-  return modifiableIndices;
+  let gridSpacing = notes.length / modifiableNotes.length;
+  for (let i = 0; i < modifiableNotes.length; i++) {
+    notes[i * gridSpacing] = modifiableNotes[i];
+  }
 }
 
-function convertToVoiceNoteArrays(score) {
+function getMutateCallback(type) {
+  let mutateCallback = null;
+  if (type === "swap") {
+    mutateCallback = swap;
+  }
+
+  return mutateCallback;
+}
+
+function getModifiableNotes(notes, grid) {
+  let modifiableNotes = [];
+  let tcDuration = vfDurationToTcDuration[grid];
+  let numIndices = notes.length / tcDuration;
+  for (let i = 0; i < numIndices; i++) {
+    modifiableNotes.push(notes[tcDuration * i]);
+  }
+
+  return modifiableNotes;
+}
+
+function convertToVoiceNoteArrays(score, numRepeats) {
   let voiceNoteArrays = {};
 
   //keep track of measure lengths so we can add in voice note arrays for previous measures
   //when discovering new voices.
   let measureLengths = [];
+
+  let currentMeasures = score.measures;
+
+  for(let i = 1; i < numRepeats; i++) {
+    currentMeasures.forEach(measure => {
+      score.measures.push(_.cloneDeep(measure))
+    })
+  }
 
   score.measures.forEach((measure) => {
     const timeSig = measure.timeSig;
@@ -105,11 +126,15 @@ function convertToVoiceNoteArrays(score) {
       part.voices.forEach((voice) => {
         voice.notes.forEach((note) => {
           note.notes.forEach((n) => {
+            console.log('1');
             //If this is a new voice. Assuming only one part for now.
             if (!voiceNoteArrays[n]) {
+              console.log('2');
               voiceNoteArrays[n] = measureLengths.map((measureLength) =>
                 new Array(measureLength).fill(null)
               );
+            } else if (voiceNoteArrays[n].length !== measureLengths.length){
+              voiceNoteArrays[n].push(new Array(measureLength).fill(null));
             }
 
             voiceNoteArrays[n][measureLengths.length - 1][durationCount] = {
@@ -148,7 +173,8 @@ function addDuration(measureNotes, index, previousNoteIndex) {
   let durations = getVFDurations(index - previousNoteIndex);
   let previousNote = measureNotes[previousNoteIndex];
   durations[0] = _addDuration(durations[0], previousNote);
-  let durationAccumulation = vfDurationToTcDuration[durations[0].replace('d', '')];
+  let durationAccumulation =
+    vfDurationToTcDuration[durations[0].replace("d", "")];
 
   //note rests need to be created for additional durations.
   for (let i = 1; i < durations.length; i++) {
@@ -204,7 +230,6 @@ function mergeVoiceNoteArrays(voiceNoteArrays) {
 }
 
 function updateScore(score, mergedNotesArray) {
-  console.log("mergedNotesArray: " + JSON.stringify(mergedNotesArray));
   mergedNotesArray.forEach((measureNotes, measureIndex) => {
     let previousNoteIndex = null;
     measureNotes.forEach((note, index) => {
@@ -230,44 +255,6 @@ function updateScore(score, mergedNotesArray) {
 
     addDuration(measureNotes, measureNotes.length, previousNoteIndex);
     measureNotes = measureNotes.filter((note) => note != null);
-    console.log("measureNotes: " + JSON.stringify(measureNotes));
     score.measures[measureIndex].parts[0].voices[0].notes = measureNotes;
   });
 }
-
-function swap(config, notes) {
-  const { grid, probability, swapWithRests } = config;
-  let modifiableIndices = getModifiableIndices(grid, notes.length);
-  let swappableIndices = modifiableIndices.slice();
-
-  for (let m = 0, length = modifiableIndices.length; m < length; m++) {
-    const noteIndex = modifiableIndices[m];
-    if (
-      Math.random() < probability &&
-      swappableIndices.length > 0 &&
-      swappableIndices.indexOf(noteIndex) > 0
-    ) {
-      let indexToSwap = Math.floor(Math.random() * swappableIndices.length);
-      let indexSwap1 = swappableIndices[indexToSwap];
-
-      //Don't swap if we are swapping with the same index
-      if (
-        noteIndex !== indexSwap1 &&
-        (notes[noteIndex] != null || swapWithRests)
-      ) {
-        swappableIndices.splice(indexToSwap, 1);
-        let indexSwap2 = swappableIndices.splice(
-          swappableIndices.indexOf(noteIndex),
-          1
-        )[0];
-        swapArrayElems(notes, indexSwap1, indexSwap2);
-      }
-    }
-  }
-}
-
-const swapArrayElems = (arr, from, to) => {
-  let temp = arr[to];
-  arr[to] = arr[from];
-  arr[from] = temp;
-};

@@ -1,8 +1,8 @@
-import useSetVoices from "./setVoices-hook";
-import useSnareVoices from "./snareVoices-hook";
-import useTenorVoices from "./tenorVoices-hook";
-import useBassVoices from "./bassVoices-hook";
-import useCymbalVoices from "./cymbalVoices-hook";
+import useSetVoices from "./voices/setVoices-hook";
+import useSnareVoices from "./voices/snareVoices-hook";
+import useTenorVoices from "./voices/tenorVoices-hook";
+import useBassVoices from "./voices/bassVoices-hook";
+import useCymbalVoices from "./voices/cymbalVoices-hook";
 import { getSelectedInstrument } from "../../../store/score";
 import { useSelector } from "react-redux";
 

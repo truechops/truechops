@@ -8,7 +8,7 @@ import {
   setRepeat,
   incDecSelectedNote,
 } from "./services/score-service";
-import { mutate } from './services/mutate-service';
+import { mutate } from './services/mutate/mutate-service';
 import { getEmptyMeasure } from "../helpers/score";
 import _ from "lodash";
 import { createSelector } from "reselect";
@@ -20,6 +20,7 @@ import {
   DEFAULT_TEMPO,
   NOTE_CONFIG
 } from "../consts/score";
+import { INSTRUMENT_NOTE_TO_VOICE_MAP } from '../consts/score';
 
 export const ACCENT = "a";
 export const FLAM = "f";
@@ -245,19 +246,20 @@ const scoreSlice = createSlice({
         });
       });
     },
-    mutateNotes(state) {
+    mutateNotes(state, action) {
+      const { type, grid, context, numRepeats } = action.payload;
       let modifiers = [];
       modifiers.push({
-        type: 'swap',
-        context: 'F4',
+        type,
+        context,
         config: {
-            grid: 32,
-            probability: 0.25,
+            grid,
+            probability: 0.5,
             swapWithRests: true
         }
     });
 
-      mutate(state.score, modifiers);
+      mutate(state.score, modifiers, numRepeats);
     },
     //When user modifies a note in the score. Ex: 8th note to 16th note
     modifyNote(state, action) {
@@ -438,6 +440,31 @@ export const getSelectedNote = createSelector(
   }
 );
 
+//Assumes one part for now.
+export const getScoreVoices = createSelector([state => state.score], score => {
+  let scoreVoices = new Set();
+  const instrument = Object.keys(score.parts)[0];
+  score.measures.forEach(measure => {
+    measure.parts.forEach(part => {
+      part.voices.forEach(voice => {
+        voice.notes.forEach(note => {
+          note.notes.forEach(n => {
+            scoreVoices.add(n);
+          })
+        })
+      })
+    })
+  });
+
+  //Returning a 'map' so that the client can access both they key and the associated instrument name
+  let keysToVoices = {};
+  scoreVoices.forEach(key => {
+    keysToVoices[key] = INSTRUMENT_NOTE_TO_VOICE_MAP[instrument][key]
+  });
+
+  return keysToVoices;
+})
+
 //Get the notes for playback
 export const getToneJs = createSelector([(state) => state.score, state => state.tempo], (score, tempo) => {
   let measures = score.measures;
@@ -596,7 +623,6 @@ export const selectNote = (note, scrollAmount) => {
 
 export const modifyNote = (noteData, scrollAmount) => {
   return async (dispatch) => {
-    console.log('dispatching note data: ' + JSON.stringify(noteData));
     dispatch(scoreActions.modifyNote(noteData));
     dispatch(scoreActions.setScrollAmount(scrollAmount));
   }

@@ -1,6 +1,6 @@
 import { useDispatch, useSelector } from 'react-redux';
-import { scoreActions } from '../../../store/score';
-import Button from '../../ui/Button';
+import { scoreActions } from '../../../../store/score';
+import Button from '../../../ui/Button';
 
 export default function useTenorVoices() {
     const { spockSelected, t1Selected, t2Selected, t3Selected, t4Selected } = useSelector(state => state.score.present.voices.tenors);
