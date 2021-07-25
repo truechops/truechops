@@ -254,7 +254,7 @@ const scoreSlice = createSlice({
         context,
         config: {
             grid,
-            probability: 0.5,
+            probability: 0.25,
             swapWithRests: true
         }
     });
