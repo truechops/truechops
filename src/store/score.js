@@ -260,6 +260,10 @@ const scoreSlice = createSlice({
     });
 
       mutate(state.score, modifiers, numRepeats);
+
+      //We need to clear this out because mutating the notes might change the number of notes in the 
+      //score, which could cause the note index for the selected note to be for a non-existent note.
+      state.selectedNoteIndex = null;
     },
     //When user modifies a note in the score. Ex: 8th note to 16th note
     modifyNote(state, action) {
@@ -424,6 +428,7 @@ export const getSelectedNote = createSelector(
     if (selectedNoteIndex) {
       const { measureIndex, partIndex, voiceIndex, noteIndex } =
         selectedNoteIndex;
+        console.log("selectedNote: " + JSON.stringify(selectedNoteIndex));
       const part = score.measures[measureIndex].parts[partIndex];
 
       //We have to clone because the original object is not extensible.

@@ -9,7 +9,12 @@ import {
   NON_ACCENT_VELOCITY,
 } from "../../../consts/score";
 
-import { getVFDurations } from "../../../helpers/score";
+import {
+  getVFDurations,
+  getNotesLength,
+  getTupletLengths,
+  getTCDurationSingle,
+} from "../../../helpers/score";
 import swap from "./types/swap";
 
 /**
@@ -35,7 +40,13 @@ import swap from "./types/swap";
 
 //Assuming only one part for now.
 export async function mutate(score, modifiers, numRepeats) {
-  let voiceNoteArrays = convertToVoiceNoteArrays(score, numRepeats);
+  let { voiceNoteArrays, tupletLengths } = convertToVoiceNoteArrays(
+    score,
+    numRepeats
+  );
+
+  let measureBoundaries = getMeasureBoundaries(score);
+
   let mutateAllConfig = null;
 
   modifiers = modifiers.filter((modifier) => {
@@ -69,7 +80,7 @@ export async function mutate(score, modifiers, numRepeats) {
     });
   }
 
-  updateScore(score, mergedVoiceNoteArray);
+  updateScore(score, mergedVoiceNoteArray, tupletLengths, measureBoundaries);
 }
 
 function _mutate(mutateCallback, config, notes) {
@@ -102,6 +113,76 @@ function getModifiableNotes(notes, grid) {
   return modifiableNotes;
 }
 
+function getMeasureBoundaries(score) {
+  let tempBoundaries = [8, 16, 24];
+  let boundaries = [];
+
+  score.measures.forEach((measure) => {
+    let measureBoundaries = [];
+    measure.parts.forEach((part) => [
+      part.voices.forEach((voice) => {
+        let notes = voice.notes;
+        let index = 0;
+        let tuplets = _.cloneDeep(voice.tuplets);
+        let length = 0;
+
+        while (index < notes.length && tempBoundaries.length > 0) {
+          if (tuplets.length > 0) {
+            let {
+              start: tupletStart,
+              end: tupletEnd,
+              actual,
+              normal,
+            } = tuplets[0];
+            if (index >= tupletStart && index < tupletEnd) {
+              let noteEnd = length;
+              let tupletLength = 0;
+              for (let i = tupletStart; i < tupletEnd; i++) {
+                let duration = getTCDurationSingle(
+                  notes[i].duration,
+                  notes[i].dots
+                );
+                noteEnd += duration;
+                tupletLength += duration;
+                index++;
+              }
+
+              if (noteEnd >= tempBoundaries[0]) {
+                measureBoundaries.push(noteEnd);
+                tempBoundaries.shift();
+              }
+
+              tuplets.shift();
+              length = noteEnd;
+
+              let tupletType = tupletLength / actual;
+              let additionalLength = tupletType * (actual - normal);
+              for (let j = 0; j < tempBoundaries.length; j++) {
+                tempBoundaries[j] += additionalLength;
+              }
+            }
+          } else {
+            length += getTCDurationSingle(
+              notes[index].duration,
+              notes[index].dots
+            );
+            if (length >= tempBoundaries[0]) {
+              measureBoundaries.push(tempBoundaries[0]);
+              tempBoundaries.shift();
+            }
+
+            index++;
+          }
+        }
+
+        boundaries.push(measureBoundaries);
+      }),
+    ]);
+  });
+
+  return boundaries;
+}
+
 function convertToVoiceNoteArrays(score, numRepeats) {
   let voiceNoteArrays = {};
 
@@ -109,31 +190,30 @@ function convertToVoiceNoteArrays(score, numRepeats) {
   //when discovering new voices.
   let measureLengths = [];
 
-  let currentMeasures = score.measures;
+  let currentMeasures = _.cloneDeep(score.measures);
 
-  for(let i = 1; i < numRepeats; i++) {
-    currentMeasures.forEach(measure => {
-      score.measures.push(_.cloneDeep(measure))
-    })
+  for (let i = 1; i < numRepeats; i++) {
+    currentMeasures.forEach((measure) => {
+      score.measures.push(_.cloneDeep(measure));
+    });
   }
 
+  let tupletLengths = [];
   score.measures.forEach((measure) => {
-    const timeSig = measure.timeSig;
-    const measureLength = vfDurationToTcDuration[timeSig.type] * timeSig.num;
+    const measureLength = getNotesLength(measure.parts[0].voices[0].notes);
     measureLengths.push(measureLength);
     let durationCount = 0;
     measure.parts.forEach((part) => {
       part.voices.forEach((voice) => {
+        tupletLengths.push(getTupletLengths(voice));
         voice.notes.forEach((note) => {
           note.notes.forEach((n) => {
-            console.log('1');
             //If this is a new voice. Assuming only one part for now.
             if (!voiceNoteArrays[n]) {
-              console.log('2');
               voiceNoteArrays[n] = measureLengths.map((measureLength) =>
                 new Array(measureLength).fill(null)
               );
-            } else if (voiceNoteArrays[n].length !== measureLengths.length){
+            } else if (voiceNoteArrays[n].length !== measureLengths.length) {
               voiceNoteArrays[n].push(new Array(measureLength).fill(null));
             }
 
@@ -143,13 +223,13 @@ function convertToVoiceNoteArrays(score, numRepeats) {
             };
           });
 
-          durationCount += vfDurationToTcDuration[note.duration];
+          durationCount += getTCDurationSingle(note.duration, note.dots);
         });
       });
     });
   });
 
-  return voiceNoteArrays;
+  return { voiceNoteArrays, tupletLengths };
 }
 
 function addDuration(measureNotes, index, previousNoteIndex) {
@@ -229,12 +309,21 @@ function mergeVoiceNoteArrays(voiceNoteArrays) {
   return mergedVoiceNoteArray;
 }
 
-function updateScore(score, mergedNotesArray) {
+function updateScore(
+  score,
+  mergedNotesArray,
+  tupletLengths,
+  measureBoundaries
+) {
+
   mergedNotesArray.forEach((measureNotes, measureIndex) => {
     let previousNoteIndex = null;
     measureNotes.forEach((note, index) => {
-      //If we encounter a non-rest note or we are at the quarter note boundary (index % 8 === 0).
-      if (note || index % 8 === 0) {
+      if (
+        index === 0 ||
+        note ||
+        measureBoundaries[measureIndex].includes(index)
+      ) {
         //This is null for the very first note we encounter.
         if (previousNoteIndex != null) {
           addDuration(measureNotes, index, previousNoteIndex);
@@ -255,6 +344,39 @@ function updateScore(score, mergedNotesArray) {
 
     addDuration(measureNotes, measureNotes.length, previousNoteIndex);
     measureNotes = measureNotes.filter((note) => note != null);
+
     score.measures[measureIndex].parts[0].voices[0].notes = measureNotes;
+
+    //reset/restore the tuplets
+    score.measures[measureIndex].parts.forEach((part) => {
+      part.voices.forEach((voice) => {
+        let tupletTypes = voice.tuplets.map((tuplet) => ({
+          actual: tuplet.actual,
+          normal: tuplet.normal,
+        }));
+        voice.tuplets = [];
+        let endTupletIndex = 0;
+        tupletLengths[measureIndex].forEach(
+          (tupletLength, tupletLengthsIndex) => {
+            let notesLength = 0;
+            let startTupletIndex = endTupletIndex;
+            while (notesLength < tupletLength) {
+              notesLength += getTCDurationSingle(
+                voice.notes[endTupletIndex].duration,
+                voice.notes[endTupletIndex].dots
+              );
+              endTupletIndex++;
+            }
+
+            voice.tuplets.push({
+              start: startTupletIndex,
+              end: endTupletIndex,
+              actual: tupletTypes[tupletLengthsIndex].actual,
+              normal: tupletTypes[tupletLengthsIndex].normal,
+            });
+          }
+        );
+      });
+    });
   });
 }

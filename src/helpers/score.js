@@ -111,6 +111,28 @@ export function getVFDurations(tcDuration) {
   }
 }
 
+export function getNotesLength(notes) {
+  return notes.reduce((total, note) => {
+    return total + getTCDurationSingle(note.duration, note.dots);
+  }, 0);
+}
+
+//used so we can properly put tuplets back in place when mutating the rhythm.
+export function getTupletLengths(voice) {
+  let tupletLengths = [];
+  const notes = voice.notes;
+  for(const tuplet of voice.tuplets) {
+    const { start, end } = tuplet;
+    let tupletLength = 0;
+    for(let i = start; i < end; i++) {
+      tupletLength += getTCDurationSingle(notes[i].duration, notes[i].dots)
+    }
+    tupletLengths.push(tupletLength);
+  }
+
+  return tupletLengths;
+}
+
 //Get the TrueChops duration value, with or without including additional duration for dots.
 //Assumes the VF duration given will map to a TC Duration.
 export function getTCDurationSingle(duration, numDots) {
