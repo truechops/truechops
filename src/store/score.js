@@ -280,7 +280,6 @@ const scoreSlice = createSlice({
     mutateNotes(state, action) {
       const numRepeats = action.payload;
       const mutations = state.mutations;
-      console.log('mutations: ' + JSON.stringify(mutations));
 
       mutate(state.score, mutations, numRepeats, Object.keys(getScoreVoices(state)));
 

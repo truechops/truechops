@@ -1,35 +1,58 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { scoreActions } from "../../store/score";
 import { useRouter } from "next/router";
 import { useLazyQuery, useReactiveVar } from "@apollo/client";
 import { GET_ALL_USER_SAVED_RHYTHMS_QUERY } from "../../consts/gql/graphql";
 import { userRhythmsVar } from "../../graphql/cache";
-import { CircularProgress } from "@material-ui/core";
+import { Button, CircularProgress, ListItemSecondaryAction } from "@material-ui/core";
 import { makeStyles } from "@material-ui/styles";
 
 import List from "@material-ui/core/List";
 import ListItem from "@material-ui/core/ListItem";
 import ListItemText from "@material-ui/core/ListItemText";
 import Paper from "@material-ui/core/Paper";
-import { DEFAULT_TEMPO } from '../../consts/score';
+import { DEFAULT_TEMPO } from "../../consts/score";
 
-import { scrubTypename } from '../../helpers/mongodb';
+import { scrubTypename } from "../../helpers/mongodb";
+import { FaTrash } from "react-icons/fa";
+import { useTheme } from "@material-ui/core/styles";
+import Dialog from '../ui/Dialog';
+
+import useRhythmMutations from '../../graphql/rhythm/useRhythmMutations';
 
 export default function Main() {
   const currentUser = useSelector((state) => state.realm.currentUser);
   const router = useRouter();
+  const theme = useTheme();
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [errorDeletingRhythmDialog, setErrorDeletingRhythmDialog] = useState(false);
+  const [rhythmToDelete, setRhythmToDelete] = useState(false);
+  const { deleteRhythm } = useRhythmMutations();
+
+  const [getUserRhythms, { data: userRhythmsData, refetch }] = useLazyQuery(
+    GET_ALL_USER_SAVED_RHYTHMS_QUERY
+  );
 
   //Don't allow the user to visit this page if they are not logged in.
-  if(!currentUser) {
-    router.push('/');
+  if (!currentUser) {
+    router.push("/");
+  }
+
+  async function deleteRhythmHandler() {
+    const deletedRhythm = await deleteRhythm(rhythmToDelete);
+    if(!deletedRhythm) {
+      setErrorDeletingRhythmDialog(true);
+    }
+    setShowDeleteConfirmation(false);
+    refetch();
   }
 
   const dispatch = useDispatch();
-  
+
   let userRhythmsReactiveVar = useReactiveVar(userRhythmsVar);
   let userRhythms = userRhythmsReactiveVar.slice();
-  
+
   const useStyles = makeStyles((theme) => ({
     root: {
       width: "100%",
@@ -42,31 +65,28 @@ export default function Main() {
       margin: theme.spacing(1),
     },
     listItemText: {
-      color: 'black'
-    }
+      color: "black",
+    },
   }));
 
   const classes = useStyles();
-
-  const [getUserRhythms, { data: userRhythmsData }] = useLazyQuery(
-    GET_ALL_USER_SAVED_RHYTHMS_QUERY
-  );
 
   if (userRhythmsData) {
     userRhythmsVar(userRhythmsData["rhythms"]);
   }
 
   useEffect(() => {
-    if(currentUser) {
+    if (currentUser) {
       getUserRhythms({ variables: { userId: currentUser.id } });
     }
-    
   }, [getUserRhythms, currentUser]);
 
   function practiceRhythm(score, name, tempo, mutations) {
     const scrubbedScore = scrubTypename(score);
-    dispatch(scoreActions.updateScore({ score: scrubbedScore, name, tempo, mutations }));
-    router.push('/');
+    dispatch(
+      scoreActions.updateScore({ score: scrubbedScore, name, tempo, mutations })
+    );
+    router.push("/");
   }
 
   //The rhythms coming back from mongodb are in ascending order. This makes sure the saved
@@ -74,17 +94,28 @@ export default function Main() {
   userRhythms.sort(() => -1);
 
   return (
-    <section style={{ textAlign: "center" }}>
-      {userRhythms.length > 0 && (
-        
+    <>
+      <section style={{ textAlign: "center" }}>
+        {userRhythms.length > 0 && (
           <List>
             {userRhythms.map((rhythm, rhythmIndex) => (
               <Paper key={`rhythm-${rhythmIndex}`} className={classes.root}>
-                <ListItem className={classes.listItem} onClick={practiceRhythm.bind(null, rhythm.score, rhythm.name, rhythm.tempo ?? DEFAULT_TEMPO, rhythm.mutations )}>
+                <ListItem
+                  className={classes.listItem}
+                  onClick={practiceRhythm.bind(
+                    null,
+                    rhythm.score,
+                    rhythm.name,
+                    rhythm.tempo ?? DEFAULT_TEMPO,
+                    rhythm.mutations
+                  )}
+                >
                   <ListItemText
-                  secondaryTypographyProps={{ style: {
-                    color: 'black'
-                  } }} 
+                    secondaryTypographyProps={{
+                      style: {
+                        color: "black",
+                      },
+                    }}
                     primary={rhythm.name}
                     secondary={new Date(rhythm.date).toLocaleString("en-US", {
                       day: "numeric", // numeric, 2-digit
@@ -92,13 +123,37 @@ export default function Main() {
                       month: "long", // numeric, 2-digit, long, short, nar
                     })}
                   />
+                  <ListItemSecondaryAction onClick={() => {
+                    setRhythmToDelete(rhythm._id);
+                    setShowDeleteConfirmation(true);
+                  }
+                  }>
+                  <Button>
+                    <FaTrash size={theme.compose.sidebar.icons.size} />
+                  </Button>
+                  </ListItemSecondaryAction>
                 </ListItem>
+                
               </Paper>
             ))}
           </List>
-      )}
+        )}
 
-      {userRhythms.length === 0 && <CircularProgress />}
-    </section>
+        {userRhythms.length === 0 && <CircularProgress />}
+      </section>
+
+      <Dialog
+        onOk={deleteRhythmHandler}
+        message={"You wants to delete me?"}
+        isOpen={showDeleteConfirmation}
+        onCancel={() => setShowDeleteConfirmation(false)}
+      />
+
+      <Dialog
+        onOk={() => setErrorDeletingRhythmDialog(false)}
+        message={"Error deleting rhythm. Please try again later."}
+        isOpen={errorDeletingRhythmDialog}
+      />
+    </>
   );
 }

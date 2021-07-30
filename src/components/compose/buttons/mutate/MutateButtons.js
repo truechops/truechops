@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import Button from "../../../ui/Button";
 import { makeStyles } from "@material-ui/core/styles";
 import contextHook from "./common/context-hook";
@@ -7,8 +8,11 @@ import typesHook from './common/types-hook';
 import { scoreActions } from '../../../../store/score';
 import { useDispatch, useSelector } from 'react-redux';
 import { DEFAULT_MUTATION_NUM_REPEATS } from '../../../../consts/score';
+import Dialog from '../../../ui/Dialog';
 
 export default function MutateButtons() {
+  const numParts = useSelector(state => Object.keys(state.score.present.score.parts).length);
+  const [onlyOnePartDialogOpen, setOnlyOnePartDialogOpen] = useState(false);
   const useStyles = makeStyles((theme) => ({
     root: {
       display: "flex",
@@ -21,6 +25,15 @@ export default function MutateButtons() {
       marginRight: theme.spacing(2),
     },
   }));
+
+  function mutateHandler() {
+    if(numParts > 1) {
+      setOnlyOnePartDialogOpen(true);
+    } else {
+      dispatch(scoreActions.mutateNotes(numRepeats))
+    }
+    
+  }
 
   const dispatch = useDispatch();
   let mutationRepeats = DEFAULT_MUTATION_NUM_REPEATS;
@@ -40,7 +53,12 @@ export default function MutateButtons() {
           <div key={Math.random().toString()} className={classes.formControl}>{formControl}
           </div>
       )}
-      <Button onClick={() => dispatch(scoreActions.mutateNotes(numRepeats))}>Go</Button>
+      <Button onClick={mutateHandler}>Go</Button>
+      <Dialog
+        onOk={() => setOnlyOnePartDialogOpen(false)}
+        message={"Mutate can only be used with one part."}
+        isOpen={onlyOnePartDialogOpen}
+      />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { ObjectId } from "bson";
 import { useMutation } from "@apollo/client";
 import { useSelector } from "react-redux";
-import { ADD_RHYTHM_MUTATION, RHYTHM_FRAGMENT } from "../../consts/gql/graphql";
+import { ADD_RHYTHM_MUTATION, DELETE_RHYTHM_MUTATION, RHYTHM_FRAGMENT } from "../../consts/gql/graphql";
 
 export default function useRhythmMutations() {
   const currentUser = useSelector((state) => state.realm.currentUser);
@@ -11,6 +11,7 @@ export default function useRhythmMutations() {
 
   return {
     addRhythm: useAddRhythm(currentUser, score, tempo, mutations),
+    deleteRhythm: useDeleteRhythm()
   };
 }
 
@@ -69,4 +70,40 @@ function useAddRhythm(currentUser, score, tempo, mutations) {
   };
 
   return addRhythm;
+}
+
+function useDeleteRhythm() {
+  const [deleteRhythmMutation] = useMutation(DELETE_RHYTHM_MUTATION, {
+    // Manually save added Tasks into the Apollo cache so that Task queries automatically update
+    // For details, refer to https://www.apollographql.com/docs/react/data/mutations/#making-all-other-cache-updates
+    // update: (cache, { data: { addedRhythm } }) => {
+    //   cache.modify({
+    //     fields: {
+    //       rhythms: (existingRhythms = []) => [
+    //         ...existingRhythms,
+    //         cache.writeFragment({
+    //           data: addedRhythm,
+    //           fragment: RHYTHM_FRAGMENT,
+    //         }),
+    //       ],
+    //     },
+    //   });
+     }
+  );
+
+  const deleteRhythm = async (id) => {
+    try {
+      const {
+        data: { deletedRhythm }
+      } = await deleteRhythmMutation({ variables: { id } });
+
+      return deletedRhythm;
+    } catch (err) {
+      console.log("problem deleting rhythm: " + id + ": " + err);
+    }
+
+    return null;
+  };
+
+  return deleteRhythm;
 }

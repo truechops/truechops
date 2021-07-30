@@ -48,6 +48,27 @@ export const tcDurationToVfDuration = {
   1: 32,
 };
 
+/**
+ *  const tenorsSampler = new Tone.Sampler({
+            urls: {
+              G5: 'S.mp3',
+              E5: "1.mp3",
+              C5: "2.mp3",
+              A4: "3.mp3",
+              F4: '4.mp3'
+            },
+            release: 1,
+            baseUrl: `${origin}/samples/tenors/`,
+          }).toDestination();
+          setTenorsSampler(tenorsSampler);
+
+          const cymbalsSampler = new Tone.Sampler({
+            urls: {
+              E5: 'crash.mp3',
+              C5: 'choke.mp3',
+            },
+ */
+
 export const INSTRUMENT_NOTE_TO_VOICE_MAP = {
   drumset: {
     'D4': 'Hi Hat Foot',
@@ -61,13 +82,23 @@ export const INSTRUMENT_NOTE_TO_VOICE_MAP = {
     'G4': "Tom 4"
   },
   snare: {
-
+    C5: 'Snare',
+    E5: 'Ping',
+    F5: 'Rim'
   },
   tenors: {
-
+    G5: 'Spock',
+    E5: "Tenor 1",
+    C5: "Tenor 2",
+    A4: "Tenor 3",
+    F4: 'Tenor 4'
   },
   bass: {
-
+    G5: 'Bass 1',
+    E5: 'Bass 2',
+    C5: 'Bass 3',
+    A4: 'Bass 4',
+    F4: 'Bass 5'
   },
   cymbals: {
 

@@ -64,6 +64,8 @@ export function TopToolbar(props) {
   const [errorAddingRhythm, setErrorAddingRhythm] = useState(false);
   const [errorAddingLink, setErrorAddingLink] = useState(false);
 
+  const numParts = useSelector(state => Object.keys(state.score.present.score.parts).length);
+
   let eventListenersEnabledRef = useRef();
   eventListenersEnabledRef.current =
     !addLinkModalOpen && !saveRhythmModalOpen && !logInToSaveRhythmModalOpen;
@@ -128,7 +130,7 @@ export function TopToolbar(props) {
     const addedRhythm = await addRhythmMutation(
       rhythmToSaveName,
       RHYTHM_TYPES.saved,
-      saveMutations
+      numParts === 1 ? saveMutations : false
     );
     if (!addedRhythm) {
       setErrorAddingRhythm(true);
@@ -143,7 +145,7 @@ export function TopToolbar(props) {
   }
 
   async function addLink() {
-    const link = await getRhythmLink(rhythmToSaveName, saveMutations);
+    const link = await getRhythmLink(rhythmToSaveName, numParts === 1 ? saveMutations : false);
     if (!link) {
       setErrorAddingLink(true);
       ReactGA.event({
@@ -211,6 +213,7 @@ export function TopToolbar(props) {
         onChange={(e) => setRhythmToSaveName(e.target.value)}
         value={rhythmToSaveName}
       />
+      {numParts === 1 && 
       <FormControlLabel
         labelPlacement="start"
         style={{marginLeft: 8}}
@@ -222,7 +225,7 @@ export function TopToolbar(props) {
           />
         }
         label="Save Mutations?"
-      />
+      />}
     </form>
   );
 

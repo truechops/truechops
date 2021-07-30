@@ -23,7 +23,15 @@ export const ADD_RHYTHM_MUTATION = gql`
             ${RHYTHM_SCHEMA}
         }
     }
-`
+`;
+
+export const DELETE_RHYTHM_MUTATION = gql`
+    mutation DeleteRhythm($id: String!) {
+        deletedRhythm: deleteOneRhythm(query: { _id: $id} ) {
+            ${RHYTHM_SCHEMA}
+        }
+    }
+`;
 
 export const RHYTHM_FRAGMENT = gql`
     fragment RhythmFragment on Rhythm {
