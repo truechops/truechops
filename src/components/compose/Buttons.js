@@ -26,7 +26,7 @@ function TabPanel(props) {
       {...other}
     >
       {value === index && (
-        <Box p={theme.compose.buttons.container.padding}>{children}</Box>
+        <Box style={{paddingTop: 16}} p={0}>{children}</Box>
       )}
     </div>
   );
@@ -35,6 +35,12 @@ function TabPanel(props) {
 const useTabStyles = makeStyles((theme) => ({
   tabs: {
     justifyContent: "center",
+  },
+  mutateButtonsRoot: {
+    padding: 0,
+    '& .MuiBox-root': {
+      padding: '0px',
+      }
   },
   scroller: {
     flexGrow: "0",
@@ -227,7 +233,7 @@ export function Buttons(props) {
         <TabPanel value={selectedTab} index={2}>
           <ButtonsRow>{ornamentButtons}</ButtonsRow>
         </TabPanel>
-        <TabPanel style={{margin: 'auto'}} value={selectedTab} index={3}>
+        <TabPanel style={{margin: 'auto', padding: 0}} classes={{root: classes.mutateButtonsRoot}} value={selectedTab} index={3}>
           <MutateButtons />
         </TabPanel>
       </div>

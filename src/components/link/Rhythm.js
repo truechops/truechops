@@ -20,7 +20,7 @@ export default function RhythmLink({ linkId }) {
   if (linkRhythm) {
     const { score, name, tempo, mutations } = scrubTypename(linkRhythm.getLinkRhythmById);
      dispatch(scoreActions.updateScore({ score, name, tempo, mutations }));
-     router.push(router.push('/'));
+     router.push('/');
   }
 
   //Why does this have to be in useEffect???

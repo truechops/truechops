@@ -143,7 +143,7 @@ export function TopToolbar(props) {
   }
 
   async function addLink() {
-    const link = await getRhythmLink(rhythmToSaveName);
+    const link = await getRhythmLink(rhythmToSaveName, saveMutations);
     if (!link) {
       setErrorAddingLink(true);
       ReactGA.event({
@@ -213,6 +213,7 @@ export function TopToolbar(props) {
       />
       <FormControlLabel
         labelPlacement="start"
+        style={{marginLeft: 8}}
         control={
           <Switch
             checked={saveMutations}

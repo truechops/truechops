@@ -14,6 +14,8 @@ export default function MutateButtons() {
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
+      margin: 'auto',
+      padding: 0 
     },
     formControl: {
       marginRight: theme.spacing(2),

@@ -8,13 +8,14 @@ export default function useLinkMutations() {
   const currentUser = useSelector((state) => state.realm.currentUser);
   const score = useSelector((state) => state.score.present.score);
   const tempo = useSelector((state) => state.score.present.tempo);
+  const mutations = useSelector((state) => state.score.present.mutations);
 
   return {
-    getRhythmLink: useGetRhythmLink(currentUser, score, tempo)
+    getRhythmLink: useGetRhythmLink(currentUser, score, tempo, mutations)
   };
 }
 
-function useGetRhythmLink(currentUser, score, tempo) {
+function useGetRhythmLink(currentUser, score, tempo, mutations) {
   const [addLinkMutation] = useMutation(GET_RHYTHM_LINK, {
     // Manually save added Tasks into the Apollo cache so that Task queries automatically update
     // For details, refer to https://www.apollographql.com/docs/react/data/mutations/#making-all-other-cache-updates
@@ -33,7 +34,16 @@ function useGetRhythmLink(currentUser, score, tempo) {
     },
   });
 
-  const getLink = async (name) => {
+  const getLink = async (name, saveMutations) => {
+    let ms = saveMutations ? [
+      {
+        type: mutations[0].type,
+        context: mutations[0].context,
+        grid: mutations[0].grid,
+        config: JSON.stringify(mutations[0].config),
+      },
+    ] : null;
+    console.log('mutations: ' + JSON.stringify(ms));
     try {
       const {
         data: { addedLink },
@@ -47,6 +57,7 @@ function useGetRhythmLink(currentUser, score, tempo) {
             score,
             tempo,
             type: LINK_TYPES.rhythm,
+            mutations: ms
           },
         },
       });
