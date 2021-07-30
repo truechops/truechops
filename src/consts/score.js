@@ -75,3 +75,14 @@ export const INSTRUMENT_NOTE_TO_VOICE_MAP = {
 }
 
 export const NOTE_HIGHLIGHT_COLOR = '#00FF00';
+
+export const DEFAULT_MUTATION_NUM_REPEATS = 1;
+export const DEFAULT_MUTATION = {
+  type: 'swap',
+  context: 'All',
+  grid: 16,
+  config: {
+    probability: 0.25,
+    swapWithRests: true
+  }
+};

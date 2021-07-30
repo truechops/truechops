@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { drawScore, initialize } from "../../lib/vexflow";
 import { useSelector, useDispatch } from "react-redux";
 import { scoreActions, selectNote } from "../../store/score";
+import Dialog from '../ui/Dialog';
+import repeatHook from './buttons/mutate/common/repeat-hook';
 
 export default function Score(props) {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -10,8 +12,13 @@ export default function Score(props) {
     (state) => state.score.present.selectedNoteIndex
   );
   const repeat = useSelector((state) => state.score.present.repeat);
+  const isDynamic = useSelector((state) => state.score.present.dynamic);
   const score = useSelector((state) => state.score.present.score);
   const name = useSelector(state => state.score.present.name);
+  const [promptedForRepeat, setPromptedForRepeat] = useState(false);
+  const [repeatDialogOpen, setRepeatDialogOpen] = useState(false);
+  const { formControl: repeatFormControl, numRepeats } = repeatHook();
+    console.log('numRepeats: ' + numRepeats);
 
   const scrollAmount = useSelector(state => state.score.present.scrollAmount);
 
@@ -54,6 +61,11 @@ export default function Score(props) {
     const scoreElementRoot = document.getElementById('score-root');
      scoreElementRoot.scrollTop = scrollAmount.top;
      scoreElementRoot.scrollLeft = scrollAmount.left;
+
+      if(!promptedForRepeat && isDynamic) {
+        setRepeatDialogOpen(true);
+        setPromptedForRepeat(true);
+      }
   }, [
     windowWidth,
     score,
@@ -63,13 +75,31 @@ export default function Score(props) {
     dispatch,
     props.selectedTab,
     props.tabPanelHidden,
-    scrollAmount
+    scrollAmount,
+    promptedForRepeat,
+    isDynamic
   ]);
 
+  const numRepeatsElement = <><div>This is a dynamic rhythm. How many times should it repeat?</div><br></br>
+  <div style={{textAlign: 'center'}}>
+    {repeatFormControl}
+    </div></>
+
   return (
+    <>
     <div className="vexflow-wrapper">
       <h2 style={{textAlign: 'center', margin: 0}}>{name}</h2>
       <div id="vexflow" key={Math.random().toString()} />
     </div>
+    <Dialog
+    isOpen={repeatDialogOpen}
+    message={numRepeatsElement}
+    onOk={() => {
+      setRepeatDialogOpen(false)
+      dispatch(scoreActions.mutateNotes(numRepeats))
+    }}
+    onCancel={() => setRepeatDialogOpen(false)}
+    okDisabled={false} />
+  </>
   );
 }

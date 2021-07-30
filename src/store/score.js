@@ -20,7 +20,7 @@ import {
   DEFAULT_TEMPO,
   NOTE_CONFIG
 } from "../consts/score";
-import { INSTRUMENT_NOTE_TO_VOICE_MAP } from '../consts/score';
+import { INSTRUMENT_NOTE_TO_VOICE_MAP, DEFAULT_MUTATION } from '../consts/score';
 
 export const ACCENT = "a";
 export const FLAM = "f";
@@ -32,6 +32,19 @@ export const RIGHT_STICKING = "r";
 const initialState = {
   tempo: DEFAULT_TEMPO,
   score: defaultScore,
+  /**
+   * [{
+   *  type: 'swap',
+   *  context: 'E5',
+   *  config: {
+   *    probability: 0.25,
+   *    swapWithRests: true
+   * }
+   * }]
+   *  
+   * */
+  mutations: [DEFAULT_MUTATION],
+  dynamic: false,
   scrollAmount: {
     top: 0,
     left: 0
@@ -103,13 +116,29 @@ const scoreSlice = createSlice({
   initialState,
   reducers: {
     updateScore(state, action) {
-      const { score, name, tempo } = action.payload;
+      const { score, name, tempo, mutations } = action.payload;
       state.score = score;
       state.name = name;
       state.tempo = tempo;
       state.repeat = {};
       state.selectedPartIndex = 0;
       state.selectedNoteIndex = null;
+
+      if(mutations && mutations.length > 0) {
+        state.dynamic = true;
+      }
+
+      state.mutations = [];
+      if(mutations && mutations.length > 0) {
+        mutations.forEach(mutation => {
+          const { type, context, grid, config: configString } = mutation;
+          const config = JSON.parse(configString);
+          
+          state.mutations.push({ type, context, grid, config });
+        })
+      } else {
+        state.mutations.push(DEFAULT_MUTATION)
+      }
     },
     updateTempo(state, action) {
       state.tempo = action.payload;
@@ -182,7 +211,7 @@ const scoreSlice = createSlice({
       const measures = state.score.measures;
       const isRight = action.payload;
       let index = 0;
-      if (!_.has(state, "selectedNoteIndex")) {
+      if (!_.has(state, "selectedNoteIndex") || !state.selectedNoteIndex) {
         index = isRight ? measures.length - 1 : 0;
       } else {
         index = state.selectedNoteIndex.measureIndex;
@@ -230,6 +259,8 @@ const scoreSlice = createSlice({
           spliceArguments
         );
       }
+
+      state.selectedNoteIndex = null;
     },
     shuffleNotes(state) {
       state.score.measures.forEach((measure, measureIndex) => {
@@ -247,23 +278,24 @@ const scoreSlice = createSlice({
       });
     },
     mutateNotes(state, action) {
-      const { type, grid, context, numRepeats } = action.payload;
-      let modifiers = [];
-      modifiers.push({
-        type,
-        context,
-        config: {
-            grid,
-            probability: 0.25,
-            swapWithRests: true
-        }
-    });
+      const numRepeats = action.payload;
+      const mutations = state.mutations;
+      console.log('mutations: ' + JSON.stringify(mutations));
 
-      mutate(state.score, modifiers, numRepeats);
+      mutate(state.score, mutations, numRepeats, Object.keys(getScoreVoices(state)));
 
       //We need to clear this out because mutating the notes might change the number of notes in the 
       //score, which could cause the note index for the selected note to be for a non-existent note.
       state.selectedNoteIndex = null;
+    },
+    updateMutateContext(state, action) {
+      state.mutations[0].context = action.payload;
+    },
+    updateMutateGrid(state, action) {
+      state.mutations[0].grid = action.payload;
+    },
+    updateMutateType(state, action) {
+      state.mutations[0].type = action.payload;
     },
     //When user modifies a note in the score. Ex: 8th note to 16th note
     modifyNote(state, action) {
@@ -429,6 +461,7 @@ export const getSelectedNote = createSelector(
       const { measureIndex, partIndex, voiceIndex, noteIndex } =
         selectedNoteIndex;
         console.log("selectedNote: " + JSON.stringify(selectedNoteIndex));
+        console.log('m')
       const part = score.measures[measureIndex].parts[partIndex];
 
       //We have to clone because the original object is not extensible.
@@ -461,7 +494,7 @@ export const getScoreVoices = createSelector([state => state.score], score => {
     })
   });
 
-  //Returning a 'map' so that the client can access both they key and the associated instrument name
+  //Returning a 'map' so that the client can access both the key and the associated instrument name
   let keysToVoices = {};
   scoreVoices.forEach(key => {
     keysToVoices[key] = INSTRUMENT_NOTE_TO_VOICE_MAP[instrument][key]

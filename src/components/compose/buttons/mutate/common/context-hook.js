@@ -1,13 +1,15 @@
-import { useState } from "react";
-import { useSelector } from "react-redux";
-import { getScoreVoices } from "../../../../../store/score";
+import { useSelector, useDispatch } from "react-redux";
+import { getScoreVoices, scoreActions } from "../../../../../store/score";
 import { FormControl, FormHelperText, Select } from "@material-ui/core";
 
-export default function useVoices() {
+
+export default function useContext() {
   const scoreContexts = useSelector((state) =>
     getScoreVoices(state.score.present)
   );
-  const [selectedContext, setSelectedContext] = useState("All");
+
+  const context = useSelector(state => state.score.present.mutations[0].context);
+  const dispatch = useDispatch();
 
   let options = [];
 
@@ -23,14 +25,14 @@ for (const [key, voice] of Object.entries(scoreContexts)) {
   const formControl = (
     <FormControl>
       <Select
-        value={selectedContext}
+        value={context}
         native
-        onChange={(event) => setSelectedContext(event.target.value)}
+        onChange={(event) => dispatch(scoreActions.updateMutateContext(event.target.value))}
       >
         {options}
       </Select>
       <FormHelperText>context</FormHelperText>
     </FormControl>
   );
-  return { formControl, context: selectedContext };
+  return { formControl, context };
 }

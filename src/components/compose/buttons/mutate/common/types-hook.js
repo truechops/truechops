@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { FormControl, FormHelperText, Select } from "@material-ui/core";
+import { useSelector, useDispatch } from 'react-redux';
+import { scoreActions } from '../../../../../store/score';
 
-export default function useRepeat() {
-  const [selectedType, setSelectedType] = useState("swap");
+export default function useType() {
+  const type = useSelector(state => state.score.present.mutations[0].type);
+    const dispatch = useDispatch();
+
   let options = ["swap"].map((type) => (
     <option key={Math.random().toString()} value={type}>
       {type}
@@ -12,14 +16,14 @@ export default function useRepeat() {
   const formControl = (
     <FormControl>
       <Select
-        value={selectedType}
+        value={type}
         native
-        onChange={(event) => setSelectedType(event.target.value)}
+        onChange={(event) => dispatch(scoreActions.updateMutateType(event.target.value))}
       >
         {options}
       </Select>
       <FormHelperText>type</FormHelperText>
     </FormControl>
   );
-  return { formControl, type: selectedType };
+  return { formControl, type };
 }

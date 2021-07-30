@@ -39,17 +39,18 @@ import swap from "./types/swap";
  */
 
 //Assuming only one part for now.
-export async function mutate(score, modifiers, numRepeats) {
+export async function mutate(score, mutations, numRepeats, scoreVoices) {
   let { voiceNoteArrays, tupletLengths } = convertToVoiceNoteArrays(
     score,
-    numRepeats
+    numRepeats,
+    scoreVoices
   );
 
   let measureBoundaries = getMeasureBoundaries(score);
 
   let mutateAllConfig = null;
 
-  modifiers = modifiers.filter((modifier) => {
+  mutations = mutations.filter((modifier) => {
     if (modifier.context === "All") {
       mutateAllConfig = _.cloneDeep(modifier);
       return false;
@@ -58,33 +59,34 @@ export async function mutate(score, modifiers, numRepeats) {
     }
   });
 
-  for (const modifier of modifiers) {
-    const { context, type, config } = modifier;
+  for (const mutation of mutations) {
+    const { context, type, config, grid } = mutation;
+    console.log('grid: ' + grid);
 
     let mutateCallback = getMutateCallback(type);
 
     let measureNoteArrays = voiceNoteArrays[context];
     for (let measureNotes of measureNoteArrays) {
-      _mutate(mutateCallback, config, measureNotes);
+      _mutate(mutateCallback, config, measureNotes), grid;
     }
   }
 
   let mergedVoiceNoteArray = mergeVoiceNoteArrays(voiceNoteArrays);
 
   if (mutateAllConfig) {
-    let { type, config } = mutateAllConfig;
+    let { type, config, grid } = mutateAllConfig;
     let mutateCallback = getMutateCallback(type);
 
     mergedVoiceNoteArray.forEach((measureNotes) => {
-      _mutate(mutateCallback, config, measureNotes);
+      _mutate(mutateCallback, config, measureNotes, grid);
     });
   }
 
   updateScore(score, mergedVoiceNoteArray, tupletLengths, measureBoundaries);
 }
 
-function _mutate(mutateCallback, config, notes) {
-  const modifiableNotes = getModifiableNotes(notes, config.grid);
+function _mutate(mutateCallback, config, notes, grid) {
+  const modifiableNotes = getModifiableNotes(notes, grid);
   mutateCallback(config, modifiableNotes);
 
   let gridSpacing = notes.length / modifiableNotes.length;
@@ -114,11 +116,12 @@ function getModifiableNotes(notes, grid) {
 }
 
 function getMeasureBoundaries(score) {
-  let tempBoundaries = [8, 16, 24];
+  
   let boundaries = [];
 
   score.measures.forEach((measure) => {
     let measureBoundaries = [];
+    let tempBoundaries = [8, 16, 24];
     measure.parts.forEach((part) => [
       part.voices.forEach((voice) => {
         let notes = voice.notes;
@@ -180,15 +183,12 @@ function getMeasureBoundaries(score) {
     ]);
   });
 
+  console.log('boundaries: ' + JSON.stringify(boundaries));
   return boundaries;
 }
 
-function convertToVoiceNoteArrays(score, numRepeats) {
+function convertToVoiceNoteArrays(score, numRepeats, scoreVoices) {
   let voiceNoteArrays = {};
-
-  //keep track of measure lengths so we can add in voice note arrays for previous measures
-  //when discovering new voices.
-  let measureLengths = [];
 
   let currentMeasures = _.cloneDeep(score.measures);
 
@@ -198,10 +198,16 @@ function convertToVoiceNoteArrays(score, numRepeats) {
     });
   }
 
+  for(const voice of scoreVoices) {
+    voiceNoteArrays[voice] = score.measures.map(measure => {
+      const measureLength = getNotesLength(measure.parts[0].voices[0].notes);
+      return new Array(measureLength).fill(null);
+    })
+  }
+
   let tupletLengths = [];
-  score.measures.forEach((measure) => {
-    const measureLength = getNotesLength(measure.parts[0].voices[0].notes);
-    measureLengths.push(measureLength);
+  console.log("measure count " + score.measures.length);
+  score.measures.forEach((measure, measureIndex) => {
     let durationCount = 0;
     measure.parts.forEach((part) => {
       part.voices.forEach((voice) => {
@@ -209,15 +215,15 @@ function convertToVoiceNoteArrays(score, numRepeats) {
         voice.notes.forEach((note) => {
           note.notes.forEach((n) => {
             //If this is a new voice. Assuming only one part for now.
-            if (!voiceNoteArrays[n]) {
-              voiceNoteArrays[n] = measureLengths.map((measureLength) =>
-                new Array(measureLength).fill(null)
-              );
-            } else if (voiceNoteArrays[n].length !== measureLengths.length) {
-              voiceNoteArrays[n].push(new Array(measureLength).fill(null));
-            }
+            // if (!voiceNoteArrays[n]) {
+            //   voiceNoteArrays[n] = measureLengths.map((measureLength) =>
+            //     new Array(measureLength).fill(null)
+            //   );
+            // } else if (voiceNoteArrays[n].length !== measureLengths.length) {
+            //   voiceNoteArrays[n].push(new Array(measureLength).fill(null));
+            // }
 
-            voiceNoteArrays[n][measureLengths.length - 1][durationCount] = {
+            voiceNoteArrays[n][measureIndex][durationCount] = {
               ornaments: note.ornaments || "",
               velocity: note.velocity,
             };

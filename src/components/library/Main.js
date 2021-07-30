@@ -63,10 +63,10 @@ export default function Main() {
     
   }, [getUserRhythms, currentUser]);
 
-  function practiceRhythm(score, name, tempo) {
+  function practiceRhythm(score, name, tempo, mutations) {
     const scrubbedScore = scrubTypename(score);
-    dispatch(scoreActions.updateScore({ score: scrubbedScore, name, tempo }));
-    router.push("/");
+    dispatch(scoreActions.updateScore({ score: scrubbedScore, name, tempo, mutations }));
+    router.push('/');
   }
 
   //The rhythms coming back from mongodb are in ascending order. This makes sure the saved
@@ -80,7 +80,7 @@ export default function Main() {
           <List>
             {userRhythms.map((rhythm, rhythmIndex) => (
               <Paper key={`rhythm-${rhythmIndex}`} className={classes.root}>
-                <ListItem className={classes.listItem} onClick={practiceRhythm.bind(null, rhythm.score, rhythm.name, rhythm.tempo ?? DEFAULT_TEMPO )}>
+                <ListItem className={classes.listItem} onClick={practiceRhythm.bind(null, rhythm.score, rhythm.name, rhythm.tempo ?? DEFAULT_TEMPO, rhythm.mutations )}>
                   <ListItemText
                   secondaryTypographyProps={{ style: {
                     color: 'black'

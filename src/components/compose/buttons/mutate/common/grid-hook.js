@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { FormControl, FormHelperText, Select } from "@material-ui/core";
+import { useSelector, useDispatch } from 'react-redux';
+import { scoreActions } from '../../../../../store/score';
 
 export default function useGrid() {
-  const [grid, setGrid] = useState(16);
+    const grid = useSelector(state => state.score.present.mutations[0].grid);
+    const dispatch = useDispatch();
+
   let options = [4, 8, 16, 32].map((num) => (
     <option key={Math.random().toString()} value={num}>
       {num}
@@ -14,7 +18,7 @@ export default function useGrid() {
       <Select
         value={grid}
         native
-        onChange={(event) => setGrid(event.target.value)}
+        onChange={(event) => dispatch(scoreActions.updateMutateGrid(event.target.value))}
       >
         {options}
       </Select>

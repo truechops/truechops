@@ -226,7 +226,7 @@ export function toggleOrnament(state, ornament, clear) {
 export function incDecSelectedNote(state, inc) {
   const measures = state.score.measures;
 
-  if (!_.has(state, "selectedNoteIndex")) {
+  if (!_.has(state, "selectedNoteIndex") || !state.selectedNoteIndex) {
     if (inc) {
       state.selectedNoteIndex = {
         measureIndex: 0,
@@ -248,6 +248,7 @@ export function incDecSelectedNote(state, inc) {
     //we would be updating the new object and not the original state. That is why you see below a mix of destructing and
     //not.
     const selectedNoteIndex = state.selectedNoteIndex;
+
     const { measureIndex, partIndex, voiceIndex, noteIndex } =
       selectedNoteIndex;
     const notes =

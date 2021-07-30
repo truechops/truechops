@@ -1,5 +1,5 @@
-import { useRouter } from 'next/router'
-import dynamic from 'next/dynamic'
+import { useRouter } from 'next/router';
+import dynamic from 'next/dynamic';
 import { LINK_TYPES } from '../../src/consts/db';
 
 export default function Link() {

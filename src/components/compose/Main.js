@@ -5,7 +5,7 @@ import Score from "./Score";
 import ErrorBoundary from "../error/ErrorBoundary";
 import $ from 'jquery';
 
-export default function Main() {
+export default function Main(isDynamicRhythm) {
   const [selectedTab, setSelectedTab] = useState(1);
   const [tabPanelHidden, setTabPanelHidden] = useState(false);
 
@@ -86,7 +86,7 @@ export default function Main() {
         </div>
         <div id="score-root" className={classes.score}>
           <ErrorBoundary component="compose">
-            <Score selectedTab={selectedTab} tabPanelHidden={tabPanelHidden} />
+            <Score selectedTab={selectedTab} tabPanelHidden={tabPanelHidden} isDynamicRhythm={isDynamicRhythm}/>
           </ErrorBoundary>
         </div>
       </div>

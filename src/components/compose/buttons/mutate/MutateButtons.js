@@ -5,7 +5,8 @@ import repeatHook from "./common/repeat-hook";
 import gridHook from "./common/grid-hook";
 import typesHook from './common/types-hook';
 import { scoreActions } from '../../../../store/score';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { DEFAULT_MUTATION_NUM_REPEATS } from '../../../../consts/score';
 
 export default function MutateButtons() {
   const useStyles = makeStyles((theme) => ({
@@ -20,15 +21,16 @@ export default function MutateButtons() {
   }));
 
   const dispatch = useDispatch();
+  let mutationRepeats = DEFAULT_MUTATION_NUM_REPEATS;
 
   const classes = useStyles();
 
-  const { formControl: voicesFormControl, context } = contextHook();
-  const { formControl: repeatFormControl, numRepeats } = repeatHook();
-  const { formControl: gridFormControl, grid } = gridHook();
-  const { formControl: typesFormControl, type } = typesHook();
+  const { formControl: contextFormControl} = contextHook();
+  const { formControl: repeatFormControl, numRepeats} = repeatHook(mutationRepeats);
+  const { formControl: gridFormControl} = gridHook();
+  const { formControl: typesFormControl} = typesHook();
 
-  const formControls = [typesFormControl, voicesFormControl, gridFormControl, repeatFormControl]
+  const formControls = [typesFormControl, contextFormControl, gridFormControl, repeatFormControl]
 
   return (
     <div className={classes.root}>
@@ -36,7 +38,7 @@ export default function MutateButtons() {
           <div key={Math.random().toString()} className={classes.formControl}>{formControl}
           </div>
       )}
-      <Button onClick={() => dispatch(scoreActions.mutateNotes({type, grid, context, numRepeats}))}>Go</Button>
+      <Button onClick={() => dispatch(scoreActions.mutateNotes(numRepeats))}>Go</Button>
     </div>
   );
 }

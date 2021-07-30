@@ -48,7 +48,13 @@ export const RHYTHM_SCHEMA = `
                 }
             }
         }
-    } 
+    }
+    mutations {
+        type
+        context
+        grid
+        config
+    }
 `;
 
 export const LINK_SCHEMA = `

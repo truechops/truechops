@@ -22,6 +22,13 @@ import useRhythmMutations from "../../graphql/rhythm/useRhythmMutations";
 import useLinkMutations from "../../graphql/link/useLinkMutations";
 import MetronomePopover from "./popovers/MetronomePopover";
 import addComposeEventListeners from "./event-listeners";
+import {
+  FormControlLabel,
+  ListItem,
+  ListItemSecondaryAction,
+  ListItemText,
+  Switch,
+} from "@material-ui/core";
 
 export function TopToolbar(props) {
   const {
@@ -60,6 +67,8 @@ export function TopToolbar(props) {
   let eventListenersEnabledRef = useRef();
   eventListenersEnabledRef.current =
     !addLinkModalOpen && !saveRhythmModalOpen && !logInToSaveRhythmModalOpen;
+
+  const [saveMutations, setSaveMutations] = useState(false);
 
   //Only execute events if modals are not open. This prevents, for example, ornaments from being added
   //to the score while the user is typing in the rhythm name. Ex: they might type in 'c' for cheese or
@@ -118,7 +127,8 @@ export function TopToolbar(props) {
   async function addRhythm() {
     const addedRhythm = await addRhythmMutation(
       rhythmToSaveName,
-      RHYTHM_TYPES.saved
+      RHYTHM_TYPES.saved,
+      saveMutations
     );
     if (!addedRhythm) {
       setErrorAddingRhythm(true);
@@ -200,6 +210,17 @@ export function TopToolbar(props) {
         margin="normal"
         onChange={(e) => setRhythmToSaveName(e.target.value)}
         value={rhythmToSaveName}
+      />
+      <FormControlLabel
+        labelPlacement="start"
+        control={
+          <Switch
+            checked={saveMutations}
+            onChange={(event) => setSaveMutations(event.target.checked)}
+            name="saveMutations"
+          />
+        }
+        label="Save Mutations?"
       />
     </form>
   );
