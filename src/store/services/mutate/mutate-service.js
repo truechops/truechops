@@ -46,6 +46,8 @@ export async function mutate(score, mutations, numRepeats, scoreVoices) {
     scoreVoices
   );
 
+  console.log('voice note arrays: ' + JSON.stringify(voiceNoteArrays));
+
   let measureBoundaries = getMeasureBoundaries(score);
 
   let mutateAllConfig = null;
@@ -67,7 +69,7 @@ export async function mutate(score, mutations, numRepeats, scoreVoices) {
 
     let measureNoteArrays = voiceNoteArrays[context];
     for (let measureNotes of measureNoteArrays) {
-      _mutate(mutateCallback, config, measureNotes), grid;
+      _mutate(mutateCallback, config, measureNotes, grid);
     }
   }
 

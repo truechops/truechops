@@ -230,7 +230,7 @@ const scoreSlice = createSlice({
       state.score.measures.splice(isRight ? index + 1 : index, 0, emptyMeasure);
     },
     deleteMeasure(state) {
-      if (!_.has(state, "selectedNoteIndex")) {
+      if (!_.has(state, "selectedNoteIndex") || !state.selectedNoteIndex) {
         return;
       }
 
