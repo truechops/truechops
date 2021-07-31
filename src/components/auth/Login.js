@@ -1,13 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState  } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import * as Realm from "realm-web";
 import { login } from "../../store/realm-app";
-import DividerWithText from "../ui/DividerWithText";
 import useAuthStyles from "./auth-styles";
-import SocialButtons from "./SocialButtons";
 import useAuthFormHook from "./auth-form-hook";
 import useRouter from "next/router";
 import CircularProgress from "@material-ui/core/CircularProgress";
+import { appActions } from "../../store/app";
 
 export default function Login() {
   const dispatch = useDispatch();
@@ -37,6 +36,8 @@ export default function Login() {
     emailHeading: 'Log In by E-mail',
     continueText: 'Log In'
   });
+
+  dispatch(appActions.setPageLoaded());
 
   const classes = useAuthStyles();
   return (

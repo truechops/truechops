@@ -18,6 +18,7 @@ import { scrubTypename } from "../../helpers/mongodb";
 import { FaTrash } from "react-icons/fa";
 import { useTheme } from "@material-ui/core/styles";
 import Dialog from '../ui/Dialog';
+import { appActions } from "../../store/app";
 
 import useRhythmMutations from '../../graphql/rhythm/useRhythmMutations';
 
@@ -91,6 +92,8 @@ export default function Main() {
   //The rhythms coming back from mongodb are in ascending order. This makes sure the saved
   //rhythms are in descending order.
   userRhythms.sort(() => -1);
+
+  dispatch(appActions.setPageLoaded());
 
   return (
     <>

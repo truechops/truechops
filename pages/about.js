@@ -1,14 +1,21 @@
-import React from 'react';
-import Container from '@material-ui/core/Container';
-import Typography from '@material-ui/core/Typography';
-import Box from '@material-ui/core/Box';
-import Button from '@material-ui/core/Button';
-import ProTip from '../src/ProTip';
-import Link from '../src/Link';
-import Copyright from '../src/Copyright';
+import { useEffect }  from 'react';
+import { useTheme } from '@material-ui/styles';
+import { useDispatch } from "react-redux";
+import { appActions } from '../src/store/app';
 
 export default function About() {
+  const theme = useTheme();
+  const dispatch = useDispatch();
+  useEffect(() => {
+    dispatch(appActions.setPageLoaded());
+  }, [dispatch]);
   return (
-    TrueChops is wri
+    <div style={{...theme.spinner, marginLeft: -135}}>
+      Originated by Jared Simon, based out of Kansas City. 
+      <br />
+      Open source project.
+      <br />
+      Questions/concerns/intersted in contributing: contact jared@truechops.com
+    </div>
   );
 }

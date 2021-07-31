@@ -10,7 +10,7 @@ import List from "@material-ui/core/List";
 import Divider from "@material-ui/core/Divider";
 import ListItem from "@material-ui/core/ListItem";
 import ListItemText from "@material-ui/core/ListItemText";
-import Dialog from '../ui/Dialog';
+import Dialog from "../ui/Dialog";
 
 import { FaDrum, FaUsers, FaTools, FaSearch, FaUserTie } from "react-icons/fa";
 import { ImBooks } from "react-icons/im";
@@ -20,7 +20,7 @@ export default function Navigation() {
 
   const useStyles = makeStyles((theme) => ({
     drawer: {
-      width: drawerWidth
+      width: drawerWidth,
     },
     drawerPaper: {
       width: drawerWidth,
@@ -48,9 +48,9 @@ export default function Navigation() {
   };
 
   function navigateToMyLibary() {
-    if(!currentUser) {
+    if (!currentUser) {
       dispatch(setNavOpen(false));
-      setMustBeLoggedInModalOpen(true)
+      setMustBeLoggedInModalOpen(true);
     } else {
       navigationHandler("/library");
     }
@@ -60,34 +60,30 @@ export default function Navigation() {
 
   return (
     <>
-    <Drawer
-      className={classes.drawer}
-      classes={{
-        paper: classes.drawerPaper,
-      }}
-      anchor="left"
-      open={sideNavOpen}
-      onClose={() => dispatch(setNavOpen(false))}
-    >
-      <Divider />
-      <List>
-        <ListItem
-          button
-          key="compose"
-          onClick={navigationHandler.bind(null, "/")}
-        >
-          <FaDrum className={classes.drawerIcon} size={iconSize} />
-          <ListItemText primary="compose" />
-        </ListItem>
-        <ListItem
-          button
-          key="my library"
-          onClick={navigateToMyLibary}
-        >
-          <ImBooks className={classes.drawerIcon} size={iconSize} />
-          <ListItemText primary="my libary" />
-        </ListItem>
-        {/* <ListItem
+      <Drawer
+        className={classes.drawer}
+        classes={{
+          paper: classes.drawerPaper,
+        }}
+        anchor="left"
+        open={sideNavOpen}
+        onClose={() => dispatch(setNavOpen(false))}
+      >
+        <Divider />
+        <List>
+          <ListItem
+            button
+            key="compose"
+            onClick={navigationHandler.bind(null, "/")}
+          >
+            <FaDrum className={classes.drawerIcon} size={iconSize} />
+            <ListItemText primary="compose" />
+          </ListItem>
+          <ListItem button key="my library" onClick={navigateToMyLibary}>
+            <ImBooks className={classes.drawerIcon} size={iconSize} />
+            <ListItemText primary="my libary" />
+          </ListItem>
+          {/* <ListItem
           onClick={navigationHandler.bind(null, "/discover")}
           button
           key="discover"
@@ -96,42 +92,40 @@ export default function Navigation() {
           <ListItemText primary="discover" />
         </ListItem> */}
 
-        {/* <ListItem button key="mods" onClick={navigationHandler.bind(null, "/mods")}>
+          {/* <ListItem button key="mods" onClick={navigationHandler.bind(null, "/mods")}>
           <FaTools className={classes.drawerIcon} size={iconSize} />
           <ListItemText primary="mods" />
         </ListItem> */}
 
-        {/* <ListItem button key="search" onClick={navigationHandler.bind(null, "/search")}>
+          {/* <ListItem button key="search" onClick={navigationHandler.bind(null, "/search")}>
           <FaSearch className={classes.drawerIcon} size={iconSize} />
           <ListItemText primary="search" />
         </ListItem> */}
-      </List>
-      {!currentUser && (
-        <>
-          <Divider />
-          <List>
-            <ListItem
-              onClick={navigationHandler.bind(null, "/signup")}
-              button
-              key="Sign Up"
-            >
-              <ListItemText primary="Sign Up" />
-            </ListItem>
-            <ListItem
-              onClick={navigationHandler.bind(null, "/login")}
-              button
-              key="Log In"
-            >
-              <ListItemText primary="Log In" />
-            </ListItem>
-          </List>
-        </>
-      )}
-      {currentUser && (
-        <>
-          <Divider />
-          <List>
-            {/* <ListItem
+        </List>
+
+        <Divider />
+        <List>
+          {!currentUser && (
+            <>
+              <ListItem
+                onClick={navigationHandler.bind(null, "/signup")}
+                button
+                key="Sign Up"
+              >
+                <ListItemText primary="Sign Up" />
+              </ListItem>
+              <ListItem
+                onClick={navigationHandler.bind(null, "/login")}
+                button
+                key="Log In"
+              >
+                <ListItemText primary="Log In" />
+              </ListItem>
+            </>
+          )}
+          {currentUser && (
+            <>
+              {/* <ListItem
               onClick={navigationHandler.bind(null, "/profile")}
               button
               key="Profile"
@@ -139,15 +133,27 @@ export default function Navigation() {
               <FaUserTie className={classes.drawerIcon} size={iconSize} />
               <ListItemText primary="Profile" />
             </ListItem> */}
-            <ListItem onClick={logoutHandler} button key="Log Out">
-              <ListItemText primary="Log Out" />
-            </ListItem>
-          </List>
-        </>
-      )}
-    </Drawer>
-    <Dialog onOk={setMustBeLoggedInModalOpen.bind(null, false)} message="Log in to view your library!"
-    isOpen={mustBeLoggedInModalOpen} setIsOpen={setMustBeLoggedInModalOpen} />
+              <ListItem onClick={logoutHandler} button key="Log Out">
+                <ListItemText primary="Log Out" />
+              </ListItem>
+            </>
+          )}
+          <Divider />
+          <ListItem
+            onClick={navigationHandler.bind(null, "/about")}
+            button
+            key="About"
+          >
+            <ListItemText primary="About" />
+          </ListItem>
+        </List>
+      </Drawer>
+      <Dialog
+        onOk={setMustBeLoggedInModalOpen.bind(null, false)}
+        message="Log in to view your library!"
+        isOpen={mustBeLoggedInModalOpen}
+        setIsOpen={setMustBeLoggedInModalOpen}
+      />
     </>
   );
 }
