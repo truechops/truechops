@@ -5,6 +5,7 @@ import { scoreActions, selectNote } from "../../store/score";
 import { appActions } from "../../store/app";
 import Dialog from '../ui/Dialog';
 import repeatHook from './buttons/mutate/common/repeat-hook';
+import { browserName } from 'react-device-detect';
 
 export default function Score(props) {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -20,6 +21,7 @@ export default function Score(props) {
   const [repeatDialogOpen, setRepeatDialogOpen] = useState(false);
   const { formControl: repeatFormControl, numRepeats } = repeatHook();
 
+  alert('browser: ' + browserName);
   const scrollAmount = useSelector(state => state.score.present.scrollAmount);
 
   const updateDimensions = useCallback(() => {
