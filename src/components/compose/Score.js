@@ -20,12 +20,18 @@ export default function Score(props) {
   const [promptedForRepeat, setPromptedForRepeat] = useState(false);
   const [repeatDialogOpen, setRepeatDialogOpen] = useState(false);
   const { formControl: repeatFormControl, numRepeats } = repeatHook();
-
-  alert('browser: ' + browserName);
+  
+  const [dontUseSafariDialogShown, setDontUseSafariDialogShown] = useState(false);
   const scrollAmount = useSelector(state => state.score.present.scrollAmount);
 
   const updateDimensions = useCallback(() => {
     setWindowWidth(window.innerWidth);
+  }, []);
+
+  useEffect(() => {
+    if(browserName.indexOf('Safari') >= 0) {
+      setDontUseSafariDialogShown(true);
+    }
   }, []);
 
   window.addEventListener("resize", updateDimensions);
@@ -81,7 +87,8 @@ export default function Score(props) {
     scrollAmount,
     promptedForRepeat,
     isDynamic,
-    //scoreRenderedCallback
+    dontUseSafariDialogShown,
+    numRepeats
   ]);
 
   const numRepeatsElement = <><div>This is a dynamic rhythm. How many times should it repeat?</div><br></br>
@@ -97,11 +104,18 @@ export default function Score(props) {
     </div>
 
     <Dialog
-    isOpen={repeatDialogOpen}
+    isOpen={repeatDialogOpen && !dontUseSafariDialogShown}
     message={numRepeatsElement}
     onOk={() => {
       setRepeatDialogOpen(false)
       dispatch(scoreActions.mutateNotes(numRepeats))
+    }}/>
+
+    <Dialog
+    isOpen={dontUseSafariDialogShown}
+    message={"TrueChops does not work well with Safari. Please use another browser."}
+    onOk={() => {
+      setDontUseSafariDialogShown(false)
     }}/>
   </>
   );

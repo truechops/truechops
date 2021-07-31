@@ -58,7 +58,31 @@ export default function MouseOverPopover() {
       }}>
         <div id ="instrumentTooltipText">
        {tooltipText}
+       <br />
+       <br />
+       -----KEYBOARD SHORTCUTS-----
+       <br />
+       left/right arrow - note navigation
+       <br />
+       a - accent
+       <br />
+       f - flam
+       <br />
+       d - diddle
+       <br />
+       c - cheese
+       <br />
+       R/L - stickings
+       <br />
+       space - play score
+       <br />
+       0-9, -, + notes
+       <br />
+       ctrl+z, ctrl+y - undo/redo
        </div>
+       
+
+
        </ClickAwayListener>
       </Popover>
       </>
