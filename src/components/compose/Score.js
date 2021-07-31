@@ -100,9 +100,7 @@ export default function Score(props) {
     onOk={() => {
       setRepeatDialogOpen(false)
       dispatch(scoreActions.mutateNotes(numRepeats))
-    }}
-    onCancel={() => setRepeatDialogOpen(false)}
-    okDisabled={false} />
+    }}/>
   </>
   );
 }

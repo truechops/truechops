@@ -1,4 +1,4 @@
-import { makeStyles, useTheme } from "@material-ui/core/styles";
+import { makeStyles } from "@material-ui/core/styles";
 import Tabs from "@material-ui/core/Tabs";
 import Tab from "@material-ui/core/Tab";
 import Box from "@material-ui/core/Box";
@@ -10,12 +10,10 @@ import { connect, useDispatch, useSelector } from "react-redux";
 import Button from "../ui/Button";
 import { useState, useCallback } from "react";
 import TupletPickerPopover from "./popovers/TupletPickerPopover";
-import { Select, FormHelperText, FormControl } from "@material-ui/core";
 import MutateButtons from './buttons/mutate/MutateButtons';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
-  const theme = useTheme();
 
   return (
     <div

@@ -333,7 +333,7 @@ export default function useComposeButtons(
     {
       component: AddMeasureRightIcon,
       onClick: () => dispatch(scoreActions.addMeasure(true)),
-      viewBox: "0 0 81 52",
+      viewBox: "0 0 88 52",
       disabled: isPlaying,
     },
     {

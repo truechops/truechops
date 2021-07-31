@@ -11,7 +11,7 @@ let STAVE_SPACE = BASE_STAVE_SPACE;
 const PADDING = 50;
 const FORMAT_PADDING = 13;
 const MIN_BAR_SIZE = 225;
-const SCORE_MIN_WIDTH = 750;
+const SCORE_MIN_WIDTH = 600;
 
 export function initialize() {
   // Create an SVG renderer and attach it to the DIV element named "vf".
