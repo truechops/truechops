@@ -8,10 +8,12 @@ Direct commits against 'main' are rejected.
 
 Current desired changes:
 
-1. Multiple time signatures.
-2. Exercises / Rudiments.
-3. Preview saved rhythms/exercises/playlists.
-4. Nested tuplets.
-5. Profiles.
-6. "Playlists" - link with multiple rhythms.
-7. Search
+1. Playback position tracker.
+2. Multiple time signatures.
+3. Exercises / Rudiments.
+4. Preview saved rhythms/exercises/playlists.
+5. Nested tuplets.
+6. Profiles.
+7. "Playlists" - link with multiple rhythms.
+8. Search.
+9. Infinite score when using dynamic rhythm.
