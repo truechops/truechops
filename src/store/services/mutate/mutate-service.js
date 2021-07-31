@@ -16,6 +16,7 @@ import {
   getTCDurationSingle,
 } from "../../../helpers/score";
 import swap from "./types/swap";
+import shuffle from './types/shuffle';
 
 /**
  *
@@ -46,8 +47,6 @@ export async function mutate(score, mutations, numRepeats, scoreVoices) {
     scoreVoices
   );
 
-  console.log('voice note arrays: ' + JSON.stringify(voiceNoteArrays));
-
   let measureBoundaries = getMeasureBoundaries(score);
 
   let mutateAllConfig = null;
@@ -63,13 +62,12 @@ export async function mutate(score, mutations, numRepeats, scoreVoices) {
 
   for (const mutation of mutations) {
     const { context, type, config, grid } = mutation;
-    console.log('grid: ' + grid);
 
-    let mutateCallback = getMutateCallback(type);
+    let mutateFn = getMutateFn(type);
 
     let measureNoteArrays = voiceNoteArrays[context];
     for (let measureNotes of measureNoteArrays) {
-      _mutate(mutateCallback, config, measureNotes, grid);
+      _mutate(mutateFn, config, measureNotes, grid);
     }
   }
 
@@ -77,19 +75,19 @@ export async function mutate(score, mutations, numRepeats, scoreVoices) {
 
   if (mutateAllConfig) {
     let { type, config, grid } = mutateAllConfig;
-    let mutateCallback = getMutateCallback(type);
+    let mutateFn = getMutateFn(type);
 
     mergedVoiceNoteArray.forEach((measureNotes) => {
-      _mutate(mutateCallback, config, measureNotes, grid);
+      _mutate(mutateFn, config, measureNotes, grid);
     });
   }
 
   updateScore(score, mergedVoiceNoteArray, tupletLengths, measureBoundaries);
 }
 
-function _mutate(mutateCallback, config, notes, grid) {
+function _mutate(mutateFn, config, notes, grid) {
   const modifiableNotes = getModifiableNotes(notes, grid);
-  mutateCallback(config, modifiableNotes);
+  mutateFn(config, modifiableNotes);
 
   let gridSpacing = notes.length / modifiableNotes.length;
   for (let i = 0; i < modifiableNotes.length; i++) {
@@ -97,13 +95,15 @@ function _mutate(mutateCallback, config, notes, grid) {
   }
 }
 
-function getMutateCallback(type) {
-  let mutateCallback = null;
+function getMutateFn(type) {
+  let mutateFn = null;
   if (type === "swap") {
-    mutateCallback = swap;
+    mutateFn = swap;
+  } else if(type === "shuffle") {
+    mutateFn = shuffle;
   }
 
-  return mutateCallback;
+  return mutateFn;
 }
 
 function getModifiableNotes(notes, grid) {

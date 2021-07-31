@@ -7,7 +7,7 @@ export default function useType() {
   const type = useSelector(state => state.score.present.mutations[0].type);
     const dispatch = useDispatch();
 
-  let options = ["swap"].map((type) => (
+  let options = ["swap", "shuffle"].map((type) => (
     <option key={Math.random().toString()} value={type}>
       {type}
     </option>
