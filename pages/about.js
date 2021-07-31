@@ -15,7 +15,7 @@ export default function About() {
       <br />
       Open source project.
       <br />
-      Questions/concerns/intersted in contributing: contact jared@truechops.com
+      Questions/concerns/interested in contributing: contact jared@truechops.com
     </div>
   );
 }
