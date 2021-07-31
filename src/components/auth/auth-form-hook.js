@@ -65,7 +65,6 @@ export default function AuthForm(props) {
 
   const googleSignInHandler = async () => {
     const redirectUri = `${window.location.origin}/oathRedirect`;
-    console.log('submitting google!');
     // Calling logIn() opens a Google authentication screen in a new window.
     try {
       await dispatch(login(Realm.Credentials.google(redirectUri)));
@@ -88,7 +87,6 @@ export default function AuthForm(props) {
 
   const onSubmitHandler = (e) => {
     e.preventDefault();
-    console.log("submitting form!!!")
 
     if (isSignUp && password != confirmPassword) {
       setError((state) => ({
@@ -198,6 +196,7 @@ export default function AuthForm(props) {
         label="Email"
         style={{ margin: 8 }}
         fullWidth
+        required
         type="email"
         margin="normal"
         onChange={emailChangeHandler}

@@ -10,7 +10,6 @@ export default function SaveRhythmForm(props) {
   }
 
   useEffect(() => {
-    console.log('fired!');
    $('#rhythm-name').attr('onblur', "yo")
   }, []);
 

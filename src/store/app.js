@@ -5,7 +5,8 @@ const initialState = {
     pageOffset: {
         x: 0,
         y: 0
-    }
+    },
+    loaded: false
 }
 
 const appSlice = createSlice({
@@ -16,8 +17,10 @@ const appSlice = createSlice({
             state.sideNavOpen = action.payload;
         },
         setPageOffset(state, action) {
-            console.log("set page offset: " + JSON.stringify(action.payload));
             state.pageOffset = { x: action.payload.x, y: action.payload.y }
+        },
+        setPageLoaded(state) {
+            state.loaded = true;
         }
     }
 });

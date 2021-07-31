@@ -21,8 +21,8 @@ import WholeNoteRestIcon from "../../../../icons/notes/wholeRest.svg";
 
 import RepeatEndIcon from "../../../../icons/measure/repeatEnd.svg";
 import RepeatStartIcon from "../../../../icons/measure/repeatStart.svg";
-import AddLeftIcon from "../../../../icons/measure/addLeft.svg";
-import AddRightIcon from "../../../../icons/measure/addRight.svg";
+import AddMeasureLeftIcon from "../../../../icons/measure/addMeasureLeft.svg";
+import AddMeasureRightIcon from "../../../../icons/measure/addMeasureRight.svg";
 import DeleteMeasureIcon from "../../../../icons/measure/deleteMeasure.svg";
 
 import AccentIcon from "../../../../icons/ornaments/accent.svg";
@@ -325,15 +325,15 @@ export default function useComposeButtons(
 
   const measureButtons = [
     {
-      component: AddLeftIcon,
+      component: AddMeasureLeftIcon,
       onClick: () => dispatch(scoreActions.addMeasure(false)),
-      viewBox: "0 0 18 14",
+      viewBox: "0 0 77 52",
       disabled: isPlaying,
     },
     {
-      component: AddRightIcon,
+      component: AddMeasureRightIcon,
       onClick: () => dispatch(scoreActions.addMeasure(true)),
-      viewBox: "0 0 18 14",
+      viewBox: "0 0 81 52",
       disabled: isPlaying,
     },
     {

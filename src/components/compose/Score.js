@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { drawScore, initialize } from "../../lib/vexflow";
 import { useSelector, useDispatch } from "react-redux";
 import { scoreActions, selectNote } from "../../store/score";
+import { appActions } from "../../store/app";
 import Dialog from '../ui/Dialog';
 import repeatHook from './buttons/mutate/common/repeat-hook';
 
@@ -18,7 +19,6 @@ export default function Score(props) {
   const [promptedForRepeat, setPromptedForRepeat] = useState(false);
   const [repeatDialogOpen, setRepeatDialogOpen] = useState(false);
   const { formControl: repeatFormControl, numRepeats } = repeatHook();
-    console.log('numRepeats: ' + numRepeats);
 
   const scrollAmount = useSelector(state => state.score.present.scrollAmount);
 
@@ -58,6 +58,7 @@ export default function Score(props) {
       repeat
     );
 
+    dispatch(appActions.setPageLoaded());
     const scoreElementRoot = document.getElementById('score-root');
      scoreElementRoot.scrollTop = scrollAmount.top;
      scoreElementRoot.scrollLeft = scrollAmount.left;
@@ -77,7 +78,8 @@ export default function Score(props) {
     props.tabPanelHidden,
     scrollAmount,
     promptedForRepeat,
-    isDynamic
+    isDynamic,
+    //scoreRenderedCallback
   ]);
 
   const numRepeatsElement = <><div>This is a dynamic rhythm. How many times should it repeat?</div><br></br>
@@ -91,6 +93,7 @@ export default function Score(props) {
       <h2 style={{textAlign: 'center', margin: 0}}>{name}</h2>
       <div id="vexflow" key={Math.random().toString()} />
     </div>
+
     <Dialog
     isOpen={repeatDialogOpen}
     message={numRepeatsElement}

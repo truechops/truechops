@@ -54,6 +54,8 @@ function useAddRhythm(currentUser, score, tempo, mutations) {
           config: JSON.stringify(mutations[0].config),
         },
       ];
+    } else {
+      rhythm.mutations = [];
     }
 
     try {

@@ -1,13 +1,12 @@
 import Button from "@material-ui/core/Button";
 import { useTheme } from "@material-ui/core/styles";
 
-export default function TCButton({ onClick, id, key, selected, children, disabled }) {
+export default function TCButton({ onClick, id, selected, children, disabled }) {
   const theme = useTheme();
 
   return (
     <Button
       onClick={onClick}
-      key={key}
       id={id}
       variant="outlined"
       disableRipple

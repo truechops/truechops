@@ -2,7 +2,7 @@ import { useQuery } from "@apollo/client";
 import { GET_RHYTHM_LINK } from "../../consts/gql/graphql";
 import { useSelector } from "react-redux";
 import { ObjectId } from "bson";
-import { LINK_TYPES } from "../../consts/db";
+import { RHYTHM_TYPES } from "../../consts/db";
 
 export default function useLinkQueries() {
   const currentUser = useSelector((state) => state.realm.currentUser);
@@ -24,7 +24,7 @@ function useGetRhythmLink(currentUser, score, tempo, name) {
         date: new Date(),
         score,
         tempo,
-        type: LINK_TYPES.rhythm,
+        type: RHYTHM_TYPES.link,
       },
     },
   });

@@ -1,24 +1,14 @@
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect } from "react";
-import { login } from "../../store/realm-app";
 import { useRouter } from "next/router";
 import CircularProgress from "@material-ui/core/CircularProgress";
-import { makeStyles } from "@material-ui/styles";
+import { useTheme } from "@material-ui/styles";
 
 export default function EmailConfirmation(props) {
   const app = useSelector((state) => state.realm.app);
   const dispatch = useDispatch();
   const router = useRouter();
-
-  const useStyles = makeStyles(theme => ({
-    topQuarterCentered: {
-      position: "fixed",
-      top: "25%",
-      left: "50%",
-    }
-  }));
-
-  const classes = useStyles();
+  const theme = useTheme();
 
   useEffect(() => {
     const confirmUser = async () => {
@@ -27,9 +17,9 @@ export default function EmailConfirmation(props) {
     };
 
     confirmUser();
-  }, [app, dispatch, login]);
+  }, [app, dispatch, props.token, props.tokenId, router]);
 
-  return <CircularProgress className={classes.topQuarterCentered} color="primary" />;
+  return <CircularProgress style={theme.spinner} color="primary" />;
 }
 
 export async function getServerSideProps({ query }) {

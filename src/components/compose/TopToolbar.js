@@ -8,7 +8,7 @@ import { connect, useSelector, useDispatch } from "react-redux";
 import { getToneJs, scoreActions } from "../../store/score";
 import Dialog from "../ui/Dialog";
 import TextField from "@material-ui/core/TextField";
-import { LINK_TYPES, RHYTHM_TYPES } from "../../consts/db";
+import { RHYTHM_TYPES } from "../../consts/db";
 import ReactGA from "react-ga";
 
 import { copyToClipboard } from "../../helpers/browser";
@@ -24,9 +24,6 @@ import MetronomePopover from "./popovers/MetronomePopover";
 import addComposeEventListeners from "./event-listeners";
 import {
   FormControlLabel,
-  ListItem,
-  ListItemSecondaryAction,
-  ListItemText,
   Switch,
 } from "@material-ui/core";
 
@@ -64,7 +61,8 @@ export function TopToolbar(props) {
   const [errorAddingRhythm, setErrorAddingRhythm] = useState(false);
   const [errorAddingLink, setErrorAddingLink] = useState(false);
 
-  const numParts = useSelector(state => Object.keys(state.score.present.score.parts).length);
+  const numParts = useSelector(state => Object.keys(state.score.present.score.parts)
+                              .filter(part => state.score.present.score.parts[part] != null).length);
 
   let eventListenersEnabledRef = useRef();
   eventListenersEnabledRef.current =

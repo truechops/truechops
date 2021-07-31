@@ -1,6 +1,6 @@
 import { useMutation } from "@apollo/client";
 import { GET_RHYTHM_LINK, LINK_FRAGMENT } from "../../consts/gql/graphql";
-import { LINK_TYPES } from '../../consts/db';
+import { LINK_TYPES, RHYTHM_TYPES } from '../../consts/db';
 import { useSelector } from 'react-redux';
 import { ObjectId } from "bson";
 
@@ -42,8 +42,7 @@ function useGetRhythmLink(currentUser, score, tempo, mutations) {
         grid: mutations[0].grid,
         config: JSON.stringify(mutations[0].config),
       },
-    ] : null;
-    console.log('mutations: ' + JSON.stringify(ms));
+    ] : [];
     try {
       const {
         data: { addedLink },
@@ -56,7 +55,7 @@ function useGetRhythmLink(currentUser, score, tempo, mutations) {
             date: new Date(),
             score,
             tempo,
-            type: LINK_TYPES.rhythm,
+            type: RHYTHM_TYPES.link,
             mutations: ms
           },
         },

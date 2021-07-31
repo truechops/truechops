@@ -70,7 +70,6 @@ export default function addComposeEventListeners(dispatch, eventHandler) {
 
       //'a' for accent
       eventHandler(() => {
-        console.log('did accent!');
         dispatch(scoreActions.toggleAccent());
       }
         );

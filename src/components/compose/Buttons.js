@@ -167,7 +167,7 @@ export function Buttons(props) {
             {voiceButtons.map((rowButtons, rowIndex) => {
               let content = [];
               if (rowIndex === 0) {
-                content.push(<InstrumentHelpPopover />);
+                content.push(<InstrumentHelpPopover key={Math.random().toString()}/>);
               }
 
               content.push(rowButtons);
@@ -176,12 +176,14 @@ export function Buttons(props) {
                 content.push(dotButton);
                 content.push(
                   <ComposeButton
+                    key={Math.random().toString()}
                     text={`${tupletActualDuration}:${tupletNormalDuration}`}
                     onClick={handleTupletPickerClick}
                   />
                 );
                 content.push(
                   <ComposeButton
+                    key={Math.random().toString()}
                     text={`${tupletActualDuration}:${tupletNormalDuration}`}
                     selected={tupletSelected}
                     onClick={() =>
@@ -255,7 +257,6 @@ const mapStateToProps = (state) => {
 const mapDispatchToProps = (dispatch) => {
   return {
     modifyNote: (voices, type, isRest) => {
-      console.log("modifyNote dispatthToProps: " + type);
       const scoreRootElement = document.getElementById("score-root");
 
       dispatch(

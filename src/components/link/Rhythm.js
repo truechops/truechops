@@ -8,12 +8,14 @@ import { useLazyQuery } from "@apollo/client";
 import { scrubTypename } from "../../helpers/mongodb";
 import { GET_LINK_RHYTHM_BY_ID_QUERY } from '../../consts/gql/graphql';
 import { useEffect } from 'react';
+import { useTheme } from '@material-ui/styles';
 
 export default function RhythmLink({ linkId }) {
   const dispatch = useDispatch();
   const router = useRouter();
+  const theme = useTheme();
 
-  const [getLinkRhythm, { data: linkRhythm }] = useLazyQuery(
+  const [getLinkRhythm, { data: linkRhythm, error }] = useLazyQuery(
     GET_LINK_RHYTHM_BY_ID_QUERY
   );
 
@@ -21,6 +23,8 @@ export default function RhythmLink({ linkId }) {
     const { score, name, tempo, mutations } = scrubTypename(linkRhythm.getLinkRhythmById);
      dispatch(scoreActions.updateScore({ score, name, tempo, mutations }));
      router.push('/');
+  } else if(error) {
+    router.push('/');
   }
 
   //Why does this have to be in useEffect???
@@ -28,5 +32,5 @@ export default function RhythmLink({ linkId }) {
     getLinkRhythm({ variables: { id: linkId } });
   }, [getLinkRhythm, linkId]);
 
-  return <><CircularProgress /></>;
+  return <><CircularProgress style={theme.spinner}/></>;
 }

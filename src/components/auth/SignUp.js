@@ -51,6 +51,7 @@ export default function SignUp() {
       //user. See authorization in Realm.
       await app.emailPasswordAuth.registerUser(email, password);
     } catch (err) {
+      alert('error!' + err);
       handleAuthenticationError(err);
     }
   };

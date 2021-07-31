@@ -27,20 +27,19 @@ export default function Main() {
   const theme = useTheme();
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [errorDeletingRhythmDialog, setErrorDeletingRhythmDialog] = useState(false);
-  const [rhythmToDelete, setRhythmToDelete] = useState(false);
+  const [rhythmToDelete, setRhythmToDelete] = useState({name: '', id: ''});
   const { deleteRhythm } = useRhythmMutations();
 
-  const [getUserRhythms, { data: userRhythmsData, refetch }] = useLazyQuery(
+  const [getUserRhythms, { data: userRhythmsData, refetch, loading }] = useLazyQuery(
     GET_ALL_USER_SAVED_RHYTHMS_QUERY
   );
-
   //Don't allow the user to visit this page if they are not logged in.
   if (!currentUser) {
     router.push("/");
   }
 
   async function deleteRhythmHandler() {
-    const deletedRhythm = await deleteRhythm(rhythmToDelete);
+    const deletedRhythm = await deleteRhythm(rhythmToDelete.id);
     if(!deletedRhythm) {
       setErrorDeletingRhythmDialog(true);
     }
@@ -66,7 +65,7 @@ export default function Main() {
     },
     listItemText: {
       color: "black",
-    },
+    }
   }));
 
   const classes = useStyles();
@@ -124,7 +123,7 @@ export default function Main() {
                     })}
                   />
                   <ListItemSecondaryAction onClick={() => {
-                    setRhythmToDelete(rhythm._id);
+                    setRhythmToDelete({id: rhythm._id, name: rhythm.name});
                     setShowDeleteConfirmation(true);
                   }
                   }>
@@ -139,12 +138,13 @@ export default function Main() {
           </List>
         )}
 
-        {userRhythms.length === 0 && <CircularProgress />}
+        {userRhythms.length === 0 && loading && <CircularProgress style={{...theme.spinner}} />}
+        {userRhythms.length === 0 && !loading && <div style={{...theme.spinner, marginLeft: -33}}>No Rhythms!</div>}
       </section>
 
       <Dialog
         onOk={deleteRhythmHandler}
-        message={"You wants to delete me?"}
+        message={`Delete ${rhythmToDelete.name}?`}
         isOpen={showDeleteConfirmation}
         onCancel={() => setShowDeleteConfirmation(false)}
       />

@@ -15,8 +15,8 @@ export default createMuiTheme({
     },
     text: { secondary: "ffffff" },
     action: {
-      disabled: 'lightgray'
-    }
+      disabled: "lightgray",
+    },
   },
   mixins: {
     toolbar: {
@@ -51,11 +51,11 @@ export default createMuiTheme({
         marginLeft: spacing,
       },
       outlined: {
-        padding: "5x 11px"
+        padding: "5x 11px",
       },
       label: {
         //color: 'black'
-      }
+      },
     },
   },
   buttons: {
@@ -65,25 +65,31 @@ export default createMuiTheme({
       },
     },
     topToolbar: {
-      iconSize: 20
+      iconSize: 20,
     },
     svg: {
       root: {
         height: 50,
-        width: 50
+        width: 50,
       },
       htmlColor: {
-        selected: 'white',
-        notSelected: primary
-      }
+        selected: "white",
+        notSelected: primary,
+      },
     },
     selected: {
       backgroundColor: primary,
-      color: 'white'
-    }
+      color: "white",
+    },
   },
   sidebar: {
-    width: 256
+    width: 256,
+  },
+  spinner: {
+    position: "fixed",
+    top: "25%",
+    left: "50%",
+    marginLeft: -20
   },
   compose: {
     buttons: {
@@ -119,8 +125,8 @@ export default createMuiTheme({
     },
     sidebar: {
       icons: {
-        size: 18
-      }
-    }
+        size: 18,
+      },
+    },
   },
 });

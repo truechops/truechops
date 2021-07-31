@@ -25,7 +25,6 @@ const createRealmApolloClient = (currentUser) => {
     },
   });
   const cache = new InMemoryCache();
-  console.log('new cache');
   return new ApolloClient({ link, cache });
 };
 

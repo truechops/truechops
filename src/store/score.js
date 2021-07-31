@@ -459,8 +459,6 @@ export const getSelectedNote = createSelector(
     if (selectedNoteIndex) {
       const { measureIndex, partIndex, voiceIndex, noteIndex } =
         selectedNoteIndex;
-        console.log("selectedNote: " + JSON.stringify(selectedNoteIndex));
-        console.log('m')
       const part = score.measures[measureIndex].parts[partIndex];
 
       //We have to clone because the original object is not extensible.

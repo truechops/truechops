@@ -185,7 +185,6 @@ function getMeasureBoundaries(score) {
     ]);
   });
 
-  console.log('boundaries: ' + JSON.stringify(boundaries));
   return boundaries;
 }
 
@@ -208,7 +207,6 @@ function convertToVoiceNoteArrays(score, numRepeats, scoreVoices) {
   }
 
   let tupletLengths = [];
-  console.log("measure count " + score.measures.length);
   score.measures.forEach((measure, measureIndex) => {
     let durationCount = 0;
     measure.parts.forEach((part) => {

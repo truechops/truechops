@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { appActions } from "../../store/app";
 
 import React from "react";
-import { makeStyles } from "@material-ui/core/styles";
+import { makeStyles, useTheme } from "@material-ui/core/styles";
 import Drawer from "@material-ui/core/Drawer";
 import CssBaseline from "@material-ui/core/CssBaseline";
 import AppBar from "@material-ui/core/AppBar";
@@ -16,8 +16,7 @@ import dynamic from "next/dynamic";
 
 import { GiHamburgerMenu } from "react-icons/gi";
 import { FiSettings } from "react-icons/fi";
-import { Typography } from "@material-ui/core";
-import Dialog from '../ui/Dialog';
+import { CircularProgress, Typography } from "@material-ui/core";
 
 // const searchClient = algoliasearch(
 //   "7VD37OIZBX",
@@ -49,6 +48,8 @@ const DynamicComposeSidebar = dynamic(() => import("../compose/Sidebar"));
 export default function Header() {
   const classes = useStyles();
   const router = useRouter();
+  const theme = useTheme();
+  const loaded = useSelector(state => state.app.loaded);
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const { setNavOpen } = appActions;
@@ -133,6 +134,7 @@ export default function Header() {
         </Toolbar>
       </AppBar>
       <div className={classes.drawerHeader} />
+      {!loaded && <CircularProgress style={theme.spinner}/>}
     </>
   );
 }
