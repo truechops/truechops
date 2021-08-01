@@ -13,7 +13,7 @@ import { FaTrash, FaPlus } from "react-icons/fa";
 import { useTheme } from "@material-ui/core/styles";
 
 import React from "react";
-import Dialog from '../ui/Dialog';
+import Dialog from "../ui/Dialog";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -40,15 +40,15 @@ export default function Sidebar() {
   const theme = useTheme();
   let partConfig = useSelector((state) => state.score.present.score.parts);
   partConfig = _.omitBy(partConfig, _.isNil);
-  
+
   const unusedInstruments = useSelector((state) =>
     Object.keys(state.score.present.voices).filter(
       (voice) => !Object.keys(partConfig).includes(voice)
     )
   );
 
-  const [instrumentToDelete, setInstrumentToDelete] = useState('');
-  const [selectedInstrument, setSelectedInstrument] = useState('');
+  const [instrumentToDelete, setInstrumentToDelete] = useState("");
+  const [selectedInstrument, setSelectedInstrument] = useState("");
 
   function onChangeInstrument(event) {
     setSelectedInstrument(event.target.value);
@@ -80,7 +80,10 @@ export default function Sidebar() {
       label: part,
       checked: partConfig[clonedPart].enabled,
       onChange: () => dispatch(scoreActions.togglePartEnabled(clonedPart)),
-      onDelete: () => { setInstrumentToDelete(clonedPart); setModalOpen(true) },
+      onDelete: () => {
+        setInstrumentToDelete(clonedPart);
+        setModalOpen(true);
+      },
     });
   }
 
@@ -142,15 +145,24 @@ export default function Sidebar() {
         {listItems}
       </List>
 
-      {_.size(partConfig) > 1 && <Dialog useCancel
-              isOpen={modalOpen} setIsOpen={setModalOpen}
-              message={`Are you sure you want to delete the '${instrumentToDelete}' part?`} 
-              onOk={deletePart.bind(null, instrumentToDelete)} />}
+      {_.size(partConfig) > 1 && (
+        <Dialog
+          onCancel={() => setModalOpen(false)}
+          isOpen={modalOpen}
+          setIsOpen={setModalOpen}
+          message={`Are you sure you want to delete the '${instrumentToDelete}' part?`}
+          onOk={deletePart.bind(null, instrumentToDelete)}
+        />
+      )}
 
-      {_.size(partConfig) === 1 && <Dialog
-               isOpen={modalOpen} setIsOpen={setModalOpen}
-              message='Add another part before deleting.'
-              onOk={setModalOpen.bind(null, false)} /> }
+      {_.size(partConfig) === 1 && (
+        <Dialog
+          isOpen={modalOpen}
+          setIsOpen={setModalOpen}
+          message="Add another part before deleting."
+          onOk={setModalOpen.bind(null, false)}
+        />
+      )}
     </>
   );
 }
