@@ -323,6 +323,8 @@ const scoreSlice = createSlice({
           }
         });
       });
+
+      state.selectedNoteIndex = null;
     },
     addPart(state, action) {
       const instrument = action.payload;
@@ -461,6 +463,7 @@ export const getSelectedNote = createSelector(
         selectedNoteIndex;
       const part = score.measures[measureIndex].parts[partIndex];
 
+      
       //We have to clone because the original object is not extensible.
       let selectedNote = _.cloneDeep(part.voices[voiceIndex].notes[noteIndex]);
       selectedNote.measureIndex = measureIndex;
