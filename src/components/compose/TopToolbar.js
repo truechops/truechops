@@ -14,6 +14,7 @@ import ReactGA from "react-ga";
 import { copyToClipboard } from "../../helpers/browser";
 
 import _ from "lodash";
+import { score } from '../../consts/score';
 
 import { FaUndo, FaRedo, FaPlay, FaStop, FaSave, FaLink } from "react-icons/fa";
 import { FiCopy } from "react-icons/fi";
@@ -64,24 +65,15 @@ export function TopToolbar(props) {
   const numParts = useSelector(state => Object.keys(state.score.present.score.parts)
                               .filter(part => state.score.present.score.parts[part] != null).length);
 
-  let eventListenersEnabledRef = useRef();
-  eventListenersEnabledRef.current =
-    !addLinkModalOpen && !saveRhythmModalOpen && !logInToSaveRhythmModalOpen;
+  score.modalShown =
+    addLinkModalOpen || saveRhythmModalOpen || 
+    logInToSaveRhythmModalOpen || logInToAddLinkModalOpen;
 
   const [saveMutations, setSaveMutations] = useState(false);
 
-  //Only execute events if modals are not open. This prevents, for example, ornaments from being added
-  //to the score while the user is typing in the rhythm name. Ex: they might type in 'c' for cheese or
-  //'d' for diddle.
-  const eventHandler = useCallback((callback) => {
-    if (eventListenersEnabledRef.current) {
-      callback();
-    }
-  }, []);
-
   useEffect(() => {
-    addComposeEventListeners(dispatch, eventHandler);
-  }, [dispatch, eventHandler]);
+    addComposeEventListeners(dispatch);
+  }, [dispatch]);
 
   function rhythmLinkDialogContents(link) {
     return (

@@ -101,7 +101,8 @@ export const INSTRUMENT_NOTE_TO_VOICE_MAP = {
     F4: 'Bass 5'
   },
   cymbals: {
-
+    E5: 'Crash',
+    C5: 'Choke',
   }
 }
 
@@ -117,3 +118,7 @@ export const DEFAULT_MUTATION = {
     swapWithRests: true
   }
 };
+
+export const score = {
+  modalShown: false
+}
