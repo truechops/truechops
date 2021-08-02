@@ -325,6 +325,7 @@ const scoreSlice = createSlice({
       });
 
       state.selectedNoteIndex = null;
+      state.selectedPartIndex = 0;
     },
     addPart(state, action) {
       const instrument = action.payload;
