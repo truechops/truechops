@@ -11,7 +11,8 @@ import { DEFAULT_MUTATION_NUM_REPEATS } from '../../../../consts/score';
 import Dialog from '../../../ui/Dialog';
 
 export default function MutateButtons() {
-  const numParts = useSelector(state => Object.keys(state.score.present.score.parts).length);
+  const numParts = useSelector(state => Object.keys(state.score.present.score.parts)
+                              .filter(part => state.score.present.score.parts[part] != null).length);
   const [onlyOnePartDialogOpen, setOnlyOnePartDialogOpen] = useState(false);
   const useStyles = makeStyles((theme) => ({
     root: {
