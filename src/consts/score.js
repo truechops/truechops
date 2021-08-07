@@ -7,6 +7,10 @@ export const GRACE_X_SHIFT = 13;
 export const MIN_TEMPO = 40;
 export const MAX_TEMPO = 250;
 export const DEFAULT_TEMPO = 90;
+export const DEFAULT_TIME_SIG = {
+  num: 4,
+  type: 4
+}
 
 export const NOTE_CONFIG = {
     whole: {
@@ -47,27 +51,6 @@ export const tcDurationToVfDuration = {
   2: 16,
   1: 32,
 };
-
-/**
- *  const tenorsSampler = new Tone.Sampler({
-            urls: {
-              G5: 'S.mp3',
-              E5: "1.mp3",
-              C5: "2.mp3",
-              A4: "3.mp3",
-              F4: '4.mp3'
-            },
-            release: 1,
-            baseUrl: `${origin}/samples/tenors/`,
-          }).toDestination();
-          setTenorsSampler(tenorsSampler);
-
-          const cymbalsSampler = new Tone.Sampler({
-            urls: {
-              E5: 'crash.mp3',
-              C5: 'choke.mp3',
-            },
- */
 
 export const INSTRUMENT_NOTE_TO_VOICE_MAP = {
   drumset: {
@@ -120,4 +103,67 @@ export const DEFAULT_MUTATION = {
 
 export const score = {
   modalShown: false
+}
+
+export const timeSigs = {
+  '2/4': {
+    notes: ['4', '4'],
+    groups: [[1, 4]]
+  },
+  '3/4': {
+    notes: ['4', '4', '4'],
+    groups: [[1, 4]]
+  },
+  '4/4': {
+    notes: ['4', '4', '4', '4'],
+    groups: [[1, 4]]
+  },
+  '5/4': {
+    notes: ['4', '4', '4', '4', '4'],
+    groups: [[1, 4]]
+  },
+  '5/8': {
+    notes: ['4', '4d'],
+    groups: [[1, 4], [3, 8]]
+  },
+  '6/8': {
+    notes: ['4d', '4d'],
+    groups: [[3, 8]]
+  },
+  '7/8':  {
+    notes: ['4', '4', '4d'],
+    groups: [[1, 4], [1, 4], [3, 8]]
+  },
+  '9/8': {
+    note: ['4d', '4d', '4d'],
+    groups: [[3, 8]]
+  },
+  "5/16": {
+    notes: ['8', '8d'],
+    groups: [[1, 8], [3, 16]]
+  },
+  "7/16": {
+    notes: ['4', '8d'],
+    groups: [[1, 4], [3, 16]]
+  },
+  "9/16": {
+    notes: ['8d', '8d', '8d'],
+    groups: [[3, 16]]
+  },
+  "11/16": {
+    notes: ['4', '4', '8d'],
+    groups: [[1, 4], [1, 4], [3, 16]]
+  },
+  "13/16": {
+    notes: ['4', '4', '4', '16'],
+    groups: [[1, 4], [1, 4], [1, 16]]
+  },
+  "15/16": {
+    notes: ['4', '4', '4', '8d'],
+    groups: [[1, 4], [1, 4], [1, 4], [3, 16]]
+  },
+  "17/16": {
+    notes: ['4', '4', '4', '4', '16'],
+    groups: [[1, 4], [1, 4], [1, 4], [1, 4], [1, 16]]
+  }
 }

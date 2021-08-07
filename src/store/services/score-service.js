@@ -290,7 +290,7 @@ export function incDecSelectedNote(state, inc) {
 export function setRepeat(state, startOrEnd) {
   let measureIndex = 0;
 
-  if (_.has(state, "selectedNoteIndex")) {
+  if (_.has(state, "selectedNoteIndex") && state.selectedNoteIndex) {
     measureIndex = state.selectedNoteIndex.measureIndex;
   } else {
     measureIndex = startOrEnd === "start" ? 0 : state.score.measures.length - 1;

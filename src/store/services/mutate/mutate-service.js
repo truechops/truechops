@@ -7,6 +7,7 @@ import _ from "lodash";
 import {
   vfDurationToTcDuration,
   NON_ACCENT_VELOCITY,
+  timeSigs
 } from "../../../consts/score";
 
 import {
@@ -117,12 +118,18 @@ function getModifiableNotes(notes, grid) {
 }
 
 function getMeasureBoundaries(score) {
-  
   let boundaries = [];
 
   score.measures.forEach((measure) => {
     let measureBoundaries = [];
-    let tempBoundaries = [8, 16, 24];
+    let durations = timeSigs[`${measure.timeSig.num}/${measure.timeSig.type}`].notes;
+    let tempBoundaries = [];
+    let durationTotal = 0;
+    for(let i = 0; i < durations.length - 1; i++) {
+      durationTotal += getTCDurationSingle(durations[i].replace('d', ''), durations[i].includes('d') ? 1 : 0);
+      tempBoundaries.push(durationTotal);
+    }
+
     measure.parts.forEach((part) => [
       part.voices.forEach((voice) => {
         let notes = voice.notes;

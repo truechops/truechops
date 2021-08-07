@@ -1,9 +1,14 @@
 import ReactGA from "react-ga";
-import { useState, useCallback } from 'react';
+import { useState, useCallback } from "react";
 
-import Popover from '@material-ui/core/Popover';
-
-import { ACCENT, FLAM, DIDDLE, CHEESE, LEFT_STICKING, RIGHT_STICKING } from '../../../store/score';
+import {
+  ACCENT,
+  FLAM,
+  DIDDLE,
+  CHEESE,
+  LEFT_STICKING,
+  RIGHT_STICKING,
+} from "../../../store/score";
 
 import ThirtysecondNoteIcon from "../../../../icons/notes/thirtysecond.svg";
 import SixteenthNoteIcon from "../../../../icons/notes/sixteenth.svg";
@@ -37,10 +42,11 @@ import Button from "../../ui/Button";
 import SvgButton from "../../ui/SvgButton";
 
 import { makeStyles } from "@material-ui/core/styles";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { scoreActions } from "../../../store/score";
 
-import useInstruments from './instruments-hook';
+import useInstruments from "./instruments-hook";
+import TimeSigMenu from "../menus/TimeSigMenu";
 
 const useTabStyles = makeStyles((theme) => ({
   chips: {
@@ -81,6 +87,25 @@ export default function useComposeButtons(
 ) {
   const { voiceButtons } = useInstruments();
   const dispatch = useDispatch();
+  const { num : timeSigNum, type: timeSigType } = useSelector(state => state.score.present.timeSig);
+  const measureSelected = useSelector(state => "selectedNoteIndex" in state.score.present && state.score.present.selectedNoteIndex);
+
+  const [timeSigPickerAnchorEl, setTimeSigPickerAnchorEl] = useState();
+  const timeSigPickerOpen = Boolean(timeSigPickerAnchorEl);
+
+  const handleTimeSigClick = () => {
+    setTimeSigPickerAnchorEl(document.getElementById("composeButtonsTabPanel"));
+  };
+
+  const handleTimeSigPickerClose = () => {
+    setTimeSigPickerAnchorEl(null);
+  };
+
+  const handleTimeSigChange = (newValue) => {
+    const newValueSplit = newValue.split('/');
+    dispatch(scoreActions.updateTimeSig({num: newValueSplit[0], type: newValueSplit[1]}));
+    setTimeSigPickerAnchorEl(null);
+  };
 
   let selectedMeasureIndex = null;
 
@@ -130,38 +155,22 @@ export default function useComposeButtons(
       component: HalfNoteIcon,
     },
     {
-      onClick: modifyNoteHandler.bind(
-        null,
-        "quarter",
-        false
-      ),
+      onClick: modifyNoteHandler.bind(null, "quarter", false),
       viewBox: "0 0 15.28 42.64",
       component: QuarterNoteIcon,
     },
     {
-      onClick: modifyNoteHandler.bind(
-        null,
-        "eighth",
-        false
-      ),
+      onClick: modifyNoteHandler.bind(null, "eighth", false),
       viewBox: "0 0 29 43",
       component: EighthNoteIcon,
     },
     {
-      onClick: modifyNoteHandler.bind(
-        null,
-        "sixteenth",
-        false
-      ),
+      onClick: modifyNoteHandler.bind(null, "sixteenth", false),
       viewBox: "0 0 28.43 50",
       component: SixteenthNoteIcon,
     },
     {
-      onClick: modifyNoteHandler.bind(
-        null,
-        "thirtysecond",
-        false
-      ),
+      onClick: modifyNoteHandler.bind(null, "thirtysecond", false),
       viewBox: "0 0 28.43 50",
       component: ThirtysecondNoteIcon,
     },
@@ -186,11 +195,7 @@ export default function useComposeButtons(
       component: HalfNoteRestIcon,
     },
     {
-      onClick: modifyNoteHandler.bind(
-        null,
-        "quarter",
-        true
-      ),
+      onClick: modifyNoteHandler.bind(null, "quarter", true),
       viewBox: "0 0 16.05 43.81",
       component: QuarterNoteRestIcon,
     },
@@ -200,20 +205,12 @@ export default function useComposeButtons(
       component: EighthNoteRestIcon,
     },
     {
-      onClick: modifyNoteHandler.bind(
-        null,
-        "sixteenth",
-        true
-      ),
+      onClick: modifyNoteHandler.bind(null, "sixteenth", true),
       viewBox: "0 0 26.27 50",
       component: SixteenthNoteRestIcon,
     },
     {
-      onClick: modifyNoteHandler.bind(
-        null,
-        "thirtysecond",
-        true
-      ),
+      onClick: modifyNoteHandler.bind(null, "thirtysecond", true),
       viewBox: "0 0 25.82 50",
       component: ThirtysecondNoteRestIcon,
     },
@@ -226,7 +223,7 @@ export default function useComposeButtons(
     />
   ));
 
-  const dotButton = 
+  const dotButton = (
     <Button
       key={Math.random().toString()}
       variant="outlined"
@@ -236,8 +233,7 @@ export default function useComposeButtons(
     >
       .
     </Button>
-  ;
-
+  );
   const noteButtonsRow2Desktop = noteButtonsRow2Mobile.slice().reverse();
 
   const ornamentButtons = [
@@ -323,7 +319,7 @@ export default function useComposeButtons(
     />
   ));
 
-  const measureButtons = [
+  let measureButtons = [
     {
       component: AddMeasureLeftIcon,
       onClick: () => dispatch(scoreActions.addMeasure(false)),
@@ -373,6 +369,26 @@ export default function useComposeButtons(
     />
   ));
 
+  measureButtons.push(
+    <>
+      <Button
+        disabled={!measureSelected}
+        key={Math.random().toString()}
+        variant="outlined"
+        className={classes.noteButton}
+        onClick={handleTimeSigClick}
+      >
+        {`${timeSigNum}/${timeSigType}`}
+      </Button>
+      <TimeSigMenu
+        isOpen={timeSigPickerOpen}
+        anchorEl={timeSigPickerAnchorEl}
+        onClose={handleTimeSigPickerClose}
+        onChange={handleTimeSigChange}
+      />
+    </>
+  );
+
   return {
     measureButtons,
     ornamentButtons,
@@ -380,6 +396,6 @@ export default function useComposeButtons(
     noteButtonsRow1,
     noteButtonsRow2Mobile,
     noteButtonsRow2Desktop,
-    dotButton
+    dotButton,
   };
 }

@@ -8,7 +8,10 @@ import {
   setRepeat,
   incDecSelectedNote,
 } from "./services/score-service";
-import { mutate } from './services/mutate/mutate-service';
+import { mutate } from "./services/mutate/mutate-service";
+import { addMeasure as addMeasureService, 
+         deleteMeasure as deleteMeasureService,
+        updateTimeSig as updateTimeSigService } from './services/measure-service';
 import { getEmptyMeasure } from "../helpers/score";
 import _ from "lodash";
 import { createSelector } from "reselect";
@@ -18,9 +21,13 @@ import {
   GRACE_VELOCITY,
   ACCENT_VELOCITY,
   DEFAULT_TEMPO,
-  NOTE_CONFIG
+  NOTE_CONFIG,
 } from "../consts/score";
-import { INSTRUMENT_NOTE_TO_VOICE_MAP, DEFAULT_MUTATION } from '../consts/score';
+import {
+  INSTRUMENT_NOTE_TO_VOICE_MAP,
+  DEFAULT_MUTATION,
+  DEFAULT_TIME_SIG,
+} from "../consts/score";
 
 export const ACCENT = "a";
 export const FLAM = "f";
@@ -31,6 +38,7 @@ export const RIGHT_STICKING = "r";
 
 const initialState = {
   tempo: DEFAULT_TEMPO,
+  timeSig: DEFAULT_TIME_SIG,
   score: defaultScore,
   /**
    * [{
@@ -40,15 +48,15 @@ const initialState = {
    *    probability: 0.25
    * }
    * }]
-   *  
+   *
    * */
   mutations: [DEFAULT_MUTATION],
   dynamic: false,
   scrollAmount: {
     top: 0,
-    left: 0
+    left: 0,
   },
-  name: '',
+  name: "",
   voices: {
     drumset: {
       kickSelected: false,
@@ -123,24 +131,27 @@ const scoreSlice = createSlice({
       state.selectedPartIndex = 0;
       state.selectedNoteIndex = null;
 
-      if(mutations && mutations.length > 0) {
+      if (mutations && mutations.length > 0) {
         state.dynamic = true;
       }
 
       state.mutations = [];
-      if(mutations && mutations.length > 0) {
-        mutations.forEach(mutation => {
+      if (mutations && mutations.length > 0) {
+        mutations.forEach((mutation) => {
           const { type, context, grid, config: configString } = mutation;
           const config = JSON.parse(configString);
-          
+
           state.mutations.push({ type, context, grid, config });
-        })
+        });
       } else {
-        state.mutations.push(DEFAULT_MUTATION)
+        state.mutations.push(DEFAULT_MUTATION);
       }
     },
     updateTempo(state, action) {
       state.tempo = action.payload;
+    },
+    updateTimeSig(state, action) {
+      updateTimeSigService(state, action);
     },
     setScrollAmount(state, action) {
       state.scrollAmount = action.payload;
@@ -181,6 +192,9 @@ const scoreSlice = createSlice({
       if (partIndex !== state.selectedPartIndex) {
         state.selectedPartIndex = partIndex;
       }
+
+      //update the selected timeSig
+      state.timeSig = state.score.measures[measureIndex].timeSig;
     },
     selectPreviousNote(state) {
       incDecSelectedNote(state, false);
@@ -207,82 +221,23 @@ const scoreSlice = createSlice({
       toggleOrnament(state, CHEESE, FLAM + DIDDLE);
     },
     addMeasure(state, action) {
-      const measures = state.score.measures;
-      const isRight = action.payload;
-      let index = 0;
-      if (!_.has(state, "selectedNoteIndex") || !state.selectedNoteIndex) {
-        index = isRight ? measures.length - 1 : 0;
-      } else {
-        index = state.selectedNoteIndex.measureIndex;
-      }
-
-      //make sure a measure is selected
-      const { timeSig, parts } = state.score.measures[index];
-
-      //Get the empty measure given the time signature and instruments
-      const emptyMeasure = getEmptyMeasure(
-        timeSig,
-        parts.map((part) => part.instrument)
-      );
-
-      //Either insert the empty measure to the left or right of the currently selected measure.
-      state.score.measures.splice(isRight ? index + 1 : index, 0, emptyMeasure);
+      addMeasureService(state, action);
     },
     deleteMeasure(state) {
-      if (!_.has(state, "selectedNoteIndex") || !state.selectedNoteIndex) {
-        return;
-      }
-
-      const measureIndex = state.selectedNoteIndex.measureIndex;
-
-      //make sure a measure is selected
-      if (measureIndex >= 0) {
-        //The initial splice arguments: deleting one entry at the specified measure index.
-        let spliceArguments = [measureIndex, 1];
-
-        //If they are removing the only measure in the score
-        if (state.score.measures.length === 1) {
-          const { timeSig, parts } = state.score.measures[measureIndex];
-
-          //We need to add an empty measure if they are deleting the only measure in the score.
-          spliceArguments.push(
-            getEmptyMeasure(
-              timeSig,
-              parts.map((part) => part.instrument)
-            )
-          );
-        }
-
-        state.score.measures.splice.apply(
-          state.score.measures,
-          spliceArguments
-        );
-      }
-
-      state.selectedNoteIndex = null;
-    },
-    shuffleNotes(state) {
-      state.score.measures.forEach((measure, measureIndex) => {
-        measure.parts.forEach((part, partIndex) => {
-          part.voices.forEach((voice, voiceIndex) => {
-            state.score.measures[measureIndex].parts[partIndex].voices[
-              voiceIndex
-            ].notes = _.shuffle(
-              state.score.measures[measureIndex].parts[partIndex].voices[
-                voiceIndex
-              ].notes
-            );
-          });
-        });
-      });
+      deleteMeasureService(state);
     },
     mutateNotes(state, action) {
       const numRepeats = action.payload;
       const mutations = state.mutations;
 
-      mutate(state.score, mutations, numRepeats, Object.keys(getScoreVoices(state)));
+      mutate(
+        state.score,
+        mutations,
+        numRepeats,
+        Object.keys(getScoreVoices(state))
+      );
 
-      //We need to clear this out because mutating the notes might change the number of notes in the 
+      //We need to clear this out because mutating the notes might change the number of notes in the
       //score, which could cause the note index for the selected note to be for a non-existent note.
       state.selectedNoteIndex = null;
     },
@@ -463,7 +418,6 @@ export const getSelectedNote = createSelector(
         selectedNoteIndex;
       const part = score.measures[measureIndex].parts[partIndex];
 
-      
       //We have to clone because the original object is not extensible.
       let selectedNote = _.cloneDeep(part.voices[voiceIndex].notes[noteIndex]);
       selectedNote.measureIndex = measureIndex;
@@ -479,171 +433,184 @@ export const getSelectedNote = createSelector(
 );
 
 //Assumes one part for now.
-export const getScoreVoices = createSelector([state => state.score], score => {
-  let scoreVoices = new Set();
-  const instrument = Object.keys(score.parts)[0];
-  score.measures.forEach(measure => {
-    measure.parts.forEach(part => {
-      part.voices.forEach(voice => {
-        voice.notes.forEach(note => {
-          note.notes.forEach(n => {
-            scoreVoices.add(n);
-          })
-        })
-      })
-    })
-  });
-
-  //Returning a 'map' so that the client can access both the key and the associated instrument name
-  let keysToVoices = {};
-  scoreVoices.forEach(key => {
-    keysToVoices[key] = INSTRUMENT_NOTE_TO_VOICE_MAP[instrument][key]
-  });
-
-  return keysToVoices;
-})
-
-//Get the notes for playback
-export const getToneJs = createSelector([(state) => state.score, state => state.tempo], (score, tempo) => {
-  let measures = score.measures;
-  const partConfig = score.parts;
-  const spb = 60 / tempo;
-  let toneJsNotes = [];
-
-  const toneJs = {
-    notes: [],
-    duration: 0,
-    numMeasures: measures.length,
-  };
-
-  let measureStartingTime = 0;
-  let measureTimeLength = 0;
-  let loopTimeDuration = 0;
-  measures.forEach((measure) => {
-    loopTimeDuration += measure.timeSig.num * spb;
-
-    measureStartingTime += measureTimeLength;
-    measureTimeLength = 0;
-    let parts = measure.parts;
-    let firstPart = true;
-
-    parts = parts.filter(part => partConfig[part.instrument].enabled);
-
-    parts.forEach((part) => {
-      const { voices, instrument } = part;
-      let time = measureStartingTime;
-
-      voices.forEach((voice) => {
-        const notes = voice.notes;
-
-        notes.forEach((note, noteIndex) => {
-          let noteSecondsDuration = (spb * 4) / note.duration;
-
-          const tuplets = voice.tuplets;
-          tuplets.forEach((tuplet) => {
-            if (noteIndex >= tuplet.start && noteIndex < tuplet.end) {
-              noteSecondsDuration *= tuplet.normal / tuplet.actual;
-            }
+export const getScoreVoices = createSelector(
+  [(state) => state.score],
+  (score) => {
+    let scoreVoices = new Set();
+    const instrument = Object.keys(score.parts)[0];
+    score.measures.forEach((measure) => {
+      measure.parts.forEach((part) => {
+        part.voices.forEach((voice) => {
+          voice.notes.forEach((note) => {
+            note.notes.forEach((n) => {
+              scoreVoices.add(n);
+            });
           });
-
-          if (note.dots) {
-            let extraDuration = noteSecondsDuration;
-
-            //Add extra time for the dots
-            for (let i = 0; i < note.dots; i++) {
-              extraDuration /= 2;
-              noteSecondsDuration += extraDuration;
-            }
-          }
-
-          if (note.notes.length) {
-            //Not a rest
-            for (const tjsNote of note.notes) {
-              const toneJsNote = {
-                time,
-                note: tjsNote,
-                instrument,
-              };
-
-              toneJsNotes.push(toneJsNote);
-
-              //Adjust the velocity depending on if there is an accent
-              const hasOrnaments = note.ornaments;
-              if (hasOrnaments) {
-                if (!note.ornaments.includes(ACCENT)) {
-                  toneJsNote.velocity = NON_ACCENT_VELOCITY;
-                } else {
-                  toneJsNote.velocity = ACCENT_VELOCITY;
-                }
-              } else {
-                toneJsNote.velocity = NON_ACCENT_VELOCITY;
-              }
-
-              const cloneNote = (note, time, velocity) => {
-                const diddleNote = _.cloneDeep(note);
-                diddleNote.time = diddleNote.time + time;
-
-                if (velocity) {
-                  diddleNote.velocity = velocity;
-                }
-
-                return diddleNote;
-              };
-
-              if (hasOrnaments) {
-                //Add the diddle note.
-                if (note.ornaments.includes(DIDDLE)) {
-                  toneJsNotes.push(
-                    cloneNote(
-                      toneJsNote,
-                      noteSecondsDuration / 2,
-                      note.velocity
-                    )
-                  );
-                }
-
-                //Add the flam note
-                if (note.ornaments.includes(FLAM)) {
-                  toneJsNotes.push(
-                    cloneNote(toneJsNote, -0.0175, GRACE_VELOCITY)
-                  );
-                }
-
-                if (note.ornaments.includes(CHEESE)) {
-                  //Add the diddle and flam notes, respectively.
-                  toneJsNotes.push(
-                    cloneNote(
-                      toneJsNote,
-                      noteSecondsDuration / 2,
-                      note.velocity
-                    )
-                  );
-                  toneJsNotes.push(
-                    cloneNote(toneJsNote, -0.0175, GRACE_VELOCITY)
-                  );
-                }
-              }
-            }
-          } else {
-            //rest
-            toneJsNotes.push({});
-          }
-
-          time += noteSecondsDuration;
-          if (firstPart) {
-            measureTimeLength += noteSecondsDuration;
-          }
         });
       });
-      firstPart = false;
     });
-  });
 
-  toneJs.notes = toneJsNotes;
-  toneJs.duration = loopTimeDuration;
+    //Returning a 'map' so that the client can access both the key and the associated instrument name
+    let keysToVoices = {};
+    scoreVoices.forEach((key) => {
+      keysToVoices[key] = INSTRUMENT_NOTE_TO_VOICE_MAP[instrument][key];
+    });
 
-  return toneJs;
-});
+    return keysToVoices;
+  }
+);
+
+//Get the notes for playback
+export const getToneJs = createSelector(
+  [(state) => state.score, (state) => state.tempo],
+  (score, tempo) => {
+    let measures = score.measures;
+    const partConfig = score.parts;
+    const spb = 60 / tempo;
+    let toneJsNotes = [];
+
+    const toneJs = {
+      notes: [],
+      duration: 0,
+      numMeasures: measures.length,
+    };
+
+    let measureStartingTime = 0;
+    let measureTimeLength = 0;
+    let loopTimeDuration = 0;
+    measures.forEach((measure) => {
+      let loopTimeDurationAddition = (measure.timeSig.num * spb);
+      if(measure.timeSig.type == 8) {
+        loopTimeDurationAddition /= 2;
+      } else if(measure.timeSig.type == 16) {
+        loopTimeDurationAddition /= 4;
+      }
+
+      loopTimeDuration += loopTimeDurationAddition;
+
+      measureStartingTime += measureTimeLength;
+      measureTimeLength = 0;
+      let parts = measure.parts;
+      let firstPart = true;
+
+      parts = parts.filter((part) => partConfig[part.instrument].enabled);
+
+      parts.forEach((part) => {
+        const { voices, instrument } = part;
+        let time = measureStartingTime;
+
+        voices.forEach((voice) => {
+          const notes = voice.notes;
+
+          notes.forEach((note, noteIndex) => {
+            let noteSecondsDuration = (spb * 4) / note.duration;
+
+            const tuplets = voice.tuplets;
+            tuplets.forEach((tuplet) => {
+              if (noteIndex >= tuplet.start && noteIndex < tuplet.end) {
+                noteSecondsDuration *= tuplet.normal / tuplet.actual;
+              }
+            });
+
+            if (note.dots) {
+              let extraDuration = noteSecondsDuration;
+
+              //Add extra time for the dots
+              for (let i = 0; i < note.dots; i++) {
+                extraDuration /= 2;
+                noteSecondsDuration += extraDuration;
+              }
+            }
+
+            if (note.notes.length) {
+              //Not a rest
+              for (const tjsNote of note.notes) {
+                const toneJsNote = {
+                  time,
+                  note: tjsNote,
+                  instrument,
+                };
+
+                toneJsNotes.push(toneJsNote);
+
+                //Adjust the velocity depending on if there is an accent
+                const hasOrnaments = note.ornaments;
+                if (hasOrnaments) {
+                  if (!note.ornaments.includes(ACCENT)) {
+                    toneJsNote.velocity = NON_ACCENT_VELOCITY;
+                  } else {
+                    toneJsNote.velocity = ACCENT_VELOCITY;
+                  }
+                } else {
+                  toneJsNote.velocity = NON_ACCENT_VELOCITY;
+                }
+
+                const cloneNote = (note, time, velocity) => {
+                  const diddleNote = _.cloneDeep(note);
+                  diddleNote.time = diddleNote.time + time;
+
+                  if (velocity) {
+                    diddleNote.velocity = velocity;
+                  }
+
+                  return diddleNote;
+                };
+
+                if (hasOrnaments) {
+                  //Add the diddle note.
+                  if (note.ornaments.includes(DIDDLE)) {
+                    toneJsNotes.push(
+                      cloneNote(
+                        toneJsNote,
+                        noteSecondsDuration / 2,
+                        note.velocity
+                      )
+                    );
+                  }
+
+                  //Add the flam note
+                  if (note.ornaments.includes(FLAM)) {
+                    toneJsNotes.push(
+                      cloneNote(toneJsNote, -0.0175, GRACE_VELOCITY)
+                    );
+                  }
+
+                  if (note.ornaments.includes(CHEESE)) {
+                    //Add the diddle and flam notes, respectively.
+                    toneJsNotes.push(
+                      cloneNote(
+                        toneJsNote,
+                        noteSecondsDuration / 2,
+                        note.velocity
+                      )
+                    );
+                    toneJsNotes.push(
+                      cloneNote(toneJsNote, -0.0175, GRACE_VELOCITY)
+                    );
+                  }
+                }
+              }
+            } else {
+              //rest
+              toneJsNotes.push({});
+            }
+
+            time += noteSecondsDuration;
+            if (firstPart) {
+              measureTimeLength += noteSecondsDuration;
+            }
+          });
+        });
+        firstPart = false;
+      });
+    });
+
+    toneJs.notes = toneJsNotes;
+    toneJs.duration = loopTimeDuration;
+
+    return toneJs;
+  }
+);
 
 export const selectNote = (note, scrollAmount) => {
   return async (dispatch) => {
@@ -656,12 +623,12 @@ export const selectNote = (note, scrollAmount) => {
       })
     );
     dispatch(scoreActions.setScrollAmount(scrollAmount));
-  }
-}
+  };
+};
 
 export const modifyNote = (noteData, scrollAmount) => {
   return async (dispatch) => {
     dispatch(scoreActions.modifyNote(noteData));
     dispatch(scoreActions.setScrollAmount(scrollAmount));
-  }
-}
+  };
+};

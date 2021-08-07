@@ -71,7 +71,7 @@ export function TopToolbar(props) {
 
   const [saveMutations, setSaveMutations] = useState(false);
 
-  useEffect(() => {
+  useEffect(() => {''
     if(!window.tcEventsAdded) {
       addComposeEventListeners(dispatch);
     }

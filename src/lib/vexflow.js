@@ -1,9 +1,16 @@
 import Vex from "vexflow";
 import VexFlowInteraction from "./VexFlowInteraction";
 import { getNote, getGraceNote } from "../helpers/score";
-import { NOTE_HIGHLIGHT_COLOR } from '../consts/score';
+import { NOTE_HIGHLIGHT_COLOR, timeSigs } from "../consts/score";
 import _ from "lodash";
-import { ACCENT, FLAM, DIDDLE, CHEESE, LEFT_STICKING, RIGHT_STICKING } from '../store/score';
+import {
+  ACCENT,
+  FLAM,
+  DIDDLE,
+  CHEESE,
+  LEFT_STICKING,
+  RIGHT_STICKING,
+} from "../store/score";
 
 const VF = Vex.Flow;
 const BASE_STAVE_SPACE = 125;
@@ -50,6 +57,7 @@ export function drawScore(
   let width = measurePartsArray[0].length > 1 ? 100 : 0;
   let row = 0;
   let firstMeasure = true;
+  let previousTimeSig = {};
   for (const measureParts of measurePartsArray) {
     let voices = measureParts.map((measurePart) => measurePart.voices);
     //One formatter for both parts so that we can calculate one width to
@@ -62,7 +70,7 @@ export function drawScore(
     );
 
     systemWidth = minTotalWidth + FORMAT_PADDING;
-    if (width + systemWidth > (svgWidth + PADDING)) {
+    if (width + systemWidth > svgWidth + PADDING) {
       renderStaves(
         barRenderData,
         svgWidth - width - PADDING,
@@ -71,7 +79,7 @@ export function drawScore(
         selectedNoteIndex,
         noteSelectedCallback,
         repeat,
-        measureIndex
+        previousTimeSig
       );
       barRenderData = [];
       width = 0;
@@ -82,7 +90,8 @@ export function drawScore(
       parts: measureParts,
       width: systemWidth + (firstMeasure ? 20 : 0),
       firstMeasure,
-      measureIndex
+      measureIndex,
+      timeSig: score.measures[measureIndex].timeSig,
     });
 
     width += systemWidth + (firstMeasure ? 20 : 0);
@@ -98,10 +107,14 @@ export function drawScore(
       context,
       selectedNoteIndex,
       noteSelectedCallback,
-      repeat
+      repeat,
+      previousTimeSig
     );
   }
-  renderer.resize(svgWidth, (STAVE_SPACE * (row + 1)) /** scale * scaleWidthMultipler*/);
+  renderer.resize(
+    svgWidth,
+    STAVE_SPACE * (row + 1) /** scale * scaleWidthMultipler*/
+  );
   context.scale(scale, scale);
 }
 
@@ -109,10 +122,10 @@ function getMeasureData(measures, partConfig) {
   const measurePartsArray = [];
 
   measures.forEach((measure, measureIndex) => {
-    let { parts } = measure;
+    let { parts, timeSig } = measure;
 
     //Only render instruments that are enabled.
-    parts = parts.filter(part => partConfig[part.instrument].enabled);
+    parts = parts.filter((part) => partConfig[part.instrument].enabled);
     let measureParts = [];
     parts.forEach((part, partIndex) => {
       let partData = {
@@ -146,19 +159,28 @@ function getMeasureData(measures, partConfig) {
           vfNotes.push(n);
         });
 
-        tuplets.forEach(tuplet => {
-          vfTuplets.push(new VF.Tuplet(vfNotes.slice(tuplet.start,tuplet.end), {
-          num_notes: tuplet.actual, notes_occupied: tuplet.normal, bracketed: true
-        }));
-      });
+        tuplets.forEach((tuplet) => {
+          vfTuplets.push(
+            new VF.Tuplet(vfNotes.slice(tuplet.start, tuplet.end), {
+              num_notes: tuplet.actual,
+              notes_occupied: tuplet.normal,
+              bracketed: true,
+            })
+          );
+        });
 
         // Create a voice in 4/4 and add the notes from above
-        var vfVoice = new VF.Voice({ num_beats: 4, beat_value: 4 });
+        var vfVoice = new VF.Voice({
+          num_beats: timeSig.num,
+          beat_value: timeSig.type,
+        });
         vfVoice.addTickables(vfNotes);
         vfVoices.push(vfVoice);
         vfVoiceBeams.push(
           VF.Beam.generateBeams(vfNotes, {
             stem_direction: Vex.Flow.StaveNote.STEM_UP,
+            groups: timeSigs[`${timeSig.num}/${timeSig.type}`].groups.map(group => 
+              new Vex.Flow.Fraction(group[0], group[1]))
           })
         );
         vfVoiceNotes.push(vfNotes);
@@ -189,10 +211,10 @@ function renderStaves(
   context,
   selectedNoteIndex,
   noteSelectedCallback,
-  repeat
+  repeat,
+  previousTimeSig
 ) {
   const barWidths = barRenderData.map((renderDataBar) => renderDataBar.width);
-
   //Given the space left over in the stave (i.e.: remainingWidth), get the additional
   //width to add to each bar to make up that space.
   const additionalWidths = getAdditionalWidthsForBars(
@@ -209,9 +231,7 @@ function renderStaves(
 
   let staves = [];
   barRenderData.forEach((renderData, renderDataIndex) => {
-
-    const { parts, width, firstMeasure, measureIndex } = renderData;
-
+    const { parts, width, firstMeasure, measureIndex, timeSig } = renderData;
     let xDiff = 0;
 
     parts.forEach((part, partIndex) => {
@@ -225,7 +245,7 @@ function renderStaves(
         }
       );
 
-      if(renderDataIndex === 0) {
+      if (renderDataIndex === 0) {
         staves.push(stave);
       }
 
@@ -241,10 +261,11 @@ function renderStaves(
       var formatter = new VF.Formatter();
 
       let widthDiff = 0;
-      if (firstMeasure) {
-        // Add a clef and time signature.
-        stave.addTimeSignature("4/4");
+      if (!_.isEqual(previousTimeSig, timeSig)) {
+        stave.addTimeSignature(`${timeSig.num}/${timeSig.type}`);
+      }
 
+      if (firstMeasure) {
         //We don't need the measure label if it is the only instrument in the score.
         if (parts.length > 1) {
           stave.setText(instrument, Vex.Flow.Modifier.Position.LEFT);
@@ -265,10 +286,10 @@ function renderStaves(
         vfBeams.map((beam) => beam.setContext(context).draw())
       );
 
-      tuplets.map(vfTuplet => vfTuplet.setContext(context).draw());
+      tuplets.map((vfTuplet) => vfTuplet.setContext(context).draw());
 
       const interaction = new VexFlowInteraction(context.svg);
-      
+
       notes[0].forEach((note, noteIndex) => {
         // highlight the note if it selected
         if (
@@ -289,11 +310,10 @@ function renderStaves(
         const events = ["touchStart"];
         events.forEach((type) => {
           noteInteraction.addEventListener(type, (e, coords) => {
-
             //Two events are fired on mobile. One with e.type === 'mousedown' and another with
-            //e.type === 'touchStart'. Desktop only fires e.type === 'mousedown'. Since we only want 
+            //e.type === 'touchStart'. Desktop only fires e.type === 'mousedown'. Since we only want
             //this callback to fire once, we are calling out e.type === 'mousedown'.
-            if (e.type === 'mousedown') {
+            if (e.type === "mousedown") {
               noteSelectedCallback(note, context);
             }
           });
@@ -301,14 +321,16 @@ function renderStaves(
       });
     });
 
+    previousTimeSig.num = timeSig.num;
+    previousTimeSig.type = timeSig.type;
     x += xDiff;
   });
 
-  if(numParts > 1) {
+  if (numParts > 1) {
     var connector = new VF.StaveConnector(staves[0], staves[staves.length - 1]);
-        connector.setType(VF.StaveConnector.type.SINGLE);
-        connector.setContext(context);
-        connector.draw();
+    connector.setType(VF.StaveConnector.type.SINGLE);
+    connector.setContext(context);
+    connector.draw();
   }
 }
 
@@ -320,7 +342,6 @@ function getAdditionalWidthsForBars(widths, remainingWidth) {
 }
 
 function addOrnaments(jsonNote, scoreNote) {
-
   if (jsonNote.ornaments) {
     if (jsonNote.ornaments.includes(CHEESE)) {
       let tremolo = new VF.Tremolo(1);
@@ -358,17 +379,13 @@ function addOrnaments(jsonNote, scoreNote) {
     //right sticking - add 'R' annotation
     if (jsonNote.ornaments.includes(RIGHT_STICKING)) {
       const annotation = new VF.Annotation("R");
-      annotation.setVerticalJustification(
-        VF.Annotation.VerticalJustify.BOTTOM
-      );
+      annotation.setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM);
 
       scoreNote.addModifier(0, annotation);
     } else if (jsonNote.ornaments.includes(LEFT_STICKING)) {
       //left sticking - add 'L' annotation
       const annotation = new VF.Annotation("L");
-      annotation.setVerticalJustification(
-        VF.Annotation.VerticalJustify.BOTTOM
-      );
+      annotation.setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM);
 
       scoreNote.addModifier(0, annotation);
     }

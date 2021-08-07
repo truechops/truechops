@@ -3,6 +3,7 @@ import {
   NON_ACCENT_VELOCITY,
   tcDurationToVfDuration,
   vfDurationToTcDuration,
+  timeSigs
 } from "../consts/score";
 import { getAdditionalDotDuration, getPowersOf2, isPowerOf2 } from "./math";
 
@@ -163,28 +164,12 @@ export function getEmptyMeasure(timeSig, instruments) {
     instrument: instrument,
     voices: [
       {
-        notes: [
-          {
-            notes: [],
-            duration: 4,
-            velocity: NON_ACCENT_VELOCITY,
-          },
-          {
-            notes: [],
-            duration: 4,
-            velocity: NON_ACCENT_VELOCITY,
-          },
-          {
-            notes: [],
-            duration: 4,
-            velocity: NON_ACCENT_VELOCITY,
-          },
-          {
-            notes: [],
-            duration: 4,
-            velocity: NON_ACCENT_VELOCITY,
-          },
-        ],
+        notes: timeSigs[`${timeSig.num}/${timeSig.type}`].notes.map(duration => ({
+          notes: [],
+          duration: duration.replace('d', ''),
+          dots: duration.includes('d') ? 1 : 0,
+          velocity: NON_ACCENT_VELOCITY
+        })),
         tuplets: [],
       },
     ],
