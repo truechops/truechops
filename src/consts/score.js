@@ -114,8 +114,7 @@ export const DEFAULT_MUTATION = {
   context: 'All',
   grid: 16,
   config: {
-    probability: 0.25,
-    swapWithRests: true
+    probability: 0.25
   }
 };
 

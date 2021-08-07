@@ -37,8 +37,7 @@ const initialState = {
    *  type: 'swap',
    *  context: 'E5',
    *  config: {
-   *    probability: 0.25,
-   *    swapWithRests: true
+   *    probability: 0.25
    * }
    * }]
    *  

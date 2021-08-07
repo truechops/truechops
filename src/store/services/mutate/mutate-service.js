@@ -26,8 +26,7 @@ import shuffle from './types/shuffle';
  *     context: 'C5',
  *     config: {
  *         grid: 16,
- *         probability: 0.25,
- *         swapWithRests: true
+ *         probability: 0.25
  * },
  * {
  *     type: 'random',
@@ -40,7 +39,7 @@ import shuffle from './types/shuffle';
  */
 
 //Assuming only one part for now.
-export async function mutate(score, mutations, numRepeats, scoreVoices) {
+export function mutate(score, mutations, numRepeats, scoreVoices) {
   let { voiceNoteArrays, tupletLengths } = convertToVoiceNoteArrays(
     score,
     numRepeats,
