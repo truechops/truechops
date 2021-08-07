@@ -1,13 +1,13 @@
-export default function swap(config, notes) {
-  const { probability } = config;
+export default function swap({ probability }, notes) {
+  let noteIndexes = [...Array(notes.length).keys()];
 
   for (let i = 0, length = notes.length; i < length; i++) {
     if (
       Math.random() < probability
     ) {
       let indexToSwap1 = Math.floor(Math.random() * notes.length);
-      let swappables = [...Array(notes.length).keys()].filter(index => index != indexToSwap1);
-      let indexToSwap2 = Math.floor(Math.random() * swappables.length);
+      let swappables = noteIndexes.filter(index => index != indexToSwap1);
+      let indexToSwap2 = swappables[Math.floor(Math.random() * swappables.length)];
       swapArrayElems(notes, indexToSwap1, indexToSwap2);
     }
   }
