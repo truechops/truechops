@@ -72,7 +72,10 @@ export function TopToolbar(props) {
   const [saveMutations, setSaveMutations] = useState(false);
 
   useEffect(() => {
-    addComposeEventListeners(dispatch);
+    if(!window.tcEventsAdded) {
+      addComposeEventListeners(dispatch);
+    }
+    window.tcEventsAdded = true;
   }, [dispatch]);
 
   function rhythmLinkDialogContents(link) {
