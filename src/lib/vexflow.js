@@ -263,6 +263,7 @@ function renderStaves(
       let widthDiff = 0;
       if (!_.isEqual(previousTimeSig, timeSig)) {
         stave.addTimeSignature(`${timeSig.num}/${timeSig.type}`);
+        widthDiff = stave.getNoteStartX() - stave.getX();
       }
 
       if (firstMeasure) {
