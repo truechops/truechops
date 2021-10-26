@@ -20,19 +20,36 @@ export default function raEmergentCycles(config, notes) {
       }
     }
   }
-  console.log(drumSounds);
   const loop0 = emergentCycles(drumSounds);
-  console.log("Loop0::");
-  console.log(loop0);
   const loop1 = emergentCycles(loop0);
-  console.log("Loop1::");
-  console.log(loop1);
-  // The above work now! Need to make the function converting these arrays to not arrays.
+  const loop2 = emergentCycles(loop1);
+  const loop3 = emergentCycles(loop2);
 
+  notes = notes.concat(convertArrayToNotes(loop0));
+}
 
-  /*for (let i = 1; i < 4; i++) {
-    newSounds.push([...emergentCycles(newSounds[i-1])]);
-  }*/
+function convertArrayToNotes(loop) {
+ const newNotes = initializeNotes();
+    // The above work now! Need to make the function converting these arrays to not arrays.
+  for (let i = 0; i < loop[0].data.length; i++) {
+    for (let voiceIndex = 0; voiceIndex < loop.length; voiceIndex++) {
+      if (loop[voiceIndex].data[i]) {
+        newNotes[i].notes.push(loop[voiceIndex].note);
+      }
+    }
+  }
+  return newNotes;
+}
+
+function initializeNotes() {
+  return Array.from({ length: 16 }, () => {
+   let tempNote = new Object();
+   tempNote.notes = [];
+   tempNote.duration = 16;
+   tempNote.velocity = 1;
+   tempNote.ornaments = "";
+   return tempNote;
+  });
 }
 
 /**
