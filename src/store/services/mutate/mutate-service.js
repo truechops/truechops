@@ -18,7 +18,7 @@ import {
 } from "../../../helpers/score";
 import swap from "./types/swap";
 import shuffle from './types/shuffle';
-import raEmergentCycles from './types/raEmergentCycles';
+import raemergentcycles from './types/raemergentcycles';
 
 /**
  *
@@ -103,7 +103,7 @@ function getMutateFn(type) {
   } else if(type === "shuffle") {
     mutateFn = shuffle;
   } else if(type === "ra-emergent-cycles") {
-    mutateFn = raEmergentCycles;
+    mutateFn = raemergentcycles;
   }
   return mutateFn;
 }

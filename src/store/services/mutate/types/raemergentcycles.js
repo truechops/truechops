@@ -1,4 +1,4 @@
-export default function raEmergentCycles(config, notes) {
+export default function raemergentcycles(config, notes) {
   // MOVE TO PROPS or general settings.
   // Massage input. Convert Notes to single drum sound notes.
   // NOTE: All automata will normalize this input,
@@ -20,12 +20,17 @@ export default function raEmergentCycles(config, notes) {
       }
     }
   }
+ // Run emergent Cycles til a point you find something slightly similar.
+ // Todo similarity function.
+
   const loop0 = emergentCycles(drumSounds);
   const loop1 = emergentCycles(loop0);
   const loop2 = emergentCycles(loop1);
   const loop3 = emergentCycles(loop2);
-
-  notes = notes.concat(convertArrayToNotes(loop0));
+  let newNotes =  convertArrayToNotes(loop0);
+  for (let i = 0; i < newNotes.length; i++) {
+    notes.splice(i,1, newNotes[i]);
+  }
 }
 
 function convertArrayToNotes(loop) {

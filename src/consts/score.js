@@ -93,7 +93,7 @@ export const NOTE_HIGHLIGHT_COLOR = '#00FF00';
 
 export const DEFAULT_MUTATION_NUM_REPEATS = 1;
 export const DEFAULT_MUTATION = {
-  type: 'swap',
+  type: 'ra-emergent-cycles',
   context: 'All',
   grid: 16,
   config: {
