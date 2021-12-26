@@ -1,4 +1,28 @@
-export default function raemergentcycles(config, notes) {
+import {
+  DELAYED_STABILITY,
+  RHYTHMIC_INVERSION,
+  DENSITY_THINNING,
+  EVOLVING_THINNING,
+  EMERGENT_CYCLES,
+  PROPABILISTIC_TRANSITIONS,
+  RHYTHMIC_PHASING} from "../../../../consts/raTypes";
+import {
+  N,
+  R,
+  F,
+  U,
+  RF,
+  raTypes
+} from "../../../../consts/raRules";
+import {
+  _N,
+  _R,
+  _F,
+  _U,
+  _RF
+} from "./cellularAutomataApplicationFunctions";
+
+export default function cellularAutomata(config, notes, type) {
   // MOVE TO PROPS or general settings.
   // Massage input. Convert Notes to single drum sound notes.
   // NOTE: All automata will normalize this input,
@@ -20,16 +44,16 @@ export default function raemergentcycles(config, notes) {
       }
     }
   }
+ // Create neighnooring notes. That could fx be hihat, ride cymbal. If all of them are absent, consider adding one(randomly?)
  // Run emergent Cycles til a point you find something slightly similar.
  // Todo similarity function.
 
-  const loop0 = emergentCycles(drumSounds);
-  const loop1 = emergentCycles(loop0);
-  const loop2 = emergentCycles(loop1);
-  const loop3 = emergentCycles(loop2);
-  let newNotes =  convertArrayToNotes(loop0);
-  for (let i = 0; i < newNotes.length; i++) {
-    notes.splice(i,1, newNotes[i]);
+  const loop0 = ra(drumSounds, type);
+  if (loop0.length > 0) {
+    let newNotes =  convertArrayToNotes(loop0);
+    for (let i = 0; i < newNotes.length; i++) {
+      notes.splice(i,1, newNotes[i]);
+    }
   }
 }
 
@@ -65,13 +89,13 @@ function initializeNotes() {
  * @param array drumSounds
  *   It contains an array of drum sounds of the same length.
  **/
-function emergentCycles(drumSounds) {
+function ra(drumSounds, type) {
   const newDrumSounds = [];
   for (let [i, val] of drumSounds.entries()) {
     newDrumSounds.push({note: drumSounds[i].note, data: []});
     for (let j = 0, lengthJ = drumSounds[i].data.length; j < lengthJ; j++) {
       let neighborhoodSize = calculateNeighborhood(drumSounds[i].data, j);
-      let a = applyEmergentCycles(neighborhoodSize, drumSounds[i].data[j]);
+      let a = applyRA(neighborhoodSize, drumSounds[i].data[j], type);
       newDrumSounds[i].data.push(a);
     }
   }
@@ -89,21 +113,25 @@ function calculateNeighborhood(drumSoundPattern, index) {
     return drumSoundPattern[index] + drumSoundPattern[index-1] + drumSoundPattern[index+1]
   }
 }
- // (0) Note, (1) Rest , (2) Rest ,(3) Unchanged.
- // Make this abstract so that you can pass the type and it'll figure out the rules.
-function applyEmergentCycles(neighborhoodSize, noteValue) {
-  if (neighborhoodSize == 0) {
-    return 1;
-  } else if (neighborhoodSize == 1) {
-    return 0;
-  } else if (neighborhoodSize == 2) {
-    return 0;
-  } else {
-    return noteValue;
+// (0) Note, (1) Rest , (2) Rest ,(3) Unchanged.
+// Make this abstract so that you can pass the type and it'll figure out the rules.
+function applyRA(neighborhoodSize, noteValue, raType) {
+  switch (raTypes[raType][neighborhoodSize]) {
+    case N:
+      return _N(noteValue);
+    case R:
+      return _R(noteValue);
+    case U:
+      return _U(noteValue);
+    case F:
+      return _F(noteValue);
+    case RF:
+      return _RF(noteValue);
+    default:
+      return _U(noteValue);
   }
+ }
 
-
-}
 /**
  * Function returning the index of an object with a specific param value within an array.
  */

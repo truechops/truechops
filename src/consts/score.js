@@ -1,3 +1,7 @@
+import {
+  RHYTHMIC_INVERSION,
+} from "./raTypes";
+
 export const NON_ACCENT_VELOCITY = 0.5;
 export const ACCENT_VELOCITY = 1.0;
 export const GRACE_VELOCITY = 0.1;
@@ -93,7 +97,7 @@ export const NOTE_HIGHLIGHT_COLOR = '#00FF00';
 
 export const DEFAULT_MUTATION_NUM_REPEATS = 1;
 export const DEFAULT_MUTATION = {
-  type: 'ra-emergent-cycles',
+  type: 'RHYTHMIC_INVERSION',
   context: 'All',
   grid: 16,
   config: {
