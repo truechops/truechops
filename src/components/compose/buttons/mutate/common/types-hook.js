@@ -2,12 +2,26 @@ import { useState } from "react";
 import { FormControl, FormHelperText, Select } from "@material-ui/core";
 import { useSelector, useDispatch } from 'react-redux';
 import { scoreActions } from '../../../../../store/score';
+import {
+  DELAYED_STABILITY,
+  RHYTHMIC_INVERSION,
+  DENSITY_THINNING,
+  EVOLVING_THINNING,
+  EMERGENT_CYCLES,
+  PROPABILISTIC_TRANSITIONS,
+  RHYTHMIC_PHASING} from "../../../../../consts/raTypes";
 
 export default function useType() {
   const type = useSelector(state => state.score.present.mutations[0].type);
     const dispatch = useDispatch();
 
-  let options = ["swap", "shuffle", "ra-emergent-cycles"].map((type) => (
+  let options = [DELAYED_STABILITY,
+    RHYTHMIC_INVERSION,
+    DENSITY_THINNING,
+    EVOLVING_THINNING,
+    EMERGENT_CYCLES,
+    PROPABILISTIC_TRANSITIONS,
+    RHYTHMIC_PHASING, "swap", "shuffle"].map((type) => (
     <option key={Math.random().toString()} value={type}>
       {type}
     </option>

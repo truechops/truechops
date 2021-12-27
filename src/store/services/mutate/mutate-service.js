@@ -18,7 +18,15 @@ import {
 } from "../../../helpers/score";
 import swap from "./types/swap";
 import shuffle from './types/shuffle';
-import raEmergentCycles from './types/raEmergentCycles';
+import cellularAutomata from './types/cellularAutomata';
+import {
+  DELAYED_STABILITY,
+  RHYTHMIC_INVERSION,
+  DENSITY_THINNING,
+  EVOLVING_THINNING,
+  EMERGENT_CYCLES,
+  PROPABILISTIC_TRANSITIONS,
+  RHYTHMIC_PHASING} from "../../../consts/raTypes";
 
 /**
  *
@@ -68,7 +76,7 @@ export function mutate(score, mutations, numRepeats, scoreVoices) {
 
     let measureNoteArrays = voiceNoteArrays[context];
     for (let measureNotes of measureNoteArrays) {
-      _mutate(mutateFn, config, measureNotes, grid);
+      _mutate(mutateFn, config, measureNotes, grid, type);
     }
   }
 
@@ -79,16 +87,16 @@ export function mutate(score, mutations, numRepeats, scoreVoices) {
     let mutateFn = getMutateFn(type);
 
     mergedVoiceNoteArray.forEach((measureNotes) => {
-      _mutate(mutateFn, config, measureNotes, grid);
+      _mutate(mutateFn, config, measureNotes, grid, type);
     });
   }
 
   updateScore(score, mergedVoiceNoteArray, tupletLengths, measureBoundaries);
 }
 
-function _mutate(mutateFn, config, notes, grid) {
+function _mutate(mutateFn, config, notes, grid, type) {
   const modifiableNotes = getModifiableNotes(notes, grid);
-  mutateFn(config, modifiableNotes);
+  mutateFn(config, modifiableNotes, type);
 
   let gridSpacing = notes.length / modifiableNotes.length;
   for (let i = 0; i < modifiableNotes.length; i++) {
@@ -102,9 +110,22 @@ function getMutateFn(type) {
     mutateFn = swap;
   } else if(type === "shuffle") {
     mutateFn = shuffle;
-  } else if(type === "ra-emergent-cycles") {
-    mutateFn = raEmergentCycles;
+  } else if(type === DELAYED_STABILITY) {
+    mutateFn = cellularAutomata;
+  } else if(type === RHYTHMIC_INVERSION) {
+    mutateFn = cellularAutomata;
+  } else if(type === DENSITY_THINNING) {
+    mutateFn = cellularAutomata;
+  } else if(type === EVOLVING_THINNING) {
+    mutateFn = cellularAutomata;
+  } else if(type === EMERGENT_CYCLES) {
+    mutateFn = cellularAutomata;
+  } else if(type === PROPABILISTIC_TRANSITIONS) {
+    mutateFn = cellularAutomata;
+  } else if(type === RHYTHMIC_PHASING) {
+    mutateFn = cellularAutomata;
   }
+
   return mutateFn;
 }
 
