@@ -27,19 +27,19 @@ export default function cellularAutomata(config, notes, type) {
   // Massage input. Convert Notes to single drum sound notes.
   // NOTE: All automata will normalize this input,
   // so most like a generic service could hold it.
-  let drumSounds = [];
+  let originalGroove = [];
   for (let i = 0, lengthI = notes.length; i < lengthI; i++) {
     let currentNote = notes[i];
     if(currentNote != null) {
       for (let j = 0, lengthJ = currentNote.notes.length; j < lengthJ; j++) {
         let drumsoundOnNote = notes[i].notes[j];
-        let noteIndex = findWithAttr(drumSounds, "note", drumsoundOnNote);
+        let noteIndex = findWithAttr(originalGroove, "note", drumsoundOnNote);
         if( noteIndex == -1) {
           let initialRhythmicScheme = new Array(notes.length).fill(0);
           initialRhythmicScheme[i]=1;
-          drumSounds.push({note: drumsoundOnNote, data: initialRhythmicScheme});
+          originalGroove.push({note: drumsoundOnNote, data: initialRhythmicScheme});
         } else {
-          drumSounds[noteIndex].data[i]=1;
+          originalGroove[noteIndex].data[i]=1;
         }
       }
     }
@@ -47,14 +47,36 @@ export default function cellularAutomata(config, notes, type) {
  // Create neighnooring notes. That could fx be hihat, ride cymbal. If all of them are absent, consider adding one(randomly?)
  // Run emergent Cycles til a point you find something slightly similar.
  // Todo similarity function.
+  let generatedGroove = ra(originalGroove, type);
+  let similiarity = calculateSimilarity(originalGroove, generatedGroove);
+  console.log(originalGroove);
+  console.log(generatedGroove);
+  console.log(similiarity);
+  let cnt = 0;
+  while (similiarity > 10 && cnt < 1000) {
+    cnt +=1;
+    generatedGroove = ra(generatedGroove, type);
+    similiarity = calculateSimilarity(originalGroove, generatedGroove);
+    console.log("Similarity" + similiarity);
+  }
 
-  const loop0 = ra(drumSounds, type);
-  if (loop0.length > 0) {
-    let newNotes =  convertArrayToNotes(loop0);
+  if (generatedGroove.length > 0) {
+    let newNotes =  convertArrayToNotes(generatedGroove);
     for (let i = 0; i < newNotes.length; i++) {
       notes.splice(i,1, newNotes[i]);
     }
   }
+}
+
+function calculateSimilarity(originalGroove, generatedGroove) {
+  let variation = 0;
+  for (let i = 0; i < originalGroove.length; i++) {
+    let noteIndex = findWithAttr(generatedGroove, 'note', originalGroove[i].note);
+    for (let j = 0; j < generatedGroove[noteIndex].data.length; j++) {
+      variation += Math.abs(generatedGroove[noteIndex].data[j] - originalGroove[i].data[j]);
+    }
+  }
+  return variation;
 }
 
 function convertArrayToNotes(loop) {
@@ -86,20 +108,20 @@ function initializeNotes() {
  * @param array<objects> notes
  *  An array of notes objects.
  *
- * @param array drumSounds
+ * @param array originalGroove
  *   It contains an array of drum sounds of the same length.
  **/
-function ra(drumSounds, type) {
-  const newDrumSounds = [];
-  for (let [i, val] of drumSounds.entries()) {
-    newDrumSounds.push({note: drumSounds[i].note, data: []});
-    for (let j = 0, lengthJ = drumSounds[i].data.length; j < lengthJ; j++) {
-      let neighborhoodSize = calculateNeighborhood(drumSounds[i].data, j);
-      let a = applyRA(neighborhoodSize, drumSounds[i].data[j], type);
-      newDrumSounds[i].data.push(a);
+function ra(originalGroove, type) {
+  const newGroove = [];
+  for (let [i, val] of originalGroove.entries()) {
+    newGroove.push({note: originalGroove[i].note, data: []});
+    for (let j = 0, lengthJ = originalGroove[i].data.length; j < lengthJ; j++) {
+      let neighborhoodSize = calculateNeighborhood(originalGroove[i].data, j);
+      let a = applyRA(neighborhoodSize, originalGroove[i].data[j], type);
+      newGroove[i].data.push(a);
     }
   }
-  return newDrumSounds;
+  return newGroove;
 }
 
 function calculateNeighborhood(drumSoundPattern, index) {
