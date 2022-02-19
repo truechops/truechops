@@ -173,6 +173,7 @@ export default function useComposeButtons(
       onClick: modifyNoteHandler.bind(null, "thirtysecond", false),
       viewBox: "0 0 28.43 50",
       component: ThirtysecondNoteIcon,
+      disabled: dotSelected
     },
   ].map((props) => (
     <SvgButton
@@ -180,6 +181,7 @@ export default function useComposeButtons(
       onClick={props.onClick}
       viewBox={props.viewBox}
       component={props.component}
+      disabled={props.disabled}
     />
   ));
 
@@ -213,6 +215,7 @@ export default function useComposeButtons(
       onClick: modifyNoteHandler.bind(null, "thirtysecond", true),
       viewBox: "0 0 25.82 50",
       component: ThirtysecondNoteRestIcon,
+      disabled: dotSelected
     },
   ].map((props) => (
     <SvgButton
@@ -220,6 +223,7 @@ export default function useComposeButtons(
       onClick={props.onClick}
       viewBox={props.viewBox}
       component={props.component}
+      disabled={props.disabled}
     />
   ));
 

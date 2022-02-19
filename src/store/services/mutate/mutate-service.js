@@ -18,6 +18,7 @@ import {
 } from "../../../helpers/score";
 import swap from "./types/swap";
 import shuffle from './types/shuffle';
+import reverse from './types/reverse';
 import cellularAutomata from './types/cellularAutomata';
 import {
   DELAYED_STABILITY,
@@ -110,6 +111,8 @@ function getMutateFn(type) {
     mutateFn = swap;
   } else if(type === "shuffle") {
     mutateFn = shuffle;
+  } else if(type === "reverse") {
+    mutateFn = reverse;
   } else if(type === DELAYED_STABILITY) {
     mutateFn = cellularAutomata;
   } else if(type === RHYTHMIC_INVERSION) {
