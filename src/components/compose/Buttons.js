@@ -127,35 +127,6 @@ export function Buttons(props) {
 
   return (
     <>
-      <Tabs
-        value={selectedTab}
-        onChange={onTabSelected}
-        aria-label="simple tabs example"
-        classes={{ root: classes.tabs, scroller: classes.scroller }}
-        variant={"scrollable"}
-        scrollButtons={"auto"}
-      >
-        <Tab
-          key={"compose-button-tabs-measure"}
-          label="Measure"
-          {...a11yProps(0)}
-        />
-        <Tab
-          key={"compose-button-tabs-notes"}
-          label="Notes"
-          {...a11yProps(1)}
-        />
-        <Tab
-          key={"compose-button-tabs-ornaments"}
-          label="Ornaments"
-          {...a11yProps(2)}
-        />
-        <Tab
-          key={"compose-button-tabs-mods"}
-          label="Mutate"
-          {...a11yProps(3)}
-        />
-      </Tabs>
       <div id="composeButtonsTabPanel" style={{ margin: "auto" }}>
         <TabPanel value={selectedTab} index={0}>
           <ButtonsRow>{measureButtons}</ButtonsRow>
@@ -237,6 +208,35 @@ export function Buttons(props) {
           <MutateButtons />
         </TabPanel>
       </div>
+      <Tabs
+        value={selectedTab}
+        onChange={onTabSelected}
+        aria-label="simple tabs example"
+        classes={{ root: classes.tabs, scroller: classes.scroller }}
+        variant={"scrollable"}
+        scrollButtons={"auto"}
+      >
+        <Tab
+          key={"compose-button-tabs-measure"}
+          label="Measure"
+          {...a11yProps(0)}
+        />
+        <Tab
+          key={"compose-button-tabs-notes"}
+          label="Notes"
+          {...a11yProps(1)}
+        />
+        <Tab
+          key={"compose-button-tabs-ornaments"}
+          label="Ornaments"
+          {...a11yProps(2)}
+        />
+        <Tab
+          key={"compose-button-tabs-mods"}
+          label="Mutate"
+          {...a11yProps(3)}
+        />
+      </Tabs>
     </>
   );
 }

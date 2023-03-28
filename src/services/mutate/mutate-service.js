@@ -8,14 +8,14 @@ import {
   vfDurationToTcDuration,
   NON_ACCENT_VELOCITY,
   timeSigs
-} from "../../../consts/score";
+} from "../../consts/score";
 
 import {
   getVFDurations,
   getNotesLength,
   getTupletLengths,
   getTCDurationSingle,
-} from "../../../helpers/score";
+} from "../../helpers/score";
 import swap from "./types/swap";
 import shuffle from './types/shuffle';
 import reverse from './types/reverse';
@@ -27,7 +27,7 @@ import {
   EVOLVING_THINNING,
   EMERGENT_CYCLES,
   PROPABILISTIC_TRANSITIONS,
-  RHYTHMIC_PHASING} from "../../../consts/raTypes";
+  RHYTHMIC_PHASING} from "../../consts/raTypes";
 
 /**
  *
@@ -60,7 +60,6 @@ export function mutate(score, mutations, numRepeats, scoreVoices) {
   let measureBoundaries = getMeasureBoundaries(score);
 
   let mutateAllConfig = null;
-
   mutations = mutations.filter((modifier) => {
     if (modifier.context === "All") {
       mutateAllConfig = _.cloneDeep(modifier);
@@ -74,7 +73,6 @@ export function mutate(score, mutations, numRepeats, scoreVoices) {
     const { context, type, config, grid } = mutation;
 
     let mutateFn = getMutateFn(type);
-
     let measureNoteArrays = voiceNoteArrays[context];
     for (let measureNotes of measureNoteArrays) {
       _mutate(mutateFn, config, measureNotes, grid, type);
@@ -221,6 +219,7 @@ function getMeasureBoundaries(score) {
 }
 
 function convertToVoiceNoteArrays(score, numRepeats, scoreVoices) {
+  console.log(`score: ${JSON.stringify(score)}, numRepeats: ${numRepeats}, scoreVoices: ${JSON.stringify(scoreVoices)}`)
   let voiceNoteArrays = {};
 
   let currentMeasures = _.cloneDeep(score.measures);

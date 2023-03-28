@@ -11,17 +11,17 @@ import AppBar from "@material-ui/core/AppBar";
 import Toolbar from "@material-ui/core/Toolbar";
 import IconButton from "@material-ui/core/IconButton";
 import ErrorBoundary from "../error/ErrorBoundary";
+import { FaDrum } from "react-icons/fa";
+
+import Tabs from "@material-ui/core/Tabs";
+import Tab from "@material-ui/core/Tab";
 
 import dynamic from "next/dynamic";
 
 import { GiHamburgerMenu } from "react-icons/gi";
 import { FiSettings } from "react-icons/fi";
 import { CircularProgress, Typography } from "@material-ui/core";
-
-// const searchClient = algoliasearch(
-//   "7VD37OIZBX",
-//   "075e3727b35d845338b30a28b5a54562"
-// );
+import { findLastIndex } from "lodash";
 
 const useStyles = makeStyles((theme) => ({
   appBar: {
@@ -39,10 +39,12 @@ const useStyles = makeStyles((theme) => ({
   sidebar: {
     ...theme.sidebar,
   },
+  pages: {
+    display: 'flex',
+    justifyContent: 'center'
+  }
 }));
 
-//Each page has its own top toolbar. Render it dynamically based on which page you are on.
-const DynamicComposeTopToolbar = dynamic(() => import("../compose/TopToolbar"));
 const DynamicComposeSidebar = dynamic(() => import("../compose/Sidebar"));
 
 export default function Header() {
@@ -54,16 +56,6 @@ export default function Header() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const { setNavOpen } = appActions;
   const dispatch = useDispatch();
-
-  const getToolbarContent = () => {
-    if (router.pathname === "/") {
-      return (
-        <ErrorBoundary component="compose toolbar">
-          <DynamicComposeTopToolbar />
-        </ErrorBoundary>
-      );
-    }
-  };
 
   const getSettingsContent = () => {
     if (router.pathname === "/") {
@@ -79,6 +71,13 @@ export default function Header() {
       );
     }
   };
+
+  function a11yProps(index) {
+    return {
+      id: `simple-tab-${index}`,
+      "aria-controls": `simple-tabpanel-${index}`,
+    };
+  }
 
   const getSidebarContent = () => {
     let content = null;
@@ -109,7 +108,9 @@ export default function Header() {
     <>
       <CssBaseline />
       <AppBar position="fixed">
-        <Toolbar>
+        <Toolbar style={{
+          justifyContent: 'space-between'
+        }}>
           
           <IconButton
             color="inherit"
@@ -119,7 +120,6 @@ export default function Header() {
           >
             <GiHamburgerMenu />
           </IconButton>
-          {getToolbarContent()}
           {getTitle()}
           <Drawer
             anchor="right"

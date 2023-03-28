@@ -5,7 +5,7 @@ import {
   EVOLVING_THINNING,
   EMERGENT_CYCLES,
   PROPABILISTIC_TRANSITIONS,
-  RHYTHMIC_PHASING} from "../../../../consts/raTypes";
+  RHYTHMIC_PHASING} from "../../../consts/raTypes";
 import {
   N,
   R,
@@ -13,7 +13,7 @@ import {
   U,
   RF,
   raTypes
-} from "../../../../consts/raRules";
+} from "../../../consts/raRules";
 import {
   _N,
   _R,

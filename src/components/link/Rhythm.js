@@ -22,7 +22,7 @@ export default function RhythmLink({ linkId }) {
   if (linkRhythm) {
     const { score, name, tempo, mutations } = scrubTypename(linkRhythm.getLinkRhythmById);
      dispatch(scoreActions.updateScore({ score, name, tempo, mutations }));
-     router.push('/');
+     router.push({pathname: "/", query: {doDynamic: true}});
   } else if(error) {
     router.push('/');
   }

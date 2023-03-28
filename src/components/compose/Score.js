@@ -7,7 +7,12 @@ import Dialog from '../ui/Dialog';
 import repeatHook from './buttons/mutate/common/repeat-hook';
 import { browserName } from 'react-device-detect';
 
+import { useRouter } from "next/router";
+
 export default function Score(props) {
+  const router = useRouter();
+  const {doDynamic} = router.query;
+  console.log(`doDynamic: ${doDynamic}`);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const dispatch = useDispatch();
   const selectedNoteIndex = useSelector(
@@ -15,7 +20,7 @@ export default function Score(props) {
   );
   const repeat = useSelector((state) => state.score.present.repeat);
   const isDynamic = useSelector((state) => state.score.present.dynamic);
-  const score = useSelector((state) => state.score.present.score);
+  console.log(`score: ${JSON.stringify(props.score)}`);
   const name = useSelector(state => state.score.present.name);
   const [promptedForRepeat, setPromptedForRepeat] = useState(false);
   const [repeatDialogOpen, setRepeatDialogOpen] = useState(false);
@@ -55,16 +60,17 @@ export default function Score(props) {
   );
 
   useEffect(() => {
-    const { renderer, context } = initialize();
-    drawScore(
-      renderer,
-      context,
-      score,
-      selectedNoteIndex,
-      noteSelectedCallback,
-      windowWidth,
-      repeat
-    );
+    const { renderer, context } = initialize(props.id, 1);
+      drawScore(
+        renderer,
+        context,
+        props.score,
+        selectedNoteIndex,
+        noteSelectedCallback,
+        windowWidth,
+        repeat,
+        1
+      );
 
     dispatch(appActions.setPageLoaded());
     const scoreElementRoot = document.getElementById('score-root');
@@ -77,7 +83,7 @@ export default function Score(props) {
       }
   }, [
     windowWidth,
-    score,
+    props.score,
     noteSelectedCallback,
     selectedNoteIndex,
     repeat,
@@ -98,13 +104,14 @@ export default function Score(props) {
 
   return (
     <>
+    {/* This wrapper and the key ensure that content isn't duplicated when the screen resizes*/}
     <div className="vexflow-wrapper">
       <h2 style={{textAlign: 'center', margin: 0}}>{name}</h2>
-      <div id="vexflow" key={Math.random().toString()} />
+      <div className={props.vexflowClass} id="vexflow" key={Math.random().toString()} />
     </div>
 
     <Dialog
-    isOpen={repeatDialogOpen && !dontUseSafariDialogShown}
+    isOpen={repeatDialogOpen && !dontUseSafariDialogShown && doDynamic}
     message={numRepeatsElement}
     onOk={() => {
       setRepeatDialogOpen(false)

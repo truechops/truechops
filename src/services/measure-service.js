@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { getEmptyMeasure } from "../../helpers/score";
+import { getEmptyMeasure } from "../helpers/score";
 
 export function addMeasure(state, action) {
   const isRight = action.payload;

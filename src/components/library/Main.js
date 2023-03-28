@@ -86,12 +86,14 @@ export default function Main() {
     dispatch(
       scoreActions.updateScore({ score: scrubbedScore, name, tempo, mutations })
     );
-    router.push("/");
+    router.push({pathname: "/", query: {doDynamic: true}});
   }
 
   //The rhythms coming back from mongodb are in ascending order. This makes sure the saved
   //rhythms are in descending order.
   userRhythms.sort(() => -1);
+
+  console.log(`userRhythms: ${JSON.stringify(userRhythms)}`);
 
   dispatch(appActions.setPageLoaded());
 

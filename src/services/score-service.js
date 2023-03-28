@@ -1,7 +1,7 @@
-import { getPowersOf2, getAdditionalDotDuration } from "../../helpers/math";
-import { getTCDurationSingle, getRestsFromTCDuration } from "../../helpers/score";
+import { getPowersOf2, getAdditionalDotDuration } from "../helpers/math";
+import { getTCDurationSingle, getRestsFromTCDuration } from "../helpers/score";
 import _ from "lodash";
-import { NON_ACCENT_VELOCITY, tcDurationToVfDuration } from "../../consts/score";
+import { NON_ACCENT_VELOCITY, tcDurationToVfDuration } from "../consts/score";
 
 export function modifyNote(state, newNoteValueIn, isRest, selectedNote) {
   let { measureIndex, partIndex, voiceIndex, noteIndex } = selectedNote;

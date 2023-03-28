@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { smallSinglePart as defaultScore } from "../components/compose/sample-score";
+import { getScoreVoices as getScoreVoicesUtil } from "../utils/score";
 //import defaultScore from '../../data/default-score';
 //import { smallMultiPart as defaultScore } from "../components/compose/sample-score";
 import {
@@ -7,11 +8,11 @@ import {
   toggleOrnament,
   setRepeat,
   incDecSelectedNote,
-} from "./services/score-service";
-import { mutate } from "./services/mutate/mutate-service";
+} from "../services/score-service";
+import { mutate } from "../services/mutate/mutate-service";
 import { addMeasure as addMeasureService, 
          deleteMeasure as deleteMeasureService,
-        updateTimeSig as updateTimeSigService } from './services/measure-service';
+        updateTimeSig as updateTimeSigService } from '../services/measure-service';
 import { getEmptyMeasure } from "../helpers/score";
 import _ from "lodash";
 import { createSelector } from "reselect";
@@ -130,18 +131,20 @@ const scoreSlice = createSlice({
       state.repeat = {};
       state.selectedPartIndex = 0;
       state.selectedNoteIndex = null;
-
-      if (mutations && mutations.length > 0) {
-        state.dynamic = true;
-      }
+      state.dynamic = mutations && mutations.length > 0;
 
       state.mutations = [];
       if (mutations && mutations.length > 0) {
         mutations.forEach((mutation) => {
-          const { type, context, grid, config: configString } = mutation;
-          const config = JSON.parse(configString);
+          const { type, context, grid, config } = mutation;
 
-          state.mutations.push({ type, context, grid, config });
+          //JARED_TODO: change this
+          let _config = config;
+          if(typeof config === 'string') {
+            _config = JSON.parse(config);
+          }
+
+          state.mutations.push({ type, context, grid, config: _config });
         });
       } else {
         state.mutations.push(DEFAULT_MUTATION);
@@ -436,27 +439,7 @@ export const getSelectedNote = createSelector(
 export const getScoreVoices = createSelector(
   [(state) => state.score],
   (score) => {
-    let scoreVoices = new Set();
-    const instrument = Object.keys(score.parts)[0];
-    score.measures.forEach((measure) => {
-      measure.parts.forEach((part) => {
-        part.voices.forEach((voice) => {
-          voice.notes.forEach((note) => {
-            note.notes.forEach((n) => {
-              scoreVoices.add(n);
-            });
-          });
-        });
-      });
-    });
-
-    //Returning a 'map' so that the client can access both the key and the associated instrument name
-    let keysToVoices = {};
-    scoreVoices.forEach((key) => {
-      keysToVoices[key] = INSTRUMENT_NOTE_TO_VOICE_MAP[instrument][key];
-    });
-
-    return keysToVoices;
+    return getScoreVoicesUtil(score)
   }
 );
 

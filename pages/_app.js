@@ -4,6 +4,7 @@ import { ThemeProvider } from "@material-ui/core/styles";
 import CssBaseline from "@material-ui/core/CssBaseline";
 import Theme from "../src/components/ui/Theme";
 import HeaderToolbar from "../src/components/layout/HeaderToolbar";
+import Footer from "../src/components/layout/Footer";
 import Navigation from "../src/components/layout/Navigation";
 import { Provider } from "react-redux";
 import store from "../src/store/index";
@@ -45,6 +46,7 @@ export default function MyApp(props) {
               <HeaderToolbar />
               <Navigation />
               <Component {...pageProps} />
+              <Footer />
             </ThemeProvider>
           </ToneContextProvider>
         </RealmApolloProvider>

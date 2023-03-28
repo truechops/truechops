@@ -17,24 +17,21 @@ const BASE_STAVE_SPACE = 125;
 let STAVE_SPACE = BASE_STAVE_SPACE;
 const PADDING = 50;
 const FORMAT_PADDING = 13;
-const MIN_BAR_SIZE = 225;
-const SCORE_MIN_WIDTH = 600;
+const MIN_BAR_SIZE = 100;
+const SCORE_MIN_WIDTH = 100;
 
-export function initialize() {
+export function initialize(id) {
   // Create an SVG renderer and attach it to the DIV element named "vf".
   const renderer = new VF.Renderer(
-    document.getElementById("vexflow"),
+    document.getElementById(id),
     VF.Renderer.Backends.SVG
   );
   // Configure the rendering context.
 
   const context = renderer.getContext();
   context.setFont("Arial", 10, "").setBackgroundFillStyle("#eed");
-
   return { renderer, context };
 }
-
-const scale = 1;
 
 export function drawScore(
   renderer,
@@ -42,16 +39,18 @@ export function drawScore(
   score,
   selectedNoteIndex,
   noteSelectedCallback,
-  windowWidth,
-  repeat
+  svgWidthProposed,
+  repeat,
+  scale
 ) {
+  
   let { measures } = score;
   let systemWidth = 0;
   const measurePartsArray = getMeasureData(measures, score.parts);
   let measureIndex = 0;
   STAVE_SPACE = BASE_STAVE_SPACE * measurePartsArray[0].length;
 
-  const svgWidth = Math.max(windowWidth, SCORE_MIN_WIDTH) / scale;
+  const svgWidth = Math.max(svgWidthProposed, SCORE_MIN_WIDTH);
 
   let barRenderData = [];
   let width = measurePartsArray[0].length > 1 ? 100 : 0;
@@ -115,6 +114,7 @@ export function drawScore(
     svgWidth,
     STAVE_SPACE * (row + 1) /** scale * scaleWidthMultipler*/
   );
+
   context.scale(scale, scale);
 }
 
@@ -223,6 +223,7 @@ function renderStaves(
   );
 
   let x = PADDING / 2;
+  console.log(`renderStaves: ${barRenderData.length}`);
   const numParts = barRenderData[0].parts.length;
 
   if (row === 0 && numParts > 1) {

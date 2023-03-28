@@ -12,7 +12,7 @@ import ListItem from "@material-ui/core/ListItem";
 import ListItemText from "@material-ui/core/ListItemText";
 import Dialog from "../ui/Dialog";
 
-import { FaDrum, FaUsers, FaTools, FaSearch, FaUserTie } from "react-icons/fa";
+import { FaDrum} from "react-icons/fa";
 import { ImBooks } from "react-icons/im";
 
 export default function Navigation() {
@@ -47,7 +47,7 @@ export default function Navigation() {
     router.push("/");
   };
 
-  function navigateToMyLibary() {
+  function navigateToMyLibrary() {
     if (!currentUser) {
       dispatch(setNavOpen(false));
       setMustBeLoggedInModalOpen(true);
@@ -79,9 +79,9 @@ export default function Navigation() {
             <FaDrum className={classes.drawerIcon} size={iconSize} />
             <ListItemText primary="compose" />
           </ListItem>
-          <ListItem button key="my library" onClick={navigateToMyLibary}>
+          <ListItem button key="my library" onClick={navigateToMyLibrary}>
             <ImBooks className={classes.drawerIcon} size={iconSize} />
-            <ListItemText primary="my libary" />
+            <ListItemText primary="my library" />
           </ListItem>
           {/* <ListItem
           onClick={navigationHandler.bind(null, "/discover")}

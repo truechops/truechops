@@ -6,7 +6,7 @@ const initialState = {
         x: 0,
         y: 0
     },
-    loaded: false
+    loaded: false,
 }
 
 const appSlice = createSlice({
