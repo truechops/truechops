@@ -19,7 +19,7 @@ import { getScoreVoices } from "../../utils/score";
 import { FaForward, FaDrum } from "react-icons/fa";
 import IconButton from "@material-ui/core/IconButton";
 
-export default function Main({rhythms}) {
+export default function Main({rhythms, getSvgConfig, getHeight}) {
   const [svgConfig, setSvgConfig] = useState(getSvgConfig(window.innerWidth));
   const repeat = useSelector((state) => state.score.present.repeat);
   const router = useRouter();
@@ -30,12 +30,12 @@ export default function Main({rhythms}) {
     dispatch(
       scoreActions.updateScore({ score: scrubbedScore, name, tempo, mutations })
     );
-    router.push({pathname: "/", query: {doDynamic: true}});
+    router.push("/");
   }
 
   const useStyles = makeStyles((theme) => ({
     root: {
-      height: window.innerHeight - (2 * theme.mixins.toolbar.minHeight)
+      height: getHeight(window)
     },
     listItem: {
       cursor: "pointer",
@@ -61,44 +61,33 @@ export default function Main({rhythms}) {
       score,
       0,
       () => {},
-      svgConfig.width,
+      svgConfig,
 
       //JARED_TODO: what to do about this 'repeat'?
-      repeat,
-      svgConfig.scale
+      repeat
     );
   }
 
   useEffect(async () => {
     for (let rhythm of rhythms) {
-      const { renderer, context } = initialize(`rhythm-${rhythm.name}`);
+      const { renderer, context } = initialize(`rhythm-${rhythm.id}`);
       drawScore(
         renderer,
         context,
         rhythm.score,
         0,
         () => {},
-        svgConfig.width,
+        svgConfig,
         repeat,
-        svgConfig.scale
       );
     }
 
     dispatch(appActions.setPageLoaded());
-  }, [svgConfig]);
-
-  function getSvgConfig(windowWidth) {
-    if(windowWidth < 900) {
-      return {width: 200, scale: 0.8};
-    } else {
-       return {width: 275, scale: 1};
-    }
-    // return {width: 250, scale: 1}
-  }
+  }, [svgConfig, rhythms]);
 
   const updateDimensions = useCallback(() => {
     setSvgConfig(getSvgConfig(window.innerWidth));
-  }, []);
+  }, [getSvgConfig]);
 
   window.addEventListener("resize", updateDimensions);
 //JARED_TODO: why isn't 32nd mutate working?
@@ -129,19 +118,15 @@ export default function Main({rhythms}) {
                     rhythm.tempo ?? DEFAULT_TEMPO,
                     rhythm.mutations
                   )}>
-                   <div id={`rhythm-${rhythm.name}`} key={Math.random().toString()} />
+                   <div id={`rhythm-${rhythm.id}`} key={Math.random().toString()} />
                 </Paper>
+                    
                   <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
-                  <IconButton onClick={practiceRhythm.bind(
-                    null,
-                    rhythm.score,
-                    rhythm.name,
-                    rhythm.tempo ?? DEFAULT_TEMPO,
-                    rhythm.mutations
-                  )}><FaDrum/></IconButton>
-                    {/* <button onClick={redrawScore.bind(null, `rhythm-${rhythm.name}`, rhythm)}>regenerate</button> */}
-                    <IconButton onClick={redrawScore.bind(null, `rhythm-${rhythm.name}`, rhythm)}><FaForward/></IconButton>
-                  </div>
+                      {rhythm.name}
+                      {rhythm.mutations.length > 0 && <IconButton onClick={redrawScore.bind(null, `rhythm-${rhythm.id}`, rhythm)}>
+                        <FaForward/>
+                      </IconButton>}
+                    </div>
               </Box>
           ))}
           </Box>

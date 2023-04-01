@@ -11,22 +11,21 @@ import { useRouter } from "next/router";
 
 export default function Score(props) {
   const router = useRouter();
-  const {doDynamic} = router.query;
-  console.log(`doDynamic: ${doDynamic}`);
+
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const dispatch = useDispatch();
   const selectedNoteIndex = useSelector(
     (state) => state.score.present.selectedNoteIndex
   );
+
   const repeat = useSelector((state) => state.score.present.repeat);
   const isDynamic = useSelector((state) => state.score.present.dynamic);
-  console.log(`score: ${JSON.stringify(props.score)}`);
   const name = useSelector(state => state.score.present.name);
   const [promptedForRepeat, setPromptedForRepeat] = useState(false);
   const [repeatDialogOpen, setRepeatDialogOpen] = useState(false);
   const { formControl: repeatFormControl, numRepeats } = repeatHook();
   
-  const [dontUseSafariDialogShown, setDontUseSafariDialogShown] = useState(false);
+  const dontUseSafariShown = useSelector(state => state.app.dontUseSafariShown);
   const scrollAmount = useSelector(state => state.score.present.scrollAmount);
 
   const updateDimensions = useCallback(() => {
@@ -34,10 +33,10 @@ export default function Score(props) {
   }, []);
 
   useEffect(() => {
-    if(browserName.indexOf('Safari') >= 0) {
-      setDontUseSafariDialogShown(true);
+    if(browserName.indexOf('Safari') >= 0 && dontUseSafariShown == "init") {
+      dispatch(appActions.setDontUseSafariShown("true"));
     }
-  }, []);
+  }, [dontUseSafariShown]);
 
   window.addEventListener("resize", updateDimensions);
 
@@ -67,16 +66,14 @@ export default function Score(props) {
         props.score,
         selectedNoteIndex,
         noteSelectedCallback,
-        windowWidth,
-        repeat,
-        1
+        { width: windowWidth, scale: 1 },
+        repeat
       );
 
     dispatch(appActions.setPageLoaded());
-    const scoreElementRoot = document.getElementById('score-root');
+      const scoreElementRoot = document.getElementById('score-root');
      scoreElementRoot.scrollTop = scrollAmount.top;
      scoreElementRoot.scrollLeft = scrollAmount.left;
-
       if(!promptedForRepeat && isDynamic) {
         setRepeatDialogOpen(true);
         setPromptedForRepeat(true);
@@ -93,7 +90,7 @@ export default function Score(props) {
     scrollAmount,
     promptedForRepeat,
     isDynamic,
-    dontUseSafariDialogShown,
+    dontUseSafariShown,
     numRepeats
   ]);
 
@@ -111,7 +108,7 @@ export default function Score(props) {
     </div>
 
     <Dialog
-    isOpen={repeatDialogOpen && !dontUseSafariDialogShown && doDynamic}
+    isOpen={repeatDialogOpen && (dontUseSafariShown == "init" || dontUseSafariShown == "false")}
     message={numRepeatsElement}
     onOk={() => {
       setRepeatDialogOpen(false)
@@ -119,10 +116,10 @@ export default function Score(props) {
     }}/>
 
     <Dialog
-    isOpen={dontUseSafariDialogShown}
+    isOpen={dontUseSafariShown == "true"}
     message={"TrueChops does not work well with Safari. Please use another browser."}
     onOk={() => {
-      setDontUseSafariDialogShown(false)
+      dispatch(appActions.setDontUseSafariShown("false"));
     }}/>
   </>
   );

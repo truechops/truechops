@@ -39,11 +39,10 @@ export function drawScore(
   score,
   selectedNoteIndex,
   noteSelectedCallback,
-  svgWidthProposed,
+  svgConfig,
   repeat,
-  scale
 ) {
-  
+  const {width: svgWidthProposed, scale, hResize, vResize} = svgConfig;
   let { measures } = score;
   let systemWidth = 0;
   const measurePartsArray = getMeasureData(measures, score.parts);
@@ -111,8 +110,8 @@ export function drawScore(
     );
   }
   renderer.resize(
-    svgWidth,
-    STAVE_SPACE * (row + 1) /** scale * scaleWidthMultipler*/
+    svgWidth * (hResize ?? 1),
+    (STAVE_SPACE * (row + 1)) * (vResize ?? 1) /** scale * scaleWidthMultipler*/
   );
 
   context.scale(scale, scale);
@@ -223,7 +222,6 @@ function renderStaves(
   );
 
   let x = PADDING / 2;
-  console.log(`renderStaves: ${barRenderData.length}`);
   const numParts = barRenderData[0].parts.length;
 
   if (row === 0 && numParts > 1) {
@@ -236,7 +234,7 @@ function renderStaves(
     let xDiff = 0;
 
     parts.forEach((part, partIndex) => {
-      let systemWidth = width + additionalWidths[renderDataIndex];
+      let systemWidth = (width + additionalWidths[renderDataIndex]);
       const stave = new VF.Stave(
         x,
         partIndex * BASE_STAVE_SPACE + row * STAVE_SPACE,

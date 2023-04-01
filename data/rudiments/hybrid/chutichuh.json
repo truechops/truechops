@@ -1,0 +1,77 @@
+{
+  "id": 12,
+  "name": "Chutichuh",
+  "tempo": 90,
+  "score": {
+    "parts": {
+      "drumset": null,
+      "snare": { "enabled": true },
+      "tenors": null,
+      "bass": null,
+      "cymbals": null
+    },
+    "measures": [
+      {
+        "timeSig": { "num": 2, "type": 4 },
+        "parts": [
+          {
+            "instrument": "snare",
+            "voices": [
+              {
+                "notes": [
+                  {
+                    "notes": ["C5"],
+                    "ornaments": "afr",
+                    "velocity": 0.5,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": "l",
+                    "velocity": 0.5,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": "fr",
+                    "velocity": 0.5,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": "afl",
+                    "velocity": 0.5,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": "r",
+                    "velocity": 0.5,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": "fl",
+                    "velocity": 0.5,
+                    "duration": 8,
+                    "dots": null
+                  }
+                ],
+                "tuplets": [
+                  { "actual": 3, "normal": 2, "start": 0, "end": 3 },
+                  { "actual": 3, "normal": 2, "start": 3, "end": 6 }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "mutations": []
+}

@@ -46,7 +46,7 @@ export default function MyApp(props) {
               <HeaderToolbar />
               <Navigation />
               <Component {...pageProps} />
-              <Footer />
+              {/* <Footer /> */}
             </ThemeProvider>
           </ToneContextProvider>
         </RealmApolloProvider>

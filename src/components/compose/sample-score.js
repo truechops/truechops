@@ -142,6 +142,54 @@ export const smallMultiPart = {
   ],
 };
 
+export const EMPTY_SCORE = {
+  parts: {
+    drumset: {
+      enabled: true
+    }
+  },
+  measures: [
+    {
+      timeSig: {
+        num: 4,
+        type: 4,
+      },
+      parts: [
+        {
+          instrument: "drumset",
+          voices: [
+            {
+              notes: [
+                {
+                  notes: [],
+                  duration: 4,
+                  velocity: 1.0,
+                },
+                {
+                  notes: [],
+                  duration: 4,
+                  velocity: 1.0,
+                },
+                {
+                  notes: [],
+                  duration: 4,
+                  velocity: 1.0,
+                },
+                {
+                  notes: [],
+                  duration: 4,
+                  velocity: 1.0,
+                }
+              ],
+              tuplets: [],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
 export const smallSinglePart = {
   parts: {
     drumset: {

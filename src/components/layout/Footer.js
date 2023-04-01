@@ -1,3 +1,5 @@
+/**Not currently used. Kept here in case we want to move stuff back to the footer */
+
 import router, { useRouter } from "next/router";
 import { useSelector, useDispatch } from "react-redux";
 import { appActions } from "../../store/app";
@@ -26,11 +28,11 @@ export default function Footer() {
   const classes = useTabStyles();
   const router = useRouter();
   const onAreaSelected = (event, newValue) => {
-    if (newValue === 0) {
+    if (newValue === 0 && router.pathname != '/exercises') {
       router.push("/exercises");
-    } else if (newValue === 1) {
+    } else if (newValue === 1 && router.pathname != '/') {
       router.push("/");
-    } else if (newValue === 2) {
+    } else if (newValue === 2 && router.pathname != '/rudiments') {
       router.push("/rudiments");
     }
   };
@@ -63,7 +65,7 @@ export default function Footer() {
       centered
     >
       <Tab key={"footer-exercises"} label="EXERCISES" {...a11yProps(0)} />
-      <Tab key={"footer-edit"} label="EDIT" {...a11yProps(1)} />
+      <Tab key={"footer-edit"} label="SCORE" {...a11yProps(1)} />
       <Tab key={"footer-rudiments"} label="RUDIMENTS" {...a11yProps(2)} />
     </Tabs>
   );

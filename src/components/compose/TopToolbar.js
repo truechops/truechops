@@ -2,7 +2,7 @@ import { useContext, useEffect, useRef, useState, useCallback } from "react";
 import { ActionCreators } from "redux-undo";
 import IconButton from "@material-ui/core/IconButton";
 import { update as updateToneJs, setSamplers } from "../../lib/tone";
-import { useTheme } from "@material-ui/core/styles";
+import { useTheme, makeStyles } from "@material-ui/core/styles";
 import ToneContext from "../../store/tone-context";
 import { connect, useSelector, useDispatch } from "react-redux";
 import { getToneJs, scoreActions } from "../../store/score";
@@ -16,7 +16,7 @@ import { copyToClipboard } from "../../helpers/browser";
 import _ from "lodash";
 import { score } from '../../consts/score';
 
-import { FaUndo, FaRedo, FaPlay, FaStop, FaSave, FaLink } from "react-icons/fa";
+import { FaUndo, FaRedo, FaPlay, FaStop, FaSave, FaLink, FaPlus, FaTimes} from "react-icons/fa";
 import { FiCopy } from "react-icons/fi";
 import { GiMetronome } from "react-icons/gi";
 import useRhythmMutations from "../../graphql/rhythm/useRhythmMutations";
@@ -27,6 +27,10 @@ import {
   FormControlLabel,
   Switch,
 } from "@material-ui/core";
+import Drawer from "@material-ui/core/Drawer";
+import dynamic from "next/dynamic";
+
+const DynamicComposeSidebar = dynamic(() => import("./Sidebar"));
 
 export function TopToolbar(props) {
   const {
@@ -42,7 +46,9 @@ export function TopToolbar(props) {
   const toneJs = props.toneJs;
   const repeat = props.repeat;
   const startStop = props.startStop;
+  const clearScore = props.clearScore;
   const prevRepeatRef = useRef();
+  const [sheetOpen, setSheetOpen] = useState(false);
   const { addRhythm: addRhythmMutation } = useRhythmMutations();
   const { getRhythmLink } = useLinkMutations();
 
@@ -70,6 +76,30 @@ export function TopToolbar(props) {
     logInToSaveRhythmModalOpen || logInToAddLinkModalOpen;
 
   const [saveMutations, setSaveMutations] = useState(false);
+
+  const useStyles = makeStyles((theme) => ({
+    appBar: {
+      transition: theme.transitions.create(["margin", "width"], {
+        easing: theme.transitions.easing.sharp,
+        duration: theme.transitions.duration.leavingScreen,
+      }),
+    },
+    drawerHeader: {
+      display: "flex",
+      alignItems: "center",
+      padding: theme.spacing(0, 1),
+      height: theme.mixins.toolbar.minHeight,
+    },
+    sidebar: {
+      ...theme.sidebar,
+    },
+    pages: {
+      display: "flex",
+      justifyContent: "center",
+    },
+  }));
+
+  const classes = useStyles();
 
   useEffect(() => {''
     if(!window.tcEventsAdded) {
@@ -255,6 +285,9 @@ export function TopToolbar(props) {
   return (
     <>
       <div style={{ width: "auto", margin: "auto" }}>
+        <IconButton color="inherit" aria-label="parts" onClick={clearScore}>
+          <FaTimes size={iconSize} />
+        </IconButton>
         <IconButton color="inherit" aria-label="undo" onClick={props.undo}>
           <FaUndo size={iconSize} />
         </IconButton>
@@ -276,6 +309,9 @@ export function TopToolbar(props) {
         </IconButton>
         <IconButton color="inherit" aria-label="link" onClick={onAddLink}>
           <FaLink size={iconSize} />
+        </IconButton>
+        <IconButton color="inherit" aria-label="parts" onClick={() => setSheetOpen(true)}>
+          <FaPlus size={iconSize} />
         </IconButton>
       </div>
       <Dialog
@@ -306,6 +342,15 @@ export function TopToolbar(props) {
         anchorEl={metronomeAnchorEl}
         handlePopoverClose={handleMetronomePopoverClose}
       />
+      <Drawer
+            anchor="right"
+            open={sheetOpen}
+            onClose={() => setSheetOpen(false)}
+             className={classes.sidebar}
+             classes={{ paper: classes.sidebar }}
+          >
+            <DynamicComposeSidebar />
+          </Drawer>
     </>
   );
 }
@@ -323,6 +368,7 @@ const mapDispatchToProps = (dispatch) => {
     startStop: () => dispatch(scoreActions.startStop()),
     undo: () => dispatch(ActionCreators.undo()),
     redo: () => dispatch(ActionCreators.redo()),
+    clearScore: () => dispatch(scoreActions.clearScore())
   };
 };
 

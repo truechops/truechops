@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { smallSinglePart as defaultScore } from "../components/compose/sample-score";
+import { smallSinglePart as defaultScore, EMPTY_SCORE } from "../components/compose/sample-score";
 import { getScoreVoices as getScoreVoicesUtil } from "../utils/score";
 //import defaultScore from '../../data/default-score';
 //import { smallMultiPart as defaultScore } from "../components/compose/sample-score";
@@ -229,6 +229,10 @@ const scoreSlice = createSlice({
     deleteMeasure(state) {
       deleteMeasureService(state);
     },
+    clearScore(state) {
+      state.score = EMPTY_SCORE
+      state.selectedNoteIndex = null
+    },
     mutateNotes(state, action) {
       const numRepeats = action.payload;
       const mutations = state.mutations;
@@ -243,6 +247,9 @@ const scoreSlice = createSlice({
       //We need to clear this out because mutating the notes might change the number of notes in the
       //score, which could cause the note index for the selected note to be for a non-existent note.
       state.selectedNoteIndex = null;
+      state.score.mutations = [];
+      //JARED_TODO: see if there is any way to get rid of this.
+      state.dynamic = false;
     },
     updateMutateContext(state, action) {
       state.mutations[0].context = action.payload;

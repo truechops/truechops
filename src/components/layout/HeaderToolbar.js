@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import { useDispatch, useSelector } from "react-redux";
 import { appActions } from "../../store/app";
+import Dialog from "../ui/Dialog";
 
 import React from "react";
 import { makeStyles, useTheme } from "@material-ui/core/styles";
@@ -9,9 +10,10 @@ import Drawer from "@material-ui/core/Drawer";
 import CssBaseline from "@material-ui/core/CssBaseline";
 import AppBar from "@material-ui/core/AppBar";
 import Toolbar from "@material-ui/core/Toolbar";
+import Button from "@material-ui/core/Button";
 import IconButton from "@material-ui/core/IconButton";
 import ErrorBoundary from "../error/ErrorBoundary";
-import { FaDrum } from "react-icons/fa";
+import { FaDrum, FaUser } from "react-icons/fa";
 
 import Tabs from "@material-ui/core/Tabs";
 import Tab from "@material-ui/core/Tab";
@@ -30,6 +32,9 @@ const useStyles = makeStyles((theme) => ({
       duration: theme.transitions.duration.leavingScreen,
     }),
   },
+  tabs: {
+    width: '100px',
+  },
   drawerHeader: {
     display: "flex",
     alignItems: "center",
@@ -40,9 +45,9 @@ const useStyles = makeStyles((theme) => ({
     ...theme.sidebar,
   },
   pages: {
-    display: 'flex',
-    justifyContent: 'center'
-  }
+    display: "flex",
+    justifyContent: "center",
+  },
 }));
 
 const DynamicComposeSidebar = dynamic(() => import("../compose/Sidebar"));
@@ -51,26 +56,36 @@ export default function Header() {
   const classes = useStyles();
   const router = useRouter();
   const theme = useTheme();
-  const loaded = useSelector(state => state.app.loaded);
+  const loaded = useSelector((state) => state.app.loaded);
+  const currentUser = useSelector((state) => state.realm.currentUser);
 
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const { setNavOpen } = appActions;
-  const dispatch = useDispatch();
-
-  const getSettingsContent = () => {
-    if (router.pathname === "/") {
-      return (
-        <IconButton
-          color="inherit"
-          aria-label="open more information"
-          onClick={() => setSheetOpen(true)}
-          edge="end"
-        >
-          <FiSettings />
-        </IconButton>
-      );
+  const onAreaSelected = (event, newValue) => {
+    if (newValue === 0 && router.pathname != '/exercises') {
+      router.push("/exercises");
+    } else if (newValue === 1 && router.pathname != '/') {
+      router.push("/");
+    } else if (newValue === 2 && router.pathname != '/rudiments') {
+      router.push("/rudiments");
+    } else if (newValue === 3 && router.pathname != '/library') {
+      if (!currentUser) {
+        router.push("/login");
+      } else {
+        router.push("/library");
+      }
     }
   };
+
+  let selectedArea = 0;
+  if(router.pathname === '/') {
+    selectedArea = 1;
+  } else if(router.pathname === '/rudiments') {
+    selectedArea = 2;
+  } else if(router.pathname === '/library' || router.pathname == '/login') {
+    selectedArea = 3;
+  }
+
+  const { setNavOpen } = appActions;
+  const dispatch = useDispatch();
 
   function a11yProps(index) {
     return {
@@ -79,39 +94,17 @@ export default function Header() {
     };
   }
 
-  const getSidebarContent = () => {
-    let content = null;
-    if (router.pathname === "/") {
-      content = <DynamicComposeSidebar />;
-    }
-
-    return content;
-  };
-
-  const getTitle = () => {
-    let content = null;
-    function typographyContent(title) {
-    return <Typography style={{margin: 'auto'}} variant="h6" color="textSecondary">
-        {title}
-    </Typography>
-    }
-    if (router.pathname === "/library") {
-      content = typographyContent("Library");
-    } else if (router.pathname === "/profile") {
-      content = typographyContent("Profile");
-    }
-
-    return content;
-  }
+  const [mustBeLoggedInModalOpen, setMustBeLoggedInModalOpen] = useState(false);
 
   return (
     <>
       <CssBaseline />
       <AppBar position="fixed">
-        <Toolbar style={{
-          justifyContent: 'space-between'
-        }}>
-          
+        <Toolbar
+          style={{
+            justifyContent: "space-between",
+          }}
+        >
           <IconButton
             color="inherit"
             aria-label="open drawer"
@@ -120,21 +113,33 @@ export default function Header() {
           >
             <GiHamburgerMenu />
           </IconButton>
-          {getTitle()}
-          <Drawer
-            anchor="right"
-            open={sheetOpen}
-            onClose={() => setSheetOpen(false)}
-            className={classes.sidebar}
-            classes={{ paper: classes.sidebar }}
+
+          <Tabs
+            value={selectedArea}
+            onChange={onAreaSelected}
+            // aria-label="simple tabs example"
+            variant={"scrollable"}
+            scrollButtons={"auto"}
+            centered
+            edge="center"
           >
-            {getSidebarContent()}
-          </Drawer>
-          {getSettingsContent()}
+            <Tab style={{ minWidth: 50 }} key={"header-exercises"} label="EXERCISES" {...a11yProps(0)} />
+            <Tab style={{ minWidth: 50 }} key={"header-score"} label="SCORE" {...a11yProps(1)} />
+            <Tab style={{ minWidth: 50 }} key={"header-rudiments"} label="RUDIMENTS" {...a11yProps(2)} />
+            <Tab edge="end" style={{ minWidth: 50 }} key={"header-saved"} icon={<FaUser />}  {...a11yProps(3)} />
+          </Tabs>
+          <div class="right"></div>
         </Toolbar>
+        
       </AppBar>
+      <Dialog
+        onOk={setMustBeLoggedInModalOpen.bind(null, false)}
+        message="Log in to view your library!"
+        isOpen={mustBeLoggedInModalOpen}
+        setIsOpen={setMustBeLoggedInModalOpen}
+      />
       <div className={classes.drawerHeader} />
-      {!loaded && <CircularProgress style={theme.spinner}/>}
+      {!loaded && <CircularProgress style={theme.spinner} />}
     </>
   );
 }

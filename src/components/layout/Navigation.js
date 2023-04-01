@@ -3,17 +3,13 @@ import { useSelector, useDispatch } from "react-redux";
 import { appActions } from "../../store/app";
 import { logout } from "../../store/realm-app";
 
-import React, { useState } from "react";
+import React from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import Drawer from "@material-ui/core/Drawer";
 import List from "@material-ui/core/List";
 import Divider from "@material-ui/core/Divider";
 import ListItem from "@material-ui/core/ListItem";
 import ListItemText from "@material-ui/core/ListItemText";
-import Dialog from "../ui/Dialog";
-
-import { FaDrum} from "react-icons/fa";
-import { ImBooks } from "react-icons/im";
 
 export default function Navigation() {
   const drawerWidth = 256;
@@ -35,7 +31,6 @@ export default function Navigation() {
   const sideNavOpen = useSelector((state) => state.app.sideNavOpen);
   const { setNavOpen } = appActions;
   const dispatch = useDispatch();
-  const [mustBeLoggedInModalOpen, setMustBeLoggedInModalOpen] = useState(false);
 
   const navigationHandler = (url) => {
     router.push(url);
@@ -46,15 +41,6 @@ export default function Navigation() {
     dispatch(logout());
     router.push("/");
   };
-
-  function navigateToMyLibrary() {
-    if (!currentUser) {
-      dispatch(setNavOpen(false));
-      setMustBeLoggedInModalOpen(true);
-    } else {
-      navigationHandler("/library");
-    }
-  }
 
   const iconSize = 24;
 
@@ -71,18 +57,6 @@ export default function Navigation() {
       >
         <Divider />
         <List>
-          <ListItem
-            button
-            key="compose"
-            onClick={navigationHandler.bind(null, "/")}
-          >
-            <FaDrum className={classes.drawerIcon} size={iconSize} />
-            <ListItemText primary="compose" />
-          </ListItem>
-          <ListItem button key="my library" onClick={navigateToMyLibrary}>
-            <ImBooks className={classes.drawerIcon} size={iconSize} />
-            <ListItemText primary="my library" />
-          </ListItem>
           {/* <ListItem
           onClick={navigationHandler.bind(null, "/discover")}
           button
@@ -125,14 +99,6 @@ export default function Navigation() {
           )}
           {currentUser && (
             <>
-              {/* <ListItem
-              onClick={navigationHandler.bind(null, "/profile")}
-              button
-              key="Profile"
-            >
-              <FaUserTie className={classes.drawerIcon} size={iconSize} />
-              <ListItemText primary="Profile" />
-            </ListItem> */}
               <ListItem onClick={logoutHandler} button key="Log Out">
                 <ListItemText primary="Log Out" />
               </ListItem>
@@ -148,12 +114,7 @@ export default function Navigation() {
           </ListItem>
         </List>
       </Drawer>
-      <Dialog
-        onOk={setMustBeLoggedInModalOpen.bind(null, false)}
-        message="Log in to view your library!"
-        isOpen={mustBeLoggedInModalOpen}
-        setIsOpen={setMustBeLoggedInModalOpen}
-      />
+
     </>
   );
 }

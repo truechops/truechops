@@ -1,10 +1,5 @@
-import dynamic from "next/dynamic";
-import allExercises from '../../../data/rudiments/all';
+import Rudiments from '../src/components/rudiments/Main'
 
-const DynamicMain = dynamic(() => import("../src/components/exercises/Main"), {
-  ssr: false,
-});
-
-export default function mine() {
-  return <DynamicMain rhythms={allExercises}/>;
+export default function main() {
+  return <Rudiments />
 }

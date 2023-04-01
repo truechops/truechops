@@ -1,135 +1,114 @@
 {
-    "name": "2",
-    "tempo": 90,
-    "score": {
-      "parts": {
-        "drumset": {
-          "enabled": true
-        },
-        "snare": null,
-        "tenors": null,
-        "bass": null,
-        "cymbals": null
+  "id": 2,
+  "name": "Snare 16th",
+  "tempo": 90,
+  "score": {
+    "parts": {
+      "drumset": {
+        "enabled": true
       },
-      "measures": [
-        {
-          "timeSig": {
-            "num": 4,
-            "type": 4
-          },
-          "parts": [
-            {
-              "instrument": "drumset",
-              "voices": [
-                {
-                  "notes": [
-                    {
-                      "notes": [
-                        "F4",
-                        "E5"
-                      ],
-                      "ornaments": null,
-                      "velocity": 1,
-                      "duration": 8,
-                      "dots": null
-                    },
-                    {
-                      "notes": [
-                        "E5"
-                      ],
-                      "ornaments": null,
-                      "velocity": 1,
-                      "duration": 8,
-                      "dots": null
-                    },
-                    {
-                      "notes": [
-                        "C5",
-                        "E5"
-                      ],
-                      "ornaments": null,
-                      "velocity": 1,
-                      "duration": 8,
-                      "dots": null
-                    },
-                    {
-                      "notes": [
-                        "E5"
-                      ],
-                      "ornaments": null,
-                      "velocity": 1,
-                      "duration": 16,
-                      "dots": null
-                    },
-                    {
-                      "notes": [
-                        "C5"
-                      ],
-                      "ornaments": null,
-                      "velocity": 1,
-                      "duration": 16,
-                      "dots": null
-                    },
-                    {
-                      "notes": [
-                        "E5"
-                      ],
-                      "ornaments": null,
-                      "velocity": 1,
-                      "duration": 16,
-                      "dots": null
-                    },
-                    {
-                      "notes": [
-                        "F4"
-                      ],
-                      "ornaments": null,
-                      "velocity": 1,
-                      "duration": 16,
-                      "dots": null
-                    },
-                    {
-                      "notes": [
-                        "F4",
-                        "E5"
-                      ],
-                      "ornaments": null,
-                      "velocity": 1,
-                      "duration": 8,
-                      "dots": null
-                    },
-                    {
-                      "notes": [
-                        "C5",
-                        "E5"
-                      ],
-                      "ornaments": null,
-                      "velocity": 1,
-                      "duration": 8,
-                      "dots": null
-                    },
-                    {
-                      "notes": [
-                        "E5"
-                      ],
-                      "ornaments": null,
-                      "velocity": 1,
-                      "duration": 8,
-                      "dots": null
-                    }
-                  ],
-                  "tuplets": []
-                }
-              ]
-            }
-          ]
-        }
-      ]
+      "snare": null,
+      "tenors": null,
+      "bass": null,
+      "cymbals": null
     },
-    "mutations": [{
+    "measures": [
+      {
+        "timeSig": {
+          "num": 4,
+          "type": 4
+        },
+        "parts": [
+          {
+            "instrument": "drumset",
+            "voices": [
+              {
+                "notes": [
+                  {
+                    "notes": ["F4", "E5"],
+                    "ornaments": null,
+                    "velocity": 1,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["E5"],
+                    "ornaments": null,
+                    "velocity": 1,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5", "E5"],
+                    "ornaments": null,
+                    "velocity": 1,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["E5"],
+                    "ornaments": null,
+                    "velocity": 1,
+                    "duration": 16,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": null,
+                    "velocity": 1,
+                    "duration": 16,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["E5"],
+                    "ornaments": null,
+                    "velocity": 1,
+                    "duration": 16,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["F4"],
+                    "ornaments": null,
+                    "velocity": 1,
+                    "duration": 16,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["F4", "E5"],
+                    "ornaments": null,
+                    "velocity": 1,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5", "E5"],
+                    "ornaments": null,
+                    "velocity": 1,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["E5"],
+                    "ornaments": null,
+                    "velocity": 1,
+                    "duration": 8,
+                    "dots": null
+                  }
+                ],
+                "tuplets": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "mutations": [
+    {
       "type": "swap",
       "context": "C5",
       "grid": 16,
-      "config": {"probability":0.5,"swapWithRests":true}
-    }]
-  }
+      "config": { "probability": 0.5, "swapWithRests": true }
+    }
+  ]
+}

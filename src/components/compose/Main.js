@@ -58,7 +58,7 @@ export default function Main(isDynamicRhythm) {
       position: "fixed",
       left: "51%",
       transform: "translateX(-50%)",
-      bottom: theme.overrides.MuiTab.root.minHeight,
+      bottom: 0,
     },
     root: {
       flexDirection: "column",
@@ -69,10 +69,10 @@ export default function Main(isDynamicRhythm) {
 
       // JARED_TODO: is this even used
       [theme.breakpoints.down("xs")]: {
-        height: `calc(100vh - ${calculateButtonsHeight(theme, true)}px - ${2 * theme.mixins.toolbar.minHeight}px - 8px)`,
+        height: `calc(100vh - ${calculateButtonsHeight(theme, true)}px - ${theme.mixins.toolbar.minHeight}px - 8px)`,
       },
       [theme.breakpoints.up("sm")]: {
-        height: `calc(100vh - ${calculateButtonsHeight(theme, false)}px - ${2 * theme.mixins.toolbar.minHeight}px - 8px)`,
+        height: `calc(100vh - ${calculateButtonsHeight(theme, false)}px - ${theme.mixins.toolbar.minHeight}px - 8px)`,
       },
       width: '100%',
       overflow: "auto",
@@ -80,10 +80,10 @@ export default function Main(isDynamicRhythm) {
     },
     vexflow: {
       [theme.breakpoints.down("xs")]: {
-        height: `calc(100vh - ${calculateButtonsHeight(theme, true)}px - ${2 * theme.mixins.toolbar.minHeight}px - 8px)`,
+        height: `calc(100vh - ${calculateButtonsHeight(theme, true)}px - ${theme.mixins.toolbar.minHeight}px - 8px)`,
       },
       [theme.breakpoints.up("sm")]: {
-        height: `calc(100vh - ${calculateButtonsHeight(theme, false)}px - ${2 * theme.mixins.toolbar.minHeight}px - 8px)`,
+        height: `calc(100vh - ${calculateButtonsHeight(theme, false)}px - ${theme.mixins.toolbar.minHeight}px - 8px)`,
       }, 
     },
     toolbar: {

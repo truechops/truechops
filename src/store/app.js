@@ -2,6 +2,7 @@ import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
     sideNavOpen: false,
+    dontUseSafariShown: "init",
     pageOffset: {
         x: 0,
         y: 0
@@ -21,6 +22,9 @@ const appSlice = createSlice({
         },
         setPageLoaded(state) {
             state.loaded = true;
+        },
+        setDontUseSafariShown(state, {payload}) {
+            state.dontUseSafariShown = payload
         }
     }
 });
