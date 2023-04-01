@@ -81,10 +81,10 @@ export default function Main(isDynamicRhythm) {
     },
     vexflowWrapper: {
       [theme.breakpoints.down("sm")]: {
-        height: `calc(100vh - ${calculateButtonsHeight(theme, true)}px - ${3 * theme.mixins.toolbar.minHeight}px)`,
+        height: `calc(${window.innerHeight}px - ${calculateButtonsHeight(theme, true)}px - ${3 * theme.mixins.toolbar.minHeight}px)`,
       },
       [theme.breakpoints.up("sm")]: {
-        height: `calc(100vh - ${calculateButtonsHeight(theme, false)}px - ${3 * theme.mixins.toolbar.minHeight}px)`,
+        height: `calc(${window.innerHeight}px - ${calculateButtonsHeight(theme, false)}px - ${3 * theme.mixins.toolbar.minHeight}px)`,
       },
     }
 ,    vexflow: {
