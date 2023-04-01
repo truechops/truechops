@@ -102,7 +102,7 @@ export default function Score(props) {
   return (
     <>
     {/* This wrapper and the key ensure that content isn't duplicated when the screen resizes*/}
-    <div className="vexflow-wrapper">
+    <div className={props.vexflowWrapperClass}>
       <h2 style={{textAlign: 'center', margin: 0}}>{name}</h2>
       <div className={props.vexflowClass} id="vexflow" key={Math.random().toString()} />
     </div>

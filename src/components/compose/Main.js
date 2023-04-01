@@ -30,16 +30,25 @@ export default function Main(isDynamicRhythm) {
      * below the toolbar.
      */
     if (!tabPanelHidden) {
-      const paddingHeight = 2 * spacing * buttonsContainerPadding;
-
-      //The first tab is the notes tab
-      const numChips = selectedTab === 1 ? (isMobile ? 4 : 2) : 1;
-      buttonsHeight = paddingHeight + numChips * (chipHeight + rowBottomMargin);
+      if(selectedTab == 3) {
+        //JARED_TODO: cleanup magic constant
+        buttonsHeight = theme.mixins.toolbar.minHeight - 10;
+      } else {
+        const paddingHeight = 2 * spacing * buttonsContainerPadding;
+              //The first tab is the notes tab
+              const numChips = selectedTab === 1 ? (isMobile ? 4 : 2) : 1;
+              
+              //JARED_TODO: cleanup magic constant
+              buttonsHeight = paddingHeight + numChips * (chipHeight + rowBottomMargin) - 32;
+      }
     } else {
-      buttonsHeight += theme.compose.score.tabsHiddenTopPadding;
+      buttonsHeight = theme.compose.score.tabsHiddenTopPadding
+      
+      //JARED_TODO: magic constant
+      buttonsHeight = buttonsHeight - (selectedTab === 3 ? 10 : 32)
     }
 
-    return toolbarHeight + tabsHeight + buttonsHeight;
+    return buttonsHeight;
   };
 
   const onTabSelected = (event, newValue) => {
@@ -66,24 +75,24 @@ export default function Main(isDynamicRhythm) {
       height: "100%"
     },
     score: {
-
-      // JARED_TODO: is this even used
-      [theme.breakpoints.down("xs")]: {
-        height: `calc(100vh - ${calculateButtonsHeight(theme, true)}px - ${theme.mixins.toolbar.minHeight}px - 8px)`,
-      },
-      [theme.breakpoints.up("sm")]: {
-        height: `calc(100vh - ${calculateButtonsHeight(theme, false)}px - ${theme.mixins.toolbar.minHeight}px - 8px)`,
-      },
       width: '100%',
       overflow: "auto",
       flex: 1,
     },
-    vexflow: {
-      [theme.breakpoints.down("xs")]: {
-        height: `calc(100vh - ${calculateButtonsHeight(theme, true)}px - ${theme.mixins.toolbar.minHeight}px - 8px)`,
+    vexflowWrapper: {
+      [theme.breakpoints.down("sm")]: {
+        height: `calc(100vh - ${calculateButtonsHeight(theme, true)}px - ${3 * theme.mixins.toolbar.minHeight}px)`,
       },
       [theme.breakpoints.up("sm")]: {
-        height: `calc(100vh - ${calculateButtonsHeight(theme, false)}px - ${theme.mixins.toolbar.minHeight}px - 8px)`,
+        height: `calc(100vh - ${calculateButtonsHeight(theme, false)}px - ${3 * theme.mixins.toolbar.minHeight}px)`,
+      },
+    }
+,    vexflow: {
+      [theme.breakpoints.down("sm")]: {
+        height: `100%`,
+      },
+      [theme.breakpoints.up("sm")]: {
+        height: `100%`,
       }, 
     },
     toolbar: {
@@ -104,7 +113,7 @@ export default function Main(isDynamicRhythm) {
         <div id="score-root" className={classes.score}>
           <ErrorBoundary component="compose">
             <Score id={"vexflow"} score={score} selectedTab={selectedTab} tabPanelHidden={tabPanelHidden} 
-                   isDynamicRhythm={isDynamicRhythm} vexflowClass={classes.vexflow}/>
+                   isDynamicRhythm={isDynamicRhythm} vexflowClass={classes.vexflow} vexflowWrapperClass={classes.vexflowWrapper}/>
           </ErrorBoundary>
         </div>
         <div className={classes.buttons}>
