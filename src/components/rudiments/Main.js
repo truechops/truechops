@@ -13,7 +13,7 @@ const DynamicMain = dynamic(() => import("../rhythms/Main"), {
 });
 
 function getSvgConfig(windowWidth) {
-  return { width: 450, scale: 0.6, hResize: 0.65, vResize: 0.6 };
+  return { width: 530, scale: 0.7, hResize: 0.65, vResize: 0.75 }
 }
 
 const useTabStyles = makeStyles((theme) => ({
@@ -51,7 +51,6 @@ export default function main() {
   const [selectedRudiments, setSelectedRudiments] = useState(0);
 
   function changeSelectedRudiments(event, newValue) {
-    console.log(`changeSelectedRudiments: ${newValue}`);
     setSelectedRudiments(newValue);
   }
 
