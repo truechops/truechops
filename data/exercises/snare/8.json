@@ -1,0 +1,100 @@
+{
+  "id": 8,
+  "name": "Rhythm",
+  "tempo": 90,
+  "score": {
+    "parts": {
+      "drumset": { "enabled": true },
+      "snare": null,
+      "tenors": null,
+      "bass": null,
+      "cymbals": null
+    },
+    "measures": [
+      {
+        "timeSig": { "num": 4, "type": 4 },
+        "parts": [
+          {
+            "instrument": "drumset",
+            "voices": [
+              {
+                "notes": [
+                  {
+                    "notes": ["C5"],
+                    "ornaments": null,
+                    "velocity": 1,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": null,
+                    "velocity": 0.5,
+                    "duration": 4,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": null,
+                    "velocity": 1,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": null,
+                    "velocity": 0.5,
+                    "duration": 4,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": null,
+                    "velocity": 1,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": null,
+                    "velocity": 0.5,
+                    "duration": 4,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": null,
+                    "velocity": 1,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": null,
+                    "velocity": 0.5,
+                    "duration": 4,
+                    "dots": null
+                  }
+                ],
+                "tuplets": [
+                  { "actual": 3, "normal": 2, "start": 0, "end": 2 },
+                  { "actual": 3, "normal": 2, "start": 2, "end": 4 },
+                  { "actual": 3, "normal": 2, "start": 4, "end": 6 },
+                  { "actual": 3, "normal": 2, "start": 6, "end": 8 }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "mutations": [
+    {
+      "type": "swap",
+      "context": "C5",
+      "grid": 8,
+      "config": { "probability": 0.5, "swapWithRests": true }
+    }
+  ]
+}

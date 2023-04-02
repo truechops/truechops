@@ -1,0 +1,81 @@
+{
+  "id": 2,
+  "name": "Grid",
+  "tempo": 90,
+  "score": {
+    "parts": {
+      "drumset": null,
+      "snare": { "enabled": true },
+      "tenors": null,
+      "bass": null,
+      "cymbals": null
+    },
+    "measures": [
+      {
+        "timeSig": { "num": 4, "type": 4 },
+        "parts": [
+          {
+            "instrument": "snare",
+            "voices": [
+              {
+                "notes": [
+                  {
+                    "notes": ["C5"],
+                    "ornaments": null,
+                    "velocity": 0.5,
+                    "duration": 4,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": null,
+                    "velocity": 0.5,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": null,
+                    "velocity": 0.5,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": null,
+                    "velocity": 0.5,
+                    "duration": 4,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": null,
+                    "velocity": 0.5,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": null,
+                    "velocity": 0.5,
+                    "duration": 8,
+                    "dots": null
+                  }
+                ],
+                "tuplets": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "mutations": [
+    {
+      "type": "swap",
+      "context": "C5",
+      "grid": 8,
+      "config": { "probability": 0.5, "swapWithRests": true }
+    }
+  ]
+}

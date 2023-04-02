@@ -1,0 +1,128 @@
+{
+  "id": 10,
+  "name": "diddle",
+  "tempo": 90,
+  "score": {
+    "parts": {
+      "drumset": null,
+      "snare": { "enabled": true },
+      "tenors": null,
+      "bass": null,
+      "cymbals": null
+    },
+    "measures": [
+      {
+        "timeSig": { "num": 4, "type": 4 },
+        "parts": [
+          {
+            "instrument": "snare",
+            "voices": [
+              {
+                "notes": [
+                  {
+                    "notes": ["C5"],
+                    "ornaments": "d",
+                    "velocity": 0.5,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": null,
+                    "velocity": 0.5,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": null,
+                    "velocity": 0.5,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": "d",
+                    "velocity": 0.5,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": null,
+                    "velocity": 0.5,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": null,
+                    "velocity": 0.5,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": "d",
+                    "velocity": 0.5,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": "",
+                    "velocity": 0.5,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": null,
+                    "velocity": 0.5,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": "d",
+                    "velocity": 0.5,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": null,
+                    "velocity": 0.5,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": null,
+                    "velocity": 0.5,
+                    "duration": 8,
+                    "dots": null
+                  }
+                ],
+                "tuplets": [
+                  { "actual": 3, "normal": 2, "start": 0, "end": 3 },
+                  { "actual": 3, "normal": 2, "start": 3, "end": 6 },
+                  { "actual": 3, "normal": 2, "start": 6, "end": 9 },
+                  { "actual": 3, "normal": 2, "start": 9, "end": 12 }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "mutations": [
+    {
+      "type": "swap",
+      "context": "All",
+      "grid": 8,
+      "config": { "probability": 0.5, "swapWithRests": true }
+    }
+  ]
+}

@@ -44,6 +44,7 @@ export function drawScore(
 ) {
   const {width: svgWidthProposed, scale, hResize, vResize} = svgConfig;
   let { measures } = score;
+  console.log(`drawScore: ${JSON.stringify(score)}`)
   let systemWidth = 0;
   const measurePartsArray = getMeasureData(measures, score.parts);
   let measureIndex = 0;

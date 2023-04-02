@@ -92,6 +92,7 @@ export default function Main() {
   //The rhythms coming back from mongodb are in ascending order. This makes sure the saved
   //rhythms are in descending order.
   userRhythms.sort(() => -1);
+  console.log(`userRhythms length: ${userRhythms.length}`)
 
   dispatch(appActions.setPageLoaded());
 
