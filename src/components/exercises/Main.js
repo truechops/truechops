@@ -13,7 +13,7 @@ const DynamicMain = dynamic(() => import("../rhythms/Main"), {
 });
 
 function getSvgConfig(windowWidth) {
-  return { width: 530, scale: 0.75, hResize: 0.65, vResize: 0.75 };
+  return { width: 530, scale: 0.75, hResize: 0.75, vResize: 0.75 };
 }
 
 const useTabStyles = makeStyles((theme) => ({

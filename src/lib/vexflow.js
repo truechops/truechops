@@ -70,7 +70,7 @@ export function drawScore(
     systemWidth = minTotalWidth + FORMAT_PADDING;
 
     if ((width + systemWidth > svgWidth + PADDING) && barRenderData.length) {
-      let w = renderStaves(
+      renderStaves(
         barRenderData,
         systemWidth - PADDING,
         row,
@@ -81,8 +81,8 @@ export function drawScore(
         previousTimeSig
       );
 
-      if(w > maxWidth) {
-        maxWidth = w
+      if(width + systemWidth > maxWidth) {
+        maxWidth = width + systemWidth
       }
 
       barRenderData = [];
@@ -115,11 +115,11 @@ export function drawScore(
       previousTimeSig
     );
 
-    if(w > maxWidth) {
-      maxWidth = w
+    if(width > maxWidth) {
+      maxWidth = width
     }
   }
-
+console.log(`maxWidth: ${maxWidth}`)
   renderer.resize(
     (maxWidth + PADDING) * (hResize ?? 1),
     (STAVE_SPACE * (row + 1)) * (vResize ?? 1) /** scale * scaleWidthMultipler*/
@@ -350,6 +350,7 @@ function renderStaves(
     connector.draw();
   }
 
+  console.log(`systemWidthReturn: ${systemWidthReturn}`)
   return systemWidthReturn
 }
 
@@ -388,7 +389,7 @@ function addOrnaments(jsonNote, scoreNote) {
 
     //accent
     if (jsonNote.ornaments.includes(ACCENT)) {
-      scoreNote.addArticulation(0, new VF.Articulation("a>").setPosition(3));
+      scoreNote.addModifier(new VF.Articulation("a>").setPosition(3), 0);
     }
 
     //right sticking - add 'R' annotation
