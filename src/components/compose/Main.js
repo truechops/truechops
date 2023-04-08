@@ -7,7 +7,6 @@ import $ from 'jquery';
 import { useSelector } from "react-redux";
 
 import dynamic from "next/dynamic";
-
 //Each page has its own top toolbar. Render it dynamically based on which page you are on.
 const DynamicComposeTopToolbar = dynamic(() => import("../compose/TopToolbar"));
 
@@ -78,13 +77,14 @@ export default function Main(isDynamicRhythm) {
       width: '100%',
       overflow: "auto",
       flex: 1,
+      zIndex: 1
     },
     vexflowWrapper: {
       [theme.breakpoints.down("sm")]: {
-        height: `calc(${window.innerHeight}px - ${calculateButtonsHeight(theme, true)}px - ${3 * theme.mixins.toolbar.minHeight}px)`,
+        height: `calc(${window.innerHeight}px - ${calculateButtonsHeight(theme, true)}px - ${3 * theme.mixins.toolbar.minHeight}px - 12px)`,
       },
       [theme.breakpoints.up("sm")]: {
-        height: `calc(${window.innerHeight}px - ${calculateButtonsHeight(theme, false)}px - ${3 * theme.mixins.toolbar.minHeight}px)`,
+        height: `calc(${window.innerHeight}px - ${calculateButtonsHeight(theme, false)}px - ${3 * theme.mixins.toolbar.minHeight}px - 12px)`,
       },
     }
 ,    vexflow: {

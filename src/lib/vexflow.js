@@ -1,4 +1,4 @@
-import Vex from "vexflow";
+import {Vex, Dot} from "vexflow";
 import VexFlowInteraction from "./VexFlowInteraction";
 import { getNote, getGraceNote } from "../helpers/score";
 import { NOTE_HIGHLIGHT_COLOR, timeSigs } from "../consts/score";
@@ -44,12 +44,10 @@ export function drawScore(
 ) {
   const {width: svgWidthProposed, scale, hResize, vResize} = svgConfig;
   let { measures } = score;
-  console.log(`drawScore: ${JSON.stringify(score)}`)
   let systemWidth = 0;
   const measurePartsArray = getMeasureData(measures, score.parts);
   let measureIndex = 0;
   STAVE_SPACE = BASE_STAVE_SPACE * measurePartsArray[0].length;
-
   const svgWidth = Math.max(svgWidthProposed, SCORE_MIN_WIDTH);
 
   let barRenderData = [];
@@ -57,6 +55,7 @@ export function drawScore(
   let row = 0;
   let firstMeasure = true;
   let previousTimeSig = {};
+  let maxWidth = 0;
   for (const measureParts of measurePartsArray) {
     let voices = measureParts.map((measurePart) => measurePart.voices);
     //One formatter for both parts so that we can calculate one width to
@@ -69,10 +68,11 @@ export function drawScore(
     );
 
     systemWidth = minTotalWidth + FORMAT_PADDING;
-    if (width + systemWidth > svgWidth + PADDING) {
-      renderStaves(
+
+    if ((width + systemWidth > svgWidth + PADDING) && barRenderData.length) {
+      let w = renderStaves(
         barRenderData,
-        svgWidth - width - PADDING,
+        systemWidth - PADDING,
         row,
         context,
         selectedNoteIndex,
@@ -80,6 +80,11 @@ export function drawScore(
         repeat,
         previousTimeSig
       );
+
+      if(w > maxWidth) {
+        maxWidth = w
+      }
+
       barRenderData = [];
       width = 0;
       row += 1;
@@ -99,7 +104,7 @@ export function drawScore(
   }
 
   if (barRenderData.length) {
-    renderStaves(
+    let w = renderStaves(
       barRenderData,
       0,
       row,
@@ -109,9 +114,14 @@ export function drawScore(
       repeat,
       previousTimeSig
     );
+
+    if(w > maxWidth) {
+      maxWidth = w
+    }
   }
+
   renderer.resize(
-    svgWidth * (hResize ?? 1),
+    (maxWidth + PADDING) * (hResize ?? 1),
     (STAVE_SPACE * (row + 1)) * (vResize ?? 1) /** scale * scaleWidthMultipler*/
   );
 
@@ -148,6 +158,12 @@ function getMeasureData(measures, partConfig) {
             note,
             instrument
           );
+
+          const numDots = note.dots != null ? note.dots : 0;
+          for (var i = 0; i < numDots; i++) {
+            const dot = new Dot();
+            n.addModifier(dot, i);
+          }
 
           addOrnaments(note, n);
 
@@ -214,6 +230,7 @@ function renderStaves(
   repeat,
   previousTimeSig
 ) {
+  let systemWidthReturn = 0
   const barWidths = barRenderData.map((renderDataBar) => renderDataBar.width);
   //Given the space left over in the stave (i.e.: remainingWidth), get the additional
   //width to add to each bar to make up that space.
@@ -236,6 +253,7 @@ function renderStaves(
 
     parts.forEach((part, partIndex) => {
       let systemWidth = (width + additionalWidths[renderDataIndex]);
+      systemWidthReturn = systemWidth
       const stave = new VF.Stave(
         x,
         partIndex * BASE_STAVE_SPACE + row * STAVE_SPACE,
@@ -288,9 +306,7 @@ function renderStaves(
       );
 
       tuplets.map((vfTuplet) => vfTuplet.setContext(context).draw());
-
-      const interaction = new VexFlowInteraction(context.svg);
-
+      
       notes[0].forEach((note, noteIndex) => {
         // highlight the note if it selected
         if (
@@ -303,10 +319,10 @@ function renderStaves(
           note.setStyle({ fillStyle: NOTE_HIGHLIGHT_COLOR });
           note.setContext(context).draw();
         }
-
+        const noteSvg = note.getSVGElement()
         const noteInteraction = new VexFlowInteraction(
-          note.attrs.el,
-          interaction.svgPt
+          noteSvg,
+          context.svg.createSVGPoint()
         );
         const events = ["touchStart"];
         events.forEach((type) => {
@@ -333,6 +349,8 @@ function renderStaves(
     connector.setContext(context);
     connector.draw();
   }
+
+  return systemWidthReturn
 }
 
 function getAdditionalWidthsForBars(widths, remainingWidth) {
@@ -345,30 +363,26 @@ function getAdditionalWidthsForBars(widths, remainingWidth) {
 function addOrnaments(jsonNote, scoreNote) {
   if (jsonNote.ornaments) {
     if (jsonNote.ornaments.includes(CHEESE)) {
-      let tremolo = new VF.Tremolo(1);
-      scoreNote.addArticulation(0, tremolo);
+      scoreNote.addModifier(new VF.Tremolo(1), 0);
 
       scoreNote.addModifier(
-        0,
         new VF.GraceNoteGroup([
           getGraceNote(VF.GraceNote.prototype.constructor),
-        ])
+        ]), 0
       );
     }
 
     //diddle - add tremolo
     if (jsonNote.ornaments.includes(DIDDLE)) {
-      let tremolo = new VF.Tremolo(1);
-      scoreNote.addArticulation(0, tremolo);
+      scoreNote.addModifier(new VF.Tremolo(1), 0);
     }
 
     //flam - add grace note
     if (jsonNote.ornaments.includes(FLAM)) {
       scoreNote.addModifier(
-        0,
         new VF.GraceNoteGroup([
           getGraceNote(VF.GraceNote.prototype.constructor),
-        ])
+        ]) ,0
       );
     }
 
@@ -382,13 +396,13 @@ function addOrnaments(jsonNote, scoreNote) {
       const annotation = new VF.Annotation("R");
       annotation.setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM);
 
-      scoreNote.addModifier(0, annotation);
+      scoreNote.addModifier(annotation, 0);
     } else if (jsonNote.ornaments.includes(LEFT_STICKING)) {
       //left sticking - add 'L' annotation
       const annotation = new VF.Annotation("L");
       annotation.setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM);
 
-      scoreNote.addModifier(0, annotation);
+      scoreNote.addModifier(annotation, 0);
     }
   }
 }

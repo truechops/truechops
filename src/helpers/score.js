@@ -48,11 +48,6 @@ export function getNote(staveNoteConstructor, note, instrument) {
     duration,
   });
 
-  //Add dots to the note
-  const numDots = note.dots != null ? note.dots : 0;
-  for (var i = 0; i < numDots; i++) {
-    returnNote = returnNote.addDotToAll();
-  }
 
   return returnNote;
 }

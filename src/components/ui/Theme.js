@@ -23,6 +23,17 @@ export default createMuiTheme({
       minHeight: 55,
     },
   },
+  breakpoints:{
+    values: {
+      xs: 0,
+      //'sm' has been changed from 600 to make buttons fit right
+      sm: 750,
+      md: 900,
+      lg: 1200,
+      xl: 1536,
+    },
+  },
+    
   typography: {
     tab: {
       fontFamily: "Raleway",
