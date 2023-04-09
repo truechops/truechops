@@ -28,6 +28,7 @@ export default class SVGInteraction {
   }
 
   callListeners(type, e, coords) {
+    console.log('callListeners')
 		this[listeners].forEach(([listenerType, callback]) => {
       if (type === listenerType) {
         callback(e, coords);
@@ -37,7 +38,10 @@ export default class SVGInteraction {
 
   /* eslint-disable no-unused-vars */
   // These are here as holders -- override whichever you need when you inherit this class.
-  touchStart(e, coords) { this.callListeners('touchStart', e, coords); }
+  touchStart(e, coords) { 
+    console.log(`touchStart`)
+    this.callListeners('touchStart', e, coords); 
+  }
   touchEnd(e, coords) { this.callListeners('touchEnd', e, coords); }
   drag(e, coords) { this.callListeners('drag', e, coords); }
   hover(e, coords) { this.callListeners('hover', e, coords); }
@@ -45,6 +49,7 @@ export default class SVGInteraction {
   /* eslint-enable no-unused-vars */
 
   makeInteractive(svg = this.svg) {
+    console.log('make interactive')
     this[listeners] = [];
     // We will add listeners to the SVG bounding box itself:
     svg.style.pointerEvents = 'bounding-box';
@@ -101,8 +106,17 @@ export default class SVGInteraction {
         }
       };
 
-      if (el !== window) el.addEventListener(eventType, listener, {passive: true});
-      else this[windowListeners].push([eventType, listener]);
+      if (el !== window) {
+        if(eventType == 'touchstart') {
+          console.log(`el: ${typeof el}`)
+          console.log('el.addEventListener')
+        }
+        el.addEventListener(eventType, listener, {passive: true});
+      }
+      else {
+        if(eventType == 'touchstart') console.log('windowListener')
+        this[windowListeners].push([eventType, listener]);
+      }
     };
 
       // [ type, listener, testFunction (fire listener if true), EventTarget (default this.svg)]

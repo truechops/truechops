@@ -42,6 +42,7 @@ export function drawScore(
   svgConfig,
   repeat,
 ) {
+  console.log(`drawScore`)
   const {width: svgWidthProposed, scale, hResize, vResize} = svgConfig;
   let { measures } = score;
   let systemWidth = 0;
@@ -104,7 +105,7 @@ export function drawScore(
   }
 
   if (barRenderData.length) {
-    let w = renderStaves(
+    renderStaves(
       barRenderData,
       0,
       row,
@@ -119,7 +120,7 @@ export function drawScore(
       maxWidth = width
     }
   }
-console.log(`maxWidth: ${maxWidth}`)
+
   renderer.resize(
     (maxWidth + PADDING) * (hResize ?? 1),
     (STAVE_SPACE * (row + 1)) * (vResize ?? 1) /** scale * scaleWidthMultipler*/
@@ -230,7 +231,7 @@ function renderStaves(
   repeat,
   previousTimeSig
 ) {
-  let systemWidthReturn = 0
+
   const barWidths = barRenderData.map((renderDataBar) => renderDataBar.width);
   //Given the space left over in the stave (i.e.: remainingWidth), get the additional
   //width to add to each bar to make up that space.
@@ -253,7 +254,6 @@ function renderStaves(
 
     parts.forEach((part, partIndex) => {
       let systemWidth = (width + additionalWidths[renderDataIndex]);
-      systemWidthReturn = systemWidth
       const stave = new VF.Stave(
         x,
         partIndex * BASE_STAVE_SPACE + row * STAVE_SPACE,
@@ -316,8 +316,7 @@ function renderStaves(
           note.voiceIndex === selectedNoteIndex.voiceIndex &&
           noteIndex === selectedNoteIndex.noteIndex
         ) {
-          note.setStyle({ fillStyle: NOTE_HIGHLIGHT_COLOR });
-          note.setContext(context).draw();
+          note.getSVGElement().setAttribute('fill', NOTE_HIGHLIGHT_COLOR)
         }
         const noteSvg = note.getSVGElement()
         const noteInteraction = new VexFlowInteraction(
@@ -349,9 +348,6 @@ function renderStaves(
     connector.setContext(context);
     connector.draw();
   }
-
-  console.log(`systemWidthReturn: ${systemWidthReturn}`)
-  return systemWidthReturn
 }
 
 function getAdditionalWidthsForBars(widths, remainingWidth) {

@@ -8,7 +8,9 @@ import repeatHook from './buttons/mutate/common/repeat-hook';
 import { browserName } from 'react-device-detect';
 
 import { useRouter } from "next/router";
+import _ from "lodash";
 
+let currentScore = null
 export default function Score(props) {
   const router = useRouter();
 
@@ -59,25 +61,32 @@ export default function Score(props) {
   );
 
   useEffect(() => {
-    const { renderer, context } = initialize(props.id, 1);
-      drawScore(
-        renderer,
-        context,
-        props.score,
-        selectedNoteIndex,
-        noteSelectedCallback,
-        { width: windowWidth, scale: 1 },
-        repeat
-      );
+    if(_.isEqual(currentScore, props.score)) {
+      // console.log('equal')
+      // return;
+      //I shouldn't have to render the score two times. Do something about that.
+    }
 
-    dispatch(appActions.setPageLoaded());
-      const scoreElementRoot = document.getElementById('score-root');
-     scoreElementRoot.scrollTop = scrollAmount.top;
-     scoreElementRoot.scrollLeft = scrollAmount.left;
-      if(!promptedForRepeat && isDynamic) {
-        setRepeatDialogOpen(true);
-        setPromptedForRepeat(true);
-      }
+      const { renderer, context } = initialize(props.id);
+        drawScore(
+          renderer,
+          context,
+          props.score,
+          selectedNoteIndex,
+          noteSelectedCallback,
+          { width: windowWidth, scale: 1 },
+          repeat
+        );
+
+      dispatch(appActions.setPageLoaded());
+        const scoreElementRoot = document.getElementById('score-root');
+      scoreElementRoot.scrollTop = scrollAmount.top;
+      scoreElementRoot.scrollLeft = scrollAmount.left;
+        if(!promptedForRepeat && isDynamic) {
+          setRepeatDialogOpen(true);
+          setPromptedForRepeat(true);
+        }
+        currentScore = props.score
   }, [
     windowWidth,
     props.score,
