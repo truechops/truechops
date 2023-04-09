@@ -42,7 +42,6 @@ export function drawScore(
   svgConfig,
   repeat,
 ) {
-  console.log(`drawScore`)
   const {width: svgWidthProposed, scale, hResize, vResize} = svgConfig;
   let { measures } = score;
   let systemWidth = 0;

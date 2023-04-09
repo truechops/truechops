@@ -107,10 +107,6 @@ export default class SVGInteraction {
       };
 
       if (el !== window) {
-        if(eventType == 'touchstart') {
-          console.log(`el: ${typeof el}`)
-          console.log('el.addEventListener')
-        }
         el.addEventListener(eventType, listener, {passive: true});
       }
       else {

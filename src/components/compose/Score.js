@@ -64,7 +64,7 @@ export default function Score(props) {
     if(_.isEqual(currentScore, props.score)) {
       // console.log('equal')
       // return;
-      //I shouldn't have to render the score two times. Do something about that.
+      //JARED_TODO: I shouldn't have to render the score two times. Do something about that.
     }
 
       const { renderer, context } = initialize(props.id);
@@ -74,7 +74,8 @@ export default function Score(props) {
           props.score,
           selectedNoteIndex,
           noteSelectedCallback,
-          { width: windowWidth, scale: 1 },
+          { width: windowWidth, scale: 0.75, hResize: 0.75, vResize: 0.75,
+          },
           repeat
         );
 
