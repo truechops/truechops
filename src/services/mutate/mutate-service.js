@@ -219,7 +219,6 @@ function getMeasureBoundaries(score) {
 }
 
 function convertToVoiceNoteArrays(score, numRepeats, scoreVoices) {
-  console.log(`score: ${JSON.stringify(score)}, numRepeats: ${numRepeats}, scoreVoices: ${JSON.stringify(scoreVoices)}`)
   let voiceNoteArrays = {};
 
   let currentMeasures = _.cloneDeep(score.measures);

@@ -28,7 +28,6 @@ export default class SVGInteraction {
   }
 
   callListeners(type, e, coords) {
-    console.log('callListeners')
 		this[listeners].forEach(([listenerType, callback]) => {
       if (type === listenerType) {
         callback(e, coords);
@@ -39,7 +38,6 @@ export default class SVGInteraction {
   /* eslint-disable no-unused-vars */
   // These are here as holders -- override whichever you need when you inherit this class.
   touchStart(e, coords) { 
-    console.log(`touchStart`)
     this.callListeners('touchStart', e, coords); 
   }
   touchEnd(e, coords) { this.callListeners('touchEnd', e, coords); }
@@ -109,7 +107,6 @@ export default class SVGInteraction {
         el.addEventListener(eventType, listener, {passive: true});
       }
       else {
-        if(eventType == 'touchstart') console.log('windowListener')
         this[windowListeners].push([eventType, listener]);
       }
     };

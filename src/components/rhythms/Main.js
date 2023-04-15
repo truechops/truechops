@@ -20,7 +20,6 @@ import { FaForward, FaDrum } from "react-icons/fa";
 import IconButton from "@material-ui/core/IconButton";
 
 export default function Main({rhythms, getSvgConfig, getHeight}) {
-  console.log(`rhythms`)
   const [svgConfig, setSvgConfig] = useState(getSvgConfig(window.innerWidth));
   const repeat = useSelector((state) => state.score.present.repeat);
   const router = useRouter();

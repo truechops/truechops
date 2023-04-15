@@ -58,8 +58,6 @@ function useAddRhythm(currentUser, score, tempo, mutations) {
       rhythm.mutations = [];
     }
 
-    console.log(`rhythm: ${JSON.stringify(rhythm)}`)
-
     try {
       const {
         data: { addedRhythm },
