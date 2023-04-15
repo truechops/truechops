@@ -49,7 +49,6 @@ export default class SVGInteraction {
   /* eslint-enable no-unused-vars */
 
   makeInteractive(svg = this.svg) {
-    console.log('make interactive')
     this[listeners] = [];
     // We will add listeners to the SVG bounding box itself:
     svg.style.pointerEvents = 'bounding-box';

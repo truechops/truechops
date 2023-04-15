@@ -247,7 +247,6 @@ const scoreSlice = createSlice({
       //We need to clear this out because mutating the notes might change the number of notes in the
       //score, which could cause the note index for the selected note to be for a non-existent note.
       state.selectedNoteIndex = null;
-      state.score.mutations = [];
       //JARED_TODO: see if there is any way to get rid of this.
       state.dynamic = false;
     },
