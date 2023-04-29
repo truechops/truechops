@@ -408,7 +408,6 @@ export const getSelectedInstrument = createSelector(
   [(state) => state.selectedPartIndex, (state) => state.score],
   (selectedPartIndex, score) => {
     if ((selectedPartIndex != null) & (selectedPartIndex >= 0)) {
-      console.log(`score: ${JSON.stringify(score)}`)
       return score.measures[0].parts[selectedPartIndex].instrument;
     } else {
       return null;

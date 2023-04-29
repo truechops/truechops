@@ -21,11 +21,11 @@ export default function TupletPickerPopover(props) {
   const dispatch = useDispatch();
 
   function onChangeActualDuration(event) {
-    dispatch(scoreActions.changeTupletActualDuration(event.target.value));
+    dispatch(scoreActions.changeTupletActualDuration(+event.target.value));
   }
 
   function onChangeNormalDuration(event) {
-    dispatch(scoreActions.changeTupletNormalDuration(event.target.value));
+    dispatch(scoreActions.changeTupletNormalDuration(+event.target.value));
   }
 
   function onChangeType(event) {
