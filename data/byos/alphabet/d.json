@@ -1,0 +1,90 @@
+{
+  "id": 4, 
+  "name": "d",
+  "tempo": 90,
+  "score": {
+    "parts": {
+      "drumset": null,
+      "snare": { "enabled": true },
+      "tenors": null,
+      "bass": null,
+      "cymbals": null
+    },
+    "measures": [
+      {
+        "timeSig": { "num": 2, "type": 4 },
+        "parts": [
+          {
+            "instrument": "snare",
+            "voices": [
+              {
+                "notes": [
+                  {
+                    "notes": ["C5"],
+                    "ornaments": "r",
+                    "velocity": 0.5,
+                    "duration": 16,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": "lda",
+                    "velocity": 1,
+                    "duration": 16,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": "dr",
+                    "velocity": 0.5,
+                    "duration": 16,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": "l",
+                    "velocity": 0.5,
+                    "duration": 16,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": "ra",
+                    "velocity": 1,
+                    "duration": 16,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": "ra",
+                    "velocity": 0.5,
+                    "duration": 16,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": "la",
+                    "velocity": 1,
+                    "duration": 16,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": "la",
+                    "velocity": 1,
+                    "duration": 8,
+                    "dots": null
+                  }
+                ],
+                "tuplets": [
+                  { "actual": 3, "normal": 2, "start": 4, "end": 7 }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "mutations": []
+}

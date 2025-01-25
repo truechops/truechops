@@ -1,7 +1,7 @@
 import { getPowersOf2, getAdditionalDotDuration } from "../helpers/math";
 import { getTCDurationSingle, getRestsFromTCDuration } from "../helpers/score";
 import _ from "lodash";
-import { NON_ACCENT_VELOCITY, tcDurationToVfDuration } from "../consts/score";
+import { NON_ACCENT_VELOCITY, tcDurationToVfDuration, HEAD3, HEAD4, HEAD5, HEAD7} from "../consts/score";
 
 export function modifyNote(state, newNoteValueIn, isRest, selectedNote) {
   let { measureIndex, partIndex, voiceIndex, noteIndex } = selectedNote;
@@ -85,6 +85,25 @@ export function modifyNote(state, newNoteValueIn, isRest, selectedNote) {
 
   if (dotSelected) {
     newNote.dots = 1;
+  }
+
+  if(selectedNote.instrument == 'snare') {
+    const voice = state.voices.snare  
+    if (voice.backstickSelected) {
+      newNote.head = HEAD3
+    }
+  
+    if (voice.buttSelected) {
+      newNote.head = HEAD4
+    }
+  
+    if(voice.stickClickSelected) {
+      newNote.head = HEAD7
+    }
+  
+    if(voice.crossoverSelected) {
+      newNote.head = HEAD5
+    }
   }
 
   newNotes.push(newNote);
@@ -378,12 +397,28 @@ function getSelectedSnareNotes(voices) {
     notes.push("C5");
   }
 
+  if (voices.backstickSelected) {
+    notes.push("C5");
+  }
+
+  if (voices.buttSelected) {
+    notes.push("C5");
+  }
+
   if (voices.pingSelected) {
     notes.push("E5");
   }
 
   if (voices.rimSelected) {
     notes.push("F5");
+  }
+
+  if(voices.stickClickSelected) {
+    notes.push("F5")
+  }
+
+  if(voices.crossoverSelected) {
+    notes.push("C5")
   }
 
   return notes;

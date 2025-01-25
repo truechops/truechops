@@ -112,7 +112,7 @@ export default function Main(isDynamicRhythm) {
         </div>
         <div id="score-root" className={classes.score}>
           <ErrorBoundary component="compose">
-            <Score id={"vexflow"} score={score} selectedTab={selectedTab} tabPanelHidden={tabPanelHidden} 
+            <Score scoreRootId="score-root" id={"vexflow"} score={score} selectedTab={selectedTab} tabPanelHidden={tabPanelHidden} 
                    isDynamicRhythm={isDynamicRhythm} vexflowClass={classes.vexflow} vexflowWrapperClass={classes.vexflowWrapper}/>
           </ErrorBoundary>
         </div>

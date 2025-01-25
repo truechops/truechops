@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { smallSinglePart as defaultScore, EMPTY_SCORE } from "../components/compose/sample-score";
+import { paradiddle as defaultScore, EMPTY_SCORE } from "../components/compose/sample-score";
 import { getScoreVoices as getScoreVoicesUtil } from "../utils/score";
 //import defaultScore from '../../data/default-score';
 //import { smallMultiPart as defaultScore } from "../components/compose/sample-score";
@@ -29,11 +29,13 @@ import {
   DEFAULT_MUTATION,
   DEFAULT_TIME_SIG,
 } from "../consts/score";
+import { Note } from "@material-ui/icons";
 
 export const ACCENT = "a";
 export const FLAM = "f";
 export const DIDDLE = "d";
 export const CHEESE = "c";
+export const BUZZ = "b";
 export const LEFT_STICKING = "l";
 export const RIGHT_STICKING = "r";
 
@@ -73,6 +75,10 @@ const initialState = {
     snare: {
       snareSelected: true,
       pingSelected: false,
+      stickClickSelected: false,
+      crossoverSelected: false,
+      backstickSelected: false,
+      buttSelected: false,
       rimSelected: false,
     },
     tenors: {
@@ -207,6 +213,9 @@ const scoreSlice = createSlice({
     },
     toggleAccent(state) {
       toggleOrnament(state, ACCENT);
+    },
+    toggleBuzz(state) {
+      toggleOrnament(state, BUZZ);
     },
     toggleLeftSticking(state) {
       toggleOrnament(state, LEFT_STICKING, RIGHT_STICKING);
@@ -375,6 +384,18 @@ const scoreSlice = createSlice({
     toggleRimSelected(state) {
       state.voices.snare.rimSelected = !state.voices.snare.rimSelected;
     },
+    toggleStickClickSelected(state) {
+      state.voices.snare.stickClickSelected = !state.voices.snare.stickClickSelected;
+    },
+    toggleCrossoverSelected(state) {
+      state.voices.snare.crossoverSelected = !state.voices.snare.crossoverSelected;
+    },
+    toggleBackstickSelected(state) {
+      state.voices.snare.backstickSelected = !state.voices.snare.backstickSelected;
+    },
+    toggleButtSelected(state) {
+      state.voices.snare.buttSelected = !state.voices.snare.buttSelected;
+    },
 
     toggleB1Selected(state) {
       state.voices.bass.b1Selected = !state.voices.bass.b1Selected;
@@ -517,7 +538,7 @@ export const getToneJs = createSelector(
               for (const tjsNote of note.notes) {
                 const toneJsNote = {
                   time,
-                  note: tjsNote,
+                  note: (note.ornaments && note.ornaments.indexOf('b') >= 0) ? 'G5' : tjsNote,
                   instrument,
                 };
 

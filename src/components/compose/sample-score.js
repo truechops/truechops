@@ -1,3 +1,79 @@
+export const paradiddle = {
+  parts: {
+    snare: {
+      enabled: true
+    }
+  },
+  measures: [
+    {
+      timeSig: {
+        num: 2,
+        type: 4,
+      },
+      parts: [
+        {
+          instrument: "snare",
+          voices: [
+            {
+              notes: [
+                {
+                  notes: ["C5"],
+                  ornaments: 'ra',
+                  duration: 16,
+                  velocity: 1.0,
+                },
+                {
+                  notes: ["C5"],
+                  ornaments: 'l',
+                  duration: 16,
+                  velocity: 0.5,
+                },
+                {
+                  notes: ["C5"],
+                  ornaments: 'r',
+                  duration: 16,
+                  velocity: 0.5,
+                },
+                {
+                  notes: ["C5"],
+                  ornaments: 'r',
+                  duration: 16,
+                  velocity: 0.5,
+                },
+                {
+                  notes: ["C5"],
+                  ornaments: 'la',
+                  duration: 16,
+                  velocity: 1.0,
+                },
+                {
+                  notes: ["C5"],
+                  ornaments: 'r',
+                  duration: 16,
+                  velocity: 0.5,
+                },
+                {
+                  notes: ["C5"],
+                  ornaments: 'l',
+                  duration: 16,
+                  velocity: 0.5,
+                },
+                {
+                  notes: ["C5"],
+                  ornaments: 'l',
+                  duration: 16,
+                  velocity: 0.5,
+                }
+              ],
+              tuplets: [],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+}
+
 export const smallMultiPart = {
   parts: {
     drumset: {

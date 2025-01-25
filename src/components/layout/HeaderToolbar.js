@@ -66,7 +66,9 @@ export default function Header() {
       router.push("/");
     } else if (newValue === 2 && router.pathname != '/rudiments') {
       router.push("/rudiments");
-    } else if (newValue === 3 && router.pathname != '/library') {
+    } else if (newValue === 3 && router.pathname != '/byos') {
+      router.push("/byos")
+    } else if (newValue === 4 && router.pathname != '/library') {
       if (!currentUser) {
         router.push("/login");
       } else {
@@ -80,8 +82,10 @@ export default function Header() {
     selectedArea = 1;
   } else if(router.pathname === '/rudiments') {
     selectedArea = 2;
+  } else if(router.pathname === '/byos') {
+    selectedArea = 3
   } else if(router.pathname === '/library' || router.pathname == '/login') {
-    selectedArea = 3;
+    selectedArea = 4;
   }
 
   const { setNavOpen } = appActions;
@@ -126,7 +130,8 @@ export default function Header() {
             <Tab style={{ minWidth: 50 }} key={"header-exercises"} label="EXERCISES" {...a11yProps(0)} />
             <Tab style={{ minWidth: 50 }} key={"header-score"} label="SCORE" {...a11yProps(1)} />
             <Tab style={{ minWidth: 50 }} key={"header-rudiments"} label="RUDIMENTS" {...a11yProps(2)} />
-            <Tab edge="end" style={{ minWidth: 50 }} key={"header-saved"} icon={<FaUser />}  {...a11yProps(3)} />
+            {/* <Tab style={{ minWidth: 50 }} key={"header-byos"} label="BYOS" {...a11yProps(3)} /> */}
+            <Tab edge="end" style={{ minWidth: 50 }} key={"header-saved"} icon={<FaUser />}  {...a11yProps(4)} />
           </Tabs>
           <div class="right"></div>
         </Toolbar>

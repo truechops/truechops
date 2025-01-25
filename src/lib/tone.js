@@ -8,7 +8,6 @@ let tenorsSampler = null;
 let bassSampler = null;
 let cymbalSampler = null;
 
-
 export function setSamplers(setSamplerIn, snareSamplerIn, tenorsSamplerIn, bassSamplerIn, cymbalSamplerIn)
 {
   setSampler = setSamplerIn;
@@ -41,7 +40,7 @@ export function update(toneJsData, repeat, startStop) {
       }
     } else {
       //It's a rest
-    }
+    }  
 
     if(++counter === toneJsData.notes.length && !part.loop) {
       startStop();

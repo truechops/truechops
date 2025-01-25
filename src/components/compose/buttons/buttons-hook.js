@@ -7,6 +7,7 @@ import {
   DIDDLE,
   CHEESE,
   LEFT_STICKING,
+  BUZZ,
   RIGHT_STICKING,
 } from "../../../store/score";
 
@@ -31,6 +32,7 @@ import AddMeasureRightIcon from "../../../../icons/measure/addMeasureRight.svg";
 import DeleteMeasureIcon from "../../../../icons/measure/deleteMeasure.svg";
 
 import AccentIcon from "../../../../icons/ornaments/accent.svg";
+import BuzzIcon from "../../../../icons/ornaments/buzz.svg";
 import CheeseIcon from "../../../../icons/ornaments/cheese.svg";
 import DiddleIcon from "../../../../icons/ornaments/diddle.svg";
 import FlamIcon from "../../../../icons/ornaments/flam.svg";
@@ -110,6 +112,7 @@ export default function useComposeButtons(
   let selectedMeasureIndex = null;
 
   let accentSelected = false;
+  let buzzSelected = false
   let diddleSelected = false;
   let flamSelected = false;
   let cheeseSelected = false;
@@ -120,6 +123,9 @@ export default function useComposeButtons(
   if (selectedNote) {
     accentSelected = selectedNote.ornaments
       ? selectedNote.ornaments.includes(ACCENT)
+      : false;
+    buzzSelected = selectedNote.ornaments
+      ? selectedNote.ornaments.includes(BUZZ)
       : false;
     diddleSelected = selectedNote.ornaments
       ? selectedNote.ornaments.includes(DIDDLE)
@@ -276,6 +282,18 @@ export default function useComposeButtons(
       },
       viewBox: "0 0 42.39 50",
       selected: accentSelected,
+    },
+    {
+      component: BuzzIcon,
+      onClick: () => {
+        ReactGA.event({
+          category: "ornament",
+          action: "toggle buzz",
+        });
+        dispatch(scoreActions.toggleBuzz());
+      },
+      viewBox: "0 0 75 68",
+      selected: buzzSelected,
     },
     {
       component: FlamIcon,

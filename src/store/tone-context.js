@@ -52,8 +52,10 @@ export const ToneContextProvider = props => {
           const snareSampler = new Tone.Sampler({
             urls: {
               C5: 'snare.mp3',
+              D5: 'click.mp3',
               E5: 'ping.mp3',
-              F5: 'rim.mp3'
+              F5: 'rim.mp3',
+              G5: 'buzz.wav'
             },
             release: 1,
             baseUrl: `${origin}/samples/snare/`,

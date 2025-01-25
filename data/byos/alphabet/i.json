@@ -1,0 +1,62 @@
+{
+  "id": 9, 
+  "name": "i",
+  "tempo": 90,
+  "score": {
+    "parts": {
+      "drumset": null,
+      "snare": { "enabled": true },
+      "tenors": null,
+      "bass": null,
+      "cymbals": null
+    },
+    "measures": [
+      {
+        "timeSig": { "num": 2, "type": 4 },
+        "parts": [
+          {
+            "instrument": "snare",
+            "voices": [
+              {
+                "notes": [
+                  {
+                    "notes": ["C5"],
+                    "ornaments": "ra",
+                    "velocity": 1,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": "al",
+                    "velocity": 1,
+                    "duration": 8,
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": "r",
+                    "velocity": 1,
+                    "duration": 16,
+                    "head": "t3",
+                    "dots": null
+                  },
+                  {
+                    "notes": ["C5"],
+                    "ornaments": "l",
+                    "velocity": 1,
+                    "duration": 8,
+                    "head": "t3",
+                    "dots": 1
+                  }
+                ],
+                "tuplets": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "mutations": []
+}

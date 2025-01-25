@@ -8,6 +8,7 @@ import {
   FLAM,
   DIDDLE,
   CHEESE,
+  BUZZ,
   LEFT_STICKING,
   RIGHT_STICKING,
 } from "../store/score";
@@ -165,7 +166,7 @@ function getMeasureData(measures, partConfig) {
             n.addModifier(dot, i);
           }
 
-          addOrnaments(note, n);
+          addOrnaments(note, n, instrument);
 
           n.noteIndex = noteIndex;
           n.voiceIndex = voiceIndex;
@@ -356,7 +357,7 @@ function getAdditionalWidthsForBars(widths, remainingWidth) {
   return percentages.map((percentage) => percentage * remainingWidth);
 }
 
-function addOrnaments(jsonNote, scoreNote) {
+function addOrnaments(jsonNote, scoreNote, instrument) {
   if (jsonNote.ornaments) {
     if (jsonNote.ornaments.includes(CHEESE)) {
       scoreNote.addModifier(new VF.Tremolo(1), 0);
@@ -371,6 +372,8 @@ function addOrnaments(jsonNote, scoreNote) {
     //diddle - add tremolo
     if (jsonNote.ornaments.includes(DIDDLE)) {
       scoreNote.addModifier(new VF.Tremolo(1), 0);
+    } else if (jsonNote.ornaments.includes(BUZZ)) {
+      scoreNote.addModifier(new VF.Tremolo(3), 0);
     }
 
     //flam - add grace note
@@ -382,8 +385,9 @@ function addOrnaments(jsonNote, scoreNote) {
       );
     }
 
-    //accent
-    if (jsonNote.ornaments.includes(ACCENT)) {
+    if(jsonNote.notes.indexOf('E5') >= 0 && instrument == 'snare') {
+      scoreNote.addModifier(new VF.Articulation("a^").setPosition(3), 0);
+    } else if (jsonNote.ornaments.includes(ACCENT)) {
       scoreNote.addModifier(new VF.Articulation("a>").setPosition(3), 0);
     }
 

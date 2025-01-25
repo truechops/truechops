@@ -3,7 +3,9 @@ import { scoreActions } from '../../../../store/score';
 import Button from '../../../ui/Button';
 
 export default function useSnareVoices() {
-    const { snareSelected, pingSelected, rimSelected } = useSelector(state => state.score.present.voices.snare);
+    const { snareSelected, pingSelected, rimSelected, 
+            buttSelected, backstickSelected, crossoverSelected,
+            stickClickSelected } = useSelector(state => state.score.present.voices.snare);
 
     const dispatch = useDispatch();
     const buttons = [
@@ -27,6 +29,34 @@ export default function useSnareVoices() {
           },
           text: "Rim",
           selected: rimSelected,
+        },
+        {
+          onClick: () => {
+            dispatch(scoreActions.toggleButtSelected());
+          },
+          text: "Butt",
+          selected: buttSelected,
+        },
+        {
+          onClick: () => {
+            dispatch(scoreActions.toggleBackstickSelected());
+          },
+          text: "Back",
+          selected: backstickSelected,
+        },
+        {
+          onClick: () => {
+            dispatch(scoreActions.toggleCrossoverSelected());
+          },
+          text: "Cross",
+          selected: crossoverSelected,
+        },
+        {
+          onClick: () => {
+            dispatch(scoreActions.toggleStickClickSelected());
+          },
+          text: "Click",
+          selected: stickClickSelected,
         },
       ].map((props) => (
         <Button

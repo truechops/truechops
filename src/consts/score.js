@@ -2,6 +2,14 @@ import {
   RHYTHMIC_INVERSION,
 } from "./raTypes";
 
+export const HEAD1 = 'd1'
+export const HEAD2 = 'd3'
+export const HEAD3 = 't1'
+export const HEAD4 = 't3'
+export const HEAD5 = 'x1'
+export const HEAD6 = 'x2'
+export const HEAD7 = 'x3'
+
 export const NON_ACCENT_VELOCITY = 0.5;
 export const ACCENT_VELOCITY = 1.0;
 export const GRACE_VELOCITY = 0.1;

@@ -21,6 +21,7 @@ export default function Score(props) {
   );
 
   const repeat = useSelector((state) => state.score.present.repeat);
+  const scoreRootId = props.scoreRootId
   const isDynamic = useSelector((state) => state.score.present.dynamic);
   const name = useSelector(state => state.score.present.name);
   const [promptedForRepeat, setPromptedForRepeat] = useState(false);
@@ -40,11 +41,12 @@ export default function Score(props) {
     }
   }, [dontUseSafariShown]);
 
+  //JARED_TODO: make this work like byos
   window.addEventListener("resize", updateDimensions);
 
   const noteSelectedCallback = useCallback(
     (note) => {
-      const scoreRootElement = document.getElementById('score-root');
+      const scoreRootElement = document.getElementById(scoreRootId);
       dispatch(
         selectNote({
           measureIndex: note.measureIndex,
@@ -80,9 +82,9 @@ export default function Score(props) {
         );
 
       dispatch(appActions.setPageLoaded());
-        const scoreElementRoot = document.getElementById('score-root');
-      scoreElementRoot.scrollTop = scrollAmount.top;
-      scoreElementRoot.scrollLeft = scrollAmount.left;
+        const scoreElementRoot = document.getElementById(scoreRootId);
+        scoreElementRoot.scrollTop = scrollAmount.top;
+        scoreElementRoot.scrollLeft = scrollAmount.left;
         if(!promptedForRepeat && isDynamic) {
           setRepeatDialogOpen(true);
           setPromptedForRepeat(true);

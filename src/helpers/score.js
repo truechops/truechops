@@ -3,23 +3,24 @@ import {
   NON_ACCENT_VELOCITY,
   tcDurationToVfDuration,
   vfDurationToTcDuration,
-  timeSigs
+  timeSigs,
+  HEAD6
 } from "../consts/score";
 import { getAdditionalDotDuration, getPowersOf2, isPowerOf2 } from "./math";
 
 const noteHeadTypeLookup = {
   drumset: {
-    E5: "x2",
-    F5: "x2",
-    D4: "x2",
+    E5: HEAD6,
+    F5: HEAD6,
+    D4: HEAD6,
   },
   snare: {
-    E5: "x2",
-    F5: "x2",
+    E5: HEAD6,
+    F5: HEAD6,
   },
   cymbals: {
-    C5: "x2",
-    E5: "x2",
+    C5: HEAD6,
+    E5: HEAD6,
   },
 };
 
@@ -35,14 +36,15 @@ export function getNote(staveNoteConstructor, note, instrument) {
 
     keys: note.notes.length
       ? note.notes.map((n) => {
-          const noteHead =
-            noteHeadTypeLookup[instrument] != null
-              ? noteHeadTypeLookup[instrument][n] != null
-                ? "/" + noteHeadTypeLookup[instrument][n]
-                : ""
-              : "";
+          let notehead = ""
 
-          return `${n[0]}/${n[1]}${noteHead}`;
+          if(note.head) {
+            notehead = `/${note.head}`
+          } else if(noteHeadTypeLookup[instrument] != null && noteHeadTypeLookup[instrument][n] != null) {
+            notehead = `/${noteHeadTypeLookup[instrument][n]}`
+          }
+
+          return `${n[0]}/${n[1]}${notehead}`;
         })
       : ["r/4"],
     duration,
