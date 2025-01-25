@@ -7,6 +7,7 @@ import Box from "@material-ui/core/Box";
 import ErrorBoundary from "../error/ErrorBoundary";
 import Legend from "../../../data/byos/alphabet/legend.js";
 import LegendDialog from "./legend-dialog.js";
+import Dialog from '../ui/Dialog';
 
 import $ from "jquery";
 import Paper from "@material-ui/core/Paper";
@@ -19,6 +20,7 @@ import { drawScore, initialize } from "../../lib/vexflow";
 import Score from "../compose/Score";
 import { map as byosAlphabetMap } from "../../../data/byos/alphabet/all.js";
 import backstickHead from "../../../data/byos/custom-heads/backstick.js";
+import { browserName } from 'react-device-detect';
 
 function getSvgConfig() {
   return { width: 530, scale: 0.7, hResize: 0.75, vResize: 0.75 };
@@ -28,6 +30,13 @@ export default function Main() {
   const [svgConfig, setSvgConfig] = useState(getSvgConfig());
   const [alphabetRendered, setAlphabetRendered] = useState(false);
   const [legendOpen, setLegendOpen] = useState(false);
+  const dontUseSafariShown = useSelector(state => state.app.dontUseSafariShown);
+
+  useEffect(() => {
+    if(browserName.indexOf('Safari') >= 0 && dontUseSafariShown == "init") {
+      dispatch(appActions.setDontUseSafariShown("true"));
+    }
+  }, [dontUseSafariShown]);
 
   // -- Track the word input in state
   const [word, setWord] = useState("");
@@ -315,6 +324,14 @@ export default function Main() {
       >
         <LegendDialog open={legendOpen} onClose={() => setLegendOpen(false)} />
       </div>
+
+       {/*This needs to be put into a more central location */}
+      <Dialog
+    isOpen={dontUseSafariShown == "true"}
+    message={"TrueChops does not work well with Safari. Please use another browser."}
+    onOk={() => {
+      dispatch(appActions.setDontUseSafariShown("false"));
+    }}/>
     </>
   );
 }
