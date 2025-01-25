@@ -130,7 +130,7 @@ export default function Header() {
             <Tab style={{ minWidth: 50 }} key={"header-exercises"} label="EXERCISES" {...a11yProps(0)} />
             <Tab style={{ minWidth: 50 }} key={"header-score"} label="SCORE" {...a11yProps(1)} />
             <Tab style={{ minWidth: 50 }} key={"header-rudiments"} label="RUDIMENTS" {...a11yProps(2)} />
-            {/* <Tab style={{ minWidth: 50 }} key={"header-byos"} label="BYOS" {...a11yProps(3)} /> */}
+            <Tab style={{ minWidth: 50, display: 'none' }} key={"header-byos"} label="BYOS" {...a11yProps(3)} />
             <Tab edge="end" style={{ minWidth: 50 }} key={"header-saved"} icon={<FaUser />}  {...a11yProps(4)} />
           </Tabs>
           <div class="right"></div>

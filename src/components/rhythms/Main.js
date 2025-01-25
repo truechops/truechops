@@ -103,7 +103,7 @@ export default function Main({rhythms, getSvgConfig, getHeight}) {
         justifyContent="center"
         p={1}
         m={1}
-        sx={{ maxWidth: 300, background: 'inherit'}}
+        sx={{ background: 'inherit'}}
       >
         {rhythms.length > 0 && 
             rhythms.map((rhythm) => (
