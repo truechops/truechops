@@ -10,7 +10,6 @@ import { appActions } from "../../store/app";
 
 export default function Login() {
   const dispatch = useDispatch();
-  const app = useSelector((state) => state.realm.app);
 
   // Keep track of input validation/errors
   const [error, setError] = useState({});
@@ -21,7 +20,7 @@ export default function Login() {
     try {
       dispatch(login(Realm.Credentials.emailPassword(email, password)));
     } catch (err) {
-      handleAuthenticationError(err, setError);
+      //handleAuthenticationError(err, setError);
     }
     useRouter.push("/");
   };

@@ -1,5 +1,4 @@
 import {
-  FacebookLoginButton,
   GoogleLoginButton
 } from "react-social-login-buttons";
 import useAuthStyles from "./auth-styles";

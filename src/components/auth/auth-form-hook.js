@@ -159,7 +159,7 @@ export default function AuthForm(props) {
     }
     if (error.passwordsDontMatch) {
       passwordsDontMatchErrorMessage = (
-        <div className={classes.error}>Passwords don't match</div>
+        <div className={classes.error}>Passwords dont match</div>
       );
     }
   }

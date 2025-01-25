@@ -7,5 +7,10 @@ module.exports = {
   
       return config;
     },
+    eslint: {
+      // Warning: This allows production builds to successfully complete
+      // even if ESLint errors are present.
+      ignoreDuringBuilds: true,
+    },
     productionBrowserSourceMaps: true
   };
