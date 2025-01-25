@@ -239,7 +239,7 @@ export default function Main() {
               justifyContent="center"
               p={1}
               m={1}
-              sx={{ maxWidth: 300, background: "inherit" }}
+              sx={{ background: "inherit" }}
             >
               {byosAlphabet.map((rhythm) => (
                 <Box p={1} key={`box-${rhythm.id}`}>
