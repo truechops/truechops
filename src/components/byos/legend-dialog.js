@@ -11,6 +11,7 @@ const useStyles = makeStyles((theme) => ({
   dialogContent: {
     paddingTop: theme.spacing(1),    // or '8px'
     paddingBottom: theme.spacing(2), // or '16px'
+    overflow: 'scroll'
   },
 }));
 
