@@ -37,6 +37,7 @@ export const RHYTHM_SCHEMA = `
                         ornaments
                         velocity
                         duration
+                        head
                         dots
                     }
                     tuplets {
