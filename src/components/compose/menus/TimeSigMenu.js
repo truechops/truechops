@@ -1,4 +1,4 @@
-import { Menu, MenuItem } from "@material-ui/core";
+import { Menu, MenuItem } from "@mui/material";
 import { timeSigs } from '../../../consts/score';
 
 export default function TimeSigMenu(props) {

@@ -1,8 +1,8 @@
-import { makeStyles } from "@material-ui/core/styles";
-import Tabs from "@material-ui/core/Tabs";
-import Tab from "@material-ui/core/Tab";
-import Box from "@material-ui/core/Box";
-import { Hidden } from "@material-ui/core";
+import { makeStyles } from "@mui/styles";
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
+import Box from "@mui/material/Box";
+import { Hidden } from "@mui/material";
 import useButtonsHook from "./buttons/buttons-hook";
 import InstrumentHelpPopover from "./popovers/InstrumentHelpPopover";
 import { scoreActions, getSelectedNote, modifyNote } from "../../store/score";

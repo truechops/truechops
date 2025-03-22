@@ -1,6 +1,6 @@
 import Button from './Button';
-import SvgIcon from '@material-ui/core/SvgIcon';
-import { useTheme } from "@material-ui/core/styles";
+import SvgIcon from '@mui/material/SvgIcon';
+import { useTheme } from "@mui/styles";
 
 export default function SvgButton({onClick, selected, viewBox, component, disabled}) {
     const theme = useTheme();

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSelector } from 'react-redux';
-import { FormControl, FormHelperText, Select } from "@material-ui/core";
+import { FormControl, FormHelperText, Select } from "@mui/material";
 
 export default function useRepeat(repeat) {
   const [numRepeats, setNumRepeats] = useState(repeat);

@@ -1,5 +1,5 @@
 import Buttons from "./Buttons";
-import { makeStyles } from "@material-ui/core/styles";
+import { makeStyles } from "@mui/styles";
 import { useState } from "react";
 import Score from "./Score";
 import ErrorBoundary from "../error/ErrorBoundary";

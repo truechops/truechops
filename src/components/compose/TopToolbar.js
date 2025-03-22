@@ -1,13 +1,13 @@
 import { useContext, useEffect, useRef, useState, useCallback } from "react";
 import { ActionCreators } from "redux-undo";
-import IconButton from "@material-ui/core/IconButton";
+import IconButton from "@mui/material/IconButton";
 import { update as updateToneJs, setSamplers } from "../../lib/tone";
-import { useTheme, makeStyles } from "@material-ui/core/styles";
+import { useTheme, makeStyles } from "@mui/styles";
 import ToneContext from "../../store/tone-context";
 import { connect, useSelector, useDispatch } from "react-redux";
 import { getToneJs, scoreActions } from "../../store/score";
 import Dialog from "../ui/Dialog";
-import TextField from "@material-ui/core/TextField";
+import TextField from "@mui/material/TextField";
 import { RHYTHM_TYPES } from "../../consts/db";
 import ReactGA from "react-ga";
 
@@ -26,8 +26,8 @@ import addComposeEventListeners from "./event-listeners";
 import {
   FormControlLabel,
   Switch,
-} from "@material-ui/core";
-import Drawer from "@material-ui/core/Drawer";
+} from "@mui/material";
+import Drawer from "@mui/material/Drawer";
 import dynamic from "next/dynamic";
 
 const DynamicComposeSidebar = dynamic(() => import("./Sidebar"));

@@ -1,5 +1,5 @@
-import Button from "@material-ui/core/Button";
-import { useTheme } from "@material-ui/core/styles";
+import Button from "@mui/material/Button";
+import { useTheme } from "@mui/styles";
 
 export default function TCButton({ onClick, id, selected, children, disabled }) {
   const theme = useTheme();

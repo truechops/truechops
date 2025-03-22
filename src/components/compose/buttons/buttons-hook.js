@@ -43,7 +43,7 @@ import Button from "../../ui/Button";
 
 import SvgButton from "../../ui/SvgButton";
 
-import { makeStyles } from "@material-ui/core/styles";
+import { makeStyles } from "@mui/styles";
 import { useDispatch, useSelector } from "react-redux";
 import { scoreActions } from "../../../store/score";
 

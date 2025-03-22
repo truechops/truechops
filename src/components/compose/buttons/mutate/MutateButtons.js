@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Button from "../../../ui/Button";
-import { makeStyles } from "@material-ui/core/styles";
+import { makeStyles } from "@mui/styles";
 import contextHook from "./common/context-hook";
 import repeatHook from "./common/repeat-hook";
 import gridHook from "./common/grid-hook";

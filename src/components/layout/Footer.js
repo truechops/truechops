@@ -3,12 +3,12 @@
 import router, { useRouter } from "next/router";
 import { useSelector, useDispatch } from "react-redux";
 import { appActions } from "../../store/app";
-import { makeStyles, useTheme } from "@material-ui/core/styles";
+import { makeStyles, useTheme } from "@mui/styles";
 
 import React from "react";
 
-import Tabs from "@material-ui/core/Tabs";
-import Tab from "@material-ui/core/Tab";
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
 
 export default function Footer() {
   const useTabStyles = makeStyles({

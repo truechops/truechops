@@ -2,10 +2,10 @@ import { useEffect, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { scoreActions } from "../../store/score";
 import { useRouter } from "next/router";
-import { makeStyles } from "@material-ui/styles";
-import Box from '@material-ui/core/Box';
+import { makeStyles } from "@mui/styles";
+import Box from '@mui/material/Box';
 
-import Paper from "@material-ui/core/Paper";
+import Paper from "@mui/material/Paper";
 import { DEFAULT_TEMPO } from "../../consts/score";
 
 import { scrubTypename } from "../../helpers/mongodb";
@@ -17,7 +17,7 @@ import { mutate } from "../../services/mutate/mutate-service";
 import { getScoreVoices } from "../../utils/score";
 
 import { FaForward, FaDrum } from "react-icons/fa";
-import IconButton from "@material-ui/core/IconButton";
+import IconButton from "@mui/material/IconButton";
 
 export default function Main({rhythms, getSvgConfig, getHeight}) {
   const [svgConfig, setSvgConfig] = useState(getSvgConfig(window.innerWidth));
@@ -68,7 +68,7 @@ export default function Main({rhythms, getSvgConfig, getHeight}) {
     );
   }
 
-  useEffect(async () => {
+  useEffect(() => {
     for (let rhythm of rhythms) {
       const { renderer, context } = initialize(`rhythm-${rhythm.id}`);
       drawScore(

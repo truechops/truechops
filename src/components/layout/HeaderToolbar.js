@@ -5,24 +5,24 @@ import { appActions } from "../../store/app";
 import Dialog from "../ui/Dialog";
 
 import React from "react";
-import { makeStyles, useTheme } from "@material-ui/core/styles";
-import Drawer from "@material-ui/core/Drawer";
-import CssBaseline from "@material-ui/core/CssBaseline";
-import AppBar from "@material-ui/core/AppBar";
-import Toolbar from "@material-ui/core/Toolbar";
-import Button from "@material-ui/core/Button";
-import IconButton from "@material-ui/core/IconButton";
+import { makeStyles, useTheme } from "@mui/styles";
+import Drawer from "@mui/material/Drawer";
+import CssBaseline from "@mui/material/CssBaseline";
+import AppBar from "@mui/material/AppBar";
+import Toolbar from "@mui/material/Toolbar";
+import Button from "@mui/material/Button";
+import IconButton from "@mui/material/IconButton";
 import ErrorBoundary from "../error/ErrorBoundary";
 import { FaDrum, FaUser } from "react-icons/fa";
 
-import Tabs from "@material-ui/core/Tabs";
-import Tab from "@material-ui/core/Tab";
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
 
 import dynamic from "next/dynamic";
 
 import { GiHamburgerMenu } from "react-icons/gi";
 import { FiSettings } from "react-icons/fi";
-import { CircularProgress, Typography } from "@material-ui/core";
+import { CircularProgress, Typography } from "@mui/material";
 import { findLastIndex } from "lodash";
 
 const useStyles = makeStyles((theme) => ({

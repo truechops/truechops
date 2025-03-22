@@ -1,10 +1,10 @@
-import { createMuiTheme } from "@material-ui/core/styles";
+import { createTheme } from "@mui/material/styles";
 
 const primary = "#1c0000";
 const secondary = "#960909";
 const spacing = 8;
 
-export default createMuiTheme({
+export default createTheme({
   spacing,
   palette: {
     primary: {

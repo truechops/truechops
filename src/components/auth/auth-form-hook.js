@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import TextField from "@material-ui/core/TextField";
+import TextField from "@mui/material/TextField";
 import useAuthStyles from "./auth-styles";
-import Button from "@material-ui/core/Button";
+import Button from "@mui/material/Button";
 import { useDispatch} from "react-redux";
 import * as Realm from "realm-web";
 import { login } from "../../store/realm-app";
