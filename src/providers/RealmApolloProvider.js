@@ -11,7 +11,7 @@ import { userRhythmsVar } from '../graphql/cache';
 const createRealmApolloClient = (currentUser) => {
   const link = new HttpLink({
     // Realm apps use a standard GraphQL endpoint, identified by their App ID
-    uri: `https://us-east-1.aws.realm.mongodb.com/api/client/v2.0/app/drumtoolz-ywire/graphql`,
+    uri: `/api/graphql`,
     // A custom fetch handler adds the logged in user's access token to GraphQL requests
     fetch: async (uri, options) => {
       if (!currentUser) {
@@ -21,7 +21,13 @@ const createRealmApolloClient = (currentUser) => {
       await currentUser.refreshCustomData();
       // The handler adds a bearer token Authorization header to the otherwise unchanged request
       options.headers.Authorization = `Bearer ${currentUser.accessToken}`;
-      return fetch(uri, options);
+      return fetch(uri, options)
+      .then(async r => {
+        console.log(await r.json())
+      })
+      .catch(e => { 
+        console.log(`Error: ${e}`)
+      });
     },
   });
   const cache = new InMemoryCache();

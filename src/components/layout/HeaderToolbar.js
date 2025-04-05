@@ -122,7 +122,7 @@ export default function Header() {
             value={selectedArea}
             onChange={onAreaSelected}
             // aria-label="simple tabs example"
-            variant={"scrollable"}
+            //variant={"scrollable"}
             scrollButtons={"auto"}
             centered
             edge="center"

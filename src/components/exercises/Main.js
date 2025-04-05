@@ -88,7 +88,7 @@ export default function main() {
         onChange={changeSelectedRudiments}
         // aria-label="simple tabs example"
         // classes={{ root: classes.tabs, scroller: classes.scroller }}
-        variant={"scrollable"}
+        //variant={"scrollable"}
         scrollButtons={"auto"}
         centered
       >

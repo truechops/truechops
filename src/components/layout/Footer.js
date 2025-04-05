@@ -60,7 +60,7 @@ export default function Footer() {
       onChange={onAreaSelected}
       // aria-label="simple tabs example"
       // classes={{ root: classes.tabs, scroller: classes.scroller }}
-      variant={"scrollable"}
+      //variant={"scrollable"}
       scrollButtons={"auto"}
       centered
     >
