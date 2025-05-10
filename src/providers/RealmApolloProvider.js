@@ -22,12 +22,6 @@ const createRealmApolloClient = (currentUser) => {
       // The handler adds a bearer token Authorization header to the otherwise unchanged request
       options.headers.Authorization = `Bearer ${currentUser.accessToken}`;
       return fetch(uri, options)
-      .then(async r => {
-        console.log(await r.json())
-      })
-      .catch(e => { 
-        console.log(`Error: ${e}`)
-      });
     },
   });
   const cache = new InMemoryCache();

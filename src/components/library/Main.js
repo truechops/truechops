@@ -130,9 +130,9 @@ export default function Main() {
                     setShowDeleteConfirmation(true);
                   }
                   }>
-                  <Button>
+                  <button style={{border: 0, background: 'white', cursor: 'pointer'}}>
                     <FaTrash size={theme.compose.sidebar.icons.size} />
-                  </Button>
+                  </button>
                   </ListItemSecondaryAction>
                 </ListItem>
                 

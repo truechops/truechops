@@ -1177,6 +1177,7 @@ export default async function handler(req, res) {
         try {
           await client.connect(); // Ensure client.connect() is awaited
           const db = client.db('drumtoolz');
+          console.log(db.databaseName)
           const token = req.headers.token;
           return {
               dataSources: {

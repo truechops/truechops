@@ -284,7 +284,7 @@ export function TopToolbar(props) {
 
   return (
     <>
-      <div style={{ width: "auto", margin: "auto" }}>
+      <div className="top-toolbar" style={{ width: "auto", margin: "12px" }}>
         <IconButton color="inherit" aria-label="parts" onClick={clearScore}>
           <FaTimes size={iconSize} />
         </IconButton>

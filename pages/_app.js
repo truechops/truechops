@@ -11,6 +11,7 @@ import RealmApolloProvider from "../src/providers/RealmApolloProvider";
 import { ToneContextProvider } from "../src/store/tone-context";
 import ReactGA from "react-ga";
 import ErrorBoundary from "../src/components/error/ErrorBoundary";
+import '../styles/App.css'
 
 export default function MyApp(props) {
   const { Component, pageProps } = props;

@@ -42,31 +42,37 @@ export default createTheme({
       fontSize: "1rem",
     },
   },
-  overrides: {
+  components: {
     MuiTab: {
-      root: {
-        minHeight: 48,
-      },
+      styleOverrides: {
+        root: {
+          minHeight: 48,
+        },
+      }
     },
     MuiChip: {
-      root: {
-        minHeight: 32,
-      },
+      styleOverrides: {
+        root: {
+          minHeight: 32,
+        },
+      }
     },
     MuiButton: {
-      root: {
-        margin: "0 5px",
-        minWidth: 34,
-        borderRadius: "50rem",
-        padding: "3px 11px",
-        marginLeft: spacing,
-      },
-      outlined: {
-        padding: "5x 11px",
-      },
-      label: {
-        //color: 'black'
-      },
+      styleOverrides: {
+        root: {
+          margin: "0 5px",
+          minWidth: 34,
+          borderRadius: "50rem",
+          padding: "3px 11px",
+          marginLeft: spacing,
+        },
+        outlined: {
+          padding: "5x 11px",
+        },
+        label: {
+          color: 'black'
+        },
+      }
     },
   },
   buttons: {
@@ -90,7 +96,7 @@ export default createTheme({
     },
     selected: {
       backgroundColor: primary,
-      color: "white",
+      color: "white !important",
     },
   },
   sidebar: {

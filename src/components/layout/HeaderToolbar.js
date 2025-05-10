@@ -103,7 +103,10 @@ export default function Header() {
   return (
     <>
       <CssBaseline />
-      <AppBar position="fixed">
+      <AppBar position="fixed" style={{
+        backgroundColor: 'black',
+        color: 'white'
+        }}>
         <Toolbar
           style={{
             justifyContent: "space-between",
@@ -120,6 +123,7 @@ export default function Header() {
 
           <Tabs
             value={selectedArea}
+            textColor="secondary"
             onChange={onAreaSelected}
             // aria-label="simple tabs example"
             //variant={"scrollable"}
@@ -127,11 +131,11 @@ export default function Header() {
             centered
             edge="center"
           >
-            <Tab style={{ minWidth: 50 }} key={"header-exercises"} label="EXERCISES" {...a11yProps(0)} />
-            <Tab style={{ minWidth: 50 }} key={"header-score"} label="SCORE" {...a11yProps(1)} />
-            <Tab style={{ minWidth: 50 }} key={"header-rudiments"} label="RUDIMENTS" {...a11yProps(2)} />
-            <Tab style={{ minWidth: 50 }} key={"header-byos"} label="BYOS" {...a11yProps(3)} />
-            <Tab edge="end" style={{ minWidth: 50 }} key={"header-saved"} icon={<FaUser />}  {...a11yProps(4)} />
+            <Tab style={{ minWidth: 50, color: 'white'}} key={"header-exercises"} label="EXERCISES" {...a11yProps(0)} />
+            <Tab style={{ minWidth: 50, color: 'white' }} key={"header-score"} label="SCORE" {...a11yProps(1)} />
+            <Tab style={{ minWidth: 50, color: 'white' }} key={"header-rudiments"} label="RUDIMENTS" {...a11yProps(2)} />
+            <Tab style={{ minWidth: 50, color: 'white' }} key={"header-byos"} label="BYOS" {...a11yProps(3)} />
+            <Tab edge="end" style={{ minWidth: 50, color: 'white' }} key={"header-saved"} icon={<FaUser />}  {...a11yProps(4)} />
           </Tabs>
           <div class="right"></div>
         </Toolbar>
