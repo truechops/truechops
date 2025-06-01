@@ -64,7 +64,7 @@ export default function Footer() {
       scrollButtons={"auto"}
       centered
     >
-      <Tab key={"footer-exercises"} label="EXERCISES" {...a11yProps(0)} />
+      <Tab key={"footer-exercises"} label="DRILLS" {...a11yProps(0)} />
       <Tab key={"footer-edit"} label="SCORE" {...a11yProps(1)} />
       <Tab key={"footer-rudiments"} label="RUDIMENTS" {...a11yProps(2)} />
     </Tabs>
