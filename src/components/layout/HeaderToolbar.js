@@ -131,7 +131,7 @@ export default function Header() {
             centered
             edge="center"
           >
-            <Tab style={{ minWidth: 50, color: 'white'}} key={"header-exercises"} label="EXERCISES" {...a11yProps(0)} />
+            <Tab style={{ minWidth: 50, color: 'white'}} key={"header-exercises"} label="DRILLS" {...a11yProps(0)} />
             <Tab style={{ minWidth: 50, color: 'white' }} key={"header-score"} label="SCORE" {...a11yProps(1)} />
             <Tab style={{ minWidth: 50, color: 'white' }} key={"header-rudiments"} label="RUDIMENTS" {...a11yProps(2)} />
             <Tab style={{ minWidth: 50, color: 'white' }} key={"header-byos"} label="BYOS" {...a11yProps(3)} />
