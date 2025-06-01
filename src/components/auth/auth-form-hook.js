@@ -232,6 +232,7 @@ export default function AuthForm(props) {
       <div className={classes.continueButton}>
         <Button
           type="submit"
+          className="auth-login"
           fullWidth
           variant="outlined"
           color="primary"
