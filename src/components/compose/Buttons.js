@@ -132,7 +132,7 @@ export function Buttons(props) {
           <ButtonsRow>{measureButtons}</ButtonsRow>
         </TabPanel>
         <TabPanel id="compose-notes-tab-panel" value={selectedTab} index={1}>
-          <Hidden smUp>
+          <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
             {voiceButtons.map((rowButtons, rowIndex) => {
               let content = [];
               if (rowIndex === 0) {
@@ -168,8 +168,8 @@ export function Buttons(props) {
                 </ButtonsRow>
               );
             })}
-          </Hidden>
-          <Hidden xsDown>
+          </Box>
+          <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
             <ButtonsRow>
               <InstrumentHelpPopover />
               {voiceButtons.flat()}
@@ -184,17 +184,17 @@ export function Buttons(props) {
                 onClick={() => dispatch(scoreActions.toggleTupletSelected())}
               />
             </ButtonsRow>
-          </Hidden>
-          <Hidden smUp>
+          </Box>
+          <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
             <ButtonsRow>{noteButtonsRow1}</ButtonsRow>
             <ButtonsRow>{noteButtonsRow2Mobile}</ButtonsRow>
-          </Hidden>
-          <Hidden xsDown>
+          </Box>
+          <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
             <ButtonsRow>
               {noteButtonsRow1}
               {noteButtonsRow2Desktop}
             </ButtonsRow>
-          </Hidden>
+          </Box>
           <TupletPickerPopover
             tupletPickerOpen={tupletPickerOpen}
             tupletPickerAnchorEl={tupletPickerAnchorEl}

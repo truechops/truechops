@@ -69,5 +69,5 @@ export default function useSnareVoices() {
         </Button>
       ));
 
-      return [buttons.slice(0, 2), buttons.slice(2)];
+      return [buttons.slice(0, 4), buttons.slice(4)];
 }
