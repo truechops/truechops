@@ -13,7 +13,7 @@ import { FaTrash, FaPlus } from "react-icons/fa";
 import { useTheme } from "@material-ui/core/styles";
 
 import React from "react";
-import Dialog from "../ui/Dialog";
+import Dialog from "../ui/Dialog"; 
 
 const useStyles = makeStyles((theme) => ({
   root: {
