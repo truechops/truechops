@@ -4,7 +4,7 @@ import { GET_ALL_USER_SAVED_RHYTHMS_QUERY, GET_RHYTHM_BY_ID_QUERY } from '../../
 
 export default function useRhythmQueries() {
   const currentUser = useSelector(state => state.realm.app.currentUser);
-  return {
+  return { 
     getAllUserRhythms: useAllRhythmsForUser.bind(null, currentUser),
     getRhythmById: useGetRhythmById
   };
