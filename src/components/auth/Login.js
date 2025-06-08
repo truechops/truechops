@@ -5,7 +5,7 @@ import { login } from "../../store/realm-app";
 import useAuthStyles from "./auth-styles";
 import useAuthFormHook from "./auth-form-hook";
 import useRouter from "next/router";
-import CircularProgress from "@material-ui/core/CircularProgress";
+import CircularProgress from "@mui/material/CircularProgress";
 import { appActions } from "../../store/app";
 
 export default function Login() {

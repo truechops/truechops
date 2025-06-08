@@ -16,10 +16,12 @@ export default function useLinkMutations() {
 }
 
 function useGetRhythmLink(currentUser, score, tempo, mutations) {
+  console.log("useGetRhythmLink1")
   const [addLinkMutation] = useMutation(GET_RHYTHM_LINK, {
     // Manually save added Tasks into the Apollo cache so that Task queries automatically update
     // For details, refer to https://www.apollographql.com/docs/react/data/mutations/#making-all-other-cache-updates
     update: (cache, { data: { addedLink } }) => {
+      console.log("useGetRhythmLink2")
       cache.modify({
         fields: {
           links: (existingLinks = []) => [
@@ -35,6 +37,7 @@ function useGetRhythmLink(currentUser, score, tempo, mutations) {
   });
 
   const getLink = async (name, saveMutations) => {
+    console.log("getLinkkk")
     let ms = saveMutations ? [
       {
         type: mutations[0].type,

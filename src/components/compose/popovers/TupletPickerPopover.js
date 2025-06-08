@@ -1,6 +1,6 @@
-import { Select} from "@material-ui/core";
-import Popover from "@material-ui/core/Popover";
-import { makeStyles } from '@material-ui/styles';
+import { Select} from "@mui/material";
+import Popover from "@mui/material/Popover";
+import { makeStyles } from '@mui/styles';
 import { useDispatch, useSelector } from 'react-redux';
 import { scoreActions } from '../../../store/score';
 

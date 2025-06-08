@@ -2,15 +2,15 @@ import { useEffect, useLayoutEffect, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { scoreActions } from "../../store/score";
 import { useRouter } from "next/router";
-import { makeStyles, useTheme } from "@material-ui/styles";
-import Box from "@material-ui/core/Box";
+import { makeStyles, useTheme } from "@mui/styles";
+import Box from "@mui/material/Box";
 import ErrorBoundary from "../error/ErrorBoundary";
 import Legend from "../../../data/byos/alphabet/legend.js";
 import LegendDialog from "./legend-dialog.js";
 import Dialog from '../ui/Dialog';
 
 import $ from "jquery";
-import Paper from "@material-ui/core/Paper";
+import Paper from "@mui/material/Paper";
 import { DEFAULT_TEMPO } from "../../consts/score";
 
 import byosAlphabet from "../../../data/byos/alphabet/all.js";

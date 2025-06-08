@@ -1,6 +1,7 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { scoreActions } from '../../../../store/score';
 import Button from '../../../ui/Button';
+import { ThemeProvider } from '@mui/material/styles';
 
 export default function useSnareVoices() {
     const { snareSelected, pingSelected, rimSelected, 
@@ -68,5 +69,5 @@ export default function useSnareVoices() {
         </Button>
       ));
 
-      return [buttons.slice(0, 2), buttons.slice(2)];
+      return [buttons.slice(0, 4), buttons.slice(4)];
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import Tabs from "@material-ui/core/Tabs";
-import Tab from "@material-ui/core/Tab";
-import { makeStyles, useTheme } from "@material-ui/core/styles";
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
+import { makeStyles, useTheme } from "@mui/styles";
 import { useDispatch } from "react-redux";
 import { appActions } from "../../store/app";
 import drumsetExercises from "../../../data/exercises/drumset/all";
@@ -88,7 +88,7 @@ export default function main() {
         onChange={changeSelectedRudiments}
         // aria-label="simple tabs example"
         // classes={{ root: classes.tabs, scroller: classes.scroller }}
-        variant={"scrollable"}
+        //variant={"scrollable"}
         scrollButtons={"auto"}
         centered
       >

@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import { CircularProgress } from "@material-ui/core";
+import { CircularProgress } from "@mui/material";
 import { useDispatch } from "react-redux";
 import { scoreActions } from "../../store/score";
 
@@ -8,7 +8,7 @@ import { useLazyQuery } from "@apollo/client";
 import { scrubTypename } from "../../helpers/mongodb";
 import { GET_LINK_RHYTHM_BY_ID_QUERY } from '../../consts/gql/graphql';
 import { useEffect } from 'react';
-import { useTheme } from '@material-ui/styles';
+import { useTheme } from '@mui/styles';
 
 export default function RhythmLink({ linkId }) {
   const dispatch = useDispatch();

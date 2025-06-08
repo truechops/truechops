@@ -29,7 +29,6 @@ import {
   DEFAULT_MUTATION,
   DEFAULT_TIME_SIG,
 } from "../consts/score";
-import { Note } from "@material-ui/icons";
 
 export const ACCENT = "a";
 export const FLAM = "f";

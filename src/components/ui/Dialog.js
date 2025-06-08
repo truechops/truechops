@@ -1,5 +1,5 @@
-import { Dialog, DialogContent, DialogActions, Button} from '@material-ui/core';
-import { makeStyles } from "@material-ui/styles";
+import { Dialog, DialogContent, DialogActions, Button} from '@mui/material';
+import { makeStyles } from "@mui/styles";
 
 export default function TCDialog(props) 
 {

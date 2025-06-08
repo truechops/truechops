@@ -1,6 +1,6 @@
 import { useSelector, useDispatch } from "react-redux";
 import { getScoreVoices, scoreActions } from "../../../../../store/score";
-import { FormControl, FormHelperText, Select } from "@material-ui/core";
+import { FormControl, FormHelperText, Select } from "@mui/material";
 
 
 export default function useContext() {

@@ -3,12 +3,12 @@
 import router, { useRouter } from "next/router";
 import { useSelector, useDispatch } from "react-redux";
 import { appActions } from "../../store/app";
-import { makeStyles, useTheme } from "@material-ui/core/styles";
+import { makeStyles, useTheme } from "@mui/styles";
 
 import React from "react";
 
-import Tabs from "@material-ui/core/Tabs";
-import Tab from "@material-ui/core/Tab";
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
 
 export default function Footer() {
   const useTabStyles = makeStyles({
@@ -60,11 +60,11 @@ export default function Footer() {
       onChange={onAreaSelected}
       // aria-label="simple tabs example"
       // classes={{ root: classes.tabs, scroller: classes.scroller }}
-      variant={"scrollable"}
+      //variant={"scrollable"}
       scrollButtons={"auto"}
       centered
     >
-      <Tab key={"footer-exercises"} label="EXERCISES" {...a11yProps(0)} />
+      <Tab key={"footer-exercises"} label="DRILLS" {...a11yProps(0)} />
       <Tab key={"footer-edit"} label="SCORE" {...a11yProps(1)} />
       <Tab key={"footer-rudiments"} label="RUDIMENTS" {...a11yProps(2)} />
     </Tabs>

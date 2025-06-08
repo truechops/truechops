@@ -1,5 +1,5 @@
 import Buttons from "./Buttons";
-import { makeStyles } from "@material-ui/core/styles";
+import { makeStyles } from "@mui/styles";
 import { useState } from "react";
 import Score from "./Score";
 import ErrorBoundary from "../error/ErrorBoundary";
@@ -18,8 +18,8 @@ export default function Main(isDynamicRhythm) {
   const calculateButtonsHeight = (theme, isMobile) => {
     let buttonsHeight = 0;
     const toolbarHeight = theme.mixins.toolbar.minHeight;
-    const tabsHeight = theme.overrides.MuiTab.root.minHeight;
-    const chipHeight = theme.overrides.MuiChip.root.minHeight;
+    const tabsHeight = theme.components.MuiTab.styleOverrides.root.minHeight;
+    const chipHeight = theme.components.MuiChip.styleOverrides.root.minHeight;
     const rowBottomMargin = theme.compose.buttons.row.marginBottom;
     const spacing = theme.spacing();
     const buttonsContainerPadding = theme.compose.buttons.container.padding;

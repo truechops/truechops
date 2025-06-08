@@ -1,19 +1,20 @@
-import { Switch, makeStyles, Button, Select } from "@material-ui/core";
+import { Switch, Button, Select } from "@mui/material";
+import { makeStyles } from "@mui/styles";
 
 import { useEffect, useState, useRef } from "react";
-import List from "@material-ui/core/List";
-import ListItem from "@material-ui/core/ListItem";
-import ListItemSecondaryAction from "@material-ui/core/ListItemSecondaryAction";
-import ListItemText from "@material-ui/core/ListItemText";
-import ListSubheader from "@material-ui/core/ListSubheader";
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
+import ListItemSecondaryAction from "@mui/material/ListItemSecondaryAction";
+import ListItemText from "@mui/material/ListItemText";
+import ListSubheader from "@mui/material/ListSubheader";
 import { scoreActions } from "../../store/score";
 import { useSelector, useDispatch } from "react-redux";
 import _ from "lodash";
 import { FaTrash, FaPlus } from "react-icons/fa";
-import { useTheme } from "@material-ui/core/styles";
+import { useTheme } from "@mui/styles";
 
 import React from "react";
-import Dialog from "../ui/Dialog"; 
+import Dialog from "../ui/Dialog";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -23,10 +24,11 @@ const useStyles = makeStyles((theme) => ({
     textAlign: "center",
   },
   trash: {
-    marginRight: theme.spacing(1),
+    marginRight: "12px !important",
   },
   select: {
     textAlign: "left",
+    height: "42px !important",
   },
   subheader: {
     fontSize: 20,

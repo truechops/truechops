@@ -1,8 +1,8 @@
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect } from "react";
 import { useRouter } from "next/router";
-import CircularProgress from "@material-ui/core/CircularProgress";
-import { useTheme } from "@material-ui/styles";
+import CircularProgress from "@mui/material/CircularProgress";
+import { useTheme } from "@mui/styles";
 
 export default function EmailConfirmation(props) {
   const app = useSelector((state) => state.realm.app);

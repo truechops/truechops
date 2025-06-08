@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Popover, ClickAwayListener } from "@material-ui/core";
-import { makeStyles, useTheme } from "@material-ui/core/styles";
+import { Popover, ClickAwayListener } from "@mui/material";
+import { makeStyles, useTheme } from "@mui/styles";
 import { BiHelpCircle } from 'react-icons/bi';
 import useInstruments from '../buttons/instruments-hook';
 

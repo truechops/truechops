@@ -1,9 +1,9 @@
 import { ApolloClient, InMemoryCache } from "@apollo/client";
 
-const  createRealmApolloClient = (currentUser) => {
+const createRealmApolloClient = (currentUser) => {
     const link = new HttpLink({
       // Realm apps use a standard GraphQL endpoint, identified by their App ID
-      uri: `https://us-east-1.aws.realm.mongodb.com/api/client/v2.0/app/drumtoolz-ywire/graphql`,
+      uri: `/api/graphql`,
       // A custom fetch handler adds the logged in user's access token to GraphQL requests
       fetch: async (uri, options) => {
         if (!currentUser) {

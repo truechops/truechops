@@ -1,5 +1,5 @@
 import { useEffect }  from 'react';
-import { useTheme } from '@material-ui/styles';
+import { useTheme } from '@mui/styles';
 import { useDispatch } from "react-redux";
 import { appActions } from '../src/store/app';
 

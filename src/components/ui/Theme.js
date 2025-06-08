@@ -1,10 +1,10 @@
-import { createMuiTheme } from "@material-ui/core/styles";
+import { createTheme } from "@mui/material/styles";
 
 const primary = "#1c0000";
 const secondary = "#960909";
 const spacing = 8;
 
-export default createMuiTheme({
+export default createTheme({
   spacing,
   palette: {
     primary: {
@@ -42,31 +42,37 @@ export default createMuiTheme({
       fontSize: "1rem",
     },
   },
-  overrides: {
+  components: {
     MuiTab: {
-      root: {
-        minHeight: 48,
-      },
+      styleOverrides: {
+        root: {
+          minHeight: 48,
+        },
+      }
     },
     MuiChip: {
-      root: {
-        minHeight: 32,
-      },
+      styleOverrides: {
+        root: {
+          minHeight: 32,
+        },
+      }
     },
     MuiButton: {
-      root: {
-        margin: "0 5px",
-        minWidth: 34,
-        borderRadius: "50rem",
-        padding: "3px 11px",
-        marginLeft: spacing,
-      },
-      outlined: {
-        padding: "5x 11px",
-      },
-      label: {
-        //color: 'black'
-      },
+      styleOverrides: {
+        root: {
+          margin: "0 5px",
+          minWidth: 34,
+          borderRadius: "50rem",
+          padding: "3px 11px",
+          marginLeft: spacing,
+        },
+        outlined: {
+          padding: "5x 11px",
+        },
+        label: {
+          color: 'black'
+        },
+      }
     },
   },
   buttons: {
@@ -90,7 +96,7 @@ export default createMuiTheme({
     },
     selected: {
       backgroundColor: primary,
-      color: "white",
+      color: "white !important",
     },
   },
   sidebar: {

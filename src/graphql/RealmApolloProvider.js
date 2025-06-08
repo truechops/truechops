@@ -11,7 +11,7 @@ import {
 const createRealmApolloClient = (app) => {
   const link = new HttpLink({
     // Realm apps use a standard GraphQL endpoint, identified by their App ID
-    uri: `https://realm.mongodb.com/api/client/v2.0/app/${app.id}/graphql`,
+    uri: `/api/graphql`,
     // A custom fetch handler adds the logged in user's access token to GraphQL requests
     fetch: async (uri, options) => {
       if (!app.currentUser) {

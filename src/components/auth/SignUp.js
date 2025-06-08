@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import useAuthStyles from "./auth-styles";
 import useAuthFormHook from "./auth-form-hook";
-import CircularProgress from "@material-ui/core/CircularProgress";
+import CircularProgress from "@mui/material/CircularProgress";
 import { appActions } from '../../store/app';
 
 export default function SignUp() {

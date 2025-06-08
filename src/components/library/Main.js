@@ -5,18 +5,18 @@ import { useRouter } from "next/router";
 import { useLazyQuery, useReactiveVar } from "@apollo/client";
 import { GET_ALL_USER_SAVED_RHYTHMS_QUERY } from "../../consts/gql/graphql";
 import { userRhythmsVar } from "../../graphql/cache";
-import { Button, CircularProgress, ListItemSecondaryAction } from "@material-ui/core";
-import { makeStyles } from "@material-ui/styles";
+import { Button, CircularProgress, ListItemSecondaryAction } from "@mui/material";
+import { makeStyles } from "@mui/styles";
 
-import List from "@material-ui/core/List";
-import ListItem from "@material-ui/core/ListItem";
-import ListItemText from "@material-ui/core/ListItemText";
-import Paper from "@material-ui/core/Paper";
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
+import ListItemText from "@mui/material/ListItemText";
+import Paper from "@mui/material/Paper";
 import { DEFAULT_TEMPO } from "../../consts/score";
 
 import { scrubTypename } from "../../helpers/mongodb";
 import { FaTrash } from "react-icons/fa";
-import { useTheme } from "@material-ui/core/styles";
+import { useTheme } from "@mui/styles";
 import Dialog from '../ui/Dialog';
 import { appActions } from "../../store/app";
 
@@ -130,9 +130,9 @@ export default function Main() {
                     setShowDeleteConfirmation(true);
                   }
                   }>
-                  <Button>
+                  <button style={{border: 0, background: 'white', cursor: 'pointer'}}>
                     <FaTrash size={theme.compose.sidebar.icons.size} />
-                  </Button>
+                  </button>
                   </ListItemSecondaryAction>
                 </ListItem>
                 

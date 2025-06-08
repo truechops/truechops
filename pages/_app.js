@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import Head from "next/head";
-import { ThemeProvider } from "@material-ui/core/styles";
-import CssBaseline from "@material-ui/core/CssBaseline";
+import { ThemeProvider } from "@mui/styles";
+import CssBaseline from "@mui/material/CssBaseline";
 import Theme from "../src/components/ui/Theme";
 import HeaderToolbar from "../src/components/layout/HeaderToolbar";
 import Navigation from "../src/components/layout/Navigation";
@@ -11,6 +11,7 @@ import RealmApolloProvider from "../src/providers/RealmApolloProvider";
 import { ToneContextProvider } from "../src/store/tone-context";
 import ReactGA from "react-ga";
 import ErrorBoundary from "../src/components/error/ErrorBoundary";
+import '../styles/App.css'
 
 export default function MyApp(props) {
   const { Component, pageProps } = props;

@@ -1,4 +1,4 @@
-import { FormControl, FormHelperText, Select } from "@material-ui/core";
+import { FormControl, FormHelperText, Select } from "@mui/material";
 import { useSelector, useDispatch } from 'react-redux';
 import { scoreActions } from '../../../../../store/score';
 import {
