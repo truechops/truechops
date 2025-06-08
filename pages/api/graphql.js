@@ -795,8 +795,18 @@ input RhythmScoreMeasurePartUpdateInput {
 const resolvers = {
     Query: {
       getLinkRhythmById: async (parent, { input }, { dataSources }) => {
-          const result = await dataSources.links.findOneById(input);
-          return result;
+        // Find the link by _id
+        const link = await dataSources.links.findOne({ _id: input });
+        if (!link) {
+          throw new Error("Link not found.");
+        }
+        
+        // Find the rhythm using the link's value
+        const rhythm = await dataSources.rhythms.getRhythm(link.value);
+        if (!rhythm) {
+          throw new Error("Rhythm not found for this link.");
+        }
+        return rhythm;
       },
       getRhythmById: async (parent, { input }, { dataSources }) => {
         const result = await dataSources.rhythms.findOneById(input);

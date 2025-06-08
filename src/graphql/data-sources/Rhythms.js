@@ -2,7 +2,7 @@ import { MongoDataSource } from 'apollo-datasource-mongodb'
 
 export default class Rhythms extends MongoDataSource {
   getRhythm(rhythmId) {
-    return this.findOneById(rhythmId)
+    return this.collection.findOne({ _id: rhythmId });
   }
 
   async getAll(query) {
