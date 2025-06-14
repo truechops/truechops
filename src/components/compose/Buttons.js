@@ -104,7 +104,8 @@ export function Buttons(props) {
 
   const {
     measureButtons,
-    ornamentButtons,
+    ornamentButtonsRow1,
+    ornamentButtonsRow2,
     voiceButtons,
     dotButton,
     noteButtonsRow1,
@@ -202,7 +203,16 @@ export function Buttons(props) {
           />
         </TabPanel>
         <TabPanel value={selectedTab} index={2}>
-          <ButtonsRow>{ornamentButtons}</ButtonsRow>
+          <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
+            <ButtonsRow>{ornamentButtonsRow1}</ButtonsRow>
+            <ButtonsRow>{ornamentButtonsRow2}</ButtonsRow>
+          </Box>
+          <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+            <ButtonsRow>
+              {ornamentButtonsRow1}{ornamentButtonsRow2}
+            </ButtonsRow>
+          </Box>
+
         </TabPanel>
         <TabPanel style={{margin: 'auto', padding: 0}} classes={{root: classes.mutateButtonsRoot}} value={selectedTab} index={3}>
           <MutateButtons />

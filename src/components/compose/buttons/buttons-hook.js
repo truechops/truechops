@@ -246,7 +246,7 @@ export default function useComposeButtons(
   );
   const noteButtonsRow2Desktop = noteButtonsRow2Mobile.slice().reverse();
 
-  const ornamentButtons = [
+  const ornamentButtonsRow1 = [
     {
       component: LeftStickingIcon,
       onClick: () => {
@@ -282,7 +282,18 @@ export default function useComposeButtons(
       },
       viewBox: "0 0 42.39 50",
       selected: accentSelected,
-    },
+    }
+  ].map((props) => (
+    <SvgButton
+      key={Math.random().toString()}
+      onClick={props.onClick}
+      selected={props.selected}
+      viewBox={props.viewBox}
+      component={props.component}
+    />
+  ));
+
+  const ornamentButtonsRow2 = [
     {
       component: BuzzIcon,
       onClick: () => {
@@ -413,7 +424,8 @@ export default function useComposeButtons(
 
   return {
     measureButtons,
-    ornamentButtons,
+    ornamentButtonsRow1,
+    ornamentButtonsRow2,
     voiceButtons,
     noteButtonsRow1,
     noteButtonsRow2Mobile,
