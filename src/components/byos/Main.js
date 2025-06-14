@@ -285,7 +285,7 @@ export default function Main() {
         <button
           className={classes.byosButton}
           onClick={updateScore}
-          disabled={!word.trim().length}
+          disabled={!scorePreview}
         >
           Practice
         </button>
