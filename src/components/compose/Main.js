@@ -21,7 +21,7 @@ export default function Main(isDynamicRhythm) {
     const tabsHeight = theme.components.MuiTab.styleOverrides.root.minHeight;
     const chipHeight = theme.components.MuiChip.styleOverrides.root.minHeight;
     const rowBottomMargin = theme.compose.buttons.row.marginBottom;
-    const spacing = theme.spacing();
+    const spacing = 8;
     const buttonsContainerPadding = theme.compose.buttons.container.padding;
 
     /* If the tab panel is hidden, the buttons are hidden. So, button height = 0.
