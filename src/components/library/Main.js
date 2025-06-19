@@ -97,7 +97,11 @@ export default function Main() {
 
   return (
     <>
-      <section style={{ textAlign: "center" }}>
+      <section style={{ 
+        textAlign: "center",
+        overflow: 'scroll',
+        height: '100vh'
+       }}>
         {userRhythms.length > 0 && (
           <List>
             {userRhythms.map((rhythm, rhythmIndex) => (

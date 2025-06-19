@@ -18,7 +18,9 @@ export default class MyDocument extends Document {
           <script src="/lib/jquery.3.6.0.min.js"></script>
         </Head>
         <body>
-          <Main />
+          <div style={{maxHeight: '100vh', overflowY: 'hidden'}}>
+            <Main />
+          </div>
           <NextScript />
         </body>
       </Html>

@@ -123,6 +123,10 @@ export default function Main() {
       justifyContent: "center",
       alignItems: "center",
       gap: "12px",
+      position: 'sticky',
+      top: 0,
+      background: 'lightgray',
+      border: '1px solid gray'
     },
     byosButton: {
       height: "30px",
