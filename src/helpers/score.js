@@ -163,7 +163,7 @@ export function getEmptyMeasure(timeSig, instruments) {
       {
         notes: timeSigs[`${timeSig.num}/${timeSig.type}`].notes.map(duration => ({
           notes: [],
-          duration: duration.replace('d', ''),
+          duration: +duration.replace('d', ''),
           dots: duration.includes('d') ? 1 : 0,
           velocity: NON_ACCENT_VELOCITY
         })),
