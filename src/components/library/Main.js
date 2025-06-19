@@ -98,8 +98,7 @@ export default function Main() {
   return (
     <>
       <section style={{ 
-        textAlign: "center",
-        overflow: 'scroll'
+        textAlign: "center"
        }}>
         {userRhythms.length > 0 && (
           <List>
