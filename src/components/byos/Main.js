@@ -115,7 +115,7 @@ export default function Main() {
       backgroundPosition: "center",
     },
     alphabet: {
-      height: "60vh",
+      height: "45vh",
       overflow: "scroll",
     },
     alphabetHeader: {
@@ -160,11 +160,11 @@ export default function Main() {
     root: {
       flexDirection: "column",
       display: "flex",
-      height: "100%",
     },
     score: {
       width: "100%",
       overflow: "auto",
+      height: alphabetShown ? '32vh' : '78vh',
       flex: 1,
       zIndex: 1,
     },
