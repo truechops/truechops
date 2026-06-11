@@ -11,7 +11,7 @@ import {
   BUZZ,
   LEFT_STICKING,
   RIGHT_STICKING,
-} from "../store/score";
+} from "../consts/ornaments";
 
 const VF = Vex.Flow;
 const BASE_STAVE_SPACE = 125;
@@ -43,7 +43,7 @@ export function drawScore(
   svgConfig,
   repeat,
 ) {
-  const {width: svgWidthProposed, scale, hResize, vResize} = svgConfig;
+  const {width: svgWidthProposed, scale, hResize, vResize, justifyLastRow} = svgConfig;
   let { measures } = score;
   let systemWidth = 0;
   const measurePartsArray = getMeasureData(measures, score.parts);
@@ -105,9 +105,11 @@ export function drawScore(
   }
 
   if (barRenderData.length) {
+    const remainingWidth = justifyLastRow ? Math.max(svgWidth - width, 0) : 0;
+
     renderStaves(
       barRenderData,
-      0,
+      remainingWidth,
       row,
       context,
       selectedNoteIndex,
@@ -116,8 +118,8 @@ export function drawScore(
       previousTimeSig
     );
 
-    if(width > maxWidth) {
-      maxWidth = width
+    if(width + remainingWidth > maxWidth) {
+      maxWidth = width + remainingWidth
     }
   }
 

@@ -42,16 +42,24 @@
     "tone": "^15.0.4",
     "validator": "^13.6.0",
     "vexflow": "4.1.0",
+    "puppeteer": "^21.3.8",
     "yarn": "^1.22.10"
   },
   "scripts": {
     "dev": "next",
     "build": "NODE_OPTIONS='--openssl-legacy-provider' next build",
     "start": "next start",
+    "pdf:hybrid-rudiments": "node scripts/generate-hybrid-rudiments-pdf.js",
+    "pdf:hybrid-rudiments:musescore": "node scripts/generate-hybrid-rudiments-pdf.js --renderer musescore",
     "post-update": "echo \"codesandbox preview only, need an update\" && yarn upgrade --latest"
   },
   "devDependencies": {
+    "@babel/core": "^7.26.10",
+    "@babel/preset-env": "^7.26.9",
     "eslint": "^7.29.0",
-    "eslint-plugin-react": "^7.24.0"
+    "eslint-plugin-react": "^7.24.0",
+    "jsdom": "^22.1.0",
+    "pdfkit": "^0.19.1",
+    "svg-to-pdfkit": "^0.1.8"
   }
 }

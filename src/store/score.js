@@ -29,14 +29,25 @@ import {
   DEFAULT_MUTATION,
   DEFAULT_TIME_SIG,
 } from "../consts/score";
+import {
+  ACCENT,
+  FLAM,
+  DIDDLE,
+  CHEESE,
+  BUZZ,
+  LEFT_STICKING,
+  RIGHT_STICKING,
+} from "../consts/ornaments";
 
-export const ACCENT = "a";
-export const FLAM = "f";
-export const DIDDLE = "d";
-export const CHEESE = "c";
-export const BUZZ = "b";
-export const LEFT_STICKING = "l";
-export const RIGHT_STICKING = "r";
+export {
+  ACCENT,
+  FLAM,
+  DIDDLE,
+  CHEESE,
+  BUZZ,
+  LEFT_STICKING,
+  RIGHT_STICKING,
+};
 
 const initialState = {
   tempo: DEFAULT_TEMPO,
