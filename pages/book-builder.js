@@ -1,10 +1,10 @@
 import dynamic from "next/dynamic";
 
-const DynamicBookBuilder = dynamic(
-  () => import("../src/components/book-builder/Main"),
+const DynamicComposer = dynamic(
+  () => import("../src/components/compose/Main"),
   { ssr: false }
 );
 
 export default function BookBuilderPage() {
-  return <DynamicBookBuilder />;
+  return <DynamicComposer initialTab={4} />;
 }

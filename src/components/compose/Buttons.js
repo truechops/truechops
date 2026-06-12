@@ -249,6 +249,11 @@ export function Buttons(props) {
           label="Mutate"
           {...a11yProps(3)}
         />
+        <Tab
+          key={"compose-button-tabs-book"}
+          label="Book"
+          {...a11yProps(4)}
+        />
       </Tabs>
     </>
   );

@@ -5,20 +5,22 @@ import Score from "./Score";
 import ErrorBoundary from "../error/ErrorBoundary";
 import $ from 'jquery';
 import { useSelector } from "react-redux";
+import BookBuilderPanel from "../book-builder/Main";
 
 import dynamic from "next/dynamic";
 //Each page has its own top toolbar. Render it dynamically based on which page you are on.
 const DynamicComposeTopToolbar = dynamic(() => import("../compose/TopToolbar"));
 
-export default function Main(isDynamicRhythm) {
-  const [selectedTab, setSelectedTab] = useState(1);
+export default function Main(props) {
+  const initialTab = props && props.initialTab != null ? props.initialTab : 1;
+  const isDynamicRhythm = props && props.isDynamicRhythm;
+  const [selectedTab, setSelectedTab] = useState(initialTab);
   const [tabPanelHidden, setTabPanelHidden] = useState(false);
   const score = useSelector((state) => state.score.present.score);
+  const bookOpen = selectedTab === 4;
 
   const calculateButtonsHeight = (theme, isMobile) => {
     let buttonsHeight = 0;
-    const toolbarHeight = theme.mixins.toolbar.minHeight;
-    const tabsHeight = theme.components.MuiTab.styleOverrides.root.minHeight;
     const chipHeight = theme.components.MuiChip.styleOverrides.root.minHeight;
     const rowBottomMargin = theme.compose.buttons.row.marginBottom;
     const spacing = 8;
@@ -32,6 +34,8 @@ export default function Main(isDynamicRhythm) {
       if(selectedTab == 3) {
         //JARED_TODO: cleanup magic constant
         buttonsHeight = theme.mixins.toolbar.minHeight - 10;
+      } else if (selectedTab === 4) {
+        buttonsHeight = theme.components.MuiTab.styleOverrides.root.minHeight;
       } else {
         const paddingHeight = 2 * spacing * buttonsContainerPadding;
               //The first tab is the notes tab
@@ -64,14 +68,24 @@ export default function Main(isDynamicRhythm) {
   const useTabStyles = makeStyles((theme) => ({
     buttons: {
       position: "fixed",
-      left: "51%",
+      left: bookOpen ? "calc((100% - 380px) / 2)" : "51%",
       transform: "translateX(-50%)",
       bottom: 0,
+      maxWidth: bookOpen ? "calc(100% - 400px)" : "100%",
     },
     root: {
       flexDirection: "column",
       display: "flex",
       height: "100%"
+    },
+    workspace: {
+      display: "flex",
+      flex: 1,
+      minHeight: 0,
+      width: "100%",
+      [theme.breakpoints.down("md")]: {
+        flexDirection: "column",
+      },
     },
     score: {
       width: '100%',
@@ -110,11 +124,18 @@ export default function Main(isDynamicRhythm) {
             <DynamicComposeTopToolbar />
           </ErrorBoundary>
         </div>
-        <div id="score-root" className={classes.score}>
-          <ErrorBoundary component="compose">
-            <Score scoreRootId="score-root" id={"vexflow"} score={score} selectedTab={selectedTab} tabPanelHidden={tabPanelHidden} 
-                   isDynamicRhythm={isDynamicRhythm} vexflowClass={classes.vexflow} vexflowWrapperClass={classes.vexflowWrapper}/>
-          </ErrorBoundary>
+        <div className={classes.workspace}>
+          <div id="score-root" className={classes.score}>
+            <ErrorBoundary component="compose">
+              <Score scoreRootId="score-root" id={"vexflow"} score={score} selectedTab={selectedTab} tabPanelHidden={tabPanelHidden}
+                     isDynamicRhythm={isDynamicRhythm} vexflowClass={classes.vexflow} vexflowWrapperClass={classes.vexflowWrapper} />
+            </ErrorBoundary>
+          </div>
+          {bookOpen && (
+            <ErrorBoundary component="book builder">
+              <BookBuilderPanel />
+            </ErrorBoundary>
+          )}
         </div>
         <div className={classes.buttons}>
           <ErrorBoundary component="compose buttons">
