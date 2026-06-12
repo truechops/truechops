@@ -2,7 +2,6 @@ import { makeStyles } from "@mui/styles";
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 import Box from "@mui/material/Box";
-import { Hidden } from "@mui/material";
 import useButtonsHook from "./buttons/buttons-hook";
 import InstrumentHelpPopover from "./popovers/InstrumentHelpPopover";
 import { scoreActions, getSelectedNote, modifyNote } from "../../store/score";
@@ -121,9 +120,13 @@ export function Buttons(props) {
   );
   const ButtonsRow = useCallback(
     ({ children }) => {
-      return <div className={classes.buttonsRow}>{children}</div>;
+      const compactStyles = props.compact
+        ? { flexWrap: "wrap", gap: 4, maxWidth: "100%" }
+        : null;
+
+      return <div className={classes.buttonsRow} style={compactStyles}>{children}</div>;
     },
-    [classes.buttonsRow]
+    [classes.buttonsRow, props.compact]
   );
 
   return (
@@ -262,17 +265,17 @@ const mapStateToProps = (state) => {
   };
 };
 
-const mapDispatchToProps = (dispatch) => {
+const mapDispatchToProps = (dispatch, ownProps) => {
   return {
     modifyNote: (voices, type, isRest) => {
-      const scoreRootElement = document.getElementById("score-root");
+      const scoreRootElement = document.getElementById(ownProps.scoreRootId || "score-root");
 
       dispatch(
         modifyNote(
           { voices, type, isRest },
           {
-            top: scoreRootElement.scrollTop,
-            left: scoreRootElement.scrollLeft,
+            top: scoreRootElement ? scoreRootElement.scrollTop : 0,
+            left: scoreRootElement ? scoreRootElement.scrollLeft : 0,
           }
         )
       );

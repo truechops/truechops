@@ -7,21 +7,20 @@ import Dialog from '../ui/Dialog';
 import repeatHook from './buttons/mutate/common/repeat-hook';
 import { browserName } from 'react-device-detect';
 
-import { useRouter } from "next/router";
 import _ from "lodash";
 
 let currentScore = null
 export default function Score(props) {
-  const router = useRouter();
-
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [windowWidth, setWindowWidth] = useState(
+    typeof window !== "undefined" ? window.innerWidth : 1024
+  );
   const dispatch = useDispatch();
   const selectedNoteIndex = useSelector(
     (state) => state.score.present.selectedNoteIndex
   );
 
   const repeat = useSelector((state) => state.score.present.repeat);
-  const scoreRootId = props.scoreRootId
+  const scoreRootId = props.scoreRootId || "score-root"
   const isDynamic = useSelector((state) => state.score.present.dynamic);
   const name = useSelector(state => state.score.present.name);
   const [promptedForRepeat, setPromptedForRepeat] = useState(false);
@@ -36,13 +35,18 @@ export default function Score(props) {
   }, []);
 
   useEffect(() => {
+    window.addEventListener("resize", updateDimensions);
+
+    return () => {
+      window.removeEventListener("resize", updateDimensions);
+    };
+  }, [updateDimensions]);
+
+  useEffect(() => {
     if(browserName.indexOf('Safari') >= 0 && dontUseSafariShown == "init") {
       dispatch(appActions.setDontUseSafariShown("true"));
     }
-  }, [dontUseSafariShown]);
-
-  //JARED_TODO: make this work like byos
-  window.addEventListener("resize", updateDimensions);
+  }, [dispatch, dontUseSafariShown]);
 
   const noteSelectedCallback = useCallback(
     (note) => {
@@ -54,12 +58,12 @@ export default function Score(props) {
           voiceIndex: note.voiceIndex,
           noteIndex: note.noteIndex,
         }, {
-          top: scoreRootElement.scrollTop,
-          left: scoreRootElement.scrollLeft
+          top: scoreRootElement ? scoreRootElement.scrollTop : 0,
+          left: scoreRootElement ? scoreRootElement.scrollLeft : 0
         })
       );
     },
-    [dispatch]
+    [dispatch, scoreRootId]
   );
 
   useEffect(() => {
@@ -69,6 +73,14 @@ export default function Score(props) {
       //JARED_TODO: I shouldn't have to render the score two times. Do something about that.
     }
 
+      const scoreSvgConfig = {
+        width: props.width || windowWidth,
+        scale: 0.75,
+        hResize: 0.75,
+        vResize: 0.75,
+        ...(props.svgConfig || {}),
+      };
+
       const { renderer, context } = initialize(props.id);
         drawScore(
           renderer,
@@ -76,15 +88,16 @@ export default function Score(props) {
           props.score,
           selectedNoteIndex,
           noteSelectedCallback,
-          { width: windowWidth, scale: 0.75, hResize: 0.75, vResize: 0.75,
-          },
+          scoreSvgConfig,
           repeat
         );
 
       dispatch(appActions.setPageLoaded());
         const scoreElementRoot = document.getElementById(scoreRootId);
-        scoreElementRoot.scrollTop = scrollAmount.top;
-        scoreElementRoot.scrollLeft = scrollAmount.left;
+        if (scoreElementRoot) {
+          scoreElementRoot.scrollTop = scrollAmount.top;
+          scoreElementRoot.scrollLeft = scrollAmount.left;
+        }
         if(!promptedForRepeat && isDynamic) {
           setRepeatDialogOpen(true);
           setPromptedForRepeat(true);
@@ -103,7 +116,11 @@ export default function Score(props) {
     promptedForRepeat,
     isDynamic,
     dontUseSafariShown,
-    numRepeats
+    numRepeats,
+    props.id,
+    props.svgConfig,
+    props.width,
+    scoreRootId
   ]);
 
   const numRepeatsElement = <><div>This is a dynamic rhythm. How many times should it repeat?</div><br></br>
@@ -115,8 +132,8 @@ export default function Score(props) {
     <>
     {/* This wrapper and the key ensure that content isn't duplicated when the screen resizes*/}
     <div className={props.vexflowWrapperClass}>
-      <h2 style={{textAlign: 'center', margin: 0}}>{name}</h2>
-      <div className={props.vexflowClass} id="vexflow" key={Math.random().toString()} />
+      {props.showTitle !== false && <h2 style={{textAlign: 'center', margin: 0}}>{name}</h2>}
+      <div className={props.vexflowClass} id={props.id || "vexflow"} key={Math.random().toString()} />
     </div>
 
     <Dialog

@@ -6,24 +6,17 @@ import Dialog from "../ui/Dialog";
 
 import React from "react";
 import { makeStyles, useTheme } from "@mui/styles";
-import Drawer from "@mui/material/Drawer";
 import CssBaseline from "@mui/material/CssBaseline";
 import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
-import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
-import ErrorBoundary from "../error/ErrorBoundary";
-import { FaDrum, FaUser } from "react-icons/fa";
+import { FaUser } from "react-icons/fa";
 
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 
-import dynamic from "next/dynamic";
-
 import { GiHamburgerMenu } from "react-icons/gi";
-import { FiSettings } from "react-icons/fi";
-import { CircularProgress, Typography } from "@mui/material";
-import { findLastIndex } from "lodash";
+import { CircularProgress } from "@mui/material";
 
 const useStyles = makeStyles((theme) => ({
   appBar: {
@@ -50,8 +43,6 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const DynamicComposeSidebar = dynamic(() => import("../compose/Sidebar"));
-
 export default function Header() {
   const classes = useStyles();
   const router = useRouter();
@@ -64,11 +55,13 @@ export default function Header() {
       router.push("/exercises");
     } else if (newValue === 1 && router.pathname != '/') {
       router.push("/");
-    } else if (newValue === 2 && router.pathname != '/rudiments') {
+    } else if (newValue === 2 && router.pathname != '/book-builder') {
+      router.push("/book-builder");
+    } else if (newValue === 3 && router.pathname != '/rudiments') {
       router.push("/rudiments");
-    } else if (newValue === 3 && router.pathname != '/byos') {
+    } else if (newValue === 4 && router.pathname != '/byos') {
       router.push("/byos")
-    } else if (newValue === 4 && router.pathname != '/library') {
+    } else if (newValue === 5 && router.pathname != '/library') {
       if (!currentUser) {
         router.push("/login");
       } else {
@@ -80,12 +73,14 @@ export default function Header() {
   let selectedArea = 0;
   if(router.pathname === '/') {
     selectedArea = 1;
-  } else if(router.pathname === '/rudiments') {
+  } else if(router.pathname === '/book-builder') {
     selectedArea = 2;
+  } else if(router.pathname === '/rudiments') {
+    selectedArea = 3;
   } else if(router.pathname === '/byos') {
-    selectedArea = 3
+    selectedArea = 4
   } else if(router.pathname === '/library' || router.pathname == '/login') {
-    selectedArea = 4;
+    selectedArea = 5;
   }
 
   const { setNavOpen } = appActions;
@@ -125,19 +120,18 @@ export default function Header() {
             value={selectedArea}
             textColor="secondary"
             onChange={onAreaSelected}
-            // aria-label="simple tabs example"
-            //variant={"scrollable"}
+            variant={"scrollable"}
             scrollButtons={"auto"}
-            centered
             edge="center"
           >
             <Tab style={{ minWidth: 50, color: 'white'}} key={"header-exercises"} label="DRILLS" {...a11yProps(0)} />
             <Tab style={{ minWidth: 50, color: 'white' }} key={"header-score"} label="SCORE" {...a11yProps(1)} />
-            <Tab style={{ minWidth: 50, color: 'white' }} key={"header-rudiments"} label="RUDIMENTS" {...a11yProps(2)} />
-            <Tab style={{ minWidth: 50, color: 'white' }} key={"header-byos"} label="BYOS" {...a11yProps(3)} />
-            <Tab edge="end" style={{ minWidth: 50, color: 'white' }} key={"header-saved"} icon={<FaUser />}  {...a11yProps(4)} />
+            <Tab style={{ minWidth: 50, color: 'white' }} key={"header-book"} label="BOOK" {...a11yProps(2)} />
+            <Tab style={{ minWidth: 50, color: 'white' }} key={"header-rudiments"} label="RUDIMENTS" {...a11yProps(3)} />
+            <Tab style={{ minWidth: 50, color: 'white' }} key={"header-byos"} label="BYOS" {...a11yProps(4)} />
+            <Tab edge="end" style={{ minWidth: 50, color: 'white' }} key={"header-saved"} icon={<FaUser />}  {...a11yProps(5)} />
           </Tabs>
-          <div class="right"></div>
+          <div className="right"></div>
         </Toolbar>
         
       </AppBar>
