@@ -18,6 +18,10 @@ import {
 const BOOK_ROOT = path.join(process.cwd(), "data", "book-builder", BOOK_SLUG);
 const MANIFEST_PATH = path.join(BOOK_ROOT, "book.json");
 
+// Module-level flag so setupDom re-runs after a hot-reload (globalThis persists
+// across hot-reloads but module scope resets, clearing this flag).
+let domSetup = false;
+
 function pageDir(pageNumber) {
   return path.join(BOOK_ROOT, "pages", `page-${String(pageNumber).padStart(2, "0")}`);
 }
@@ -131,9 +135,8 @@ function getPdfBuffer(doc) {
 }
 
 function setupDom() {
-  if (globalThis.window && globalThis.document) {
-    return;
-  }
+  if (domSetup) return;
+  domSetup = true;
 
   const dom = new JSDOM("<!doctype html><html><body></body></html>", {
     pretendToBeVisual: true,
@@ -141,7 +144,16 @@ function setupDom() {
 
   globalThis.window = dom.window;
   globalThis.document = dom.window.document;
-  globalThis.navigator = dom.window.navigator;
+  // globalThis.navigator is a read-only getter in Node.js v21+; use defineProperty
+  try {
+    Object.defineProperty(globalThis, "navigator", {
+      value: dom.window.navigator,
+      writable: true,
+      configurable: true,
+    });
+  } catch {
+    // already writable or already set — skip
+  }
   globalThis.HTMLElement = dom.window.HTMLElement;
   globalThis.SVGElement = dom.window.SVGElement;
 
@@ -159,8 +171,10 @@ function setupDom() {
     };
   }
 
-  if (!dom.window.SVGSVGElement.prototype.createSVGPoint) {
-    dom.window.SVGSVGElement.prototype.createSVGPoint = function createSVGPoint() {
+  // VexFlow may create SVG elements via createElement('svg') which returns HTMLElement
+  // in JSDOM (not SVGSVGElement), so we patch Element.prototype to cover both paths.
+  if (!dom.window.Element.prototype.createSVGPoint) {
+    dom.window.Element.prototype.createSVGPoint = function createSVGPoint() {
       return {
         x: 0,
         y: 0,
@@ -171,8 +185,8 @@ function setupDom() {
     };
   }
 
-  if (!dom.window.SVGElement.prototype.getScreenCTM) {
-    dom.window.SVGElement.prototype.getScreenCTM = function getScreenCTM() {
+  if (!dom.window.Element.prototype.getScreenCTM) {
+    dom.window.Element.prototype.getScreenCTM = function getScreenCTM() {
       return {
         inverse() {
           return this;

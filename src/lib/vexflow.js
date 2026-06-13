@@ -320,22 +320,24 @@ function renderStaves(
         ) {
           note.getSVGElement().setAttribute('fill', NOTE_HIGHLIGHT_COLOR)
         }
-        const noteSvg = note.getSVGElement()
-        const noteInteraction = new VexFlowInteraction(
-          noteSvg,
-          context.svg.createSVGPoint()
-        );
-        const events = ["touchStart"];
-        events.forEach((type) => {
-          noteInteraction.addEventListener(type, (e, coords) => {
-            //Two events are fired on mobile. One with e.type === 'mousedown' and another with
-            //e.type === 'touchStart'. Desktop only fires e.type === 'mousedown'. Since we only want
-            //this callback to fire once, we are calling out e.type === 'mousedown'.
-            if (e.type === "mousedown") {
-              noteSelectedCallback(note, context);
-            }
+        if (noteSelectedCallback) {
+          const noteSvg = note.getSVGElement()
+          const noteInteraction = new VexFlowInteraction(
+            noteSvg,
+            context.svg.createSVGPoint()
+          );
+          const events = ["touchStart"];
+          events.forEach((type) => {
+            noteInteraction.addEventListener(type, (e) => {
+              //Two events are fired on mobile. One with e.type === 'mousedown' and another with
+              //e.type === 'touchStart'. Desktop only fires e.type === 'mousedown'. Since we only want
+              //this callback to fire once, we are calling out e.type === 'mousedown'.
+              if (e.type === "mousedown") {
+                noteSelectedCallback(note, context);
+              }
+            });
           });
-        });
+        }
       });
     });
 
