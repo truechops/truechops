@@ -1,6 +1,7 @@
 import Buttons from "./Buttons";
 import { makeStyles } from "@mui/styles";
 import { useState } from "react";
+import { useRouter } from "next/router";
 import Score from "./Score";
 import ErrorBoundary from "../error/ErrorBoundary";
 import $ from 'jquery';
@@ -12,9 +13,10 @@ import dynamic from "next/dynamic";
 const DynamicComposeTopToolbar = dynamic(() => import("../compose/TopToolbar"));
 
 export default function Main(props) {
+  const router = useRouter();
   const initialTab = props && props.initialTab != null ? props.initialTab : 1;
   const isDynamicRhythm = props && props.isDynamicRhythm;
-  const bookOpen = Boolean(props && props.showBookBuilder);
+  const bookOpen = Boolean((props && props.showBookBuilder) || router.query.b === '1');
   const [selectedTab, setSelectedTab] = useState(initialTab);
   const [tabPanelHidden, setTabPanelHidden] = useState(false);
   const score = useSelector((state) => state.score.present.score);
