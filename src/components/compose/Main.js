@@ -71,6 +71,7 @@ export default function Main(props) {
       bottom: 0,
       maxWidth: bookOpen ? "50%" : "100%",
       width: bookOpen ? "50%" : "auto",
+      zIndex: 20,
     },
     root: {
       flexDirection: "column",

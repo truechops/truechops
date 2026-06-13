@@ -8,8 +8,10 @@ import { DEFAULT_TEMPO } from "../../consts/score";
 
 export const BOOK_SLUG = "snare-drum-book";
 export const BOOK_TITLE = "Snare Drum Book";
-export const LINES_PER_PAGE = 12;
-export const MEASURES_PER_LINE = 2;
+export const LINES_PER_PAGE = 24;
+export const MEASURES_PER_LINE = 1;
+export const PDF_COLUMNS = 2;
+export const PDF_ROWS = 12;
 
 export function createBlankLine(pageNumber, lineNumber) {
   return {

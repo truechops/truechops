@@ -114,28 +114,28 @@
 .lineGrid {
   flex: 1;
   display: grid;
-  gap: 6px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: repeat(4, minmax(58px, 1fr));
+  gap: 4px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(6, minmax(40px, 1fr));
   min-height: 0;
 }
 
 .lineSlot {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   min-height: 0;
   overflow: hidden;
-  padding: 6px;
+  padding: 4px;
   text-align: left;
 }
 
 .slotHeader {
   align-items: center;
   display: grid;
-  gap: 6px;
-  grid-template-columns: 24px minmax(0, 1fr);
-  min-height: 22px;
+  gap: 4px;
+  grid-template-columns: 20px minmax(0, 1fr);
+  min-height: 18px;
 }
 
 .slotHeader span {
@@ -144,14 +144,14 @@
   border-radius: 8px;
   color: var(--green);
   display: flex;
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   font-weight: 800;
-  height: 22px;
+  height: 18px;
   justify-content: center;
 }
 
 .slotHeader strong {
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -164,21 +164,21 @@
   border: 1px solid #edf0ea;
   border-radius: 6px;
   flex: 1;
-  min-height: 30px;
+  min-height: 20px;
   overflow: hidden;
   position: relative;
 }
 
 .preview :global(svg) {
   display: block;
-  margin-left: -6px;
-  margin-top: -8px;
+  margin-left: -10px;
+  margin-top: -10px;
 }
 
 .blankPreview {
   display: grid;
-  gap: 3px;
-  padding: 13px 12px;
+  gap: 2px;
+  padding: 8px 9px;
 }
 
 .blankPreview span {

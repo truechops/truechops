@@ -78,10 +78,10 @@ function LinePreview({ line }) {
       null,
       () => {},
       {
-        width: 520,
-        scale: 0.48,
-        hResize: 0.48,
-        vResize: 0.48,
+        width: 340,
+        scale: 0.42,
+        hResize: 0.42,
+        vResize: 0.42,
         justifyLastRow: true,
       },
       {}
