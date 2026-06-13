@@ -6,5 +6,5 @@ const DynamicComposer = dynamic(
 );
 
 export default function BookBuilderPage() {
-  return <DynamicComposer initialTab={4} />;
+  return <DynamicComposer initialTab={1} showBookBuilder />;
 }

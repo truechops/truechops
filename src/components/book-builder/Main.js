@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   FaArrowDown,
@@ -6,12 +6,15 @@ import {
   FaBook,
   FaEraser,
   FaFolderOpen,
+  FaFilePdf,
   FaPlus,
   FaSave,
   FaUpload,
 } from "react-icons/fa";
 
+import Dialog from "../ui/Dialog";
 import { scoreActions } from "../../store/score";
+import { drawScore, initialize } from "../../lib/vexflow";
 import {
   LINES_PER_PAGE,
   createBlankLine,
@@ -52,6 +55,54 @@ function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function LinePreview({ line }) {
+  const reactId = useId();
+  const previewId = `book-line-preview-${reactId.replace(/:/g, "")}-${line.pageNumber}-${line.lineNumber}`;
+
+  useEffect(() => {
+    if (!line.score) {
+      return;
+    }
+
+    const container = document.getElementById(previewId);
+    if (!container) {
+      return;
+    }
+
+    container.innerHTML = "";
+    const { renderer, context } = initialize(previewId);
+    drawScore(
+      renderer,
+      context,
+      line.score,
+      null,
+      () => {},
+      {
+        width: 520,
+        scale: 0.48,
+        hResize: 0.48,
+        vResize: 0.48,
+        justifyLastRow: true,
+      },
+      {}
+    );
+  }, [line.score, previewId]);
+
+  if (!line.score) {
+    return (
+      <div className={styles.blankPreview}>
+        <span />
+        <span />
+        <span />
+        <span />
+        <span />
+      </div>
+    );
+  }
+
+  return <div className={styles.preview} id={previewId} />;
+}
+
 function updateBookLine(book, pageIndex, lineIndex, updater) {
   return {
     ...book,
@@ -83,6 +134,7 @@ export default function BookBuilderPanel() {
   const [selectedLineIndex, setSelectedLineIndex] = useState(0);
   const [status, setStatus] = useState("Loading");
   const [isSaving, setIsSaving] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const selectedPage = book.pages[selectedPageIndex] || book.pages[0];
   const selectedLine = selectedPage.lines[selectedLineIndex] || selectedPage.lines[0];
@@ -190,6 +242,7 @@ export default function BookBuilderPanel() {
       createBlankLine(line.pageNumber, line.lineNumber)
     );
 
+    setDeleteDialogOpen(false);
     saveBook(nextBook, `Cleared page ${selectedPage.pageNumber}, line ${selectedLine.lineNumber}`);
   }, [book, saveBook, selectedLine.lineNumber, selectedLineIndex, selectedPage.pageNumber, selectedPageIndex]);
 
@@ -248,6 +301,10 @@ export default function BookBuilderPanel() {
     saveBook(nextBook, "Added page");
   }, [book, saveBook]);
 
+  const downloadSelectedPagePdf = useCallback(() => {
+    window.location.href = `/api/book-builder?format=pdf&page=${selectedPage.pageNumber}`;
+  }, [selectedPage.pageNumber]);
+
   return (
     <aside className={styles.panel}>
       <header className={styles.header}>
@@ -262,6 +319,21 @@ export default function BookBuilderPanel() {
       </header>
 
       <div className={styles.status}>{isSaving ? "Saving..." : status}</div>
+
+      <div className={styles.actions}>
+        <IconButton icon={<FaUpload />} onClick={saveCurrentScoreToLine} title="Save current score to selected line" variant="primary">
+          Score to line
+        </IconButton>
+        <IconButton icon={<FaFolderOpen />} onClick={loadSelectedLineToScore} title="Load selected line into score">
+          Load line
+        </IconButton>
+        <IconButton icon={<FaFilePdf />} onClick={downloadSelectedPagePdf} title="Download selected page PDF">
+          Page PDF
+        </IconButton>
+        <IconButton icon={<FaSave />} onClick={saveMetadata} title="Save line details">
+          Save details
+        </IconButton>
+      </div>
 
       <div className={styles.pageTabs}>
         {book.pages.map((page, pageIndex) => (
@@ -290,9 +362,11 @@ export default function BookBuilderPanel() {
             onClick={() => setSelectedLineIndex(lineIndex)}
             type="button"
           >
-            <span>{line.lineNumber}</span>
-            <strong>{line.score ? line.title || "Untitled rhythm" : "Blank"}</strong>
-            <em>{line.score ? "2 x 4/4" : "Open slot"}</em>
+            <div className={styles.slotHeader}>
+              <span>{line.lineNumber}</span>
+              <strong>{line.score ? line.title || "Untitled rhythm" : "Blank"}</strong>
+            </div>
+            <LinePreview line={line} />
           </button>
         ))}
       </div>
@@ -313,22 +387,16 @@ export default function BookBuilderPanel() {
         <Field label="Notes">
           <textarea
             onChange={(event) => setSelectedLineDraft({ notes: event.target.value })}
-            rows={3}
+            rows={2}
             value={selectedLine.notes}
           />
         </Field>
 
-        <div className={styles.actions}>
-          <IconButton icon={<FaUpload />} onClick={saveCurrentScoreToLine} title="Save current score to selected line" variant="primary">
-            Score to line
-          </IconButton>
-          <IconButton icon={<FaFolderOpen />} onClick={loadSelectedLineToScore} title="Load selected line into score">
-            Load line
-          </IconButton>
+        <div className={styles.smallActions}>
           <IconButton icon={<FaPlus />} onClick={insertBlankLineAfter} title="Insert blank line after selected line">
             Insert
           </IconButton>
-          <IconButton icon={<FaEraser />} onClick={deleteSelectedLine} title="Delete selected line and leave a blank slot">
+          <IconButton icon={<FaEraser />} onClick={() => setDeleteDialogOpen(true)} title="Delete selected line and leave a blank slot">
             Delete
           </IconButton>
         </div>
@@ -355,6 +423,12 @@ export default function BookBuilderPanel() {
           </button>
         </div>
       </section>
+      <Dialog
+        isOpen={deleteDialogOpen}
+        message={`Clear page ${selectedPage.pageNumber}, line ${selectedLine.lineNumber}? The slot will remain blank.`}
+        onCancel={() => setDeleteDialogOpen(false)}
+        onOk={deleteSelectedLine}
+      />
     </aside>
   );
 }

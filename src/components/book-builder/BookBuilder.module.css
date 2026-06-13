@@ -9,12 +9,13 @@
   border-left: 1px solid var(--line);
   color: var(--ink);
   display: flex;
-  flex: 0 0 380px;
+  flex: 0 0 50%;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   min-height: 0;
-  overflow: auto;
-  padding: 16px;
+  overflow: hidden;
+  padding: 12px;
+  width: 50%;
 }
 
 .panel button,
@@ -52,7 +53,7 @@
 .header p {
   color: var(--muted);
   font-size: 0.78rem;
-  margin: 5px 0 0;
+  margin: 3px 0 0;
 }
 
 .eyebrow {
@@ -72,14 +73,14 @@
   border-radius: 8px;
   color: var(--muted);
   font-size: 0.82rem;
-  min-height: 36px;
-  padding: 0 10px;
+  min-height: 30px;
+  padding: 0 9px;
 }
 
 .pageTabs {
   display: grid;
-  gap: 6px;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
 }
 
 .pageTab,
@@ -98,7 +99,7 @@
   align-items: center;
   display: flex;
   font-weight: 800;
-  height: 36px;
+  height: 30px;
   justify-content: center;
   min-width: 0;
 }
@@ -111,47 +112,79 @@
 }
 
 .lineGrid {
+  flex: 1;
   display: grid;
-  gap: 7px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(4, minmax(58px, 1fr));
+  min-height: 0;
 }
 
 .lineSlot {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 3px;
-  grid-template-columns: 28px minmax(0, 1fr);
-  min-height: 58px;
-  padding: 8px;
+  min-height: 0;
+  overflow: hidden;
+  padding: 6px;
   text-align: left;
 }
 
-.lineSlot span {
+.slotHeader {
+  align-items: center;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: 24px minmax(0, 1fr);
+  min-height: 22px;
+}
+
+.slotHeader span {
   align-items: center;
   background: #edf2ea;
   border-radius: 8px;
   color: var(--green);
   display: flex;
+  font-size: 0.78rem;
   font-weight: 800;
-  grid-row: span 2;
+  height: 22px;
   justify-content: center;
 }
 
-.lineSlot strong,
-.lineSlot em {
+.slotHeader strong {
+  font-size: 0.78rem;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.lineSlot strong {
-  font-size: 0.82rem;
+.preview,
+.blankPreview {
+  background: #fbfcf8;
+  border: 1px solid #edf0ea;
+  border-radius: 6px;
+  flex: 1;
+  min-height: 30px;
+  overflow: hidden;
+  position: relative;
 }
 
-.lineSlot em {
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-style: normal;
+.preview :global(svg) {
+  display: block;
+  margin-left: -6px;
+  margin-top: -8px;
+}
+
+.blankPreview {
+  display: grid;
+  gap: 3px;
+  padding: 13px 12px;
+}
+
+.blankPreview span {
+  background: #cfd6cc;
+  height: 1px;
+  width: 100%;
 }
 
 .activeLineSlot {
@@ -162,8 +195,8 @@
 .editor {
   border-top: 1px solid var(--line);
   display: grid;
-  gap: 12px;
-  padding-top: 12px;
+  gap: 8px;
+  padding-top: 8px;
 }
 
 .editorTitle {
@@ -180,7 +213,7 @@
 
 .field {
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 
 .field span {
@@ -196,7 +229,7 @@
   border-radius: 8px;
   color: var(--ink);
   outline: none;
-  padding: 9px 10px;
+  padding: 7px 9px;
   width: 100%;
 }
 
@@ -214,15 +247,15 @@
 .actions {
   align-items: stretch;
   display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .button,
 .smallActions button {
-  gap: 7px;
+  gap: 6px;
   justify-content: center;
-  min-height: 38px;
+  min-height: 34px;
   min-width: 0;
   padding: 0 10px;
 }
@@ -246,7 +279,7 @@
 }
 
 .smallActions {
-  gap: 8px;
+  gap: 6px;
 }
 
 .smallActions button {
@@ -265,7 +298,12 @@
     border-left: 0;
     border-top: 1px solid var(--line);
     flex: 0 0 auto;
-    max-height: 60vh;
+    max-height: none;
     width: 100%;
+  }
+
+  .lineGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: none;
   }
 }

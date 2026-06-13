@@ -14,10 +14,10 @@ const DynamicComposeTopToolbar = dynamic(() => import("../compose/TopToolbar"));
 export default function Main(props) {
   const initialTab = props && props.initialTab != null ? props.initialTab : 1;
   const isDynamicRhythm = props && props.isDynamicRhythm;
+  const bookOpen = Boolean(props && props.showBookBuilder);
   const [selectedTab, setSelectedTab] = useState(initialTab);
   const [tabPanelHidden, setTabPanelHidden] = useState(false);
   const score = useSelector((state) => state.score.present.score);
-  const bookOpen = selectedTab === 4;
 
   const calculateButtonsHeight = (theme, isMobile) => {
     let buttonsHeight = 0;
@@ -34,8 +34,6 @@ export default function Main(props) {
       if(selectedTab == 3) {
         //JARED_TODO: cleanup magic constant
         buttonsHeight = theme.mixins.toolbar.minHeight - 10;
-      } else if (selectedTab === 4) {
-        buttonsHeight = theme.components.MuiTab.styleOverrides.root.minHeight;
       } else {
         const paddingHeight = 2 * spacing * buttonsContainerPadding;
               //The first tab is the notes tab
@@ -68,10 +66,11 @@ export default function Main(props) {
   const useTabStyles = makeStyles((theme) => ({
     buttons: {
       position: "fixed",
-      left: bookOpen ? "calc((100% - 380px) / 2)" : "51%",
+      left: bookOpen ? "25%" : "51%",
       transform: "translateX(-50%)",
       bottom: 0,
-      maxWidth: bookOpen ? "calc(100% - 400px)" : "100%",
+      maxWidth: bookOpen ? "50%" : "100%",
+      width: bookOpen ? "50%" : "auto",
     },
     root: {
       flexDirection: "column",
@@ -90,7 +89,7 @@ export default function Main(props) {
     score: {
       width: '100%',
       overflow: "auto",
-      flex: 1,
+      flex: bookOpen ? "0 0 50%" : 1,
       zIndex: 1
     },
     vexflowWrapper: {
@@ -139,7 +138,7 @@ export default function Main(props) {
         </div>
         <div className={classes.buttons}>
           <ErrorBoundary component="compose buttons">
-            <Buttons selectedTab={selectedTab} onTabSelected={onTabSelected} />
+            <Buttons compact={bookOpen} selectedTab={selectedTab} onTabSelected={onTabSelected} />
           </ErrorBoundary>
         </div>
       </div>
