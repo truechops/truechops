@@ -1,9 +1,5 @@
 import _ from "lodash";
-import {
-  getEmptyMeasure,
-  getRestsFromTCDuration,
-  getTCDurationSingle,
-} from "../../helpers/score";
+import { getEmptyMeasure } from "../../helpers/score";
 import { DEFAULT_TEMPO } from "../../consts/score";
 
 export const BOOK_SLUG = "snare-drum-book";
@@ -63,81 +59,10 @@ export function createBlankLineScore() {
   };
 }
 
-function normalizeLineScore(score) {
-  const fallbackScore = createBlankLineScore();
-
-  if (!score || !Array.isArray(score.measures)) {
-    return fallbackScore;
-  }
-
-  const normalizedScore = {
-    parts: score.parts || {
-      snare: {
-        enabled: true,
-      },
-    },
-    measures: cloneJson(score.measures.slice(0, MEASURES_PER_LINE)),
-  };
-
-  while (normalizedScore.measures.length < MEASURES_PER_LINE) {
-    normalizedScore.measures.push(_.cloneDeep(fallbackScore.measures[normalizedScore.measures.length]));
-  }
-
-  normalizedScore.measures = normalizedScore.measures.map((measure, measureIndex) =>
-    normalizeMeasureToFourFour(measure, fallbackScore.measures[measureIndex])
-  );
-
-  return normalizedScore;
-}
-
-function normalizeVoiceToFourFour(voice) {
-  const targetDuration = 32;
-  let totalDuration = 0;
-  const notes = [];
-
-  for (const note of voice.notes || []) {
-    const noteDuration = getTCDurationSingle(note.duration, note.dots);
-
-    if (totalDuration + noteDuration > targetDuration) {
-      break;
-    }
-
-    notes.push(note);
-    totalDuration += noteDuration;
-  }
-
-  if (totalDuration < targetDuration) {
-    notes.push(...getRestsFromTCDuration(targetDuration - totalDuration));
-  }
-
-  return {
-    ...voice,
-    notes,
-    tuplets: (voice.tuplets || []).filter((tuplet) => tuplet.end <= notes.length),
-  };
-}
-
-function normalizeMeasureToFourFour(measure, fallbackMeasure) {
-  const sourceMeasure =
-    measure && Array.isArray(measure.parts) && measure.parts.length
-      ? measure
-      : fallbackMeasure;
-
-  return {
-    ...sourceMeasure,
-    timeSig: {
-      num: 4,
-      type: 4,
-    },
-    parts: sourceMeasure.parts.map((part) => ({
-      ...part,
-      voices: (part.voices || []).map(normalizeVoiceToFourFour),
-    })),
-  };
-}
-
 export function scoreToBookLine(score) {
-  return normalizeLineScore(score);
+  return score && Array.isArray(score.measures)
+    ? cloneJson(score)
+    : createBlankLineScore();
 }
 
 export function normalizeBook(rawBook) {
@@ -168,7 +93,7 @@ export function normalizeBook(rawBook) {
             pageNumber,
             lineNumber,
             tempo: Number(line.tempo || DEFAULT_TEMPO),
-            score: line.score ? normalizeLineScore(line.score) : null,
+            score: line.score ? cloneJson(line.score) : null,
           };
         }),
       };

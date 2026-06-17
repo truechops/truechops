@@ -328,7 +328,7 @@ export default function BookBuilderPanel() {
           Load line
         </IconButton>
         <IconButton icon={<FaFilePdf />} onClick={downloadSelectedPagePdf} title="Download selected page PDF">
-          Page PDeF
+          Page PDF
         </IconButton>
         <IconButton icon={<FaSave />} onClick={saveMetadata} title="Save line details">
           Save details
