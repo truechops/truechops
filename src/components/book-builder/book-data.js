@@ -9,6 +9,14 @@ export const MEASURES_PER_LINE = 1;
 export const PDF_COLUMNS = 2;
 export const PDF_ROWS = 12;
 
+export const DEFAULT_PDF_SETTINGS = {
+  columns: PDF_COLUMNS,
+  rows: PDF_ROWS,
+  noteRenderWidth: 420,
+  noteStartPadding: 25,
+  noteEndPadding: 25,
+};
+
 export function createBlankLine(pageNumber, lineNumber) {
   return {
     pageNumber,
@@ -36,6 +44,7 @@ export function createDefaultBook() {
     slug: BOOK_SLUG,
     title: BOOK_TITLE,
     updatedAt: null,
+    pdfSettings: { ...DEFAULT_PDF_SETTINGS },
     pages: [createBlankPage(1)],
   };
 }
@@ -76,6 +85,7 @@ export function normalizeBook(rawBook) {
     slug: rawBook.slug || BOOK_SLUG,
     title: rawBook.title || BOOK_TITLE,
     updatedAt: rawBook.updatedAt || null,
+    pdfSettings: { ...DEFAULT_PDF_SETTINGS, ...(rawBook.pdfSettings || {}) },
     pages: pages.map((page, pageIndex) => {
       const pageNumber = pageIndex + 1;
       const lines = Array.isArray(page.lines) ? page.lines : [];

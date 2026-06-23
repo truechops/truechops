@@ -8,8 +8,7 @@ import { JSDOM } from "jsdom";
 import {
   BOOK_SLUG,
   BOOK_TITLE,
-  PDF_COLUMNS,
-  PDF_ROWS,
+  DEFAULT_PDF_SETTINGS,
   createBlankLineScore,
   createDefaultBook,
   normalizeBook,
@@ -17,9 +16,6 @@ import {
 
 const BOOK_ROOT = path.join(process.cwd(), "data", "book-builder", BOOK_SLUG);
 const MANIFEST_PATH = path.join(BOOK_ROOT, "book.json");
-const PDF_SCORE_RENDER_WIDTH = 420;
-const PDF_MEASURE_NOTE_START_PADDING = 25;
-const PDF_MEASURE_NOTE_END_PADDING = 25;
 
 // Module-level flag so setupDom re-runs after a hot-reload (globalThis persists
 // across hot-reloads but module scope resets, clearing this flag).
@@ -199,7 +195,7 @@ function setupDom() {
   }
 }
 
-async function renderScoreSvg(line, index) {
+async function renderScoreSvg(line, index, pdfSettings) {
   setupDom();
 
   const { initialize, drawScore } = await import("../../src/lib/vexflow");
@@ -216,14 +212,15 @@ async function renderScoreSvg(line, index) {
     null,
     () => {},
     {
-      width: PDF_SCORE_RENDER_WIDTH,
+      width: pdfSettings.noteRenderWidth,
       scale: 1,
       hResize: 1,
       vResize: 1,
       justifyLastRow: true,
-      measureNoteStartPadding: PDF_MEASURE_NOTE_START_PADDING,
-      measureNoteEndPadding: PDF_MEASURE_NOTE_END_PADDING,
+      measureNoteStartPadding: pdfSettings.noteStartPadding,
+      measureNoteEndPadding: pdfSettings.noteEndPadding,
       hideTimeSignature: true,
+      maxMeasureWidth: pdfSettings.noteRenderWidth,
     },
     { start: 0, end: 0 }
   );
@@ -299,11 +296,13 @@ function createSampleScore(pattern) {
 }
 
 async function renderSamplePdf(pattern) {
+  const book = await loadBook();
   const score = createSampleScore(pattern);
   const sampleBook = {
     slug: BOOK_SLUG,
     title: "Sample — " + pattern.replace(/-/g, " "),
     updatedAt: null,
+    pdfSettings: book.pdfSettings,
     pages: [{
       pageNumber: 1,
       title: "Sample",
@@ -321,8 +320,11 @@ async function renderSamplePdf(pattern) {
 }
 
 async function renderPagePdf(book, pageNumber) {
+  const pdfSettings = { ...DEFAULT_PDF_SETTINGS, ...(book.pdfSettings || {}) };
   const page = book.pages.find((candidate) => candidate.pageNumber === pageNumber) || book.pages[0];
-  const svgs = await Promise.all(page.lines.map((line, index) => renderScoreSvg(line, index)));
+  const linesPerPage = pdfSettings.columns * pdfSettings.rows;
+  const pageLines = page.lines.slice(0, linesPerPage);
+  const svgs = await Promise.all(pageLines.map((line, index) => renderScoreSvg(line, index, pdfSettings)));
   const doc = new PDFDocument({
     autoFirstPage: false,
     margin: 0,
@@ -339,9 +341,9 @@ async function renderPagePdf(book, pageNumber) {
   const headerHeight = 34;
   const footerHeight = 18;
   const columnGap = 18;
-  const usableWidth = pageWidth - margin * 2 - columnGap;
-  const columnWidth = usableWidth / PDF_COLUMNS;
-  const rowHeight = (pageHeight - margin * 2 - headerHeight - footerHeight) / PDF_ROWS;
+  const usableWidth = pageWidth - margin * 2 - columnGap * (pdfSettings.columns - 1);
+  const columnWidth = usableWidth / pdfSettings.columns;
+  const rowHeight = (pageHeight - margin * 2 - headerHeight - footerHeight) / pdfSettings.rows;
 
   doc.addPage();
   doc.font("Times-Roman").fillColor("#111111").fontSize(15).text(book.title || BOOK_TITLE, margin, 7, {
@@ -359,9 +361,9 @@ async function renderPagePdf(book, pageNumber) {
     lineBreak: false,
   });
 
-  page.lines.forEach((line, index) => {
-    const column = Math.floor(index / PDF_ROWS);
-    const row = index % PDF_ROWS;
+  pageLines.forEach((line, index) => {
+    const column = Math.floor(index / pdfSettings.rows);
+    const row = index % pdfSettings.rows;
     const x = margin + column * (columnWidth + columnGap);
     const y = margin + headerHeight + row * rowHeight;
 

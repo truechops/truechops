@@ -18,6 +18,7 @@ import Dialog from "../ui/Dialog";
 import { scoreActions } from "../../store/score";
 import { drawScore, initialize } from "../../lib/vexflow";
 import {
+  DEFAULT_PDF_SETTINGS,
   LINES_PER_PAGE,
   createBlankLine,
   createBlankLineScore,
@@ -433,6 +434,38 @@ export default function BookBuilderPanel() {
           </button>
         </div>
       </section>
+
+      <section className={styles.editor}>
+        <div className={styles.editorTitle}>
+          <h3>PDF Settings</h3>
+        </div>
+        {[
+          { key: "columns", label: "Columns", min: 1, max: 4 },
+          { key: "rows", label: "Rows per column", min: 1, max: 24 },
+          { key: "noteRenderWidth", label: "Note render width", min: 100, max: 1200 },
+          { key: "noteStartPadding", label: "Note start padding", min: 0, max: 200 },
+          { key: "noteEndPadding", label: "Note end padding", min: -100, max: 200 },
+        ].map(({ key, label, min, max }) => (
+          <Field key={key} label={label}>
+            <input
+              type="number"
+              min={min}
+              max={max}
+              value={(book.pdfSettings ?? DEFAULT_PDF_SETTINGS)[key]}
+              onChange={(e) => {
+                const value = Number(e.target.value);
+                setBook((b) => ({ ...b, pdfSettings: { ...(b.pdfSettings ?? DEFAULT_PDF_SETTINGS), [key]: value } }));
+              }}
+            />
+          </Field>
+        ))}
+        <div className={styles.smallActions}>
+          <IconButton icon={<FaSave />} onClick={saveMetadata} title="Save PDF settings">
+            Save settings
+          </IconButton>
+        </div>
+      </section>
+
       <Dialog
         isOpen={deleteDialogOpen}
         message={`Clear page ${selectedPage.pageNumber}, line ${selectedLine.lineNumber}? The slot will remain blank.`}
