@@ -5,6 +5,7 @@ import {
   FaArrowUp,
   FaBook,
   FaEraser,
+  FaEye,
   FaFolderOpen,
   FaFilePdf,
   FaPlus,
@@ -12,6 +13,7 @@ import {
   FaUpload,
 } from "react-icons/fa";
 
+import { Dialog as MuiDialog } from "@mui/material";
 import Dialog from "../ui/Dialog";
 import { scoreActions } from "../../store/score";
 import { drawScore, initialize } from "../../lib/vexflow";
@@ -135,6 +137,8 @@ export default function BookBuilderPanel() {
   const [status, setStatus] = useState("Loading");
   const [isSaving, setIsSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState("");
 
   const selectedPage = book.pages[selectedPageIndex] || book.pages[0];
   const selectedLine = selectedPage.lines[selectedLineIndex] || selectedPage.lines[0];
@@ -330,6 +334,12 @@ export default function BookBuilderPanel() {
         <IconButton icon={<FaFilePdf />} onClick={downloadSelectedPagePdf} title="Download selected page PDF">
           Page PDF
         </IconButton>
+        <IconButton icon={<FaEye />} onClick={() => { setPdfPreviewUrl(`/api/book-builder?format=pdf&inline=1&page=${selectedPage.pageNumber}`); setPdfPreviewOpen(true); }} title="Preview selected page PDF">
+          Preview
+        </IconButton>
+        <IconButton icon={<FaEye />} onClick={() => { setPdfPreviewUrl("/api/book-builder?format=pdf&inline=1&sample=eighth-notes"); setPdfPreviewOpen(true); }} title="Preview eighth note sample">
+          8th Sample
+        </IconButton>
         <IconButton icon={<FaSave />} onClick={saveMetadata} title="Save line details">
           Save details
         </IconButton>
@@ -429,6 +439,18 @@ export default function BookBuilderPanel() {
         onCancel={() => setDeleteDialogOpen(false)}
         onOk={deleteSelectedLine}
       />
+      <MuiDialog
+        open={pdfPreviewOpen}
+        onClose={() => setPdfPreviewOpen(false)}
+        maxWidth="xl"
+        fullWidth
+      >
+        <iframe
+          src={pdfPreviewUrl}
+          style={{ width: "100%", height: "85vh", border: "none", display: "block" }}
+          title="PDF Preview"
+        />
+      </MuiDialog>
     </aside>
   );
 }

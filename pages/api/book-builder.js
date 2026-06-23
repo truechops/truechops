@@ -280,6 +280,46 @@ function drawSlotSvg(doc, line, svg, x, y, width, height) {
   });
 }
 
+function createSampleScore(pattern) {
+  const timeSig = { num: 4, type: 4 };
+  const velocity = 0.5;
+
+  const notesByPattern = {
+    "eighth-notes": Array.from({ length: 8 }, () => ({ notes: ["c/5"], duration: 8, dots: 0, velocity })),
+    "quarter-notes": Array.from({ length: 4 }, () => ({ notes: ["c/5"], duration: 4, dots: 0, velocity })),
+    "sixteenth-notes": Array.from({ length: 16 }, () => ({ notes: ["c/5"], duration: 16, dots: 0, velocity })),
+  };
+
+  const notes = notesByPattern[pattern] ?? notesByPattern["eighth-notes"];
+
+  return {
+    parts: { snare: { enabled: true } },
+    measures: [{ timeSig, parts: [{ instrument: "snare", voices: [{ notes, tuplets: [] }] }] }],
+  };
+}
+
+async function renderSamplePdf(pattern) {
+  const score = createSampleScore(pattern);
+  const sampleBook = {
+    slug: BOOK_SLUG,
+    title: "Sample — " + pattern.replace(/-/g, " "),
+    updatedAt: null,
+    pages: [{
+      pageNumber: 1,
+      title: "Sample",
+      lines: Array.from({ length: 24 }, (_, i) => ({
+        pageNumber: 1,
+        lineNumber: i + 1,
+        title: pattern.replace(/-/g, " "),
+        notes: "",
+        tempo: 120,
+        score,
+      })),
+    }],
+  };
+  return renderPagePdf(sampleBook, 1);
+}
+
 async function renderPagePdf(book, pageNumber) {
   const page = book.pages.find((candidate) => candidate.pageNumber === pageNumber) || book.pages[0];
   const svgs = await Promise.all(page.lines.map((line, index) => renderScoreSvg(line, index)));
@@ -355,15 +395,24 @@ async function renderPagePdf(book, pageNumber) {
 export default async function handler(req, res) {
   try {
     if (req.method === "GET") {
+      if (req.query.format === "pdf" && req.query.sample) {
+        const pdf = await renderSamplePdf(req.query.sample);
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `inline; filename="sample-${req.query.sample}.pdf"`);
+        res.status(200).send(pdf);
+        return;
+      }
+
       const book = await loadBook();
       if (req.query.format === "pdf") {
         const pageNumber = Number(req.query.page || 1);
         const pdf = await renderPagePdf(book, pageNumber);
 
+        const disposition = req.query.inline === "1" ? "inline" : "attachment";
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader(
           "Content-Disposition",
-          `attachment; filename="${BOOK_SLUG}-page-${String(pageNumber).padStart(2, "0")}.pdf"`
+          `${disposition}; filename="${BOOK_SLUG}-page-${String(pageNumber).padStart(2, "0")}.pdf"`
         );
         res.status(200).send(pdf);
         return;
