@@ -43,7 +43,17 @@ export function drawScore(
   svgConfig,
   repeat,
 ) {
-  const {width: svgWidthProposed, scale, hResize, vResize, justifyLastRow} = svgConfig;
+  const {
+    width: svgWidthProposed,
+    scale,
+    hResize,
+    vResize,
+    justifyLastRow,
+    measureNotePadding = 0,
+    measureNoteStartPadding,
+    measureNoteEndPadding,
+    hideTimeSignature = false,
+  } = svgConfig;
   let { measures } = score;
   let systemWidth = 0;
   const measurePartsArray = getMeasureData(measures, score.parts);
@@ -79,7 +89,10 @@ export function drawScore(
         selectedNoteIndex,
         noteSelectedCallback,
         repeat,
-        previousTimeSig
+        previousTimeSig,
+        measureNoteStartPadding,
+        measureNoteEndPadding,
+        hideTimeSignature
       );
 
       if(width + systemWidth > maxWidth) {
@@ -115,7 +128,10 @@ export function drawScore(
       selectedNoteIndex,
       noteSelectedCallback,
       repeat,
-      previousTimeSig
+      previousTimeSig,
+      measureNoteStartPadding,
+      measureNoteEndPadding,
+      hideTimeSignature
     );
 
     if(width + remainingWidth > maxWidth) {
@@ -231,7 +247,10 @@ function renderStaves(
   selectedNoteIndex,
   noteSelectedCallback,
   repeat,
-  previousTimeSig
+  previousTimeSig,
+  measureNoteStartPadding,
+  measureNoteEndPadding,
+  hideTimeSignature
 ) {
 
   const barWidths = barRenderData.map((renderDataBar) => renderDataBar.width);
@@ -281,7 +300,7 @@ function renderStaves(
       var formatter = new VF.Formatter();
 
       let widthDiff = 0;
-      if (!_.isEqual(previousTimeSig, timeSig)) {
+      if (!hideTimeSignature && !_.isEqual(previousTimeSig, timeSig)) {
         stave.addTimeSignature(`${timeSig.num}/${timeSig.type}`);
         widthDiff = stave.getNoteStartX() - stave.getX();
       }
@@ -296,9 +315,18 @@ function renderStaves(
       }
 
       stave.setWidth(systemWidth);
+
+      if (measureNoteStartPadding) {
+        stave.setNoteStartX(stave.getNoteStartX() + measureNoteStartPadding);
+        widthDiff = stave.getNoteStartX() - stave.getX();
+      }
+
       stave.setContext(context).draw();
 
-      formatter.format(voices, systemWidth - widthDiff - FORMAT_PADDING);
+      formatter.format(
+        voices,
+        systemWidth - widthDiff - FORMAT_PADDING - measureNoteEndPadding
+      );
 
       xDiff = systemWidth;
 

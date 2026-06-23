@@ -3,7 +3,7 @@ import { getEmptyMeasure } from "../../helpers/score";
 import { DEFAULT_TEMPO } from "../../consts/score";
 
 export const BOOK_SLUG = "snare-drum-book";
-export const BOOK_TITLE = "Snare Drum Book";
+export const BOOK_TITLE = "Snare Drum Booc";
 export const LINES_PER_PAGE = 24;
 export const MEASURES_PER_LINE = 1;
 export const PDF_COLUMNS = 2;

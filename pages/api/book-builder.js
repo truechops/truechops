@@ -17,6 +17,9 @@ import {
 
 const BOOK_ROOT = path.join(process.cwd(), "data", "book-builder", BOOK_SLUG);
 const MANIFEST_PATH = path.join(BOOK_ROOT, "book.json");
+const PDF_SCORE_RENDER_WIDTH = 420;
+const PDF_MEASURE_NOTE_START_PADDING = 25;
+const PDF_MEASURE_NOTE_END_PADDING = 25;
 
 // Module-level flag so setupDom re-runs after a hot-reload (globalThis persists
 // across hot-reloads but module scope resets, clearing this flag).
@@ -213,11 +216,14 @@ async function renderScoreSvg(line, index) {
     null,
     () => {},
     {
-      width: 330,
+      width: PDF_SCORE_RENDER_WIDTH,
       scale: 1,
       hResize: 1,
       vResize: 1,
       justifyLastRow: true,
+      measureNoteStartPadding: PDF_MEASURE_NOTE_START_PADDING,
+      measureNoteEndPadding: PDF_MEASURE_NOTE_END_PADDING,
+      hideTimeSignature: true,
     },
     { start: 0, end: 0 }
   );
@@ -243,19 +249,20 @@ async function renderScoreSvg(line, index) {
 
 function drawSlotSvg(doc, line, svg, x, y, width, height) {
   const numberWidth = 18;
-  const notationX = x + numberWidth + 5;
-  const notationWidth = width - numberWidth - 5;
+  const notationX = x + numberWidth + 2;
+  const notationWidth = width - numberWidth - 2;
   const notationHeight = Math.max(height - 4, 1);
   const scale = Math.min(notationWidth / svg.width, notationHeight / svg.height);
   const svgWidth = svg.width * scale;
   const svgHeight = svg.height * scale;
   const svgY = y + (height - svgHeight) / 2 + 2;
 
+  const fontSize = 13;
   doc
     .font("Times-Roman")
-    .fontSize(8.5)
+    .fontSize(fontSize)
     .fillColor("#111111")
-    .text(String(line.lineNumber), x, svgY + svgHeight * 0.38, {
+    .text(String(line.lineNumber), x, svgY + svgHeight * 0.64 - fontSize / 2, {
       width: numberWidth,
       align: "right",
       lineBreak: false,
