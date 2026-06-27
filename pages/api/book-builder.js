@@ -11,7 +11,9 @@ import {
   DEFAULT_PDF_SETTINGS,
   createBlankLineScore,
   createDefaultBook,
+  getLinesPerPage,
   normalizeBook,
+  normalizePdfSettings,
 } from "../../src/components/book-builder/book-data";
 
 const BOOK_ROOT = path.join(process.cwd(), "data", "book-builder", BOOK_SLUG);
@@ -47,6 +49,7 @@ function createManifest(book) {
     slug: book.slug,
     title: book.title,
     updatedAt: book.updatedAt,
+    pdfSettings: book.pdfSettings,
     pages: book.pages.map((page) => ({
       pageNumber: page.pageNumber,
       title: page.title,
@@ -65,19 +68,24 @@ function createManifest(book) {
 
 async function loadBook() {
   const manifest = (await readJson(MANIFEST_PATH)) || createDefaultBook();
-  const normalizedManifest = normalizeBook(manifest);
+  const manifestPages = Array.isArray(manifest.pages) && manifest.pages.length
+    ? manifest.pages
+    : createDefaultBook().pages;
 
   const pages = await Promise.all(
-    normalizedManifest.pages.map(async (page) => ({
+    manifestPages.map(async (page, pageIndex) => ({
       ...page,
+      pageNumber: page.pageNumber || pageIndex + 1,
       lines: await Promise.all(
-        page.lines.map(async (line) => {
-          const lineFile = await readJson(linePath(page.pageNumber, line.lineNumber));
+        (page.lines || []).map(async (line, lineIndex) => {
+          const pageNumber = page.pageNumber || pageIndex + 1;
+          const lineNumber = line.lineNumber || lineIndex + 1;
+          const lineFile = await readJson(linePath(pageNumber, lineNumber));
           return {
             ...line,
             ...(lineFile || {}),
-            pageNumber: page.pageNumber,
-            lineNumber: line.lineNumber,
+            pageNumber,
+            lineNumber,
           };
         })
       ),
@@ -85,7 +93,7 @@ async function loadBook() {
   );
 
   return normalizeBook({
-    ...normalizedManifest,
+    ...manifest,
     pages,
   });
 }
@@ -297,16 +305,18 @@ function createSampleScore(pattern) {
 
 async function renderSamplePdf(pattern) {
   const book = await loadBook();
+  const pdfSettings = normalizePdfSettings(book.pdfSettings);
   const score = createSampleScore(pattern);
+  const linesPerPage = getLinesPerPage(pdfSettings);
   const sampleBook = {
     slug: BOOK_SLUG,
     title: "Sample — " + pattern.replace(/-/g, " "),
     updatedAt: null,
-    pdfSettings: book.pdfSettings,
+    pdfSettings,
     pages: [{
       pageNumber: 1,
       title: "Sample",
-      lines: Array.from({ length: 24 }, (_, i) => ({
+      lines: Array.from({ length: linesPerPage }, (_, i) => ({
         pageNumber: 1,
         lineNumber: i + 1,
         title: pattern.replace(/-/g, " "),
@@ -320,9 +330,12 @@ async function renderSamplePdf(pattern) {
 }
 
 async function renderPagePdf(book, pageNumber) {
-  const pdfSettings = { ...DEFAULT_PDF_SETTINGS, ...(book.pdfSettings || {}) };
+  const pdfSettings = normalizePdfSettings({
+    ...DEFAULT_PDF_SETTINGS,
+    ...(book.pdfSettings || {}),
+  });
   const page = book.pages.find((candidate) => candidate.pageNumber === pageNumber) || book.pages[0];
-  const linesPerPage = pdfSettings.columns * pdfSettings.rows;
+  const linesPerPage = getLinesPerPage(pdfSettings);
   const pageLines = page.lines.slice(0, linesPerPage);
   const svgs = await Promise.all(pageLines.map((line, index) => renderScoreSvg(line, index, pdfSettings)));
   const doc = new PDFDocument({

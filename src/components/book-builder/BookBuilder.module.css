@@ -20,6 +20,7 @@
 
 .panel button,
 .panel input,
+.panel select,
 .panel textarea {
   font: inherit;
 }
@@ -224,6 +225,7 @@
 }
 
 .field input,
+.field select,
 .field textarea {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -239,6 +241,7 @@
 }
 
 .field input:focus,
+.field select:focus,
 .field textarea:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(150, 9, 9, 0.12);
