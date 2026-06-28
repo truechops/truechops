@@ -384,7 +384,7 @@ async function drawBookPage(doc, book, page, bookPdfSettings) {
   const margin = 24;
   const headerHeight = 34;
   const footerHeight = 18;
-  const columnGap = 10;
+  const columnGap = 20;
   const usableWidth = pageWidth - margin * 2 - columnGap * (pdfSettings.columns - 1);
   const columnWidth = usableWidth / pdfSettings.columns;
   const rowHeight = (pageHeight - margin * 2 - headerHeight - footerHeight) / pdfSettings.rows;
