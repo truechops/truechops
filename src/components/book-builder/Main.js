@@ -20,6 +20,7 @@ import { drawScore, initialize } from "../../lib/vexflow";
 import {
   PDF_COLUMN_OPTIONS,
   getLinesPerPage,
+  getPagePdfSettings,
   createBlankLine,
   createBlankLineScore,
   createBlankPage,
@@ -129,6 +130,38 @@ function updateBookLine(book, pageIndex, lineIndex, updater) {
   };
 }
 
+function getPageIndexForAbsoluteLine(pages, absoluteLineIndex) {
+  let skippedLines = 0;
+
+  for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
+    const pageLineCount = pages[pageIndex].lines.length;
+
+    if (absoluteLineIndex < skippedLines + pageLineCount) {
+      return pageIndex;
+    }
+
+    skippedLines += pageLineCount;
+  }
+
+  return Math.max(0, pages.length - 1);
+}
+
+function getLineIndexForAbsoluteLine(pages, absoluteLineIndex) {
+  const pageIndex = getPageIndexForAbsoluteLine(pages, absoluteLineIndex);
+  const skippedLines = pages
+    .slice(0, pageIndex)
+    .reduce((count, page) => count + page.lines.length, 0);
+
+  return Math.max(0, absoluteLineIndex - skippedLines);
+}
+
+function replaceBookLines(pages, flatLines) {
+  return pages.map((page, pageIndex) => ({
+    ...page,
+    lines: pageIndex === 0 ? flatLines : [],
+  }));
+}
+
 export default function BookBuilderPanel() {
   const dispatch = useDispatch();
   const score = useSelector((state) => state.score.present.score);
@@ -145,8 +178,13 @@ export default function BookBuilderPanel() {
   const selectedPage = book.pages[selectedPageIndex] || book.pages[0];
   const selectedLine = selectedPage.lines[selectedLineIndex] || selectedPage.lines[0];
   const pdfSettings = normalizePdfSettings(book.pdfSettings);
-  const linesPerPage = getLinesPerPage(pdfSettings);
-  const slotGridColumns = pdfSettings.columns === 3 ? 6 : 4;
+  const selectedPagePdfSettings = getPagePdfSettings(selectedPage, pdfSettings);
+  const linesPerPage = getLinesPerPage(selectedPagePdfSettings);
+  const totalSlotCount = book.pages.reduce((count, page) => count + page.lines.length, 0);
+  const selectedPageStartIndex = book.pages
+    .slice(0, selectedPageIndex)
+    .reduce((count, page) => count + page.lines.length, 0);
+  const slotGridColumns = selectedPagePdfSettings.columns === 3 ? 6 : 4;
   const slotGridRows = Math.ceil(linesPerPage / slotGridColumns);
 
   const filledLineCount = useMemo(
@@ -258,25 +296,26 @@ export default function BookBuilderPanel() {
 
   const insertBlankLineAfter = useCallback(() => {
     const flatLines = book.pages.flatMap((page) => page.lines);
-    const absoluteIndex = selectedPageIndex * linesPerPage + selectedLineIndex;
+    const absoluteIndex = selectedPageStartIndex + selectedLineIndex;
     flatLines.splice(absoluteIndex + 1, 0, createBlankLine(1, 1));
 
-    const nextPageIndex = Math.floor((absoluteIndex + 1) / linesPerPage);
-    const nextLineIndex = (absoluteIndex + 1) % linesPerPage;
     const nextBook = {
       ...book,
-      pages: renumberPages([{ lines: flatLines }], pdfSettings),
+      pages: renumberPages(replaceBookLines(book.pages, flatLines), pdfSettings),
     };
+    const nextAbsoluteIndex = absoluteIndex + 1;
+    const nextPageIndex = getPageIndexForAbsoluteLine(nextBook.pages, nextAbsoluteIndex);
+    const nextLineIndex = getLineIndexForAbsoluteLine(nextBook.pages, nextAbsoluteIndex);
 
     setSelectedPageIndex(nextPageIndex);
     setSelectedLineIndex(nextLineIndex);
     saveBook(nextBook, "Inserted blank line");
-  }, [book, linesPerPage, pdfSettings, saveBook, selectedLineIndex, selectedPageIndex]);
+  }, [book, pdfSettings, saveBook, selectedLineIndex, selectedPageStartIndex]);
 
   const moveSelectedLine = useCallback(
     (direction) => {
       const flatLines = book.pages.flatMap((page) => page.lines);
-      const fromIndex = selectedPageIndex * linesPerPage + selectedLineIndex;
+      const fromIndex = selectedPageStartIndex + selectedLineIndex;
       const toIndex = fromIndex + direction;
 
       if (toIndex < 0 || toIndex >= flatLines.length) {
@@ -286,18 +325,18 @@ export default function BookBuilderPanel() {
       const [line] = flatLines.splice(fromIndex, 1);
       flatLines.splice(toIndex, 0, line);
 
-      const nextPageIndex = Math.floor(toIndex / linesPerPage);
-      const nextLineIndex = toIndex % linesPerPage;
       const nextBook = {
         ...book,
-        pages: renumberPages([{ lines: flatLines }], pdfSettings),
+        pages: renumberPages(replaceBookLines(book.pages, flatLines), pdfSettings),
       };
+      const nextPageIndex = getPageIndexForAbsoluteLine(nextBook.pages, toIndex);
+      const nextLineIndex = getLineIndexForAbsoluteLine(nextBook.pages, toIndex);
 
       setSelectedPageIndex(nextPageIndex);
       setSelectedLineIndex(nextLineIndex);
       saveBook(nextBook, "Moved line");
     },
-    [book, linesPerPage, pdfSettings, saveBook, selectedLineIndex, selectedPageIndex]
+    [book, pdfSettings, saveBook, selectedLineIndex, selectedPageStartIndex]
   );
 
   const addPage = useCallback(() => {
@@ -311,17 +350,21 @@ export default function BookBuilderPanel() {
     saveBook(nextBook, "Added page");
   }, [book, pdfSettings, saveBook]);
 
-  const updatePdfColumns = useCallback((columns) => {
-    const nextPdfSettings = normalizePdfSettings({
-      ...pdfSettings,
+  const updatePagePdfColumns = useCallback((columns) => {
+    const nextPagePdfSettings = normalizePdfSettings({
+      ...selectedPagePdfSettings,
       columns,
     });
-    const nextLinesPerPage = getLinesPerPage(nextPdfSettings);
-    const nextBook = {
+    const pagesWithUpdatedSettings = book.pages.map((page, pageIndex) =>
+      pageIndex === selectedPageIndex
+        ? { ...page, pdfSettings: nextPagePdfSettings }
+        : page
+    );
+    const nextLinesPerPage = getLinesPerPage(nextPagePdfSettings);
+    const nextBook = normalizeBook({
       ...book,
-      pdfSettings: nextPdfSettings,
-      pages: renumberPages(book.pages, nextPdfSettings),
-    };
+      pages: renumberPages(pagesWithUpdatedSettings, pdfSettings),
+    });
 
     setBook(nextBook);
     setSelectedPageIndex((pageIndex) =>
@@ -330,12 +373,19 @@ export default function BookBuilderPanel() {
     setSelectedLineIndex((lineIndex) =>
       Math.min(lineIndex, nextLinesPerPage - 1)
     );
-    setStatus(`${nextPdfSettings.columns} columns / ${nextLinesPerPage} slots`);
-  }, [book, pdfSettings]);
+    saveBook(
+      nextBook,
+      `Page ${selectedPage.pageNumber}: ${nextPagePdfSettings.columns} columns / ${nextLinesPerPage} slots`
+    );
+  }, [book, pdfSettings, saveBook, selectedPage.pageNumber, selectedPageIndex, selectedPagePdfSettings]);
 
   const downloadSelectedPagePdf = useCallback(() => {
     window.location.href = `/api/book-builder?format=pdf&page=${selectedPage.pageNumber}`;
   }, [selectedPage.pageNumber]);
+
+  const downloadFullBookPdf = useCallback(() => {
+    window.location.href = "/api/book-builder?format=pdf&scope=book";
+  }, []);
 
   return (
     <aside className={styles.panel}>
@@ -343,7 +393,7 @@ export default function BookBuilderPanel() {
         <div>
           <span className={styles.eyebrow}>Book</span>
           <h2>{book.title}</h2>
-          <p>{filledLineCount} saved rhythms / {book.pages.length * linesPerPage} slots</p>
+          <p>{filledLineCount} saved rhythms / {totalSlotCount} slots</p>
         </div>
         <IconButton icon={<FaSave />} onClick={saveMetadata} title="Save book" variant="iconOnly">
           Save
@@ -361,6 +411,9 @@ export default function BookBuilderPanel() {
         </IconButton>
         <IconButton icon={<FaFilePdf />} onClick={downloadSelectedPagePdf} title="Download selected page PDF">
           Page PDF
+        </IconButton>
+        <IconButton icon={<FaFilePdf />} onClick={downloadFullBookPdf} title="Download entire book PDF">
+          Book PDF
         </IconButton>
         <IconButton icon={<FaEye />} onClick={() => { setPdfPreviewUrl(`/api/book-builder?format=pdf&inline=1&page=${selectedPage.pageNumber}`); setPdfPreviewOpen(true); }} title="Preview selected page PDF">
           Preview
@@ -457,7 +510,7 @@ export default function BookBuilderPanel() {
           <button
             disabled={
               selectedPageIndex === book.pages.length - 1 &&
-              selectedLineIndex === linesPerPage - 1
+              selectedLineIndex === selectedPage.lines.length - 1
             }
             onClick={() => moveSelectedLine(1)}
             type="button"
@@ -470,12 +523,12 @@ export default function BookBuilderPanel() {
 
       <section className={styles.editor}>
         <div className={styles.editorTitle}>
-          <h3>PDF Settings</h3>
+          <h3>Page PDF Settings</h3>
         </div>
         <Field label="Columns">
           <select
-            value={pdfSettings.columns}
-            onChange={(event) => updatePdfColumns(Number(event.target.value))}
+            value={selectedPagePdfSettings.columns}
+            onChange={(event) => updatePagePdfColumns(Number(event.target.value))}
           >
             {PDF_COLUMN_OPTIONS.map((columns) => (
               <option key={columns} value={columns}>

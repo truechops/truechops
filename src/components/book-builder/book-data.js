@@ -36,6 +36,17 @@ export function getLinesPerPage(pdfSettings) {
   return normalizedSettings.columns * normalizedSettings.rows;
 }
 
+export function getPagePdfSettings(page, bookPdfSettings = DEFAULT_PDF_SETTINGS) {
+  return normalizePdfSettings({
+    ...bookPdfSettings,
+    ...(page?.pdfSettings || {}),
+  });
+}
+
+export function getPageLinesPerPage(page, bookPdfSettings = DEFAULT_PDF_SETTINGS) {
+  return getLinesPerPage(getPagePdfSettings(page, bookPdfSettings));
+}
+
 export function createBlankLine(pageNumber, lineNumber) {
   return {
     pageNumber,
@@ -49,11 +60,13 @@ export function createBlankLine(pageNumber, lineNumber) {
 }
 
 export function createBlankPage(pageNumber, pdfSettings = DEFAULT_PDF_SETTINGS) {
-  const linesPerPage = getLinesPerPage(pdfSettings);
+  const normalizedSettings = normalizePdfSettings(pdfSettings);
+  const linesPerPage = getLinesPerPage(normalizedSettings);
 
   return {
     pageNumber,
     title: `Page ${pageNumber}`,
+    pdfSettings: normalizedSettings,
     lines: Array.from({ length: linesPerPage }, (_, index) =>
       createBlankLine(pageNumber, index + 1)
     ),
@@ -66,7 +79,7 @@ export function createDefaultBook() {
     title: BOOK_TITLE,
     updatedAt: null,
     pdfSettings: normalizePdfSettings(),
-    pages: [createBlankPage(1)],
+    pages: [createBlankPage(1, normalizePdfSettings())],
   };
 }
 
@@ -117,22 +130,26 @@ function isBlankLine(line) {
 }
 
 export function renumberPages(pages, pdfSettings = DEFAULT_PDF_SETTINGS) {
-  const linesPerPage = getLinesPerPage(pdfSettings);
+  const normalizedBookSettings = normalizePdfSettings(pdfSettings);
   const flatLines = pages.flatMap((page) => page.lines || []);
+  const pageSettings = pages.map((page) =>
+    getPagePdfSettings(page, normalizedBookSettings)
+  );
+  const minimumLinesPerPage = getLinesPerPage(normalizedBookSettings);
 
-  while (flatLines.length > linesPerPage && isBlankLine(flatLines[flatLines.length - 1])) {
+  while (flatLines.length > minimumLinesPerPage && isBlankLine(flatLines[flatLines.length - 1])) {
     flatLines.pop();
   }
 
   const nextPages = [];
-  const pageCount = Math.max(1, Math.ceil(flatLines.length / linesPerPage));
+  let nextLineIndex = 0;
 
-  for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
+  while (nextLineIndex < flatLines.length || nextPages.length === 0) {
+    const pageIndex = nextPages.length;
     const pageNumber = pageIndex + 1;
-    const pageLines = flatLines.slice(
-      pageIndex * linesPerPage,
-      (pageIndex + 1) * linesPerPage
-    );
+    const pagePdfSettings = pageSettings[pageIndex] || normalizedBookSettings;
+    const linesPerPage = getLinesPerPage(pagePdfSettings);
+    const pageLines = flatLines.slice(nextLineIndex, nextLineIndex + linesPerPage);
 
     while (pageLines.length < linesPerPage) {
       pageLines.push(createBlankLine(pageNumber, pageLines.length + 1));
@@ -141,6 +158,7 @@ export function renumberPages(pages, pdfSettings = DEFAULT_PDF_SETTINGS) {
     nextPages.push({
       pageNumber,
       title: `Page ${pageNumber}`,
+      pdfSettings: pagePdfSettings,
       lines: pageLines.slice(0, linesPerPage).map((line, lineIndex) => ({
         ...createBlankLine(pageNumber, lineIndex + 1),
         ...line,
@@ -150,6 +168,8 @@ export function renumberPages(pages, pdfSettings = DEFAULT_PDF_SETTINGS) {
         score: line.score ? cloneJson(line.score) : null,
       })),
     });
+
+    nextLineIndex += linesPerPage;
   }
 
   return nextPages;

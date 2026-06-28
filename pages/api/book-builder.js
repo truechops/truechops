@@ -12,12 +12,14 @@ import {
   createBlankLineScore,
   createDefaultBook,
   getLinesPerPage,
+  getPagePdfSettings,
   normalizeBook,
   normalizePdfSettings,
 } from "../../src/components/book-builder/book-data";
 
 const BOOK_ROOT = path.join(process.cwd(), "data", "book-builder", BOOK_SLUG);
 const MANIFEST_PATH = path.join(BOOK_ROOT, "book.json");
+const LINE_NUMBER_CENTER_OFFSET = 1.25;
 
 // Module-level flag so setupDom re-runs after a hot-reload (globalThis persists
 // across hot-reloads but module scope resets, clearing this flag).
@@ -53,6 +55,7 @@ function createManifest(book) {
     pages: book.pages.map((page) => ({
       pageNumber: page.pageNumber,
       title: page.title,
+      pdfSettings: page.pdfSettings,
       lines: page.lines.map((line) => ({
         pageNumber: line.pageNumber,
         lineNumber: line.lineNumber,
@@ -256,23 +259,38 @@ function drawSlotSvg(doc, line, svg, x, y, width, height) {
   const numberWidth = 18;
   const notationX = x + numberWidth + 2;
   const notationWidth = width - numberWidth - 2;
-  const notationHeight = Math.max(height - 4, 1);
-  const scale = Math.min(notationWidth / svg.width, notationHeight / svg.height);
-  const svgWidth = svg.width * scale;
+
+  // Always scale to fill the full column width so the right side of each
+  // measure aligns with the column edge (prevents empty right-margin space).
+  const scale = notationWidth / svg.width;
+  const svgWidth = notationWidth;
   const svgHeight = svg.height * scale;
-  const svgY = y + (height - svgHeight) / 2 + 2;
+
+  // Center the SVG on the staff midpoint rather than the SVG bounding box,
+  // since VexFlow adds significant whitespace above the staff.
+  const staffCenterInSvg = getMeasureCenterY(svg);
+  const slotCenterY = y + height / 2;
+  const svgY = slotCenterY - staffCenterInSvg * scale;
+  const measureCenterY = slotCenterY;
 
   const fontSize = 13;
+  const lineNumber = String(line.lineNumber);
   doc
     .font("Times-Roman")
     .fontSize(fontSize)
-    .fillColor("#111111")
-    .text(String(line.lineNumber), x, svgY + svgHeight * 0.64 - fontSize / 2, {
-      width: numberWidth,
-      align: "right",
-      lineBreak: false,
-    });
+    .fillColor("#111111");
 
+  const numberHeight = doc.currentLineHeight();
+
+  doc.text(lineNumber, x, measureCenterY - numberHeight / 2 + LINE_NUMBER_CENTER_OFFSET, {
+    width: numberWidth,
+    align: "right",
+    lineBreak: false,
+  });
+
+  // Clip to the slot so that any SVG overflow above/below is hidden.
+  doc.save();
+  doc.rect(notationX, y, notationWidth, height).clip();
   SVGtoPDF(doc, svg.source, notationX, svgY, {
     width: svgWidth,
     height: svgHeight,
@@ -283,6 +301,20 @@ function drawSlotSvg(doc, line, svg, x, y, width, height) {
     },
     warningCallback() {},
   });
+  doc.restore();
+}
+
+function getMeasureCenterY(svg) {
+  const staffLineYs = [...svg.source.matchAll(/M[\d.]+ ([\d.]+)L[\d.]+ \1/g)]
+    .map((match) => Number(match[1]))
+    .filter(Number.isFinite)
+    .slice(0, 5);
+
+  if (!staffLineYs.length) {
+    return svg.height / 2;
+  }
+
+  return (Math.min(...staffLineYs) + Math.max(...staffLineYs)) / 2;
 }
 
 function createSampleScore(pattern) {
@@ -316,6 +348,7 @@ async function renderSamplePdf(pattern) {
     pages: [{
       pageNumber: 1,
       title: "Sample",
+      pdfSettings,
       lines: Array.from({ length: linesPerPage }, (_, i) => ({
         pageNumber: 1,
         lineNumber: i + 1,
@@ -329,31 +362,29 @@ async function renderSamplePdf(pattern) {
   return renderPagePdf(sampleBook, 1);
 }
 
-async function renderPagePdf(book, pageNumber) {
-  const pdfSettings = normalizePdfSettings({
-    ...DEFAULT_PDF_SETTINGS,
-    ...(book.pdfSettings || {}),
-  });
-  const page = book.pages.find((candidate) => candidate.pageNumber === pageNumber) || book.pages[0];
-  const linesPerPage = getLinesPerPage(pdfSettings);
-  const pageLines = page.lines.slice(0, linesPerPage);
-  const svgs = await Promise.all(pageLines.map((line, index) => renderScoreSvg(line, index, pdfSettings)));
-  const doc = new PDFDocument({
+function createBookPdfDocument(book, title) {
+  return new PDFDocument({
     autoFirstPage: false,
     margin: 0,
     size: "LETTER",
     info: {
-      Title: `${BOOK_TITLE} Page ${page.pageNumber}`,
+      Title: title,
       Creator: "TrueChops Book Builder",
     },
   });
-  const finished = getPdfBuffer(doc);
+}
+
+async function drawBookPage(doc, book, page, bookPdfSettings) {
+  const pdfSettings = getPagePdfSettings(page, bookPdfSettings);
+  const linesPerPage = getLinesPerPage(pdfSettings);
+  const pageLines = page.lines.slice(0, linesPerPage);
+  const svgs = await Promise.all(pageLines.map((line, index) => renderScoreSvg(line, index, pdfSettings)));
   const pageWidth = 612;
   const pageHeight = 792;
   const margin = 24;
   const headerHeight = 34;
   const footerHeight = 18;
-  const columnGap = 18;
+  const columnGap = 10;
   const usableWidth = pageWidth - margin * 2 - columnGap * (pdfSettings.columns - 1);
   const columnWidth = usableWidth / pdfSettings.columns;
   const rowHeight = (pageHeight - margin * 2 - headerHeight - footerHeight) / pdfSettings.rows;
@@ -402,6 +433,33 @@ async function renderPagePdf(book, pageNumber) {
     align: "center",
     lineBreak: false,
   });
+}
+
+async function renderPagePdf(book, pageNumber) {
+  const bookPdfSettings = normalizePdfSettings({
+    ...DEFAULT_PDF_SETTINGS,
+    ...(book.pdfSettings || {}),
+  });
+  const page = book.pages.find((candidate) => candidate.pageNumber === pageNumber) || book.pages[0];
+  const doc = createBookPdfDocument(book, `${book.title || BOOK_TITLE} Page ${page.pageNumber}`);
+  const finished = getPdfBuffer(doc);
+  await drawBookPage(doc, book, page, bookPdfSettings);
+
+  doc.end();
+  return finished;
+}
+
+async function renderFullBookPdf(book) {
+  const bookPdfSettings = normalizePdfSettings({
+    ...DEFAULT_PDF_SETTINGS,
+    ...(book.pdfSettings || {}),
+  });
+  const doc = createBookPdfDocument(book, book.title || BOOK_TITLE);
+  const finished = getPdfBuffer(doc);
+
+  for (const page of book.pages) {
+    await drawBookPage(doc, book, page, bookPdfSettings);
+  }
 
   doc.end();
   return finished;
@@ -420,6 +478,19 @@ export default async function handler(req, res) {
 
       const book = await loadBook();
       if (req.query.format === "pdf") {
+        if (req.query.scope === "book") {
+          const pdf = await renderFullBookPdf(book);
+          const disposition = req.query.inline === "1" ? "inline" : "attachment";
+
+          res.setHeader("Content-Type", "application/pdf");
+          res.setHeader(
+            "Content-Disposition",
+            `${disposition}; filename="${BOOK_SLUG}.pdf"`
+          );
+          res.status(200).send(pdf);
+          return;
+        }
+
         const pageNumber = Number(req.query.page || 1);
         const pdf = await renderPagePdf(book, pageNumber);
 
