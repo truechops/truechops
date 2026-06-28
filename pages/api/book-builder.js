@@ -4,6 +4,7 @@ import process from "process";
 import { Buffer } from "buffer";
 import PDFDocument from "pdfkit";
 import SVGtoPDF from "svg-to-pdfkit";
+import QRCode from "qrcode";
 import { JSDOM } from "jsdom";
 import {
   BOOK_SLUG,
@@ -383,7 +384,7 @@ async function drawBookPage(doc, book, page, bookPdfSettings) {
   const pageHeight = 792;
   const margin = 24;
   const headerHeight = 34;
-  const footerHeight = 18;
+  const footerHeight = 46;
   const columnGap = 20;
   const usableWidth = pageWidth - margin * 2 - columnGap * (pdfSettings.columns - 1);
   const columnWidth = usableWidth / pdfSettings.columns;
@@ -433,6 +434,14 @@ async function drawBookPage(doc, book, page, bookPdfSettings) {
     align: "center",
     lineBreak: false,
   });
+
+  const practiceUrl = `https://truechops.com/book/page/${page.pageNumber}`;
+  const qrSvg = await QRCode.toString(practiceUrl, { type: "svg", margin: 1 });
+  const contentBottom = margin + headerHeight + rowHeight * pdfSettings.rows;
+  const qrSize = 36;
+  const qrX = pageWidth - margin - qrSize;
+  const qrY = contentBottom + 5;
+  SVGtoPDF(doc, qrSvg, qrX, qrY, { width: qrSize, height: qrSize });
 }
 
 async function renderPagePdf(book, pageNumber) {
