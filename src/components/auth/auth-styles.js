@@ -4,6 +4,7 @@ const useStyles = makeStyles(() => ({
   emailAuthContainer: {
     width: 325,
     margin: "auto",
+    marginTop: "16px",
     display: "flex",
     flexDirection: "column",
     marginBottom: 25,

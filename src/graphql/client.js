@@ -1,21 +1,24 @@
-import { ApolloClient, InMemoryCache } from "@apollo/client";
+import { ApolloClient, HttpLink, InMemoryCache } from "@apollo/client";
 
 const createRealmApolloClient = (currentUser) => {
     const link = new HttpLink({
-      // Realm apps use a standard GraphQL endpoint, identified by their App ID
       uri: `/api/graphql`,
-      // A custom fetch handler adds the logged in user's access token to GraphQL requests
-      fetch: async (uri, options) => {
-        if (!currentUser) {
-          throw new Error(`Must be logged in to use the GraphQL API`);
+      fetch: async (uri, options = {}) => {
+        const headers = { ...(options.headers || {}) };
+
+        if (currentUser?.accessToken) {
+          headers.Authorization = `Bearer ${currentUser.accessToken}`;
         }
-        // Refreshing a user's custom data also refreshes their access token
-        await currentUser.refreshCustomData();
-        // The handler adds a bearer token Authorization header to the otherwise unchanged request
-        options.headers.Authorization = `Bearer ${currentUser.accessToken}`;
-        return fetch(uri, options);
+
+        return fetch(uri, {
+          ...options,
+          credentials: "same-origin",
+          headers,
+        });
       },
     });
     const cache = new InMemoryCache();
     return new ApolloClient({ link, cache });
   };
+
+export default createRealmApolloClient;

@@ -24,6 +24,7 @@ import useRhythmMutations from '../../graphql/rhythm/useRhythmMutations';
 
 export default function Main() {
   const currentUser = useSelector((state) => state.realm.currentUser);
+  const sessionLoaded = useSelector((state) => state.realm.sessionLoaded);
   const router = useRouter();
   const theme = useTheme();
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
@@ -35,7 +36,7 @@ export default function Main() {
     GET_ALL_USER_SAVED_RHYTHMS_QUERY
   );
   //Don't allow the user to visit this page if they are not logged in.
-  if (!currentUser) {
+  if (sessionLoaded && !currentUser) {
     router.push("/");
   }
 

@@ -1,5 +1,5 @@
 import React from "react";
-import { useRealmApp } from "../RealmApp";
+import { useSelector } from "react-redux";
 import {
   ApolloClient,
   HttpLink,
@@ -7,21 +7,21 @@ import {
   ApolloProvider,
 } from "@apollo/client";
 
-// Create an ApolloClient that connects to the provided Realm.App's GraphQL API
-const createRealmApolloClient = (app) => {
+const createRealmApolloClient = (currentUser) => {
   const link = new HttpLink({
-    // Realm apps use a standard GraphQL endpoint, identified by their App ID
     uri: `/api/graphql`,
-    // A custom fetch handler adds the logged in user's access token to GraphQL requests
-    fetch: async (uri, options) => {
-      if (!app.currentUser) {
-        throw new Error(`Must be logged in to use the GraphQL API`);
+    fetch: async (uri, options = {}) => {
+      const headers = { ...(options.headers || {}) };
+
+      if (currentUser?.accessToken) {
+        headers.Authorization = `Bearer ${currentUser.accessToken}`;
       }
-      // Refreshing a user's custom data also refreshes their access token
-      await app.currentUser.refreshCustomData();
-      // The handler adds a bearer token Authorization header to the otherwise unchanged request
-      options.headers.Authorization = `Bearer ${app.currentUser.accessToken}`;
-      return fetch(uri, options);
+
+      return fetch(uri, {
+        ...options,
+        credentials: "same-origin",
+        headers,
+      });
     },
   });
   const cache = new InMemoryCache();
@@ -29,10 +29,10 @@ const createRealmApolloClient = (app) => {
 };
 
 export default function RealmApolloProvider({ children }) {
-  const app = useRealmApp();
-  const [client, setClient] = React.useState(createRealmApolloClient(app));
+  const currentUser = useSelector((state) => state.realm.currentUser);
+  const [client, setClient] = React.useState(createRealmApolloClient(currentUser));
   React.useEffect(() => {
-    setClient(createRealmApolloClient(app));
-  }, [app]);
+    setClient(createRealmApolloClient(currentUser));
+  }, [currentUser]);
   return <ApolloProvider client={client}>{children}</ApolloProvider>;
 }

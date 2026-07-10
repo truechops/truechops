@@ -1,12 +1,9 @@
 import { useState  } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import * as Realm from "realm-web";
-import { login } from "../../store/realm-app";
 import useAuthStyles from "./auth-styles";
 import useAuthFormHook from "./auth-form-hook";
-import useRouter from "next/router";
 import CircularProgress from "@mui/material/CircularProgress";
 import { appActions } from "../../store/app";
+import { useDispatch } from "react-redux";
 
 export default function Login() {
   const dispatch = useDispatch();
@@ -15,14 +12,12 @@ export default function Login() {
   const [error, setError] = useState({});
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const loginHandler = async (email, password) => {
+  const loginHandler = async () => {
     setIsLoggingIn(true);
-    try {
-      dispatch(login(Realm.Credentials.emailPassword(email, password)));
-    } catch (err) {
-      //handleAuthenticationError(err, setError);
-    }
-    useRouter.push("/");
+    setError({
+      auth: "Email/password login used Atlas App Services and is no longer available. Use Google login instead.",
+    });
+    setIsLoggingIn(false);
   };
 
   const { form } = useAuthFormHook({

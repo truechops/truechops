@@ -1,13 +1,15 @@
-import * as Realm from 'realm-web';
 import { useEffect } from 'react';
 import CircularProgress from "@mui/material/CircularProgress";
 import { useTheme } from '@mui/styles';
+import { useRouter } from 'next/router';
 
 export default function useGoogleLoginRedirect() {
     const theme = useTheme();
+    const router = useRouter();
+
     useEffect(() => {
-        Realm.handleAuthRedirect();
-    }, [])
+        router.replace("/login");
+    }, [router])
+
     return <CircularProgress style={theme.spinner}/>
   }
-

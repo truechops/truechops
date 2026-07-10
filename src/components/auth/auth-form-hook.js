@@ -2,9 +2,6 @@ import { useEffect, useState } from "react";
 import TextField from "@mui/material/TextField";
 import useAuthStyles from "./auth-styles";
 import Button from "@mui/material/Button";
-import { useDispatch} from "react-redux";
-import * as Realm from "realm-web";
-import { login } from "../../store/realm-app";
 import { useRouter } from 'next/router';
 import DividerWithText from "../ui/DividerWithText";
 import SocialButtons from './SocialButtons';
@@ -19,7 +16,6 @@ export default function AuthForm(props) {
   const { isSignUp, error, setError, facebookText, googleText, emailHeading, continueText } = props;
   let continueEnabled = !!email && !!password;
   const router = useRouter();
-  const dispatch = useDispatch();
 
   if (isSignUp) {
     continueEnabled = continueEnabled && !!firstName && !!lastName;
@@ -31,6 +27,15 @@ export default function AuthForm(props) {
     $("#facebookButton button").attr('type', 'button');
     $("#googleButton button").attr('type', 'button');
   }, [])
+
+  useEffect(() => {
+    if (router.query.authError) {
+      setError((state) => ({
+        ...state,
+        auth: router.query.authError,
+      }));
+    }
+  }, [router.query.authError, setError]);
 
   const classes = useAuthStyles();
 
@@ -64,25 +69,14 @@ export default function AuthForm(props) {
   };
 
   const googleSignInHandler = async () => {
-    const redirectUri = `${window.location.origin}/oathRedirect`;
-    // Calling logIn() opens a Google authentication screen in a new window.
-    try {
-      await dispatch(login(Realm.Credentials.google(redirectUri)));
-      router.push("/");
-    } catch (err) {
-      handleAuthenticationError(err);
-    }
+    window.location.assign(`/api/auth/google?returnTo=${encodeURIComponent("/")}`);
   };
 
   const facebookSignInHandler = async () => {
-    const redirectUri = `${window.location.origin}/oathRedirect`;
-    // Calling logIn() opens a Facebook authentication screen in a new window.
-    try {
-      await dispatch(login(Realm.Credentials.facebook(redirectUri)));
-      router.push("/");
-    } catch (err) {
-      handleAuthenticationError(err);
-    }
+    setError((state) => ({
+      ...state,
+      auth: "Facebook login used Atlas App Services and is no longer available.",
+    }));
   };
 
   const onSubmitHandler = (e) => {
@@ -148,7 +142,11 @@ export default function AuthForm(props) {
   let emailErrorMessage = "";
   let passwordErrorMessage = "";
   let passwordsDontMatchErrorMessage = "";
+  let authErrorMessage = "";
   if (error) {
+    if (error.auth) {
+      authErrorMessage = <div className={classes.error}>{error.auth}</div>;
+    }
     if (error.email) {
       emailErrorMessage = <div className={classes.error}>{error.email}</div>;
     }
@@ -246,7 +244,6 @@ export default function AuthForm(props) {
 
   const socialButtons = (
     <>
-      <DividerWithText>or</DividerWithText>
       <SocialButtons
         fontSize="16px"
         facebook={{
@@ -264,9 +261,7 @@ export default function AuthForm(props) {
   const form = (
     <form onSubmit={onSubmitHandler}>
       <div className={classes.emailAuthContainer}>
-        <h3 className={classes.signUpHeading}>{emailHeading}</h3>
-        {isSignUp && nameFields}
-        {emailAuthFields}
+        {authErrorMessage}
         {socialButtons}
       </div>
     </form>

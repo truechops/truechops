@@ -5,13 +5,24 @@ import CssBaseline from "@mui/material/CssBaseline";
 import Theme from "../src/components/ui/Theme";
 import HeaderToolbar from "../src/components/layout/HeaderToolbar";
 import Navigation from "../src/components/layout/Navigation";
-import { Provider } from "react-redux";
+import { Provider, useDispatch } from "react-redux";
 import store from "../src/store/index";
+import { loadCurrentUser } from "../src/store/realm-app";
 import RealmApolloProvider from "../src/providers/RealmApolloProvider";
 import { ToneContextProvider } from "../src/store/tone-context";
 import ReactGA from "react-ga";
 import ErrorBoundary from "../src/components/error/ErrorBoundary";
 import '../styles/App.css'
+
+function AuthSessionLoader({ children }) {
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    dispatch(loadCurrentUser());
+  }, [dispatch]);
+
+  return children;
+}
 
 export default function MyApp(props) {
   const { Component, pageProps } = props;
@@ -39,17 +50,19 @@ export default function MyApp(props) {
       </Head>
 
       <Provider store={store}>
-        <RealmApolloProvider>
-          <ToneContextProvider>
-            <ThemeProvider theme={Theme}>
-              <CssBaseline />
-              <HeaderToolbar />
-              <Navigation />
-              <Component {...pageProps} />
-              {/* <Footer /> */}
-            </ThemeProvider>
-          </ToneContextProvider>
-        </RealmApolloProvider>
+        <AuthSessionLoader>
+          <RealmApolloProvider>
+            <ToneContextProvider>
+              <ThemeProvider theme={Theme}>
+                <CssBaseline />
+                <HeaderToolbar />
+                <Navigation />
+                <Component {...pageProps} />
+                {/* <Footer /> */}
+              </ThemeProvider>
+            </ToneContextProvider>
+          </RealmApolloProvider>
+        </AuthSessionLoader>
       </Provider>
     </ErrorBoundary>
   );

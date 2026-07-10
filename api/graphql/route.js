@@ -6,7 +6,7 @@ import { MongoClient } from 'mongodb'
 
 import Rhythms from "../../src/graphql/data-sources/Rhythms";
 
-const client = new MongoClient('https://us-east-1.aws.realm.mongodb.com/api/client/v2.0/app/drumtoolz-ywire')
+const client = new MongoClient(process.env.MONGODB_URI || 'mongodb+srv://jared:admin@cluster0.9ibeh.mongodb.net/drumtoolz')
 client.connect()
 
 const typeDefs = gql`

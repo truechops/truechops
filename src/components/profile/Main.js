@@ -10,10 +10,11 @@ const searchClient = algoliasearch(
 export default function UserProfile() 
 {
   const currentUser = useSelector((state) => state.realm.currentUser);
+  const sessionLoaded = useSelector((state) => state.realm.sessionLoaded);
   const router = useRouter();
 
   //Don't allow the user to visit this page if they are not logged in.
-  if(!currentUser) {
+  if(sessionLoaded && !currentUser) {
     router.push('/');
   }
 
