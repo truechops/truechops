@@ -325,9 +325,9 @@ export function TopToolbar(props) {
         <IconButton color="inherit" aria-label="link" onClick={onAddLink}>
           <FaLink size={iconSize} />
         </IconButton>
-        <IconButton color="inherit" aria-label="download-json" onClick={downloadScoreJson}>
+        {/* <IconButton color="inherit" aria-label="download-json" onClick={downloadScoreJson}>
           <FaDownload size={iconSize} />
-        </IconButton>
+        </IconButton> */}
         <IconButton color="inherit" aria-label="parts" onClick={() => setSheetOpen(true)}>
           <FaPlus size={iconSize} />
         </IconButton>
