@@ -165,11 +165,7 @@ function getPositiveInteger(value, fallback) {
 }
 
 function getScoreRenderConcurrency() {
-  return getPositiveInteger(process.env.BOOK_PDF_RENDER_CONCURRENCY, 4);
-}
-
-function getPagePrefetchLimit() {
-  return getPositiveInteger(process.env.BOOK_PDF_PAGE_PREFETCH, 3);
+  return getPositiveInteger(process.env.BOOK_PDF_RENDER_CONCURRENCY, 16);
 }
 
 function createAsyncLimiter(limit) {
@@ -632,18 +628,21 @@ async function renderBookPageAssets(book, page, bookPdfSettings, limitScoreRende
   const pdfSettings = getPagePdfSettings(page, bookPdfSettings);
   const linesPerPage = getLinesPerPage(pdfSettings);
   const pageLines = page.lines.slice(0, linesPerPage);
-  const svgs = await Promise.all(
-    pageLines.map((line, index) =>
-      limitScoreRender(() =>
-        renderScoreSvg(
-          line,
-          `${page.pageNumber}-${line.lineNumber}-${index}`,
-          pdfSettings
+
+  const [svgs, qrSvg] = await Promise.all([
+    Promise.all(
+      pageLines.map((line, index) =>
+        limitScoreRender(() =>
+          renderScoreSvg(
+            line,
+            `${page.pageNumber}-${line.lineNumber}-${index}`,
+            pdfSettings
+          )
         )
       )
-    )
-  );
-  const qrSvg = await getPracticeQrSvg(book, page);
+    ),
+    getPracticeQrSvg(book, page),
+  ]);
 
   return {
     page,
@@ -756,32 +755,14 @@ async function renderFullBookPdfFresh(book) {
   const doc = createBookPdfDocument(book, book.title || BOOK_TITLE);
   const finished = getPdfBuffer(doc);
   const limitScoreRender = createAsyncLimiter(getScoreRenderConcurrency());
-  const pagePrefetchLimit = getPagePrefetchLimit();
-  const pendingPageAssets = new Map();
-  let nextPageIndex = 0;
 
-  function schedulePageAssets() {
-    while (
-      nextPageIndex < book.pages.length &&
-      pendingPageAssets.size < pagePrefetchLimit
-    ) {
-      const pageIndex = nextPageIndex;
-      const page = book.pages[pageIndex];
-      pendingPageAssets.set(
-        pageIndex,
-        renderBookPageAssets(book, page, bookPdfSettings, limitScoreRender)
-      );
-      nextPageIndex += 1;
-    }
-  }
+  // Kick off all pages in parallel; the limiter caps concurrent SVG renders.
+  const pageAssetPromises = book.pages.map((page) =>
+    renderBookPageAssets(book, page, bookPdfSettings, limitScoreRender)
+  );
 
-  schedulePageAssets();
-
-  for (let pageIndex = 0; pageIndex < book.pages.length; pageIndex += 1) {
-    const pageAssets = await pendingPageAssets.get(pageIndex);
-    pendingPageAssets.delete(pageIndex);
-    schedulePageAssets();
-    drawBookPage(doc, book, pageAssets);
+  for (const pageAssetsPromise of pageAssetPromises) {
+    drawBookPage(doc, book, await pageAssetsPromise);
   }
 
   doc.end();
