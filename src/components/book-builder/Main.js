@@ -194,7 +194,9 @@ export default function BookBuilderPanel() {
 
   const loadBook = useCallback(async () => {
     try {
-      const response = await fetch("/api/book-builder");
+      const response = await fetch("/api/book-builder?includeScores=1", {
+        cache: "no-store",
+      });
       const payload = await response.json();
 
       if (!response.ok) {

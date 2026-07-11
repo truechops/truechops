@@ -2,8 +2,11 @@ import _ from "lodash";
 import { getEmptyMeasure } from "../../helpers/score";
 import { DEFAULT_TEMPO } from "../../consts/score";
 
+export const BOOK_KEY = "true-chops";
 export const BOOK_SLUG = "snare-drum-book";
 export const BOOK_TITLE = "Snare Drum Book";
+export const BOOK_EDITION = 1;
+export const BOOK_CONTENT_VERSION = 3;
 export const MEASURES_PER_LINE = 1;
 export const PDF_COLUMNS = 2;
 export const PDF_ROWS = 12;
@@ -75,8 +78,11 @@ export function createBlankPage(pageNumber, pdfSettings = DEFAULT_PDF_SETTINGS) 
 
 export function createDefaultBook() {
   return {
+    book: BOOK_KEY,
     slug: BOOK_SLUG,
     title: BOOK_TITLE,
+    edition: BOOK_EDITION,
+    contentVersion: BOOK_CONTENT_VERSION,
     updatedAt: null,
     pdfSettings: normalizePdfSettings(),
     pages: [createBlankPage(1, normalizePdfSettings())],
@@ -117,8 +123,11 @@ export function normalizeBook(rawBook) {
   const pages = rawBook.pages.length ? rawBook.pages : [createBlankPage(1, pdfSettings)];
 
   return {
+    book: rawBook.book || BOOK_KEY,
     slug: rawBook.slug || BOOK_SLUG,
     title: rawBook.title || BOOK_TITLE,
+    edition: Number(rawBook.edition || BOOK_EDITION),
+    contentVersion: Number(rawBook.contentVersion || BOOK_CONTENT_VERSION),
     updatedAt: rawBook.updatedAt || null,
     pdfSettings,
     pages: renumberPages(pages, pdfSettings),

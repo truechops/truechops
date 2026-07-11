@@ -17,6 +17,7 @@ import {
   normalizeBook,
   normalizePdfSettings,
 } from "../../src/components/book-builder/book-data";
+import { getBookPageQrUrl } from "../../src/lib/book-qr";
 
 const BOOK_ROOT = path.join(process.cwd(), "data", "book-builder", BOOK_SLUG);
 const MANIFEST_PATH = path.join(BOOK_ROOT, "book.json");
@@ -49,8 +50,11 @@ async function readJson(filePath) {
 
 function createManifest(book) {
   return {
+    book: book.book,
     slug: book.slug,
     title: book.title,
+    edition: book.edition,
+    contentVersion: book.contentVersion,
     updatedAt: book.updatedAt,
     pdfSettings: book.pdfSettings,
     pages: book.pages.map((page) => ({
@@ -435,7 +439,8 @@ async function drawBookPage(doc, book, page, bookPdfSettings) {
     lineBreak: false,
   });
 
-  const practiceUrl = `https://truechops.com/book/page/${page.pageNumber}`;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://truechops.com";
+  const practiceUrl = getBookPageQrUrl(page.pageNumber, book, siteUrl);
   const qrSvg = await QRCode.toString(practiceUrl, { type: "svg", margin: 1 });
   const contentBottom = margin + headerHeight + rowHeight * pdfSettings.rows;
   const qrSize = 36;
@@ -513,12 +518,20 @@ export default async function handler(req, res) {
         return;
       }
 
-      res.status(200).json({ book });
+      res.setHeader("Cache-Control", "private, no-store, no-cache, max-age=0, must-revalidate");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+      res.status(200).json({
+        book: req.query.includeScores === "1" ? book : createManifest(book),
+      });
       return;
     }
 
     if (req.method === "POST") {
       const book = await saveBook(req.body.book);
+      res.setHeader("Cache-Control", "private, no-store, no-cache, max-age=0, must-revalidate");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
       res.status(200).json({ book });
       return;
     }

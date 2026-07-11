@@ -1,18 +1,16 @@
-import dynamic from "next/dynamic";
-
-const DynamicPracticePage = dynamic(
-  () => import("../../../src/components/book-builder/PagePractice"),
-  { ssr: false }
-);
-
-export default function BookPagePractice({ pageNumber }) {
-  return <DynamicPracticePage pageNumber={pageNumber} />;
+export default function LegacyBookPagePractice() {
+  return null;
 }
 
-export function getServerSideProps({ params }) {
-  const pageNumber = Number(params.pageNumber);
-  if (!Number.isInteger(pageNumber) || pageNumber < 1) {
-    return { notFound: true };
-  }
-  return { props: { pageNumber } };
+export function getServerSideProps({ res }) {
+  res.setHeader("Cache-Control", "private, no-store, no-cache, max-age=0, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+
+  return {
+    redirect: {
+      destination: "/book",
+      permanent: false,
+    },
+  };
 }
