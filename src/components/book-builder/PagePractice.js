@@ -1,52 +1,62 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { useDispatch } from "react-redux";
+import { appActions } from "../../store/app";
 import { scoreActions } from "../../store/score";
 import { drawScore, initialize } from "../../lib/vexflow";
 import { BOOK_TITLE } from "./book-data";
 
 const styles = {
   page: {
-    padding: "20px 16px",
-    maxWidth: "540px",
+    boxSizing: "border-box",
+    padding: "44px 24px",
+    maxWidth: "960px",
+    width: "100%",
     margin: "0 auto",
     fontFamily: "Georgia, serif",
   },
   header: {
-    marginBottom: "20px",
-    borderBottom: "2px solid #222",
-    paddingBottom: "12px",
+    marginBottom: "40px",
+    borderBottom: "4px solid #222",
+    paddingBottom: "24px",
   },
   title: {
-    fontSize: "20px",
+    fontSize: "34px",
     fontWeight: "bold",
-    margin: "0 0 4px",
+    lineHeight: 1.15,
+    margin: "0 0 16px",
   },
   subtitle: {
-    fontSize: "14px",
+    fontSize: "25px",
     color: "#555",
     margin: 0,
   },
   prompt: {
-    fontSize: "14px",
+    fontSize: "25px",
     color: "#333",
-    marginBottom: "16px",
+    marginBottom: "32px",
   },
   list: {
     display: "flex",
     flexDirection: "column",
-    gap: "8px",
+    gap: "18px",
+    margin: "0 auto",
+    width: "100%",
+  },
+  exerciseWrap: {
+    position: "relative",
+    width: "100%",
   },
   exerciseRow: {
     display: "flex",
     alignItems: "center",
-    gap: "10px",
-    minHeight: "78px",
+    boxSizing: "border-box",
+    minHeight: "134px",
     width: "100%",
-    padding: "6px 8px",
+    padding: "16px 16px 14px 46px",
     fontFamily: "Georgia, serif",
     border: "1px solid #d7d7d7",
-    borderRadius: "8px",
+    borderRadius: "14px",
     background: "#fff",
     cursor: "pointer",
     color: "#111",
@@ -56,13 +66,19 @@ const styles = {
     alignItems: "center",
     background: "#f2f2f2",
     border: "1px solid #ddd",
-    borderRadius: "6px",
+    borderRadius: "10px",
     display: "flex",
-    flex: "0 0 34px",
-    fontSize: "16px",
+    fontSize: "26px",
     fontWeight: "bold",
-    height: "34px",
+    height: "52px",
     justifyContent: "center",
+    left: "-20px",
+    pointerEvents: "none",
+    position: "absolute",
+    top: "50%",
+    transform: "translateY(-50%)",
+    width: "48px",
+    zIndex: 1,
   },
   exerciseButtonEmpty: {
     color: "#bbb",
@@ -73,6 +89,10 @@ const styles = {
     flex: "1 1 auto",
     minWidth: 0,
     overflow: "hidden",
+  },
+  previewInner: {
+    marginLeft: "-10px",
+    overflow: "visible",
   },
   blankPreview: {
     color: "#aaa",
@@ -87,9 +107,42 @@ const styles = {
   },
 };
 
+const EDITOR_SCORE_SCALE = 0.75;
+const VEXFLOW_RENDER_PADDING = 50;
+
 function RhythmPreview({ line }) {
   const reactId = useId();
+  const previewRef = useRef(null);
+  const [previewWidth, setPreviewWidth] = useState(720);
   const previewId = `book-practice-preview-${reactId.replace(/:/g, "")}-${line.pageNumber}-${line.lineNumber}`;
+
+  useEffect(() => {
+    const previewElement = previewRef.current;
+    if (!previewElement) {
+      return;
+    }
+
+    const updatePreviewWidth = () => {
+      const nextWidth = Math.floor(previewElement.getBoundingClientRect().width);
+      if (!nextWidth) {
+        return;
+      }
+      setPreviewWidth((currentWidth) =>
+        Math.abs(currentWidth - nextWidth) > 2 ? nextWidth : currentWidth
+      );
+    };
+
+    updatePreviewWidth();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updatePreviewWidth);
+      return () => window.removeEventListener("resize", updatePreviewWidth);
+    }
+
+    const resizeObserver = new ResizeObserver(updatePreviewWidth);
+    resizeObserver.observe(previewElement);
+    return () => resizeObserver.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!line.score) {
@@ -103,6 +156,10 @@ function RhythmPreview({ line }) {
 
     container.innerHTML = "";
     const { renderer, context } = initialize(previewId);
+    const scoreWidth = Math.max(
+      300,
+      Math.floor(previewWidth / EDITOR_SCORE_SCALE - VEXFLOW_RENDER_PADDING)
+    );
     drawScore(
       renderer,
       context,
@@ -110,21 +167,25 @@ function RhythmPreview({ line }) {
       null,
       () => {},
       {
-        width: 720,
-        scale: 0.58,
-        hResize: 0.58,
-        vResize: 0.58,
+        width: scoreWidth,
+        scale: EDITOR_SCORE_SCALE,
+        hResize: EDITOR_SCORE_SCALE,
+        vResize: EDITOR_SCORE_SCALE,
         justifyLastRow: true,
       },
       {}
     );
-  }, [line.score, previewId]);
+  }, [line.score, previewId, previewWidth]);
 
   if (!line.score) {
     return <span style={styles.blankPreview}>Blank</span>;
   }
 
-  return <div id={previewId} style={styles.preview} />;
+  return (
+    <div ref={previewRef} style={styles.preview}>
+      <div id={previewId} style={styles.previewInner} />
+    </div>
+  );
 }
 
 export default function PagePractice({ pageNumber }) {
@@ -133,6 +194,10 @@ export default function PagePractice({ pageNumber }) {
   const [error, setError] = useState(null);
   const dispatch = useDispatch();
   const router = useRouter();
+
+  useEffect(() => {
+    dispatch(appActions.setPageLoaded());
+  }, [dispatch]);
 
   useEffect(() => {
     fetch("/api/book-builder")
@@ -184,19 +249,20 @@ export default function PagePractice({ pageNumber }) {
         {page.lines.map((line) => {
           const hasScore = Boolean(line.score);
           return (
-            <button
-              key={line.lineNumber}
-              style={{
-                ...styles.exerciseRow,
-                ...(hasScore ? {} : styles.exerciseButtonEmpty),
-              }}
-              onClick={() => hasScore && practiceExercise(line)}
-              disabled={!hasScore}
-              aria-label={`Exercise ${line.lineNumber}`}
-            >
-              <span style={styles.exerciseNumber}>{line.lineNumber}</span>
-              <RhythmPreview line={line} />
-            </button>
+            <div key={line.lineNumber} style={styles.exerciseWrap}>
+              <span aria-hidden="true" style={styles.exerciseNumber}>{line.lineNumber}</span>
+              <button
+                style={{
+                  ...styles.exerciseRow,
+                  ...(hasScore ? {} : styles.exerciseButtonEmpty),
+                }}
+                onClick={() => hasScore && practiceExercise(line)}
+                disabled={!hasScore}
+                aria-label={`Exercise ${line.lineNumber}`}
+              >
+                <RhythmPreview line={line} />
+              </button>
+            </div>
           );
         })}
       </div>
