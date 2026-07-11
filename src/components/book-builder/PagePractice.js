@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useRouter } from "next/router";
 import { useDispatch } from "react-redux";
 import { scoreActions } from "../../store/score";
+import { drawScore, initialize } from "../../lib/vexflow";
 import { BOOK_TITLE } from "./book-data";
 
 const styles = {
@@ -31,30 +32,52 @@ const styles = {
     color: "#333",
     marginBottom: "16px",
   },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    gap: "10px",
+  list: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
   },
-  exerciseButton: {
+  exerciseRow: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "center",
-    height: "56px",
-    fontSize: "22px",
-    fontWeight: "bold",
+    gap: "10px",
+    minHeight: "78px",
+    width: "100%",
+    padding: "6px 8px",
     fontFamily: "Georgia, serif",
-    border: "2px solid #222",
+    border: "1px solid #d7d7d7",
     borderRadius: "8px",
     background: "#fff",
     cursor: "pointer",
     color: "#111",
+    textAlign: "left",
+  },
+  exerciseNumber: {
+    alignItems: "center",
+    background: "#f2f2f2",
+    border: "1px solid #ddd",
+    borderRadius: "6px",
+    display: "flex",
+    flex: "0 0 34px",
+    fontSize: "16px",
+    fontWeight: "bold",
+    height: "34px",
+    justifyContent: "center",
   },
   exerciseButtonEmpty: {
-    border: "2px solid #ccc",
     color: "#bbb",
     cursor: "default",
     background: "#fafafa",
+  },
+  preview: {
+    flex: "1 1 auto",
+    minWidth: 0,
+    overflow: "hidden",
+  },
+  blankPreview: {
+    color: "#aaa",
+    fontSize: "14px",
+    fontStyle: "italic",
   },
   message: {
     fontSize: "16px",
@@ -63,6 +86,46 @@ const styles = {
     textAlign: "center",
   },
 };
+
+function RhythmPreview({ line }) {
+  const reactId = useId();
+  const previewId = `book-practice-preview-${reactId.replace(/:/g, "")}-${line.pageNumber}-${line.lineNumber}`;
+
+  useEffect(() => {
+    if (!line.score) {
+      return;
+    }
+
+    const container = document.getElementById(previewId);
+    if (!container) {
+      return;
+    }
+
+    container.innerHTML = "";
+    const { renderer, context } = initialize(previewId);
+    drawScore(
+      renderer,
+      context,
+      line.score,
+      null,
+      () => {},
+      {
+        width: 720,
+        scale: 0.58,
+        hResize: 0.58,
+        vResize: 0.58,
+        justifyLastRow: true,
+      },
+      {}
+    );
+  }, [line.score, previewId]);
+
+  if (!line.score) {
+    return <span style={styles.blankPreview}>Blank</span>;
+  }
+
+  return <div id={previewId} style={styles.preview} />;
+}
 
 export default function PagePractice({ pageNumber }) {
   const [page, setPage] = useState(null);
@@ -116,22 +179,23 @@ export default function PagePractice({ pageNumber }) {
         <p style={styles.title}>{BOOK_TITLE}</p>
         <p style={styles.subtitle}>Page {pageNumber} — choose an exercise to practice</p>
       </div>
-      <p style={styles.prompt}>Tap a number to load that exercise:</p>
-      <div style={styles.grid}>
+      <p style={styles.prompt}>Tap a rhythm to load that exercise:</p>
+      <div style={styles.list}>
         {page.lines.map((line) => {
           const hasScore = Boolean(line.score);
           return (
             <button
               key={line.lineNumber}
               style={{
-                ...styles.exerciseButton,
+                ...styles.exerciseRow,
                 ...(hasScore ? {} : styles.exerciseButtonEmpty),
               }}
               onClick={() => hasScore && practiceExercise(line)}
               disabled={!hasScore}
               aria-label={`Exercise ${line.lineNumber}`}
             >
-              {line.lineNumber}
+              <span style={styles.exerciseNumber}>{line.lineNumber}</span>
+              <RhythmPreview line={line} />
             </button>
           );
         })}
