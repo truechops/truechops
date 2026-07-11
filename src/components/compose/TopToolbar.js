@@ -16,7 +16,7 @@ import { copyToClipboard } from "../../helpers/browser";
 import _ from "lodash";
 import { score } from '../../consts/score';
 
-import { FaUndo, FaRedo, FaPlay, FaStop, FaSave, FaLink, FaPlus, FaTimes} from "react-icons/fa";
+import { FaUndo, FaRedo, FaPlay, FaStop, FaSave, FaLink, FaPlus, FaTimes, FaDownload } from "react-icons/fa";
 import { FiCopy } from "react-icons/fi";
 import { GiMetronome } from "react-icons/gi";
 import useRhythmMutations from "../../graphql/rhythm/useRhythmMutations";
@@ -55,6 +55,20 @@ export function TopToolbar(props) {
   const dispatch = useDispatch();
 
   const currentUser = useSelector((state) => state.realm.currentUser);
+  const scoreData = useSelector((state) => state.score.present);
+
+  function downloadScoreJson() {
+    const { score, name, tempo } = scoreData;
+    const filename = (name || "score") + ".json";
+    const json = JSON.stringify({ name, tempo, score }, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
   const [logInToSaveRhythmModalOpen, setLogInToSaveRhythmModalOpen] =
     useState(false);
   const [logInToAddLinkModalOpen, setLogInToAddLinkModalOpen] = useState(false);
@@ -310,6 +324,9 @@ export function TopToolbar(props) {
         </IconButton>
         <IconButton color="inherit" aria-label="link" onClick={onAddLink}>
           <FaLink size={iconSize} />
+        </IconButton>
+        <IconButton color="inherit" aria-label="download-json" onClick={downloadScoreJson}>
+          <FaDownload size={iconSize} />
         </IconButton>
         <IconButton color="inherit" aria-label="parts" onClick={() => setSheetOpen(true)}>
           <FaPlus size={iconSize} />
