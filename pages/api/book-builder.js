@@ -2,6 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import process from "process";
 import { Buffer } from "buffer";
+import { createHash } from "crypto";
 import PDFDocument from "pdfkit";
 import SVGtoPDF from "svg-to-pdfkit";
 import QRCode from "qrcode";
@@ -22,10 +23,19 @@ import { getBookPageQrUrl } from "../../src/lib/book-qr";
 const BOOK_ROOT = path.join(process.cwd(), "data", "book-builder", BOOK_SLUG);
 const MANIFEST_PATH = path.join(BOOK_ROOT, "book.json");
 const LINE_NUMBER_CENTER_OFFSET = 1.25;
+const PDF_CACHE_ROOT = process.env.BOOK_PDF_CACHE_DIR || path.join(process.cwd(), ".next", "cache", "book-builder-pdf");
+const SCORE_SVG_CACHE_VERSION = "score-svg-v1";
+const PDF_FILE_CACHE_VERSION = "pdf-v1";
+const SCORE_SVG_MEMORY_CACHE_LIMIT = Number(process.env.BOOK_PDF_SVG_MEMORY_CACHE_LIMIT || 800);
 
 // Module-level flag so setupDom re-runs after a hot-reload (globalThis persists
 // across hot-reloads but module scope resets, clearing this flag).
 let domSetup = false;
+let renderCounter = 0;
+let vexflowModulePromise = null;
+const scoreSvgMemoryCache = new Map();
+const scoreSvgInflight = new Map();
+const qrSvgMemoryCache = new Map();
 
 function pageDir(pageNumber) {
   return path.join(BOOK_ROOT, "pages", `page-${String(pageNumber).padStart(2, "0")}`);
@@ -149,6 +159,201 @@ function getPdfBuffer(doc) {
   });
 }
 
+function getPositiveInteger(value, fallback) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function getScoreRenderConcurrency() {
+  return getPositiveInteger(process.env.BOOK_PDF_RENDER_CONCURRENCY, 4);
+}
+
+function getPagePrefetchLimit() {
+  return getPositiveInteger(process.env.BOOK_PDF_PAGE_PREFETCH, 3);
+}
+
+function createAsyncLimiter(limit) {
+  let activeCount = 0;
+  const queue = [];
+
+  function runNext() {
+    if (activeCount >= limit || queue.length === 0) {
+      return;
+    }
+
+    const next = queue.shift();
+    activeCount += 1;
+
+    Promise.resolve()
+      .then(next.task)
+      .then(next.resolve, next.reject)
+      .finally(() => {
+        activeCount -= 1;
+        runNext();
+      });
+  }
+
+  return function limitTask(task) {
+    return new Promise((resolve, reject) => {
+      queue.push({ task, resolve, reject });
+      runNext();
+    });
+  };
+}
+
+function getHash(value) {
+  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+}
+
+function getScoreSvgCacheKey(line, pdfSettings) {
+  return getHash({
+    version: SCORE_SVG_CACHE_VERSION,
+    score: line.score || createBlankLineScore(),
+    pdfSettings: {
+      noteRenderWidth: pdfSettings.noteRenderWidth,
+      noteStartPadding: pdfSettings.noteStartPadding,
+      noteEndPadding: pdfSettings.noteEndPadding,
+    },
+  });
+}
+
+function getScoreSvgCachePath(cacheKey) {
+  return path.join(PDF_CACHE_ROOT, SCORE_SVG_CACHE_VERSION, `${cacheKey}.json`);
+}
+
+function rememberScoreSvg(cacheKey, rendered) {
+  scoreSvgMemoryCache.set(cacheKey, rendered);
+
+  while (scoreSvgMemoryCache.size > SCORE_SVG_MEMORY_CACHE_LIMIT) {
+    const oldestKey = scoreSvgMemoryCache.keys().next().value;
+    scoreSvgMemoryCache.delete(oldestKey);
+  }
+}
+
+async function readScoreSvgCache(cacheKey) {
+  if (process.env.BOOK_PDF_DISABLE_CACHE === "1") {
+    return null;
+  }
+
+  const memoryHit = scoreSvgMemoryCache.get(cacheKey);
+  if (memoryHit) {
+    return memoryHit;
+  }
+
+  try {
+    const cached = JSON.parse(await fs.readFile(getScoreSvgCachePath(cacheKey), "utf8"));
+    rememberScoreSvg(cacheKey, cached);
+    return cached;
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return null;
+    }
+
+    return null;
+  }
+}
+
+async function writeScoreSvgCache(cacheKey, rendered) {
+  rememberScoreSvg(cacheKey, rendered);
+
+  if (process.env.BOOK_PDF_DISABLE_CACHE === "1") {
+    return;
+  }
+
+  try {
+    const cachePath = getScoreSvgCachePath(cacheKey);
+    await fs.mkdir(path.dirname(cachePath), { recursive: true });
+    await fs.writeFile(cachePath, `${JSON.stringify(rendered)}\n`);
+  } catch {
+    // Cache writes are best-effort; PDF generation should never fail because
+    // the local cache directory is unavailable.
+  }
+}
+
+function getRelevantPdfBookPayload(book, pages) {
+  return {
+    book: book.book,
+    slug: book.slug,
+    title: book.title,
+    edition: book.edition,
+    contentVersion: book.contentVersion,
+    pdfSettings: book.pdfSettings,
+    siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://truechops.com",
+    pages: pages.map((page) => ({
+      pageNumber: page.pageNumber,
+      pdfSettings: page.pdfSettings,
+      lines: page.lines.map((line) => ({
+        lineNumber: line.lineNumber,
+        score: line.score,
+      })),
+    })),
+  };
+}
+
+function getPdfCacheKey(book, pages, scope) {
+  return getHash({
+    version: PDF_FILE_CACHE_VERSION,
+    scope,
+    book: getRelevantPdfBookPayload(book, pages),
+  });
+}
+
+function getPdfCachePath(cacheKey) {
+  return path.join(PDF_CACHE_ROOT, PDF_FILE_CACHE_VERSION, `${cacheKey}.pdf`);
+}
+
+async function readPdfCache(cacheKey) {
+  if (process.env.BOOK_PDF_DISABLE_CACHE === "1") {
+    return null;
+  }
+
+  try {
+    return await fs.readFile(getPdfCachePath(cacheKey));
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return null;
+    }
+
+    return null;
+  }
+}
+
+async function writePdfCache(cacheKey, pdf) {
+  if (process.env.BOOK_PDF_DISABLE_CACHE === "1") {
+    return;
+  }
+
+  try {
+    const cachePath = getPdfCachePath(cacheKey);
+    await fs.mkdir(path.dirname(cachePath), { recursive: true });
+    await fs.writeFile(cachePath, pdf);
+  } catch {
+    // Best-effort cache write.
+  }
+}
+
+function setNoStoreHeaders(res) {
+  res.setHeader("Cache-Control", "private, no-store, no-cache, max-age=0, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+}
+
+function sendPdfResponse(res, pdf, filename, disposition, cacheStatus) {
+  setNoStoreHeaders(res);
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `${disposition}; filename="${filename}"`);
+  res.setHeader("X-Book-PDF-Cache", cacheStatus);
+  res.status(200).send(pdf);
+}
+
+function getVexflowModule() {
+  if (!vexflowModulePromise) {
+    vexflowModulePromise = import("../../src/lib/vexflow");
+  }
+
+  return vexflowModulePromise;
+}
+
 function setupDom() {
   if (domSetup) return;
   domSetup = true;
@@ -211,53 +416,83 @@ function setupDom() {
   }
 }
 
-async function renderScoreSvg(line, index, pdfSettings) {
+async function renderScoreSvgFresh(line, renderKey, pdfSettings) {
   setupDom();
 
-  const { initialize, drawScore } = await import("../../src/lib/vexflow");
-  const id = `book-pdf-slot-${index}`;
+  const { initialize, drawScore } = await getVexflowModule();
+  renderCounter += 1;
+  const safeRenderKey = String(renderKey).replace(/[^a-zA-Z0-9_-]/g, "-");
+  const id = `book-pdf-slot-${safeRenderKey}-${renderCounter}`;
   const container = globalThis.document.createElement("div");
   container.id = id;
   globalThis.document.body.appendChild(container);
 
-  const { renderer, context } = initialize(id);
-  drawScore(
-    renderer,
-    context,
-    line.score || createBlankLineScore(),
-    null,
-    () => {},
-    {
-      width: pdfSettings.noteRenderWidth,
-      scale: 1,
-      hResize: 1,
-      vResize: 1,
-      justifyLastRow: true,
-      measureNoteStartPadding: pdfSettings.noteStartPadding,
-      measureNoteEndPadding: pdfSettings.noteEndPadding,
-      hideTimeSignature: true,
-      maxMeasureWidth: pdfSettings.noteRenderWidth,
-    },
-    { start: 0, end: 0 }
-  );
+  try {
+    const { renderer, context } = initialize(id);
+    drawScore(
+      renderer,
+      context,
+      line.score || createBlankLineScore(),
+      null,
+      () => {},
+      {
+        width: pdfSettings.noteRenderWidth,
+        scale: 1,
+        hResize: 1,
+        vResize: 1,
+        justifyLastRow: true,
+        measureNoteStartPadding: pdfSettings.noteStartPadding,
+        measureNoteEndPadding: pdfSettings.noteEndPadding,
+        hideTimeSignature: true,
+        maxMeasureWidth: pdfSettings.noteRenderWidth,
+      },
+      { start: 0, end: 0 }
+    );
 
-  const svg = container.querySelector("svg");
-  if (!svg) {
+    const svg = container.querySelector("svg");
+    if (!svg) {
+      throw new Error(`Unable to render page ${line.pageNumber}, slot ${line.lineNumber}`);
+    }
+
+    svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    svg.setAttribute("version", "1.1");
+
+    const rendered = {
+      source: svg.outerHTML,
+      width: Number.parseFloat(svg.getAttribute("width")),
+      height: Number.parseFloat(svg.getAttribute("height")),
+    };
+
+    rendered.staffCenterY = getMeasureCenterY(rendered);
+    return rendered;
+  } finally {
     container.remove();
-    throw new Error(`Unable to render page ${line.pageNumber}, slot ${line.lineNumber}`);
+  }
+}
+
+async function renderScoreSvg(line, renderKey, pdfSettings) {
+  const cacheKey = getScoreSvgCacheKey(line, pdfSettings);
+
+  if (scoreSvgInflight.has(cacheKey)) {
+    return scoreSvgInflight.get(cacheKey);
   }
 
-  svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-  svg.setAttribute("version", "1.1");
+  const renderPromise = (async () => {
+    const cached = await readScoreSvgCache(cacheKey);
 
-  const rendered = {
-    source: svg.outerHTML,
-    width: Number.parseFloat(svg.getAttribute("width")),
-    height: Number.parseFloat(svg.getAttribute("height")),
-  };
+    if (cached) {
+      return cached;
+    }
 
-  container.remove();
-  return rendered;
+    const rendered = await renderScoreSvgFresh(line, renderKey, pdfSettings);
+    writeScoreSvgCache(cacheKey, rendered);
+    return rendered;
+  })().finally(() => {
+    scoreSvgInflight.delete(cacheKey);
+  });
+
+  scoreSvgInflight.set(cacheKey, renderPromise);
+  return renderPromise;
 }
 
 function drawSlotSvg(doc, line, svg, x, y, width, height) {
@@ -273,7 +508,7 @@ function drawSlotSvg(doc, line, svg, x, y, width, height) {
 
   // Center the SVG on the staff midpoint rather than the SVG bounding box,
   // since VexFlow adds significant whitespace above the staff.
-  const staffCenterInSvg = getMeasureCenterY(svg);
+  const staffCenterInSvg = svg.staffCenterY ?? getMeasureCenterY(svg);
   const slotCenterY = y + height / 2;
   const svgY = slotCenterY - staffCenterInSvg * scale;
   const measureCenterY = slotCenterY;
@@ -379,11 +614,48 @@ function createBookPdfDocument(book, title) {
   });
 }
 
-async function drawBookPage(doc, book, page, bookPdfSettings) {
+async function getPracticeQrSvg(book, page) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://truechops.com";
+  const practiceUrl = getBookPageQrUrl(page.pageNumber, book, siteUrl);
+  const cached = qrSvgMemoryCache.get(practiceUrl);
+
+  if (cached) {
+    return cached;
+  }
+
+  const qrSvg = await QRCode.toString(practiceUrl, { type: "svg", margin: 1 });
+  qrSvgMemoryCache.set(practiceUrl, qrSvg);
+  return qrSvg;
+}
+
+async function renderBookPageAssets(book, page, bookPdfSettings, limitScoreRender) {
   const pdfSettings = getPagePdfSettings(page, bookPdfSettings);
   const linesPerPage = getLinesPerPage(pdfSettings);
   const pageLines = page.lines.slice(0, linesPerPage);
-  const svgs = await Promise.all(pageLines.map((line, index) => renderScoreSvg(line, index, pdfSettings)));
+  const svgs = await Promise.all(
+    pageLines.map((line, index) =>
+      limitScoreRender(() =>
+        renderScoreSvg(
+          line,
+          `${page.pageNumber}-${line.lineNumber}-${index}`,
+          pdfSettings
+        )
+      )
+    )
+  );
+  const qrSvg = await getPracticeQrSvg(book, page);
+
+  return {
+    page,
+    pdfSettings,
+    pageLines,
+    svgs,
+    qrSvg,
+  };
+}
+
+function drawBookPage(doc, book, pageAssets) {
+  const { page, pdfSettings, pageLines, svgs, qrSvg } = pageAssets;
   const pageWidth = 612;
   const pageHeight = 792;
   const margin = 24;
@@ -439,9 +711,6 @@ async function drawBookPage(doc, book, page, bookPdfSettings) {
     lineBreak: false,
   });
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://truechops.com";
-  const practiceUrl = getBookPageQrUrl(page.pageNumber, book, siteUrl);
-  const qrSvg = await QRCode.toString(practiceUrl, { type: "svg", margin: 1 });
   const contentBottom = margin + headerHeight + rowHeight * pdfSettings.rows;
   const qrSize = 36;
   const qrX = pageWidth - margin - qrSize;
@@ -449,7 +718,7 @@ async function drawBookPage(doc, book, page, bookPdfSettings) {
   SVGtoPDF(doc, qrSvg, qrX, qrY, { width: qrSize, height: qrSize });
 }
 
-async function renderPagePdf(book, pageNumber) {
+async function renderPagePdfFresh(book, pageNumber) {
   const bookPdfSettings = normalizePdfSettings({
     ...DEFAULT_PDF_SETTINGS,
     ...(book.pdfSettings || {}),
@@ -457,70 +726,120 @@ async function renderPagePdf(book, pageNumber) {
   const page = book.pages.find((candidate) => candidate.pageNumber === pageNumber) || book.pages[0];
   const doc = createBookPdfDocument(book, `${book.title || BOOK_TITLE} Page ${page.pageNumber}`);
   const finished = getPdfBuffer(doc);
-  await drawBookPage(doc, book, page, bookPdfSettings);
+  const limitScoreRender = createAsyncLimiter(getScoreRenderConcurrency());
+  const pageAssets = await renderBookPageAssets(book, page, bookPdfSettings, limitScoreRender);
+  drawBookPage(doc, book, pageAssets);
 
   doc.end();
   return finished;
 }
 
-async function renderFullBookPdf(book) {
+async function renderPagePdf(book, pageNumber) {
+  const page = book.pages.find((candidate) => candidate.pageNumber === pageNumber) || book.pages[0];
+  const cacheKey = getPdfCacheKey(book, [page], `page-${page.pageNumber}`);
+  const cached = await readPdfCache(cacheKey);
+
+  if (cached) {
+    return { pdf: cached, cacheStatus: "HIT" };
+  }
+
+  const pdf = await renderPagePdfFresh(book, page.pageNumber);
+  await writePdfCache(cacheKey, pdf);
+  return { pdf, cacheStatus: "MISS" };
+}
+
+async function renderFullBookPdfFresh(book) {
   const bookPdfSettings = normalizePdfSettings({
     ...DEFAULT_PDF_SETTINGS,
     ...(book.pdfSettings || {}),
   });
   const doc = createBookPdfDocument(book, book.title || BOOK_TITLE);
   const finished = getPdfBuffer(doc);
+  const limitScoreRender = createAsyncLimiter(getScoreRenderConcurrency());
+  const pagePrefetchLimit = getPagePrefetchLimit();
+  const pendingPageAssets = new Map();
+  let nextPageIndex = 0;
 
-  for (const page of book.pages) {
-    await drawBookPage(doc, book, page, bookPdfSettings);
+  function schedulePageAssets() {
+    while (
+      nextPageIndex < book.pages.length &&
+      pendingPageAssets.size < pagePrefetchLimit
+    ) {
+      const pageIndex = nextPageIndex;
+      const page = book.pages[pageIndex];
+      pendingPageAssets.set(
+        pageIndex,
+        renderBookPageAssets(book, page, bookPdfSettings, limitScoreRender)
+      );
+      nextPageIndex += 1;
+    }
+  }
+
+  schedulePageAssets();
+
+  for (let pageIndex = 0; pageIndex < book.pages.length; pageIndex += 1) {
+    const pageAssets = await pendingPageAssets.get(pageIndex);
+    pendingPageAssets.delete(pageIndex);
+    schedulePageAssets();
+    drawBookPage(doc, book, pageAssets);
   }
 
   doc.end();
   return finished;
 }
 
+async function renderFullBookPdf(book) {
+  const cacheKey = getPdfCacheKey(book, book.pages, "book");
+  const cached = await readPdfCache(cacheKey);
+
+  if (cached) {
+    return { pdf: cached, cacheStatus: "HIT" };
+  }
+
+  const pdf = await renderFullBookPdfFresh(book);
+  await writePdfCache(cacheKey, pdf);
+  return { pdf, cacheStatus: "MISS" };
+}
+
 export default async function handler(req, res) {
   try {
     if (req.method === "GET") {
       if (req.query.format === "pdf" && req.query.sample) {
-        const pdf = await renderSamplePdf(req.query.sample);
-        res.setHeader("Content-Type", "application/pdf");
-        res.setHeader("Content-Disposition", `inline; filename="sample-${req.query.sample}.pdf"`);
-        res.status(200).send(pdf);
+        const { pdf, cacheStatus } = await renderSamplePdf(req.query.sample);
+        sendPdfResponse(
+          res,
+          pdf,
+          `sample-${req.query.sample}.pdf`,
+          "inline",
+          cacheStatus
+        );
         return;
       }
 
       const book = await loadBook();
       if (req.query.format === "pdf") {
         if (req.query.scope === "book") {
-          const pdf = await renderFullBookPdf(book);
+          const { pdf, cacheStatus } = await renderFullBookPdf(book);
           const disposition = req.query.inline === "1" ? "inline" : "attachment";
-
-          res.setHeader("Content-Type", "application/pdf");
-          res.setHeader(
-            "Content-Disposition",
-            `${disposition}; filename="${BOOK_SLUG}.pdf"`
-          );
-          res.status(200).send(pdf);
+          sendPdfResponse(res, pdf, `${BOOK_SLUG}.pdf`, disposition, cacheStatus);
           return;
         }
 
         const pageNumber = Number(req.query.page || 1);
-        const pdf = await renderPagePdf(book, pageNumber);
+        const { pdf, cacheStatus } = await renderPagePdf(book, pageNumber);
 
         const disposition = req.query.inline === "1" ? "inline" : "attachment";
-        res.setHeader("Content-Type", "application/pdf");
-        res.setHeader(
-          "Content-Disposition",
-          `${disposition}; filename="${BOOK_SLUG}-page-${String(pageNumber).padStart(2, "0")}.pdf"`
+        sendPdfResponse(
+          res,
+          pdf,
+          `${BOOK_SLUG}-page-${String(pageNumber).padStart(2, "0")}.pdf`,
+          disposition,
+          cacheStatus
         );
-        res.status(200).send(pdf);
         return;
       }
 
-      res.setHeader("Cache-Control", "private, no-store, no-cache, max-age=0, must-revalidate");
-      res.setHeader("Pragma", "no-cache");
-      res.setHeader("Expires", "0");
+      setNoStoreHeaders(res);
       res.status(200).json({
         book: req.query.includeScores === "1" ? book : createManifest(book),
       });
@@ -529,9 +848,7 @@ export default async function handler(req, res) {
 
     if (req.method === "POST") {
       const book = await saveBook(req.body.book);
-      res.setHeader("Cache-Control", "private, no-store, no-cache, max-age=0, must-revalidate");
-      res.setHeader("Pragma", "no-cache");
-      res.setHeader("Expires", "0");
+      setNoStoreHeaders(res);
       res.status(200).json({ book });
       return;
     }
