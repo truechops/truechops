@@ -247,6 +247,44 @@
   box-shadow: 0 0 0 3px rgba(150, 9, 9, 0.12);
 }
 
+.pdfProgress {
+  background: var(--wash);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.pdfProgressLabel {
+  color: var(--muted);
+  font-size: 0.82rem;
+  padding: 5px 9px 4px;
+}
+
+.pdfProgressTrack {
+  background: var(--line);
+  height: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.pdfProgressBar {
+  background: var(--green);
+  height: 100%;
+  transition: width 120ms ease;
+}
+
+@keyframes pdfSpin {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(400%); }
+}
+
+.pdfProgressSpin {
+  animation: pdfSpin 1.2s ease-in-out infinite;
+  background: var(--green);
+  height: 100%;
+  width: 25%;
+}
+
 .actions {
   align-items: stretch;
   display: grid;

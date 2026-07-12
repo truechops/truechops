@@ -174,6 +174,7 @@ export default function BookBuilderPanel() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState("");
+  const [pdfDownload, setPdfDownload] = useState({ active: false, label: "", loaded: 0, total: 0 });
 
   const selectedPage = book.pages[selectedPageIndex] || book.pages[0];
   const selectedLine = selectedPage.lines[selectedLineIndex] || selectedPage.lines[0];
@@ -381,13 +382,59 @@ export default function BookBuilderPanel() {
     );
   }, [book, pdfSettings, saveBook, selectedPage.pageNumber, selectedPageIndex, selectedPagePdfSettings]);
 
+  const downloadPdf = useCallback(async (url, filename, label) => {
+    setPdfDownload({ active: true, label, loaded: 0, total: 0 });
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const contentLength = response.headers.get("content-length");
+      const total = contentLength ? Number(contentLength) : 0;
+      const reader = response.body.getReader();
+      const chunks = [];
+      let loaded = 0;
+
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        loaded += value.length;
+        setPdfDownload({ active: true, label, loaded, total });
+      }
+
+      const blob = new Blob(chunks, { type: "application/pdf" });
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+      setStatus("PDF downloaded");
+    } catch (error) {
+      setStatus(`Download failed: ${error.message}`);
+    } finally {
+      setPdfDownload({ active: false, label: "", loaded: 0, total: 0 });
+    }
+  }, []);
+
   const downloadSelectedPagePdf = useCallback(() => {
-    window.location.href = `/api/book-builder?format=pdf&page=${selectedPage.pageNumber}`;
-  }, [selectedPage.pageNumber]);
+    const pad = String(selectedPage.pageNumber).padStart(2, "0");
+    downloadPdf(
+      `/api/book-builder?format=pdf&page=${selectedPage.pageNumber}`,
+      `snare-drum-book-page-${pad}.pdf`,
+      `Downloading page ${selectedPage.pageNumber}…`
+    );
+  }, [downloadPdf, selectedPage.pageNumber]);
 
   const downloadFullBookPdf = useCallback(() => {
-    window.location.href = "/api/book-builder?format=pdf&scope=book";
-  }, []);
+    downloadPdf(
+      "/api/book-builder?format=pdf&scope=book",
+      "snare-drum-book.pdf",
+      "Downloading book PDF…"
+    );
+  }, [downloadPdf]);
 
   return (
     <aside className={styles.panel}>
@@ -404,6 +451,27 @@ export default function BookBuilderPanel() {
 
       <div className={styles.status}>{isSaving ? "Saving..." : status}</div>
 
+      {pdfDownload.active && (
+        <div className={styles.pdfProgress}>
+          <div className={styles.pdfProgressLabel}>
+            {pdfDownload.label}
+            {pdfDownload.total > 0
+              ? ` ${Math.round((pdfDownload.loaded / pdfDownload.total) * 100)}%`
+              : ""}
+          </div>
+          <div className={styles.pdfProgressTrack}>
+            {pdfDownload.total > 0 ? (
+              <div
+                className={styles.pdfProgressBar}
+                style={{ width: `${Math.round((pdfDownload.loaded / pdfDownload.total) * 100)}%` }}
+              />
+            ) : (
+              <div className={styles.pdfProgressSpin} />
+            )}
+          </div>
+        </div>
+      )}
+
       <div className={styles.actions}>
         <IconButton icon={<FaUpload />} onClick={saveCurrentScoreToLine} title="Save current score to selected line" variant="primary">
           Score to line
@@ -411,10 +479,10 @@ export default function BookBuilderPanel() {
         <IconButton icon={<FaFolderOpen />} onClick={loadSelectedLineToScore} title="Load selected line into score">
           Load line
         </IconButton>
-        <IconButton icon={<FaFilePdf />} onClick={downloadSelectedPagePdf} title="Download selected page PDF">
+        <IconButton icon={<FaFilePdf />} onClick={downloadSelectedPagePdf} title="Download selected page PDF" disabled={pdfDownload.active}>
           Page PDF
         </IconButton>
-        <IconButton icon={<FaFilePdf />} onClick={downloadFullBookPdf} title="Download entire book PDF">
+        <IconButton icon={<FaFilePdf />} onClick={downloadFullBookPdf} title="Download entire book PDF" disabled={pdfDownload.active}>
           Book PDF
         </IconButton>
         <IconButton icon={<FaEye />} onClick={() => { setPdfPreviewUrl(`/api/book-builder?format=pdf&inline=1&page=${selectedPage.pageNumber}`); setPdfPreviewOpen(true); }} title="Preview selected page PDF">

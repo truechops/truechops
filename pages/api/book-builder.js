@@ -337,6 +337,7 @@ function setNoStoreHeaders(res) {
 function sendPdfResponse(res, pdf, filename, disposition, cacheStatus) {
   setNoStoreHeaders(res);
   res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Length", pdf.length);
   res.setHeader("Content-Disposition", `${disposition}; filename="${filename}"`);
   res.setHeader("X-Book-PDF-Cache", cacheStatus);
   res.status(200).send(pdf);
