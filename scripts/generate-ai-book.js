@@ -212,6 +212,61 @@ function getNotesQuarterUnits(notes) {
   return notes.reduce((total, note) => total + getNoteQuarterUnits(note), 0);
 }
 
+function isRest(note) {
+  return !Array.isArray(note && note.notes) || note.notes.length === 0;
+}
+
+function isPlainEighth(note) {
+  return Number(note && note.duration) === 8 && Number((note && note.dots) || 0) === 0;
+}
+
+function createQuarterRestFrom(note) {
+  return {
+    notes: [],
+    duration: 4,
+    dots: 0,
+    velocity: Number((note && note.velocity) || 0.5),
+  };
+}
+
+function createQuarterNoteFrom(note) {
+  return {
+    ...note,
+    duration: 4,
+    dots: 0,
+  };
+}
+
+function preferQuarterValues(notes) {
+  const simplified = [];
+
+  for (let index = 0; index < notes.length; index += 1) {
+    const note = notes[index];
+    const next = notes[index + 1];
+
+    if (next && isPlainEighth(note) && isPlainEighth(next)) {
+      const noteIsRest = isRest(note);
+      const nextIsRest = isRest(next);
+
+      if (noteIsRest && nextIsRest) {
+        simplified.push(createQuarterRestFrom(note));
+        index += 1;
+        continue;
+      }
+
+      if (!noteIsRest && nextIsRest) {
+        simplified.push(createQuarterNoteFrom(note));
+        index += 1;
+        continue;
+      }
+    }
+
+    simplified.push(note);
+  }
+
+  return simplified;
+}
+
 function normalizeGeneratedNote(note, fallbackNote = {}) {
   const fallbackDuration = [1, 2, 4, 8, 16, 32].includes(Number(fallbackNote.duration))
     ? Number(fallbackNote.duration)
@@ -269,6 +324,8 @@ function normalizeGeneratedScore(value, fallbackScore = createBlankLineScore()) 
     return cloneJson(fallbackScore);
   }
 
+  const simplifiedNotes = preferQuarterValues(notes);
+
   return {
     parts: { snare: { enabled: true } },
     measures: [{
@@ -279,7 +336,7 @@ function normalizeGeneratedScore(value, fallbackScore = createBlankLineScore()) 
       parts: [{
         instrument: "snare",
         voices: [{
-          notes,
+          notes: simplifiedNotes,
           tuplets: Array.isArray(voice && voice.tuplets) ? voice.tuplets : [],
         }],
       }],
@@ -367,13 +424,15 @@ function createFallbackGeneratedScore(section, samplePayload, lineIndex) {
     }
   }
 
+  const simplifiedNotes = preferQuarterValues(notes);
+
   return {
     parts: { snare: { enabled: true } },
     measures: [{
       timeSig: { num: 4, type: 4 },
       parts: [{
         instrument: "snare",
-        voices: [{ notes, tuplets: [] }],
+        voices: [{ notes: simplifiedNotes, tuplets: [] }],
       }],
     }],
   };

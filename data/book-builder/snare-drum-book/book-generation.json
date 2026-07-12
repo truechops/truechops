@@ -29,6 +29,8 @@
       "Use the TrueChops score shape shown in each section sampleJson.",
       "Use C5 for normal snare notes and [] for rests.",
       "Use VexFlow-style durations: 4 for quarter notes, 8 for eighth notes, 16 for sixteenth notes.",
+      "Prefer quarter rests over two eighth note rests in a row.",
+      "Prefer a quarter note over an eighth note followed by an eighth rest.",
       "Use ornaments only when the section instructions or sampleJson call for them. Accent is \"a\". Flam is \"f\". Stickings are \"r\" and \"l\".",
       "Return this exact JSON shape and no prose: { \"lines\": [{ \"title\": \"\", \"tempo\": 90, \"score\": {} }] }."
     ]
