@@ -26,7 +26,7 @@ const MANIFEST_PATH = path.join(BOOK_ROOT, "book.json");
 const LINE_NUMBER_CENTER_OFFSET = 1.25;
 const PDF_CACHE_ROOT = process.env.BOOK_PDF_CACHE_DIR || path.join(process.cwd(), ".next", "cache", "book-builder-pdf");
 const SCORE_SVG_CACHE_VERSION = "score-svg-v1";
-const PDF_FILE_CACHE_VERSION = "pdf-v1";
+const PDF_FILE_CACHE_VERSION = "pdf-v2";
 const SCORE_SVG_MEMORY_CACHE_LIMIT = Number(process.env.BOOK_PDF_SVG_MEMORY_CACHE_LIMIT || 800);
 const DEFAULT_AI_LINE_BATCH_SIZE = 12;
 const DEFAULT_AI_REQUEST_TIMEOUT_MS = 180000;
@@ -594,9 +594,11 @@ function drawSlotSvg(doc, line, svg, x, y, width, height) {
     lineBreak: false,
   });
 
-  // Clip to the slot so that any SVG overflow above/below is hidden.
+  // Keep the horizontal crop tight, but allow a little vertical bleed so
+  // articulations above the staff (especially accents) are not sliced off.
+  const verticalBleed = Math.min(18, height * 0.28);
   doc.save();
-  doc.rect(notationX, y, notationWidth, height).clip();
+  doc.rect(notationX, y - verticalBleed, notationWidth, height + verticalBleed * 2).clip();
   SVGtoPDF(doc, svg.source, notationX, svgY, {
     width: svgWidth,
     height: svgHeight,
