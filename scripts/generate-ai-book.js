@@ -13,6 +13,13 @@ const DEFAULT_CONFIG_PATH = path.join(
   "snare-drum-book",
   "book-generation.json"
 );
+const DEFAULT_BOOK_PATH = path.join(
+  PROJECT_ROOT,
+  "data",
+  "book-builder",
+  "snare-drum-book",
+  "book.json"
+);
 
 const DEFAULT_PDF_SETTINGS = {
   columns: 2,
@@ -361,10 +368,6 @@ function extractGeneratedLineInputs(payload) {
   return payload.lines || payload.examples || payload.rhythms || payload.exercises || [];
 }
 
-function sampleHasOrnament(sampleNotes, ornament) {
-  return sampleNotes.some((note) => String((note && note.ornaments) || "").includes(ornament));
-}
-
 function getSectionInstructionText(section) {
   return `${section.title || ""}\n${section.instructions || section.prompt || ""}`.toLowerCase();
 }
@@ -373,6 +376,7 @@ function getSectionOrnamentPolicy(section) {
   const prompt = getSectionInstructionText(section);
 
   return {
+    stripAllOrnaments: /no\s+ornaments?/.test(prompt) || /notes?\s+only/.test(prompt),
     stripAccents: /no\s+accents?/.test(prompt) || /without\s+accents?/.test(prompt),
     stripFlams: /no\s+(?:accents?\s+or\s+)?flams?/.test(prompt) || /without\s+flams?/.test(prompt),
   };
@@ -381,7 +385,7 @@ function getSectionOrnamentPolicy(section) {
 function applySectionOrnamentPolicy(section, score) {
   const policy = getSectionOrnamentPolicy(section);
 
-  if (!policy.stripAccents && !policy.stripFlams) {
+  if (!policy.stripAllOrnaments && !policy.stripAccents && !policy.stripFlams) {
     return score;
   }
 
@@ -399,6 +403,10 @@ function applySectionOrnamentPolicy(section, score) {
             }
 
             let ornaments = String(note.ornaments);
+
+            if (policy.stripAllOrnaments) {
+              ornaments = "";
+            }
 
             if (policy.stripAccents) {
               ornaments = ornaments.replace(/a/g, "");
@@ -428,19 +436,96 @@ function createFallbackGeneratedScore(section, samplePayload, lineIndex) {
   const prompt = getSectionInstructionText(section);
   const sampleNotes = getSampleNotes(samplePayload);
   const sampleDurations = new Set(sampleNotes.map((note) => Number(note.duration)).filter(Boolean));
+  const allowSixteenth = prompt.includes("sixteenth") || sampleDurations.has(16);
   const allowQuarter = prompt.includes("quarter") || sampleDurations.has(4);
+  const noOrnaments = /no\s+ornaments?/.test(prompt) || /notes?\s+only/.test(prompt);
   const noAccents = /no\s+accents?/.test(prompt);
   const noFlams = /no\s+flams?/.test(prompt) || /no\s+accents?\s+or\s+flams?/.test(prompt);
-  const allowAccents = !noAccents && (
+  const allowAccents = !noOrnaments && !noAccents && (
     prompt.includes("accent") ||
-    samplePayload.accents === true ||
-    sampleHasOrnament(sampleNotes, "a")
+    samplePayload.accents === true
   );
-  const allowFlams = !noFlams && (
-    prompt.includes("flam") ||
-    sampleHasOrnament(sampleNotes, "f")
+  const allowFlams = !noOrnaments && !noFlams && (
+    prompt.includes("flam")
+  );
+  const allowSticking = !noOrnaments && (
+    prompt.includes("sticking")
+  );
+  const allowDiddles = !noOrnaments && (
+    prompt.includes("diddle")
+  );
+  const allowCheese = !noOrnaments && (
+    prompt.includes("cheese")
   );
   const notes = [];
+
+  if (allowSixteenth) {
+    const patterns = [
+      [1, 1, 2, 2, 1, 1, 3, 1, 4],
+      [1, 1, 1, 1, 2, 2, 1, 1, 2, 2, 2],
+      [2, 1, 1, 4, 1, 1, 2, 2, 2],
+      [1, 1, 1, 1, 1, 1, 1, 1, 4, 2, 2],
+      [3, 1, 2, 2, 1, 1, 1, 1, 4],
+    ];
+    const pattern = patterns[lineIndex % patterns.length];
+    let noteCount = 0;
+
+    pattern.forEach((units, patternIndex) => {
+      const seed = lineIndex * 13 + patternIndex * 7 + String(section.id || "").length;
+      const isRest = seed % 11 === 0 || (units >= 4 && seed % 5 === 0);
+      const nextSeed = lineIndex * 13 + (patternIndex + 1) * 7 + String(section.id || "").length;
+      const nextCouldFlam = allowFlams && patternIndex < pattern.length - 1 && nextSeed % 6 === 1;
+      let ornaments = "";
+
+      if (!isRest && allowSticking) {
+        ornaments += noteCount % 2 === 0 ? "r" : "l";
+      }
+
+      if (!isRest && allowFlams && seed % 6 === 1) {
+        ornaments += "f";
+      }
+
+      if (!isRest && allowAccents && seed % 4 === 0) {
+        ornaments += "a";
+      }
+
+      if (!isRest && allowDiddles && !nextCouldFlam && !ornaments.includes("f") && seed % 8 === 2) {
+        ornaments += "d";
+      }
+
+      if (!isRest && allowCheese && !nextCouldFlam && !ornaments.includes("f") && !String(notes[notes.length - 1]?.ornaments || "").includes("c") && seed % 10 === 3) {
+        ornaments += "c";
+      }
+
+      const durationByUnits = {
+        1: { duration: 16, dots: 0 },
+        2: { duration: 8, dots: 0 },
+        3: { duration: 8, dots: 1 },
+        4: { duration: 4, dots: 0 },
+      }[units] || { duration: 16, dots: 0 };
+
+      notes.push({
+        notes: isRest ? [] : ["C5"],
+        ...durationByUnits,
+        velocity: ornaments.includes("a") ? 1 : 0.5,
+        ...(ornaments ? { ornaments } : {}),
+      });
+      noteCount += isRest ? 0 : 1;
+    });
+
+    const simplifiedNotes = preferQuarterValues(notes);
+
+    return {
+      parts: { snare: { enabled: true } },
+      measures: [{
+        timeSig: { num: 4, type: 4 },
+        parts: [{
+          instrument: "snare",
+          voices: [{ notes: simplifiedNotes, tuplets: [] }],
+        }],
+      }],
+    };
+  }
 
   for (let beat = 0; beat < 4; beat += 1) {
     const seed = lineIndex * 7 + beat * 11 + String(section.id || "").length;
@@ -535,7 +620,54 @@ function inferPageCount(section) {
 
   if (numericMatch) return Number(numericMatch[1]);
   if (wordMatch) return NUMBER_WORDS[wordMatch[1]];
-  return 1;
+  return Array.isArray(section.pages) && section.pages.length
+    ? section.pages.length
+    : 1;
+}
+
+function getSectionSampleJson(section) {
+  return parseJsonLoose(section.sampleJson) || {};
+}
+
+function createGenerationSectionsFromBook(book) {
+  const bookPdfSettings = normalizePdfSettings(book.pdfSettings);
+
+  return (book.sections || []).map((section, sectionIndex) => {
+    const sectionPdfSettings = normalizePdfSettings({
+      ...bookPdfSettings,
+      ...(section.pdfSettings || {}),
+    });
+
+    return {
+      id: section.id || `section-${sectionIndex + 1}`,
+      title: section.title || `Section ${sectionIndex + 1}`,
+      pageCount: Array.isArray(section.pages) && section.pages.length
+        ? section.pages.length
+        : inferPageCount(section),
+      instructions: section.prompt || section.instructions || "",
+      sampleJson: getSectionSampleJson(section),
+      pdfSettings: sectionPdfSettings,
+    };
+  });
+}
+
+function createGenerationConfig(config, sourceBook) {
+  return {
+    ...config,
+    book: {
+      ...(config.book || {}),
+      book: sourceBook.book || (config.book && config.book.book) || "true-chops",
+      slug: sourceBook.slug || (config.book && config.book.slug) || "snare-drum-book",
+      title: sourceBook.title || (config.book && config.book.title) || "Snare Drum Book",
+      edition: Number(sourceBook.edition || (config.book && config.book.edition) || 1),
+      contentVersion: Number(sourceBook.contentVersion || (config.book && config.book.contentVersion) || 1),
+      pdfSettings: normalizePdfSettings({
+        ...((config.book && config.book.pdfSettings) || {}),
+        ...(sourceBook.pdfSettings || {}),
+      }),
+    },
+    sections: createGenerationSectionsFromBook(sourceBook),
+  };
 }
 
 function createAiPrompt(config, section, samplePayload, count, offset, linesPerPage) {
@@ -851,6 +983,9 @@ async function main() {
   const bookRoot = path.resolve(
     getArg("--output-root", path.join(PROJECT_ROOT, "data", "book-builder", bookSlug))
   );
+  const bookPath = path.resolve(getArg("--book", path.join(bookRoot, "book.json")));
+  const sourceBook = readJson(bookPath);
+  const generationConfig = createGenerationConfig(config, sourceBook);
   const allowFallback = getFlag("--allow-fallback") || process.env.BOOK_AI_ALLOW_FALLBACK === "1";
   const noLocalAi = getFlag("--no-local-ai") || process.env.BOOK_AI_DISABLE === "1";
   const dryRun = getFlag("--dry-run");
@@ -859,24 +994,25 @@ async function main() {
     process.env.BOOK_AI_DISABLE = "1";
   }
 
-  if (!Array.isArray(config.sections) || config.sections.length === 0) {
-    throw new Error(`No sections found in ${configPath}`);
+  if (!Array.isArray(generationConfig.sections) || generationConfig.sections.length === 0) {
+    throw new Error(`No saved sections found in ${bookPath}`);
   }
 
-  console.log(`Reading generation instructions from ${path.relative(PROJECT_ROOT, configPath)}`);
+  console.log(`Reading generation settings from ${path.relative(PROJECT_ROOT, configPath)}`);
+  console.log(`Reading saved sections from ${path.relative(PROJECT_ROOT, bookPath)}`);
   console.log(`Output root: ${path.relative(PROJECT_ROOT, bookRoot)}`);
 
   const generatedSections = [];
 
-  for (let sectionIndex = 0; sectionIndex < config.sections.length; sectionIndex += 1) {
+  for (let sectionIndex = 0; sectionIndex < generationConfig.sections.length; sectionIndex += 1) {
     generatedSections.push(
-      await generateSectionLines(config, config.sections[sectionIndex], sectionIndex, {
+      await generateSectionLines(generationConfig, generationConfig.sections[sectionIndex], sectionIndex, {
         allowFallback: allowFallback || noLocalAi,
       })
     );
   }
 
-  const book = buildBook(config, generatedSections);
+  const book = buildBook(generationConfig, generatedSections);
 
   if (dryRun) {
     console.log(`Dry run complete. Generated ${book.pages.length} pages and ${book.pages.reduce((sum, page) => sum + page.lines.length, 0)} lines in memory.`);
