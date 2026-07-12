@@ -53,6 +53,7 @@
     "pdf:book": "node scripts/generate-book-pdf.js",
     "pdf:book:page": "node scripts/generate-book-pdf.js --scope page",
     "pdf:fill-book": "node scripts/fill-book-pages.js",
+    "book:generate:ai": "node scripts/generate-ai-book.js",
     "pdf:hybrid-rudiments": "node scripts/generate-hybrid-rudiments-pdf.js",
     "pdf:hybrid-rudiments:musescore": "node scripts/generate-hybrid-rudiments-pdf.js --renderer musescore",
     "post-update": "echo \"codesandbox preview only, need an update\" && yarn upgrade --latest"

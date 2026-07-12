@@ -8,8 +8,10 @@ import {
   FaEye,
   FaFolderOpen,
   FaFilePdf,
+  FaMagic,
   FaPlus,
   FaSave,
+  FaTrash,
   FaUpload,
 } from "react-icons/fa";
 
@@ -24,6 +26,7 @@ import {
   createBlankLine,
   createBlankLineScore,
   createBlankPage,
+  createBookSection,
   createDefaultBook,
   normalizePdfSettings,
   normalizeBook,
@@ -58,6 +61,24 @@ function Field({ children, label }) {
 
 function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function createSectionId(title, existingSections = []) {
+  const base = String(title || "section")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "section";
+  const existingIds = new Set(existingSections.map((section) => section.id));
+  let id = base;
+  let suffix = 2;
+
+  while (existingIds.has(id)) {
+    id = `${base}-${suffix}`;
+    suffix += 1;
+  }
+
+  return id;
 }
 
 function LinePreview({ line }) {
@@ -108,26 +129,62 @@ function LinePreview({ line }) {
   return <div className={styles.preview} id={previewId} />;
 }
 
-function updateBookLine(book, pageIndex, lineIndex, updater) {
-  return {
-    ...book,
-    pages: book.pages.map((page, currentPageIndex) => {
-      if (currentPageIndex !== pageIndex) {
-        return page;
-      }
-
-      return {
-        ...page,
-        lines: page.lines.map((line, currentLineIndex) => {
-          if (currentLineIndex !== lineIndex) {
-            return line;
-          }
-
-          return updater(line);
-        }),
-      };
+function mapBookPages(book, mapper) {
+  let pageIndex = 0;
+  const sections = book.sections.map((section, sectionIndex) => ({
+    ...section,
+    pages: section.pages.map((page, sectionPageIndex) => {
+      const nextPage = mapper(page, pageIndex, sectionIndex, sectionPageIndex);
+      pageIndex += 1;
+      return nextPage;
     }),
-  };
+  }));
+
+  return normalizeBook({ ...book, sections });
+}
+
+function updateBookLine(book, pageIndex, lineIndex, updater) {
+  return mapBookPages(book, (page, currentPageIndex) => {
+    if (currentPageIndex !== pageIndex) {
+      return page;
+    }
+
+    return {
+      ...page,
+      lines: page.lines.map((line, currentLineIndex) => {
+        if (currentLineIndex !== lineIndex) {
+          return line;
+        }
+
+        return updater(line);
+      }),
+    };
+  });
+}
+
+function updateBookSection(book, sectionIndex, updater) {
+  return normalizeBook({
+    ...book,
+    sections: book.sections.map((section, currentSectionIndex) =>
+      currentSectionIndex === sectionIndex ? updater(section) : section
+    ),
+  });
+}
+
+function getPageIndexForSectionPage(book, sectionId, sectionPageNumber) {
+  return Math.max(
+    0,
+    book.pages.findIndex(
+      (page) =>
+        page.sectionId === sectionId &&
+        page.sectionPageNumber === sectionPageNumber
+    )
+  );
+}
+
+function getSectionIndexForPage(book, page) {
+  const sectionIndex = book.sections.findIndex((section) => section.id === page?.sectionId);
+  return Math.max(0, sectionIndex);
 }
 
 function getPageIndexForAbsoluteLine(pages, absoluteLineIndex) {
@@ -162,28 +219,69 @@ function replaceBookLines(pages, flatLines) {
   }));
 }
 
+function prettyPrintJsonText(value) {
+  if (!value) {
+    return "";
+  }
+
+  try {
+    return JSON.stringify(JSON.parse(value), null, 2);
+  } catch {
+    return value;
+  }
+}
+
+function createAiBookPdfRequest(book) {
+  return {
+    book: {
+      book: book.book,
+      slug: book.slug,
+      title: book.title,
+      edition: book.edition,
+      contentVersion: book.contentVersion,
+      pdfSettings: book.pdfSettings,
+    },
+    sections: book.sections.map((section) => ({
+      id: section.id,
+      title: section.title,
+      prompt: section.prompt,
+      sampleJson: section.sampleJson,
+      pdfSettings: section.pdfSettings,
+      pageCount: section.pages.length,
+    })),
+  };
+}
+
 export default function BookBuilderPanel() {
   const dispatch = useDispatch();
   const score = useSelector((state) => state.score.present.score);
   const tempo = useSelector((state) => state.score.present.tempo);
   const [book, setBook] = useState(createDefaultBook());
+  const [selectedSectionIndex, setSelectedSectionIndex] = useState(0);
   const [selectedPageIndex, setSelectedPageIndex] = useState(0);
   const [selectedLineIndex, setSelectedLineIndex] = useState(0);
   const [status, setStatus] = useState("Loading");
   const [isSaving, setIsSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteSectionDialogOpen, setDeleteSectionDialogOpen] = useState(false);
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState("");
   const [pdfDownload, setPdfDownload] = useState({ active: false, label: "", loaded: 0, total: 0 });
 
+  const selectedSection = book.sections[selectedSectionIndex] || book.sections[0];
   const selectedPage = book.pages[selectedPageIndex] || book.pages[0];
   const selectedLine = selectedPage.lines[selectedLineIndex] || selectedPage.lines[0];
   const pdfSettings = normalizePdfSettings(book.pdfSettings);
   const selectedPagePdfSettings = getPagePdfSettings(selectedPage, pdfSettings);
   const linesPerPage = getLinesPerPage(selectedPagePdfSettings);
   const totalSlotCount = book.pages.reduce((count, page) => count + page.lines.length, 0);
-  const selectedPageStartIndex = book.pages
-    .slice(0, selectedPageIndex)
+  const selectedSectionPages = selectedSection?.pages || [];
+  const selectedSectionPageIndex = Math.max(
+    0,
+    selectedSectionPages.findIndex((page) => page.pageNumber === selectedPage.pageNumber)
+  );
+  const selectedSectionPageStartIndex = selectedSectionPages
+    .slice(0, selectedSectionPageIndex)
     .reduce((count, page) => count + page.lines.length, 0);
   const slotGridColumns = selectedPagePdfSettings.columns === 3 ? 6 : 4;
   const slotGridRows = Math.ceil(linesPerPage / slotGridColumns);
@@ -204,10 +302,18 @@ export default function BookBuilderPanel() {
         throw new Error(payload.error || "Unable to load book");
       }
 
-      setBook(normalizeBook(payload.book));
+      const nextBook = normalizeBook(payload.book);
+      setBook(nextBook);
+      setSelectedSectionIndex(getSectionIndexForPage(nextBook, nextBook.pages[0]));
+      setSelectedPageIndex(0);
+      setSelectedLineIndex(0);
       setStatus("Loaded from disk");
     } catch (error) {
-      setBook(createDefaultBook());
+      const nextBook = createDefaultBook();
+      setBook(nextBook);
+      setSelectedSectionIndex(0);
+      setSelectedPageIndex(0);
+      setSelectedLineIndex(0);
       setStatus("Using blank book");
     }
   }, []);
@@ -215,6 +321,19 @@ export default function BookBuilderPanel() {
   useEffect(() => {
     loadBook();
   }, [loadBook]);
+
+  useEffect(() => {
+    if (selectedPageIndex >= book.pages.length) {
+      setSelectedPageIndex(Math.max(0, book.pages.length - 1));
+      setSelectedLineIndex(0);
+      return;
+    }
+
+    const nextSectionIndex = getSectionIndexForPage(book, selectedPage);
+    if (nextSectionIndex !== selectedSectionIndex) {
+      setSelectedSectionIndex(nextSectionIndex);
+    }
+  }, [book, selectedPage, selectedPageIndex, selectedSectionIndex]);
 
   const saveBook = useCallback(async (nextBook, successMessage = "Saved to disk") => {
     setIsSaving(true);
@@ -234,10 +353,13 @@ export default function BookBuilderPanel() {
         throw new Error(payload.error || "Unable to save book");
       }
 
-      setBook(normalizeBook(payload.book));
+      const savedBook = normalizeBook(payload.book);
+      setBook(savedBook);
       setStatus(successMessage);
+      return savedBook;
     } catch (error) {
       setStatus("Save failed");
+      return null;
     } finally {
       setIsSaving(false);
     }
@@ -298,27 +420,34 @@ export default function BookBuilderPanel() {
   }, [book, saveBook, selectedLine.lineNumber, selectedLineIndex, selectedPage.pageNumber, selectedPageIndex]);
 
   const insertBlankLineAfter = useCallback(() => {
-    const flatLines = book.pages.flatMap((page) => page.lines);
-    const absoluteIndex = selectedPageStartIndex + selectedLineIndex;
+    const flatLines = selectedSection.pages.flatMap((page) => page.lines);
+    const absoluteIndex = selectedSectionPageStartIndex + selectedLineIndex;
     flatLines.splice(absoluteIndex + 1, 0, createBlankLine(1, 1));
 
-    const nextBook = {
-      ...book,
-      pages: renumberPages(replaceBookLines(book.pages, flatLines), pdfSettings),
-    };
+    const nextBook = updateBookSection(book, selectedSectionIndex, (section) => ({
+      ...section,
+      pages: renumberPages(replaceBookLines(section.pages, flatLines), section.pdfSettings || pdfSettings),
+    }));
     const nextAbsoluteIndex = absoluteIndex + 1;
-    const nextPageIndex = getPageIndexForAbsoluteLine(nextBook.pages, nextAbsoluteIndex);
-    const nextLineIndex = getLineIndexForAbsoluteLine(nextBook.pages, nextAbsoluteIndex);
+    const nextSection = nextBook.sections[selectedSectionIndex];
+    const nextSectionPageIndex = getPageIndexForAbsoluteLine(nextSection.pages, nextAbsoluteIndex);
+    const nextLineIndex = getLineIndexForAbsoluteLine(nextSection.pages, nextAbsoluteIndex);
 
-    setSelectedPageIndex(nextPageIndex);
+    setSelectedPageIndex(
+      getPageIndexForSectionPage(
+        nextBook,
+        nextSection.id,
+        nextSection.pages[nextSectionPageIndex].sectionPageNumber
+      )
+    );
     setSelectedLineIndex(nextLineIndex);
     saveBook(nextBook, "Inserted blank line");
-  }, [book, pdfSettings, saveBook, selectedLineIndex, selectedPageStartIndex]);
+  }, [book, pdfSettings, saveBook, selectedLineIndex, selectedSection, selectedSectionIndex, selectedSectionPageStartIndex]);
 
   const moveSelectedLine = useCallback(
     (direction) => {
-      const flatLines = book.pages.flatMap((page) => page.lines);
-      const fromIndex = selectedPageStartIndex + selectedLineIndex;
+      const flatLines = selectedSection.pages.flatMap((page) => page.lines);
+      const fromIndex = selectedSectionPageStartIndex + selectedLineIndex;
       const toIndex = fromIndex + direction;
 
       if (toIndex < 0 || toIndex >= flatLines.length) {
@@ -328,50 +457,70 @@ export default function BookBuilderPanel() {
       const [line] = flatLines.splice(fromIndex, 1);
       flatLines.splice(toIndex, 0, line);
 
-      const nextBook = {
-        ...book,
-        pages: renumberPages(replaceBookLines(book.pages, flatLines), pdfSettings),
-      };
-      const nextPageIndex = getPageIndexForAbsoluteLine(nextBook.pages, toIndex);
-      const nextLineIndex = getLineIndexForAbsoluteLine(nextBook.pages, toIndex);
+      const nextBook = updateBookSection(book, selectedSectionIndex, (section) => ({
+        ...section,
+        pages: renumberPages(replaceBookLines(section.pages, flatLines), section.pdfSettings || pdfSettings),
+      }));
+      const nextSection = nextBook.sections[selectedSectionIndex];
+      const nextSectionPageIndex = getPageIndexForAbsoluteLine(nextSection.pages, toIndex);
+      const nextLineIndex = getLineIndexForAbsoluteLine(nextSection.pages, toIndex);
 
-      setSelectedPageIndex(nextPageIndex);
+      setSelectedPageIndex(
+        getPageIndexForSectionPage(
+          nextBook,
+          nextSection.id,
+          nextSection.pages[nextSectionPageIndex].sectionPageNumber
+        )
+      );
       setSelectedLineIndex(nextLineIndex);
       saveBook(nextBook, "Moved line");
     },
-    [book, pdfSettings, saveBook, selectedLineIndex, selectedPageStartIndex]
+    [book, pdfSettings, saveBook, selectedLineIndex, selectedSection, selectedSectionIndex, selectedSectionPageStartIndex]
   );
 
   const addPage = useCallback(() => {
-    const nextBook = {
-      ...book,
-      pages: [...book.pages, createBlankPage(book.pages.length + 1, pdfSettings)],
-    };
+    const nextBook = updateBookSection(book, selectedSectionIndex, (section) => ({
+      ...section,
+      pages: [
+        ...section.pages,
+        createBlankPage(section.pages.length + 1, section.pdfSettings || pdfSettings),
+      ],
+    }));
+    const nextSection = nextBook.sections[selectedSectionIndex];
+    const nextSectionPage = nextSection.pages[nextSection.pages.length - 1];
 
-    setSelectedPageIndex(nextBook.pages.length - 1);
+    setSelectedPageIndex(
+      getPageIndexForSectionPage(
+        nextBook,
+        nextSection.id,
+        nextSectionPage.sectionPageNumber
+      )
+    );
     setSelectedLineIndex(0);
-    saveBook(nextBook, "Added page");
-  }, [book, pdfSettings, saveBook]);
+    saveBook(nextBook, `Added page to ${nextSection.title}`);
+  }, [book, pdfSettings, saveBook, selectedSectionIndex]);
 
   const updatePagePdfColumns = useCallback((columns) => {
     const nextPagePdfSettings = normalizePdfSettings({
       ...selectedPagePdfSettings,
       columns,
     });
-    const pagesWithUpdatedSettings = book.pages.map((page, pageIndex) =>
-      pageIndex === selectedPageIndex
+    const selectedSectionPageNumber = selectedPage.sectionPageNumber;
+    const sectionId = selectedPage.sectionId;
+    const pagesWithUpdatedSettings = selectedSection.pages.map((page) =>
+      page.sectionPageNumber === selectedSectionPageNumber
         ? { ...page, pdfSettings: nextPagePdfSettings }
         : page
     );
     const nextLinesPerPage = getLinesPerPage(nextPagePdfSettings);
-    const nextBook = normalizeBook({
-      ...book,
-      pages: renumberPages(pagesWithUpdatedSettings, pdfSettings),
-    });
+    const nextBook = updateBookSection(book, selectedSectionIndex, (section) => ({
+      ...section,
+      pages: renumberPages(pagesWithUpdatedSettings, section.pdfSettings || pdfSettings),
+    }));
 
     setBook(nextBook);
-    setSelectedPageIndex((pageIndex) =>
-      Math.min(pageIndex, Math.max(0, nextBook.pages.length - 1))
+    setSelectedPageIndex(
+      getPageIndexForSectionPage(nextBook, sectionId, selectedSectionPageNumber)
     );
     setSelectedLineIndex((lineIndex) =>
       Math.min(lineIndex, nextLinesPerPage - 1)
@@ -380,12 +529,156 @@ export default function BookBuilderPanel() {
       nextBook,
       `Page ${selectedPage.pageNumber}: ${nextPagePdfSettings.columns} columns / ${nextLinesPerPage} slots`
     );
-  }, [book, pdfSettings, saveBook, selectedPage.pageNumber, selectedPageIndex, selectedPagePdfSettings]);
+  }, [book, pdfSettings, saveBook, selectedPage, selectedPagePdfSettings, selectedSection, selectedSectionIndex]);
 
-  const downloadPdf = useCallback(async (url, filename, label) => {
+  const selectSection = useCallback((sectionIndex) => {
+    const section = book.sections[sectionIndex];
+
+    if (!section) {
+      return;
+    }
+
+    setSelectedSectionIndex(sectionIndex);
+    setSelectedPageIndex(
+      getPageIndexForSectionPage(
+        book,
+        section.id,
+        section.pages[0]?.sectionPageNumber || 1
+      )
+    );
+    setSelectedLineIndex(0);
+  }, [book]);
+
+  const updateSelectedSectionDraft = useCallback((updates) => {
+    setBook((currentBook) =>
+      updateBookSection(currentBook, selectedSectionIndex, (section) => ({
+        ...section,
+        ...updates,
+      }))
+    );
+  }, [selectedSectionIndex]);
+
+  const saveSectionDetails = useCallback(() => {
+    saveBook(book, "Saved section details");
+  }, [book, saveBook]);
+
+  const addSection = useCallback(() => {
+    const sectionNumber = book.sections.length + 1;
+    const title = `Section ${sectionNumber}`;
+    const nextSection = createBookSection(sectionNumber, {
+      id: createSectionId(title, book.sections),
+      title,
+      prompt: "",
+      sampleJson: "",
+    }, pdfSettings);
+    const nextBook = normalizeBook({
+      ...book,
+      sections: [...book.sections, nextSection],
+    });
+    const nextSectionIndex = nextBook.sections.length - 1;
+
+    setBook(nextBook);
+    setSelectedSectionIndex(nextSectionIndex);
+    setSelectedPageIndex(
+      getPageIndexForSectionPage(
+        nextBook,
+        nextBook.sections[nextSectionIndex].id,
+        1
+      )
+    );
+    setSelectedLineIndex(0);
+    saveBook(nextBook, "Added section");
+  }, [book, pdfSettings, saveBook]);
+
+  const moveSelectedSection = useCallback((direction) => {
+    const toIndex = selectedSectionIndex + direction;
+
+    if (toIndex < 0 || toIndex >= book.sections.length) {
+      return;
+    }
+
+    const sections = [...book.sections];
+    const [section] = sections.splice(selectedSectionIndex, 1);
+    sections.splice(toIndex, 0, section);
+    const nextBook = normalizeBook({ ...book, sections });
+
+    setBook(nextBook);
+    setSelectedSectionIndex(toIndex);
+    setSelectedPageIndex(
+      getPageIndexForSectionPage(
+        nextBook,
+        nextBook.sections[toIndex].id,
+        1
+      )
+    );
+    setSelectedLineIndex(0);
+    saveBook(nextBook, "Moved section");
+  }, [book, saveBook, selectedSectionIndex]);
+
+  const deleteSelectedSection = useCallback(() => {
+    if (book.sections.length <= 1) {
+      return;
+    }
+
+    const sections = book.sections.filter((_, sectionIndex) => sectionIndex !== selectedSectionIndex);
+    const nextBook = normalizeBook({ ...book, sections });
+    const nextSectionIndex = Math.min(selectedSectionIndex, nextBook.sections.length - 1);
+
+    setDeleteSectionDialogOpen(false);
+    setBook(nextBook);
+    setSelectedSectionIndex(nextSectionIndex);
+    setSelectedPageIndex(
+      getPageIndexForSectionPage(
+        nextBook,
+        nextBook.sections[nextSectionIndex].id,
+        1
+      )
+    );
+    setSelectedLineIndex(0);
+    saveBook(nextBook, "Deleted section");
+  }, [book, saveBook, selectedSectionIndex]);
+
+  const uploadSectionJson = useCallback((event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result || "");
+      updateSelectedSectionDraft({ sampleJson: prettyPrintJsonText(text) });
+      setStatus(`Loaded JSON sample: ${file.name}`);
+    };
+    reader.onerror = () => setStatus("JSON upload failed");
+    reader.readAsText(file);
+  }, [updateSelectedSectionDraft]);
+
+  const saveCurrentScoreToSectionJson = useCallback(() => {
+    const sampleJson = JSON.stringify(
+      {
+        title: selectedSection.title,
+        tempo,
+        score: scoreToBookLine(score),
+      },
+      null,
+      2
+    );
+    const nextBook = updateBookSection(book, selectedSectionIndex, (section) => ({
+      ...section,
+      sampleJson,
+    }));
+
+    setBook(nextBook);
+    saveBook(nextBook, `Saved score sample to ${selectedSection.title}`);
+  }, [book, saveBook, score, selectedSection.title, selectedSectionIndex, tempo]);
+
+  const downloadPdf = useCallback(async (url, filename, label, options = {}) => {
     setPdfDownload({ active: true, label, loaded: 0, total: 0 });
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, options);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       const contentLength = response.headers.get("content-length");
@@ -412,8 +705,10 @@ export default function BookBuilderPanel() {
       document.body.removeChild(a);
       URL.revokeObjectURL(blobUrl);
       setStatus("PDF downloaded");
+      return true;
     } catch (error) {
       setStatus(`Download failed: ${error.message}`);
+      return false;
     } finally {
       setPdfDownload({ active: false, label: "", loaded: 0, total: 0 });
     }
@@ -435,6 +730,26 @@ export default function BookBuilderPanel() {
       "Downloading book PDF…"
     );
   }, [downloadPdf]);
+
+  const downloadAiBookPdf = useCallback(async () => {
+    const downloaded = await downloadPdf(
+      "/api/book-builder?format=pdf&scope=ai-book",
+      "snare-drum-book-ai.pdf",
+      "Generating AI book PDF…",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(createAiBookPdfRequest(book)),
+      }
+    );
+
+    if (downloaded) {
+      await loadBook();
+      setStatus("AI book PDF generated");
+    }
+  }, [book, downloadPdf, loadBook]);
 
   return (
     <aside className={styles.panel}>
@@ -485,6 +800,9 @@ export default function BookBuilderPanel() {
         <IconButton icon={<FaFilePdf />} onClick={downloadFullBookPdf} title="Download entire book PDF" disabled={pdfDownload.active}>
           Book PDF
         </IconButton>
+        <IconButton icon={<FaMagic />} onClick={downloadAiBookPdf} title="Generate sections from prompts and download the combined PDF" disabled={pdfDownload.active || isSaving}>
+          AI book PDF
+        </IconButton>
         <IconButton icon={<FaEye />} onClick={() => { setPdfPreviewUrl(`/api/book-builder?format=pdf&inline=1&page=${selectedPage.pageNumber}`); setPdfPreviewOpen(true); }} title="Preview selected page PDF">
           Preview
         </IconButton>
@@ -496,18 +814,142 @@ export default function BookBuilderPanel() {
         </IconButton>
       </div>
 
+      <section className={styles.sectionManager}>
+        <div className={styles.sectionHeader}>
+          <div>
+            <span className={styles.eyebrow}>Sections</span>
+            <h3>{selectedSection.title}</h3>
+          </div>
+          <div className={styles.sectionActions}>
+            <IconButton icon={<FaPlus />} onClick={addSection} title="Add section" variant="iconOnly">
+              Add
+            </IconButton>
+            <IconButton
+              disabled={selectedSectionIndex === 0}
+              icon={<FaArrowUp />}
+              onClick={() => moveSelectedSection(-1)}
+              title="Move section earlier"
+              variant="iconOnly"
+            >
+              Up
+            </IconButton>
+            <IconButton
+              disabled={selectedSectionIndex === book.sections.length - 1}
+              icon={<FaArrowDown />}
+              onClick={() => moveSelectedSection(1)}
+              title="Move section later"
+              variant="iconOnly"
+            >
+              Down
+            </IconButton>
+            <IconButton
+              disabled={book.sections.length <= 1}
+              icon={<FaTrash />}
+              onClick={() => setDeleteSectionDialogOpen(true)}
+              title="Delete section"
+              variant="iconOnly"
+            >
+              Delete
+            </IconButton>
+          </div>
+        </div>
+
+        <div className={styles.sectionTabs}>
+          {book.sections.map((section, sectionIndex) => (
+            <button
+              className={`${styles.sectionTab} ${sectionIndex === selectedSectionIndex ? styles.activeSectionTab : ""}`}
+              key={section.id}
+              onClick={() => selectSection(sectionIndex)}
+              type="button"
+            >
+              <strong>{section.title}</strong>
+              <span>{section.pages.length} pages</span>
+            </button>
+          ))}
+        </div>
+
+        <div className={styles.sectionEditor}>
+          <Field label="Section title">
+            <input
+              onChange={(event) => updateSelectedSectionDraft({ title: event.target.value })}
+              value={selectedSection.title}
+            />
+          </Field>
+          <Field label="Local AI prompt">
+            <textarea
+              onChange={(event) => updateSelectedSectionDraft({ prompt: event.target.value })}
+              rows={3}
+              value={selectedSection.prompt || ""}
+            />
+          </Field>
+          <Field label="Sample JSON">
+            <textarea
+              onChange={(event) => updateSelectedSectionDraft({ sampleJson: event.target.value })}
+              rows={4}
+              value={selectedSection.sampleJson || ""}
+            />
+          </Field>
+          <div className={styles.sectionEditorActions}>
+            <label className={styles.uploadButton}>
+              <FaUpload />
+              <span>Upload JSON</span>
+              <input
+                accept="application/json,.json"
+                onChange={uploadSectionJson}
+                type="file"
+              />
+            </label>
+            <IconButton
+              icon={<FaBook />}
+              onClick={saveCurrentScoreToSectionJson}
+              title="Save current score as this section's sample JSON"
+            >
+              Current score
+            </IconButton>
+            <IconButton icon={<FaSave />} onClick={saveSectionDetails} title="Save section details">
+              Save section
+            </IconButton>
+          </div>
+        </div>
+      </section>
+
+      <div className={styles.tabLabel}>All pages</div>
       <div className={styles.pageTabs}>
         {book.pages.map((page, pageIndex) => (
           <button
             className={`${styles.pageTab} ${pageIndex === selectedPageIndex ? styles.activePageTab : ""}`}
             key={page.pageNumber}
             onClick={() => {
+              setSelectedSectionIndex(getSectionIndexForPage(book, page));
               setSelectedPageIndex(pageIndex);
               setSelectedLineIndex(0);
             }}
             type="button"
+            title={page.sectionTitle ? `${page.sectionTitle}, page ${page.sectionPageNumber}` : `Page ${page.pageNumber}`}
           >
             {page.pageNumber}
+          </button>
+        ))}
+        <button className={styles.pageTab} onClick={addPage} type="button">
+          <FaPlus />
+        </button>
+      </div>
+
+      <div className={styles.tabLabel}>{selectedSection.title} pages</div>
+      <div className={styles.sectionPageTabs}>
+        {selectedSection.pages.map((page) => (
+          <button
+            className={`${styles.pageTab} ${page.pageNumber === selectedPage.pageNumber ? styles.activePageTab : ""}`}
+            key={`${selectedSection.id}-${page.sectionPageNumber}`}
+            onClick={() => {
+              setSelectedPageIndex(
+                getPageIndexForSectionPage(book, selectedSection.id, page.sectionPageNumber)
+              );
+              setSelectedLineIndex(0);
+            }}
+            type="button"
+          >
+            {page.sectionPageNumber}
           </button>
         ))}
         <button className={styles.pageTab} onClick={addPage} type="button">
@@ -541,7 +983,10 @@ export default function BookBuilderPanel() {
       <section className={styles.editor}>
         <div className={styles.editorTitle}>
           <FaBook />
-          <h3>Page {selectedPage.pageNumber}, Line {selectedLine.lineNumber}</h3>
+          <h3>
+            Page {selectedPage.pageNumber}, Line {selectedLine.lineNumber}
+            {selectedPage.sectionTitle ? ` · ${selectedPage.sectionTitle} ${selectedPage.sectionPageNumber}` : ""}
+          </h3>
         </div>
 
         <Field label="Line title">
@@ -570,7 +1015,7 @@ export default function BookBuilderPanel() {
 
         <div className={styles.smallActions}>
           <button
-            disabled={selectedPageIndex === 0 && selectedLineIndex === 0}
+            disabled={selectedSectionPageIndex === 0 && selectedLineIndex === 0}
             onClick={() => moveSelectedLine(-1)}
             type="button"
           >
@@ -579,7 +1024,7 @@ export default function BookBuilderPanel() {
           </button>
           <button
             disabled={
-              selectedPageIndex === book.pages.length - 1 &&
+              selectedSectionPageIndex === selectedSection.pages.length - 1 &&
               selectedLineIndex === selectedPage.lines.length - 1
             }
             onClick={() => moveSelectedLine(1)}
@@ -622,6 +1067,12 @@ export default function BookBuilderPanel() {
         message={`Clear page ${selectedPage.pageNumber}, line ${selectedLine.lineNumber}? The slot will remain blank.`}
         onCancel={() => setDeleteDialogOpen(false)}
         onOk={deleteSelectedLine}
+      />
+      <Dialog
+        isOpen={deleteSectionDialogOpen}
+        message={`Delete "${selectedSection.title}" and all of its pages?`}
+        onCancel={() => setDeleteSectionDialogOpen(false)}
+        onOk={deleteSelectedSection}
       />
       <MuiDialog
         open={pdfPreviewOpen}

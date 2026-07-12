@@ -18,6 +18,17 @@ const SOURCE_START = 3; // first eighth-note page
 const SOURCE_END = 7;   // last eighth-note page
 const SOURCE_COUNT = SOURCE_END - SOURCE_START + 1;
 
+function findSectionForPage(manifest, pageNumber) {
+  if (!Array.isArray(manifest.sections)) {
+    return null;
+  }
+
+  return manifest.sections.find((section) =>
+    Array.isArray(section.pages) &&
+    section.pages.some((page) => page.pageNumber === pageNumber)
+  );
+}
+
 function pageDirPath(n) {
   return path.join(PAGES_DIR, `page-${String(n).padStart(2, "0")}`);
 }
@@ -94,7 +105,7 @@ function main() {
     }
 
     // Add page entry to manifest
-    manifest.pages.push({
+    const newPageEntry = {
       pageNumber: newPageNum,
       title: srcPage.title,
       pdfSettings: srcPage.pdfSettings,
@@ -105,9 +116,25 @@ function main() {
         notes: line.notes || "",
         tempo: line.tempo,
         hasScore: line.hasScore,
-        updatedAt: now,
-      })),
-    });
+          updatedAt: now,
+        })),
+    };
+    manifest.pages.push(newPageEntry);
+
+    const srcSection = findSectionForPage(manifest, srcPageNum);
+    if (srcSection) {
+      srcSection.pages.push({
+        ...newPageEntry,
+        sectionId: srcSection.id,
+        sectionTitle: srcSection.title,
+        sectionPageNumber: srcSection.pages.length + 1,
+        lines: newPageEntry.lines.map((line) => ({
+          ...line,
+          sectionId: srcSection.id,
+          sectionPageNumber: srcSection.pages.length + 1,
+        })),
+      });
+    }
 
     if ((i + 1) % 10 === 0 || i + 1 === pagesToAdd) {
       process.stdout.write(`\r  Created page ${newPageNum} / ${TARGET_PAGES}…`);

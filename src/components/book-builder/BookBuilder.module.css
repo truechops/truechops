@@ -84,10 +84,19 @@
   grid-template-columns: repeat(9, minmax(0, 1fr));
 }
 
+.tabLabel {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
 .pageTab,
 .lineSlot,
 .button,
-.smallActions button {
+.smallActions button,
+.sectionTab,
+.uploadButton {
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -110,6 +119,99 @@
   background: var(--ink);
   border-color: var(--ink);
   color: #fff;
+}
+
+.sectionManager {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+}
+
+.sectionHeader {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.sectionHeader h3 {
+  font-size: 0.98rem;
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sectionActions,
+.sectionEditorActions {
+  display: flex;
+  gap: 6px;
+}
+
+.sectionActions {
+  flex: 0 0 auto;
+}
+
+.sectionTabs {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sectionTab {
+  display: grid;
+  gap: 2px;
+  min-height: 44px;
+  min-width: 0;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.sectionTab strong,
+.sectionTab span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sectionTab strong {
+  font-size: 0.82rem;
+}
+
+.sectionTab span {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.activeSectionTab,
+.activeSectionTab:hover {
+  border-color: var(--accent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.sectionEditor {
+  display: grid;
+  gap: 8px;
+}
+
+.sectionEditorActions {
+  align-items: stretch;
+}
+
+.sectionEditorActions .button,
+.sectionEditorActions .uploadButton {
+  flex: 1;
+}
+
+.sectionPageTabs {
+  display: grid;
+  gap: 5px;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
 }
 
 .lineGrid {
@@ -299,6 +401,21 @@
   min-height: 34px;
   min-width: 0;
   padding: 0 10px;
+}
+
+.uploadButton {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  gap: 6px;
+  justify-content: center;
+  min-height: 34px;
+  min-width: 0;
+  padding: 0 10px;
+}
+
+.uploadButton input {
+  display: none;
 }
 
 .button span,

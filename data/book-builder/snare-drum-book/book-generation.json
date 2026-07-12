@@ -1,0 +1,377 @@
+{
+  "schemaVersion": 1,
+  "book": {
+    "book": "true-chops",
+    "slug": "snare-drum-book",
+    "title": "Snare Drum Book",
+    "edition": 1,
+    "contentVersion": 3,
+    "pdfSettings": {
+      "columns": 2,
+      "rows": 12,
+      "noteRenderWidth": 420,
+      "noteStartPadding": 25,
+      "noteEndPadding": 25
+    }
+  },
+  "generation": {
+    "localAi": {
+      "endpoint": "http://127.0.0.1:11434/api/generate",
+      "model": "llama3.1",
+      "temperature": 0.8,
+      "batchSize": 12,
+      "requestTimeoutMs": 180000
+    },
+    "globalInstructions": [
+      "Generate one-measure snare drum book exercises as strict JSON only.",
+      "Every generated line must contain title, tempo, and score.",
+      "Every score must be exactly one measure of 4/4.",
+      "Use the TrueChops score shape shown in each section sampleJson.",
+      "Use C5 for normal snare notes and [] for rests.",
+      "Use VexFlow-style durations: 4 for quarter notes, 8 for eighth notes, 16 for sixteenth notes.",
+      "Use ornaments only when the section instructions or sampleJson call for them. Accent is \"a\". Flam is \"f\". Stickings are \"r\" and \"l\".",
+      "Return this exact JSON shape and no prose: { \"lines\": [{ \"title\": \"\", \"tempo\": 90, \"score\": {} }] }."
+    ]
+  },
+  "sections": [
+    {
+      "id": "imported-pages",
+      "title": "Eighths",
+      "pageCount": 5,
+      "instructions": "Generate five pages of eighth notes, notes only, no accents or flams or anything. Use this json to know how the json is structured. Random exercises.\n\nPrefer quarter rests over two eighth note rests in a row.\nPrefer a quarter note over an eighth note followed by an eighth rest.",
+      "sampleJson": {
+        "title": "Eighths",
+        "tempo": 90,
+        "score": {
+          "parts": {
+            "snare": {
+              "enabled": true
+            }
+          },
+          "measures": [
+            {
+              "timeSig": {
+                "num": 4,
+                "type": 4
+              },
+              "parts": [
+                {
+                  "instrument": "snare",
+                  "voices": [
+                    {
+                      "notes": [
+                        {
+                          "notes": [
+                            "C5"
+                          ],
+                          "duration": 8,
+                          "velocity": 0.5
+                        },
+                        {
+                          "notes": [
+                            "C5"
+                          ],
+                          "duration": 8,
+                          "velocity": 0.5
+                        },
+                        {
+                          "notes": [],
+                          "duration": 8,
+                          "velocity": 0.5
+                        },
+                        {
+                          "notes": [
+                            "C5"
+                          ],
+                          "duration": 8,
+                          "velocity": 0.5
+                        },
+                        {
+                          "notes": [],
+                          "duration": 4,
+                          "dots": 0,
+                          "velocity": 0.5
+                        },
+                        {
+                          "notes": [
+                            "C5"
+                          ],
+                          "duration": 8,
+                          "velocity": 0.5
+                        },
+                        {
+                          "notes": [
+                            "C5"
+                          ],
+                          "duration": 8,
+                          "velocity": 0.5
+                        }
+                      ],
+                      "tuplets": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "section-2",
+      "title": "Eighths with Accents",
+      "pageCount": 5,
+      "instructions": "Generate five pages of eighth notes with random accents. Use this json to know how the json is structured. Random exercises.\n\nPrefer quarter rests over two eighth note rests in a row.\nPrefer a quarter note over an eighth note followed by an eighth rest.",
+      "sampleJson": {
+        "title": "Eighths with Accents",
+        "tempo": 90,
+        "score": {
+          "parts": {
+            "snare": {
+              "enabled": true
+            }
+          },
+          "measures": [
+            {
+              "timeSig": {
+                "num": 4,
+                "type": 4
+              },
+              "parts": [
+                {
+                  "instrument": "snare",
+                  "voices": [
+                    {
+                      "notes": [
+                        {
+                          "notes": [
+                            "C5"
+                          ],
+                          "duration": 8,
+                          "velocity": 0.5,
+                          "ornaments": "a"
+                        },
+                        {
+                          "notes": [
+                            "C5"
+                          ],
+                          "duration": 8,
+                          "velocity": 0.5
+                        },
+                        {
+                          "notes": [],
+                          "duration": 8,
+                          "velocity": 0.5
+                        },
+                        {
+                          "notes": [
+                            "C5"
+                          ],
+                          "duration": 8,
+                          "velocity": 0.5
+                        },
+                        {
+                          "notes": [],
+                          "duration": 4,
+                          "dots": 0,
+                          "velocity": 0.5
+                        },
+                        {
+                          "notes": [
+                            "C5"
+                          ],
+                          "duration": 8,
+                          "velocity": 0.5
+                        },
+                        {
+                          "notes": [
+                            "C5"
+                          ],
+                          "duration": 8,
+                          "velocity": 0.5,
+                          "ornaments": "a"
+                        }
+                      ],
+                      "tuplets": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "section-3",
+      "title": "Eighths with flams",
+      "pageCount": 5,
+      "instructions": "Generate five pages of eighth notes with random accents and flams. Use this json to know how the json is structured. Random exercises.\n\nPrefer quarter rests over two eighth note rests in a row.\nPrefer a quarter note over an eighth note followed by an eighth rest.",
+      "sampleJson": {
+        "title": "Eighths with flams",
+        "tempo": 90,
+        "score": {
+          "parts": {
+            "snare": {
+              "enabled": true
+            }
+          },
+          "measures": [
+            {
+              "timeSig": {
+                "num": 4,
+                "type": 4
+              },
+              "parts": [
+                {
+                  "instrument": "snare",
+                  "voices": [
+                    {
+                      "notes": [
+                        {
+                          "notes": [
+                            "C5"
+                          ],
+                          "duration": 8,
+                          "velocity": 0.5
+                        },
+                        {
+                          "notes": [
+                            "C5"
+                          ],
+                          "duration": 8,
+                          "velocity": 0.5,
+                          "ornaments": "f"
+                        },
+                        {
+                          "notes": [],
+                          "duration": 8,
+                          "velocity": 0.5
+                        },
+                        {
+                          "notes": [
+                            "C5"
+                          ],
+                          "duration": 8,
+                          "velocity": 0.5
+                        },
+                        {
+                          "notes": [],
+                          "duration": 4,
+                          "dots": 0,
+                          "velocity": 0.5
+                        },
+                        {
+                          "notes": [
+                            "C5"
+                          ],
+                          "duration": 8,
+                          "velocity": 0.5,
+                          "ornaments": "f"
+                        },
+                        {
+                          "notes": [
+                            "C5"
+                          ],
+                          "duration": 8,
+                          "velocity": 0.5
+                        }
+                      ],
+                      "tuplets": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "section-4",
+      "title": "Eights with Flams and Accents",
+      "pageCount": 5,
+      "instructions": "Generate five pages of eighth notes with random accents and flams. Use this json to know how the json is structured. Random exercises.\n\nPrefer quarter rests over two eighth note rests in a row.\nPrefer a quarter note over an eighth note followed by an eighth rest.",
+      "sampleJson": {
+        "title": "Eights with Flams and Accents",
+        "tempo": 90,
+        "score": {
+          "parts": {
+            "snare": {
+              "enabled": true
+            }
+          },
+          "measures": [
+            {
+              "timeSig": {
+                "num": 4,
+                "type": 4
+              },
+              "parts": [
+                {
+                  "instrument": "snare",
+                  "voices": [
+                    {
+                      "notes": [
+                        {
+                          "notes": [
+                            "C5"
+                          ],
+                          "duration": 8,
+                          "velocity": 0.5
+                        },
+                        {
+                          "notes": [
+                            "C5"
+                          ],
+                          "duration": 8,
+                          "velocity": 0.5,
+                          "ornaments": "f"
+                        },
+                        {
+                          "notes": [],
+                          "duration": 8,
+                          "velocity": 0.5
+                        },
+                        {
+                          "notes": [
+                            "C5"
+                          ],
+                          "duration": 8,
+                          "velocity": 0.5
+                        },
+                        {
+                          "notes": [],
+                          "duration": 4,
+                          "dots": 0,
+                          "velocity": 0.5
+                        },
+                        {
+                          "notes": [
+                            "C5"
+                          ],
+                          "duration": 8,
+                          "velocity": 0.5,
+                          "ornaments": "f"
+                        },
+                        {
+                          "notes": [
+                            "C5"
+                          ],
+                          "duration": 8,
+                          "velocity": 0.5,
+                          "ornaments": "la"
+                        }
+                      ],
+                      "tuplets": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -7,6 +7,20 @@ export const BOOK_SLUG = "snare-drum-book";
 export const BOOK_TITLE = "Snare Drum Book";
 export const BOOK_EDITION = 1;
 export const BOOK_CONTENT_VERSION = 3;
+export const DEFAULT_BOOK_SECTIONS = [
+  {
+    id: "eighth-notes",
+    title: "Eighth Notes",
+    prompt: "Generate one-measure snare drum examples using eighth notes only. Keep the examples readable, progressive, and focused on note placement without accents.",
+    sampleJson: "{\n  \"rhythmFamily\": \"eighth-notes\",\n  \"allowedDurations\": [8],\n  \"accents\": false\n}",
+  },
+  {
+    id: "eighth-notes-accents",
+    title: "Eighth Notes with Accents",
+    prompt: "Generate one-measure snare drum examples using eighth notes with clear accent patterns. Keep the examples progressive and avoid changing the rhythmic subdivision.",
+    sampleJson: "{\n  \"rhythmFamily\": \"eighth-notes\",\n  \"allowedDurations\": [8],\n  \"accents\": true\n}",
+  },
+];
 export const MEASURES_PER_LINE = 1;
 export const PDF_COLUMNS = 2;
 export const PDF_ROWS = 12;
@@ -76,8 +90,43 @@ export function createBlankPage(pageNumber, pdfSettings = DEFAULT_PDF_SETTINGS) 
   };
 }
 
-export function createDefaultBook() {
+function slugify(value) {
+  return String(value || "section")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "section";
+}
+
+function normalizeSectionSampleJson(value) {
+  if (value == null) {
+    return "";
+  }
+
+  return typeof value === "string" ? value : JSON.stringify(value, null, 2);
+}
+
+export function createBookSection(sectionNumber = 1, overrides = {}, pdfSettings = DEFAULT_PDF_SETTINGS) {
+  const template = DEFAULT_BOOK_SECTIONS[sectionNumber - 1] || {};
+  const title = overrides.title || template.title || `Section ${sectionNumber}`;
+  const normalizedSettings = normalizePdfSettings({
+    ...pdfSettings,
+    ...(template.pdfSettings || {}),
+    ...(overrides.pdfSettings || {}),
+  });
+
   return {
+    id: overrides.id || template.id || `${slugify(title)}-${sectionNumber}`,
+    title,
+    prompt: overrides.prompt ?? template.prompt ?? "",
+    sampleJson: normalizeSectionSampleJson(overrides.sampleJson ?? template.sampleJson),
+    pdfSettings: normalizedSettings,
+    pages: overrides.pages || [createBlankPage(1, normalizedSettings)],
+  };
+}
+
+export function createDefaultBook() {
+  return normalizeBook({
     book: BOOK_KEY,
     slug: BOOK_SLUG,
     title: BOOK_TITLE,
@@ -85,8 +134,10 @@ export function createDefaultBook() {
     contentVersion: BOOK_CONTENT_VERSION,
     updatedAt: null,
     pdfSettings: normalizePdfSettings(),
-    pages: [createBlankPage(1, normalizePdfSettings())],
-  };
+    sections: DEFAULT_BOOK_SECTIONS.map((section, index) =>
+      createBookSection(index + 1, section, normalizePdfSettings())
+    ),
+  });
 }
 
 function cloneJson(value) {
@@ -116,11 +167,14 @@ export function scoreToBookLine(score) {
 
 export function normalizeBook(rawBook) {
   if (!rawBook || !Array.isArray(rawBook.pages)) {
-    return createDefaultBook();
+    if (!rawBook || !Array.isArray(rawBook.sections)) {
+      return createDefaultBook();
+    }
   }
 
   const pdfSettings = normalizePdfSettings(rawBook.pdfSettings);
-  const pages = rawBook.pages.length ? rawBook.pages : [createBlankPage(1, pdfSettings)];
+  const sections = normalizeBookSections(rawBook, pdfSettings);
+  const pages = sections.flatMap((section) => section.pages);
 
   return {
     book: rawBook.book || BOOK_KEY,
@@ -130,8 +184,79 @@ export function normalizeBook(rawBook) {
     contentVersion: Number(rawBook.contentVersion || BOOK_CONTENT_VERSION),
     updatedAt: rawBook.updatedAt || null,
     pdfSettings,
-    pages: renumberPages(pages, pdfSettings),
+    sections,
+    pages,
   };
+}
+
+function normalizeBookSections(rawBook, pdfSettings) {
+  const rawSections = Array.isArray(rawBook.sections) && rawBook.sections.length
+    ? rawBook.sections
+    : [{
+        id: "imported-pages",
+        title: "Imported Pages",
+        prompt: "",
+        sampleJson: "",
+        pdfSettings,
+        pages: Array.isArray(rawBook.pages) && rawBook.pages.length
+          ? rawBook.pages
+          : [createBlankPage(1, pdfSettings)],
+      }];
+  const seenIds = new Set();
+  let globalPageNumber = 1;
+
+  return rawSections.map((rawSection, sectionIndex) => {
+    const section = createBookSection(sectionIndex + 1, rawSection, pdfSettings);
+    let id = section.id || `${slugify(section.title)}-${sectionIndex + 1}`;
+    let suffix = 2;
+
+    while (seenIds.has(id)) {
+      id = `${section.id}-${suffix}`;
+      suffix += 1;
+    }
+
+    seenIds.add(id);
+
+    const sectionPdfSettings = normalizePdfSettings({
+      ...pdfSettings,
+      ...(section.pdfSettings || {}),
+    });
+    const sectionPages = Array.isArray(section.pages) && section.pages.length
+      ? section.pages
+      : [createBlankPage(1, sectionPdfSettings)];
+    const normalizedPages = renumberPages(sectionPages, sectionPdfSettings);
+
+    return {
+      ...section,
+      id,
+      title: section.title || `Section ${sectionIndex + 1}`,
+      prompt: section.prompt || "",
+      sampleJson: normalizeSectionSampleJson(section.sampleJson),
+      pdfSettings: sectionPdfSettings,
+      pages: normalizedPages.map((page, sectionPageIndex) => {
+        const pageNumber = globalPageNumber;
+        globalPageNumber += 1;
+
+        return {
+          ...page,
+          pageNumber,
+          sectionId: id,
+          sectionTitle: section.title,
+          sectionPageNumber: sectionPageIndex + 1,
+          title: page.title || `${section.title} ${sectionPageIndex + 1}`,
+          lines: page.lines.map((line, lineIndex) => ({
+            ...line,
+            pageNumber,
+            lineNumber: lineIndex + 1,
+            sectionId: id,
+            sectionPageNumber: sectionPageIndex + 1,
+            tempo: Number(line.tempo || DEFAULT_TEMPO),
+            score: line.score ? cloneJson(line.score) : null,
+          })),
+        };
+      }),
+    };
+  });
 }
 
 function isBlankLine(line) {

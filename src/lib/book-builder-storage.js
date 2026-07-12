@@ -32,6 +32,27 @@ async function readJson(filePath) {
 }
 
 function createManifest(book) {
+  const createLineManifest = (line) => ({
+    pageNumber: line.pageNumber,
+    lineNumber: line.lineNumber,
+    sectionId: line.sectionId,
+    sectionPageNumber: line.sectionPageNumber,
+    title: line.title,
+    notes: line.notes,
+    tempo: line.tempo,
+    hasScore: Boolean(line.score),
+    updatedAt: line.updatedAt,
+  });
+  const createPageManifest = (page) => ({
+    pageNumber: page.pageNumber,
+    sectionId: page.sectionId,
+    sectionTitle: page.sectionTitle,
+    sectionPageNumber: page.sectionPageNumber,
+    title: page.title,
+    pdfSettings: page.pdfSettings,
+    lines: page.lines.map(createLineManifest),
+  });
+
   return {
     book: book.book,
     slug: book.slug,
@@ -40,47 +61,57 @@ function createManifest(book) {
     contentVersion: book.contentVersion,
     updatedAt: book.updatedAt,
     pdfSettings: book.pdfSettings,
-    pages: book.pages.map((page) => ({
-      pageNumber: page.pageNumber,
-      title: page.title,
-      pdfSettings: page.pdfSettings,
-      lines: page.lines.map((line) => ({
-        pageNumber: line.pageNumber,
-        lineNumber: line.lineNumber,
-        title: line.title,
-        notes: line.notes,
-        tempo: line.tempo,
-        hasScore: Boolean(line.score),
-        updatedAt: line.updatedAt,
-      })),
+    sections: book.sections.map((section) => ({
+      id: section.id,
+      title: section.title,
+      prompt: section.prompt,
+      sampleJson: section.sampleJson,
+      pdfSettings: section.pdfSettings,
+      pages: section.pages.map(createPageManifest),
     })),
+    pages: book.pages.map(createPageManifest),
   };
 }
 
 export async function loadBook() {
   const manifest = (await readJson(MANIFEST_PATH)) || createDefaultBook();
+  const hydratePage = async (page, pageIndex) => ({
+    ...page,
+    pageNumber: page.pageNumber || pageIndex + 1,
+    lines: await Promise.all(
+      (page.lines || []).map(async (line, lineIndex) => {
+        const pageNumber = page.pageNumber || pageIndex + 1;
+        const lineNumber = line.lineNumber || lineIndex + 1;
+        const lineFile = await readJson(linePath(pageNumber, lineNumber));
+        return {
+          ...line,
+          ...(lineFile || {}),
+          pageNumber,
+          lineNumber,
+        };
+      })
+    ),
+  });
+
+  if (Array.isArray(manifest.sections) && manifest.sections.length) {
+    const sections = await Promise.all(
+      manifest.sections.map(async (section) => ({
+        ...section,
+        pages: await Promise.all((section.pages || []).map(hydratePage)),
+      }))
+    );
+
+    return normalizeBook({
+      ...manifest,
+      sections,
+    });
+  }
+
   const manifestPages = Array.isArray(manifest.pages) && manifest.pages.length
     ? manifest.pages
     : createDefaultBook().pages;
-
   const pages = await Promise.all(
-    manifestPages.map(async (page, pageIndex) => ({
-      ...page,
-      pageNumber: page.pageNumber || pageIndex + 1,
-      lines: await Promise.all(
-        (page.lines || []).map(async (line, lineIndex) => {
-          const pageNumber = page.pageNumber || pageIndex + 1;
-          const lineNumber = line.lineNumber || lineIndex + 1;
-          const lineFile = await readJson(linePath(pageNumber, lineNumber));
-          return {
-            ...line,
-            ...(lineFile || {}),
-            pageNumber,
-            lineNumber,
-          };
-        })
-      ),
-    }))
+    manifestPages.map(hydratePage)
   );
 
   return normalizeBook({
