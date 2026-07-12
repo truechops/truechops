@@ -35,6 +35,19 @@ export const DEFAULT_PDF_SETTINGS = {
   noteEndPadding: 25,
 };
 
+export function normalizeSectionPageCount(value, fallback = 1) {
+  const parsed = Number.parseInt(value, 10);
+  const normalizedFallback = Number.parseInt(fallback, 10);
+
+  if (Number.isInteger(parsed) && parsed > 0) {
+    return parsed;
+  }
+
+  return Number.isInteger(normalizedFallback) && normalizedFallback > 0
+    ? normalizedFallback
+    : 1;
+}
+
 export function normalizePdfSettings(pdfSettings = {}) {
   const columns = PDF_COLUMN_OPTIONS.includes(Number(pdfSettings.columns))
     ? Number(pdfSettings.columns)
@@ -120,6 +133,10 @@ export function createBookSection(sectionNumber = 1, overrides = {}, pdfSettings
     title,
     prompt: overrides.prompt ?? template.prompt ?? "",
     sampleJson: normalizeSectionSampleJson(overrides.sampleJson ?? template.sampleJson),
+    pageCount: normalizeSectionPageCount(
+      overrides.pageCount ?? template.pageCount,
+      overrides.pages?.length || template.pages?.length || 1
+    ),
     pdfSettings: normalizedSettings,
     pages: overrides.pages || [createBlankPage(1, normalizedSettings)],
   };
@@ -232,6 +249,7 @@ function normalizeBookSections(rawBook, pdfSettings) {
       title: section.title || `Section ${sectionIndex + 1}`,
       prompt: section.prompt || "",
       sampleJson: normalizeSectionSampleJson(section.sampleJson),
+      pageCount: normalizeSectionPageCount(section.pageCount, normalizedPages.length),
       pdfSettings: sectionPdfSettings,
       pages: normalizedPages.map((page, sectionPageIndex) => {
         const pageNumber = globalPageNumber;

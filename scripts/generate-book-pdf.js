@@ -14,6 +14,7 @@ const DEFAULT_OUTPUT_PATH = path.join(
   "book-output",
   "snare-drum-book.pdf"
 );
+const DEFAULT_QR_ORIGIN = "https://truechops.com";
 const LINE_NUMBER_CENTER_OFFSET = 1.25;
 
 let domSetup = false;
@@ -24,6 +25,7 @@ function parseArgs(argv) {
     scope: "book",
     page: 1,
     output: DEFAULT_OUTPUT_PATH,
+    qrOrigin: DEFAULT_QR_ORIGIN,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -54,6 +56,9 @@ function parseArgs(argv) {
       case "output":
         options.output = path.resolve(process.cwd(), nextValue);
         break;
+      case "qr-origin":
+        options.qrOrigin = nextValue;
+        break;
       default:
         throw new Error(`Unknown option: ${flag}`);
     }
@@ -83,6 +88,7 @@ Options:
   --scope <book|page>  Render the full book or one page. Default: book.
   --page <number>      Page number when --scope page is used. Default: 1.
   --output <path>      PDF destination.
+  --qr-origin <origin> Production QR origin. Default: https://truechops.com.
 `);
 }
 
@@ -312,9 +318,8 @@ function createBookPdfDocument(book, title) {
   });
 }
 
-async function getPracticeQrSvg(book, page, getBookPageQrUrl) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://truechops.com";
-  const practiceUrl = getBookPageQrUrl(page.pageNumber, book, siteUrl);
+async function getPracticeQrSvg(book, page, getBookPageQrUrl, qrOrigin = DEFAULT_QR_ORIGIN) {
+  const practiceUrl = getBookPageQrUrl(page.pageNumber, book, qrOrigin || DEFAULT_QR_ORIGIN);
   return QRCode.toString(practiceUrl, { type: "svg", margin: 1 });
 }
 
@@ -436,6 +441,7 @@ async function renderBookPageAssets(
   bookData,
   rendererApi,
   getBookPageQrUrl,
+  qrOrigin,
   limitScoreRender
 ) {
   const {
@@ -460,7 +466,7 @@ async function renderBookPageAssets(
         )
       )
     ),
-    getPracticeQrSvg(book, page, getBookPageQrUrl),
+    getPracticeQrSvg(book, page, getBookPageQrUrl, qrOrigin),
   ]);
 
   return {
@@ -537,7 +543,7 @@ function drawBookPage(doc, book, pageAssets, bookTitle) {
 }
 
 async function renderPdf(book, pages, dependencies) {
-  const { bookData, rendererApi, getBookPageQrUrl } = dependencies;
+  const { bookData, rendererApi, getBookPageQrUrl, qrOrigin } = dependencies;
   const { BOOK_TITLE } = bookData;
   const title = pages.length === 1
     ? `${book.title || BOOK_TITLE} Page ${pages[0].pageNumber}`
@@ -552,6 +558,7 @@ async function renderPdf(book, pages, dependencies) {
       bookData,
       rendererApi,
       getBookPageQrUrl,
+      qrOrigin,
       limitScoreRender
     )
   );
@@ -583,10 +590,12 @@ async function main() {
   }
 
   console.log(`Rendering ${pages.length} page${pages.length === 1 ? "" : "s"} from ${bookRoot}`);
+  console.log(`QR origin: ${options.qrOrigin}`);
   const pdf = await renderPdf(book, pages, {
     bookData,
     rendererApi,
     getBookPageQrUrl,
+    qrOrigin: options.qrOrigin,
   });
 
   await fs.mkdir(path.dirname(options.output), { recursive: true });

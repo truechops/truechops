@@ -28,6 +28,7 @@ import {
   createBookSection,
   createDefaultBook,
   normalizePdfSettings,
+  normalizeSectionPageCount,
   normalizeBook,
   renumberPages,
   scoreToBookLine,
@@ -459,6 +460,10 @@ export default function BookBuilderPanel() {
   const addPage = useCallback(() => {
     const nextBook = updateBookSection(book, selectedSectionIndex, (section) => ({
       ...section,
+      pageCount: Math.max(
+        normalizeSectionPageCount(section.pageCount, section.pages.length),
+        section.pages.length + 1
+      ),
       pages: [
         ...section.pages,
         createBlankPage(section.pages.length + 1, section.pdfSettings || pdfSettings),
@@ -818,7 +823,12 @@ export default function BookBuilderPanel() {
               type="button"
             >
               <strong>{section.title}</strong>
-              <span>{section.pages.length} pages</span>
+              <span>
+                Generate {normalizeSectionPageCount(section.pageCount, section.pages.length)} pages
+                {section.pages.length !== normalizeSectionPageCount(section.pageCount, section.pages.length)
+                  ? ` / ${section.pages.length} saved`
+                  : ""}
+              </span>
             </button>
           ))}
         </div>
@@ -828,6 +838,25 @@ export default function BookBuilderPanel() {
             <input
               onChange={(event) => updateSelectedSectionDraft({ title: event.target.value })}
               value={selectedSection.title}
+            />
+          </Field>
+          <Field label="Pages to generate from prompt">
+            <input
+              inputMode="numeric"
+              min="1"
+              onChange={(event) =>
+                updateSelectedSectionDraft({
+                  pageCount: normalizeSectionPageCount(
+                    event.target.value,
+                    selectedSection.pages.length
+                  ),
+                })
+              }
+              type="number"
+              value={normalizeSectionPageCount(
+                selectedSection.pageCount,
+                selectedSection.pages.length
+              )}
             />
           </Field>
           <Field label="Local AI prompt">

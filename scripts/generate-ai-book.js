@@ -637,13 +637,17 @@ function createGenerationSectionsFromBook(book) {
       ...bookPdfSettings,
       ...(section.pdfSettings || {}),
     });
+    const existingPageCount = Array.isArray(section.pages) && section.pages.length
+      ? section.pages.length
+      : 1;
 
     return {
       id: section.id || `section-${sectionIndex + 1}`,
       title: section.title || `Section ${sectionIndex + 1}`,
-      pageCount: Array.isArray(section.pages) && section.pages.length
-        ? section.pages.length
-        : inferPageCount(section),
+      pageCount: getPositiveInteger(
+        section.pageCount,
+        existingPageCount || inferPageCount(section)
+      ),
       instructions: section.prompt || section.instructions || "",
       sampleJson: getSectionSampleJson(section),
       pdfSettings: sectionPdfSettings,
@@ -791,7 +795,9 @@ async function generateSectionLines(config, section, sectionIndex, options) {
   );
   const lines = [];
 
-  console.log(`[${sectionIndex + 1}/${config.sections.length}] ${section.title}: ${pageCount} pages, ${lineCount} lines`);
+  console.log(
+    `[${sectionIndex + 1}/${config.sections.length}] ${section.title}: generate ${pageCount} pages, ${lineCount} lines`
+  );
 
   for (let offset = 0; offset < lineCount; offset += batchSize) {
     const count = Math.min(batchSize, lineCount - offset);
@@ -885,6 +891,7 @@ function buildBook(config, generatedSections) {
       title: section.title,
       prompt: section.instructions || "",
       sampleJson: JSON.stringify(section.sampleJson || {}, null, 2),
+      pageCount: generated.pageCount,
       pdfSettings: generated.pdfSettings,
       pages,
     };
@@ -940,6 +947,7 @@ function createManifest(book) {
       title: section.title,
       prompt: section.prompt,
       sampleJson: section.sampleJson,
+      pageCount: section.pageCount,
       pdfSettings: section.pdfSettings,
       pages: section.pages.map(createPageManifest),
     })),

@@ -93,6 +93,7 @@ function createManifest(book) {
       title: section.title,
       prompt: section.prompt,
       sampleJson: section.sampleJson,
+      pageCount: section.pageCount,
       pdfSettings: section.pdfSettings,
       pages: section.pages.map(createPageManifest),
     })),
