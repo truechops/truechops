@@ -365,8 +365,67 @@ function sampleHasOrnament(sampleNotes, ornament) {
   return sampleNotes.some((note) => String((note && note.ornaments) || "").includes(ornament));
 }
 
+function getSectionInstructionText(section) {
+  return `${section.title || ""}\n${section.instructions || section.prompt || ""}`.toLowerCase();
+}
+
+function getSectionOrnamentPolicy(section) {
+  const prompt = getSectionInstructionText(section);
+
+  return {
+    stripAccents: /no\s+accents?/.test(prompt) || /without\s+accents?/.test(prompt),
+    stripFlams: /no\s+(?:accents?\s+or\s+)?flams?/.test(prompt) || /without\s+flams?/.test(prompt),
+  };
+}
+
+function applySectionOrnamentPolicy(section, score) {
+  const policy = getSectionOrnamentPolicy(section);
+
+  if (!policy.stripAccents && !policy.stripFlams) {
+    return score;
+  }
+
+  return {
+    ...score,
+    measures: (score.measures || []).map((measure) => ({
+      ...measure,
+      parts: (measure.parts || []).map((part) => ({
+        ...part,
+        voices: (part.voices || []).map((voice) => ({
+          ...voice,
+          notes: (voice.notes || []).map((note) => {
+            if (note.ornaments == null) {
+              return note;
+            }
+
+            let ornaments = String(note.ornaments);
+
+            if (policy.stripAccents) {
+              ornaments = ornaments.replace(/a/g, "");
+            }
+
+            if (policy.stripFlams) {
+              ornaments = ornaments.replace(/f/g, "");
+            }
+
+            if (!ornaments) {
+              const { ornaments: _ornaments, ...rest } = note;
+              return rest;
+            }
+
+            return {
+              ...note,
+              ornaments,
+            };
+          }),
+        })),
+      })),
+    })),
+  };
+}
+
 function createFallbackGeneratedScore(section, samplePayload, lineIndex) {
-  const prompt = `${section.title || ""}\n${section.instructions || ""}`.toLowerCase();
+  const prompt = getSectionInstructionText(section);
   const sampleNotes = getSampleNotes(samplePayload);
   const sampleDurations = new Set(sampleNotes.map((note) => Number(note.duration)).filter(Boolean));
   const allowQuarter = prompt.includes("quarter") || sampleDurations.has(4);
@@ -451,14 +510,15 @@ function normalizeGeneratedLine(input, section, samplePayload, index) {
   const fallbackLine = createFallbackGeneratedLine(section, samplePayload, index);
   const fallbackScore = getSampleScore(samplePayload);
   const scoreSource = input && (input.score || input.measures ? input.score || input : null);
+  const score = scoreSource
+    ? normalizeGeneratedScore(scoreSource, fallbackScore)
+    : fallbackLine.score;
 
   return {
     title: (input && input.title) || fallbackLine.title,
     notes: (input && input.notes) || "",
     tempo: getPositiveInteger(input && input.tempo, fallbackLine.tempo),
-    score: scoreSource
-      ? normalizeGeneratedScore(scoreSource, fallbackScore)
-      : fallbackLine.score,
+    score: applySectionOrnamentPolicy(section, score),
   };
 }
 

@@ -8,7 +8,6 @@ import {
   FaEye,
   FaFolderOpen,
   FaFilePdf,
-  FaMagic,
   FaPlus,
   FaSave,
   FaTrash,
@@ -229,27 +228,6 @@ function prettyPrintJsonText(value) {
   } catch {
     return value;
   }
-}
-
-function createAiBookPdfRequest(book) {
-  return {
-    book: {
-      book: book.book,
-      slug: book.slug,
-      title: book.title,
-      edition: book.edition,
-      contentVersion: book.contentVersion,
-      pdfSettings: book.pdfSettings,
-    },
-    sections: book.sections.map((section) => ({
-      id: section.id,
-      title: section.title,
-      prompt: section.prompt,
-      sampleJson: section.sampleJson,
-      pdfSettings: section.pdfSettings,
-      pageCount: section.pages.length,
-    })),
-  };
 }
 
 export default function BookBuilderPanel() {
@@ -731,26 +709,6 @@ export default function BookBuilderPanel() {
     );
   }, [downloadPdf]);
 
-  const downloadAiBookPdf = useCallback(async () => {
-    const downloaded = await downloadPdf(
-      "/api/book-builder?format=pdf&scope=ai-book",
-      "snare-drum-book-ai.pdf",
-      "Generating AI book PDF…",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(createAiBookPdfRequest(book)),
-      }
-    );
-
-    if (downloaded) {
-      await loadBook();
-      setStatus("AI book PDF generated");
-    }
-  }, [book, downloadPdf, loadBook]);
-
   return (
     <aside className={styles.panel}>
       <header className={styles.header}>
@@ -799,9 +757,6 @@ export default function BookBuilderPanel() {
         </IconButton>
         <IconButton icon={<FaFilePdf />} onClick={downloadFullBookPdf} title="Download entire book PDF" disabled={pdfDownload.active}>
           Book PDF
-        </IconButton>
-        <IconButton icon={<FaMagic />} onClick={downloadAiBookPdf} title="Generate sections from prompts and download the combined PDF" disabled={pdfDownload.active || isSaving}>
-          AI book PDF
         </IconButton>
         <IconButton icon={<FaEye />} onClick={() => { setPdfPreviewUrl(`/api/book-builder?format=pdf&inline=1&page=${selectedPage.pageNumber}`); setPdfPreviewOpen(true); }} title="Preview selected page PDF">
           Preview
