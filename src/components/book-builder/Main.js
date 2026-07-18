@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   FaArrowDown,
@@ -28,6 +28,7 @@ import {
   createBookSection,
   createDefaultBook,
   normalizePdfSettings,
+  normalizeSectionMinPlayedNotes,
   normalizeSectionPageCount,
   normalizeBook,
   renumberPages,
@@ -235,7 +236,8 @@ export default function BookBuilderPanel() {
   const dispatch = useDispatch();
   const score = useSelector((state) => state.score.present.score);
   const tempo = useSelector((state) => state.score.present.tempo);
-  const [book, setBook] = useState(createDefaultBook());
+  const [book, setBookState] = useState(createDefaultBook());
+  const bookRef = useRef(book);
   const [selectedSectionIndex, setSelectedSectionIndex] = useState(0);
   const [selectedPageIndex, setSelectedPageIndex] = useState(0);
   const [selectedLineIndex, setSelectedLineIndex] = useState(0);
@@ -246,6 +248,16 @@ export default function BookBuilderPanel() {
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState("");
   const [pdfDownload, setPdfDownload] = useState({ active: false, label: "", loaded: 0, total: 0 });
+
+  const setBook = useCallback((nextBookOrUpdater) => {
+    const nextBook = typeof nextBookOrUpdater === "function"
+      ? nextBookOrUpdater(bookRef.current)
+      : nextBookOrUpdater;
+
+    bookRef.current = nextBook;
+    setBookState(nextBook);
+    return nextBook;
+  }, []);
 
   const selectedSection = book.sections[selectedSectionIndex] || book.sections[0];
   const selectedPage = book.pages[selectedPageIndex] || book.pages[0];
@@ -295,7 +307,7 @@ export default function BookBuilderPanel() {
       setSelectedLineIndex(0);
       setStatus("Using blank book");
     }
-  }, []);
+  }, [setBook]);
 
   useEffect(() => {
     loadBook();
@@ -333,7 +345,19 @@ export default function BookBuilderPanel() {
       }
 
       const savedBook = normalizeBook(payload.book);
-      setBook(savedBook);
+      setBook((currentBook) => {
+        const currentSectionsById = Object.fromEntries(
+          (currentBook.sections || []).map((s) => [s.id, s])
+        );
+        return {
+          ...savedBook,
+          globalAiRules: currentBook.globalAiRules,
+          sections: savedBook.sections.map((section) => ({
+            ...section,
+            minPlayedNotes: currentSectionsById[section.id]?.minPlayedNotes ?? section.minPlayedNotes,
+          })),
+        };
+      });
       setStatus(successMessage);
       return savedBook;
     } catch (error) {
@@ -342,7 +366,7 @@ export default function BookBuilderPanel() {
     } finally {
       setIsSaving(false);
     }
-  }, []);
+  }, [setBook]);
 
   const setSelectedLineDraft = useCallback(
     (updates) => {
@@ -386,8 +410,19 @@ export default function BookBuilderPanel() {
   }, [dispatch, selectedLine, selectedPage.pageNumber, tempo]);
 
   const saveMetadata = useCallback(() => {
-    saveBook(book, "Saved line details");
-  }, [book, saveBook]);
+    saveBook(bookRef.current, "Saved line details");
+  }, [saveBook]);
+
+  const updateGlobalAiRulesDraft = useCallback((globalAiRules) => {
+    setBook((currentBook) => ({
+      ...currentBook,
+      globalAiRules,
+    }));
+  }, [setBook]);
+
+  const saveGlobalAiRules = useCallback(() => {
+    saveBook(bookRef.current, "Saved global AI rules");
+  }, [saveBook]);
 
   const deleteSelectedLine = useCallback(() => {
     const nextBook = updateBookLine(book, selectedPageIndex, selectedLineIndex, (line) =>
@@ -539,11 +574,11 @@ export default function BookBuilderPanel() {
         ...updates,
       }))
     );
-  }, [selectedSectionIndex]);
+  }, [selectedSectionIndex, setBook]);
 
   const saveSectionDetails = useCallback(() => {
-    saveBook(book, "Saved section details");
-  }, [book, saveBook]);
+    saveBook(bookRef.current, "Saved section details");
+  }, [saveBook]);
 
   const addSection = useCallback(() => {
     const sectionNumber = book.sections.length + 1;
@@ -766,13 +801,31 @@ export default function BookBuilderPanel() {
         <IconButton icon={<FaEye />} onClick={() => { setPdfPreviewUrl(`/api/book-builder?format=pdf&inline=1&page=${selectedPage.pageNumber}`); setPdfPreviewOpen(true); }} title="Preview selected page PDF">
           Preview
         </IconButton>
-        <IconButton icon={<FaEye />} onClick={() => { setPdfPreviewUrl("/api/book-builder?format=pdf&inline=1&sample=eighth-notes"); setPdfPreviewOpen(true); }} title="Preview eighth note sample">
-          8th Sample
-        </IconButton>
         <IconButton icon={<FaSave />} onClick={saveMetadata} title="Save line details">
           Save details
         </IconButton>
       </div>
+
+      <section className={styles.sectionManager}>
+        <div className={styles.sectionHeader}>
+          <div>
+            <span className={styles.eyebrow}>AI rules</span>
+            <h3>Book-wide generation rules</h3>
+          </div>
+          <div className={styles.sectionActions}>
+            <IconButton icon={<FaSave />} onClick={saveGlobalAiRules} title="Save global AI rules" variant="iconOnly">
+              Save rules
+            </IconButton>
+          </div>
+        </div>
+        <Field label="Global AI rules">
+          <textarea
+            onChange={(event) => updateGlobalAiRulesDraft(event.target.value)}
+            rows={4}
+            value={book.globalAiRules || ""}
+          />
+        </Field>
+      </section>
 
       <section className={styles.sectionManager}>
         <div className={styles.sectionHeader}>
@@ -828,6 +881,9 @@ export default function BookBuilderPanel() {
                 {section.pages.length !== normalizeSectionPageCount(section.pageCount, section.pages.length)
                   ? ` / ${section.pages.length} saved`
                   : ""}
+                {normalizeSectionMinPlayedNotes(section.minPlayedNotes)
+                  ? ` · Min ${normalizeSectionMinPlayedNotes(section.minPlayedNotes)} notes`
+                  : ""}
               </span>
             </button>
           ))}
@@ -857,6 +913,19 @@ export default function BookBuilderPanel() {
                 selectedSection.pageCount,
                 selectedSection.pages.length
               )}
+            />
+          </Field>
+          <Field label="Minimum played notes">
+            <input
+              inputMode="numeric"
+              min="0"
+              onChange={(event) =>
+                updateSelectedSectionDraft({
+                  minPlayedNotes: normalizeSectionMinPlayedNotes(event.target.value),
+                })
+              }
+              type="number"
+              value={normalizeSectionMinPlayedNotes(selectedSection.minPlayedNotes)}
             />
           </Field>
           <Field label="Local AI prompt">

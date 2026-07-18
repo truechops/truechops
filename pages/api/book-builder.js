@@ -87,6 +87,7 @@ function createManifest(book) {
     edition: book.edition,
     contentVersion: book.contentVersion,
     updatedAt: book.updatedAt,
+    globalAiRules: book.globalAiRules,
     pdfSettings: book.pdfSettings,
     sections: book.sections.map((section) => ({
       id: section.id,
@@ -94,6 +95,7 @@ function createManifest(book) {
       prompt: section.prompt,
       sampleJson: section.sampleJson,
       pageCount: section.pageCount,
+      minPlayedNotes: section.minPlayedNotes,
       pdfSettings: section.pdfSettings,
       pages: section.pages.map(createPageManifest),
     })),
@@ -892,3 +894,11 @@ export default async function handler(req, res) {
     res.status(500).json({ error: error.message });
   }
 }
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "10mb",
+    },
+  },
+};

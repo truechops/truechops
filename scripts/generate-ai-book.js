@@ -68,6 +68,11 @@ function getPositiveInteger(value, fallback) {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function getNonNegativeInteger(value, fallback = 0) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
 function normalizePdfSettings(pdfSettings = {}) {
   const columns = [2, 3].includes(Number(pdfSettings.columns))
     ? Number(pdfSettings.columns)
@@ -180,6 +185,29 @@ function parseJsonLoose(value) {
 
 function getSamplePayload(section) {
   return parseJsonLoose(section.sampleJson) || {};
+}
+
+function normalizeGlobalAiRules(value) {
+  if (Array.isArray(value)) {
+    return value.filter(Boolean).join("\n");
+  }
+
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeInstructionList(value) {
+  if (Array.isArray(value)) {
+    return value.filter(Boolean).map(String);
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    return value
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+  }
+
+  return [];
 }
 
 function getSampleScore(samplePayload) {
@@ -369,7 +397,11 @@ function extractGeneratedLineInputs(payload) {
 }
 
 function getSectionInstructionText(section) {
-  return `${section.title || ""}\n${section.instructions || section.prompt || ""}`.toLowerCase();
+  return [
+    section.title || "",
+    section.globalRules || "",
+    section.instructions || section.prompt || "",
+  ].join("\n").toLowerCase();
 }
 
 function getSectionOrnamentPolicy(section) {
@@ -426,6 +458,127 @@ function applySectionOrnamentPolicy(section, score) {
               ornaments,
             };
           }),
+        })),
+      })),
+    })),
+  };
+}
+
+function getSectionMinPlayedNotes(section) {
+  return getNonNegativeInteger(section && section.minPlayedNotes, 0);
+}
+
+function countPlayedNotes(notes) {
+  return (notes || []).filter((note) => !isRest(note)).length;
+}
+
+function getShortestAllowedDuration(section, notes) {
+  const prompt = getSectionInstructionText(section);
+  const durations = (notes || [])
+    .map((note) => Number(note && note.duration))
+    .filter((duration) => [1, 2, 4, 8, 16, 32].includes(duration));
+
+  if (prompt.includes("sixteenth") || durations.includes(16)) {
+    return 16;
+  }
+
+  if (prompt.includes("eighth") || durations.includes(8)) {
+    return 8;
+  }
+
+  return durations.length ? Math.max(...durations) : 4;
+}
+
+function createPlayedNoteFrom(note, overrides = {}) {
+  return {
+    ...note,
+    notes: ["C5"],
+    velocity: Number((note && note.velocity) || 0.5),
+    ...overrides,
+  };
+}
+
+function splitIntoPlayedNotes(note, targetDuration) {
+  const targetUnits = 4 / targetDuration;
+  const totalUnits = getNoteQuarterUnits(note);
+  const pieces = Math.round(totalUnits / targetUnits);
+
+  if (pieces <= 1 || Math.abs(pieces * targetUnits - totalUnits) > 0.001) {
+    return null;
+  }
+
+  const ornaments = !isRest(note) && note && note.ornaments != null
+    ? String(note.ornaments)
+    : "";
+
+  return Array.from({ length: pieces }, (_, index) => ({
+    notes: ["C5"],
+    duration: targetDuration,
+    dots: 0,
+    velocity: Number((note && note.velocity) || 0.5),
+    ...(ornaments && index === 0 ? { ornaments } : {}),
+  }));
+}
+
+function enforceMinimumPlayedNotesInNotes(section, notes) {
+  const minimum = getSectionMinPlayedNotes(section);
+
+  if (!minimum || countPlayedNotes(notes) >= minimum) {
+    return notes;
+  }
+
+  let nextNotes = (notes || []).map((note) => ({ ...note }));
+  let playedCount = countPlayedNotes(nextNotes);
+
+  nextNotes = nextNotes.map((note) => {
+    if (playedCount >= minimum || !isRest(note)) {
+      return note;
+    }
+
+    playedCount += 1;
+    return createPlayedNoteFrom(note);
+  });
+
+  if (playedCount >= minimum) {
+    return nextNotes;
+  }
+
+  const targetDuration = getShortestAllowedDuration(section, nextNotes);
+  const expandedNotes = [];
+
+  for (const note of nextNotes) {
+    if (playedCount < minimum) {
+      const pieces = splitIntoPlayedNotes(note, targetDuration);
+
+      if (pieces) {
+        playedCount += pieces.length - (isRest(note) ? 0 : 1);
+        expandedNotes.push(...pieces);
+        continue;
+      }
+    }
+
+    expandedNotes.push(note);
+  }
+
+  return expandedNotes;
+}
+
+function enforceMinimumPlayedNotes(section, score) {
+  const minimum = getSectionMinPlayedNotes(section);
+
+  if (!minimum) {
+    return score;
+  }
+
+  return {
+    ...score,
+    measures: (score.measures || []).map((measure) => ({
+      ...measure,
+      parts: (measure.parts || []).map((part) => ({
+        ...part,
+        voices: (part.voices || []).map((voice) => ({
+          ...voice,
+          notes: enforceMinimumPlayedNotesInNotes(section, voice.notes || []),
         })),
       })),
     })),
@@ -603,7 +756,10 @@ function normalizeGeneratedLine(input, section, samplePayload, index) {
     title: (input && input.title) || fallbackLine.title,
     notes: (input && input.notes) || "",
     tempo: getPositiveInteger(input && input.tempo, fallbackLine.tempo),
-    score: applySectionOrnamentPolicy(section, score),
+    score: enforceMinimumPlayedNotes(
+      section,
+      applySectionOrnamentPolicy(section, score)
+    ),
   };
 }
 
@@ -629,7 +785,7 @@ function getSectionSampleJson(section) {
   return parseJsonLoose(section.sampleJson) || {};
 }
 
-function createGenerationSectionsFromBook(book) {
+function createGenerationSectionsFromBook(book, globalRules = "") {
   const bookPdfSettings = normalizePdfSettings(book.pdfSettings);
 
   return (book.sections || []).map((section, sectionIndex) => {
@@ -648,6 +804,8 @@ function createGenerationSectionsFromBook(book) {
         section.pageCount,
         existingPageCount || inferPageCount(section)
       ),
+      minPlayedNotes: getSectionMinPlayedNotes(section),
+      globalRules,
       instructions: section.prompt || section.instructions || "",
       sampleJson: getSectionSampleJson(section),
       pdfSettings: sectionPdfSettings,
@@ -656,8 +814,16 @@ function createGenerationSectionsFromBook(book) {
 }
 
 function createGenerationConfig(config, sourceBook) {
+  const configGeneration = config.generation || {};
+  const bookGlobalRules = normalizeGlobalAiRules(sourceBook.globalAiRules);
+
   return {
     ...config,
+    generation: {
+      ...configGeneration,
+      globalInstructions: normalizeInstructionList(configGeneration.globalInstructions),
+      bookGlobalRules,
+    },
     book: {
       ...(config.book || {}),
       book: sourceBook.book || (config.book && config.book.book) || "true-chops",
@@ -670,18 +836,27 @@ function createGenerationConfig(config, sourceBook) {
         ...(sourceBook.pdfSettings || {}),
       }),
     },
-    sections: createGenerationSectionsFromBook(sourceBook),
+    sections: createGenerationSectionsFromBook(sourceBook, bookGlobalRules),
   };
 }
 
 function createAiPrompt(config, section, samplePayload, count, offset, linesPerPage) {
-  const globalInstructions = (config.generation && config.generation.globalInstructions) || [];
+  const globalInstructions = normalizeInstructionList(
+    config.generation && config.generation.globalInstructions
+  );
+  const bookGlobalRules = normalizeGlobalAiRules(
+    (config.generation && config.generation.bookGlobalRules) || section.globalRules
+  );
 
   return [
     ...globalInstructions,
+    bookGlobalRules ? `Book-wide UI rules:\n${bookGlobalRules}` : "",
     "",
     `Section title: ${section.title || "Untitled section"}`,
     `Section instructions: ${section.instructions || ""}`,
+    section.minPlayedNotes
+      ? `Each generated rhythm in this section must have at least ${section.minPlayedNotes} played note events. Rests do not count as played notes.`
+      : "",
     `Return exactly ${count} lines. These begin at section line ${offset + 1}.`,
     `The section has ${linesPerPage} lines per PDF page.`,
     "",
@@ -892,6 +1067,7 @@ function buildBook(config, generatedSections) {
       prompt: section.instructions || "",
       sampleJson: JSON.stringify(section.sampleJson || {}, null, 2),
       pageCount: generated.pageCount,
+      minPlayedNotes: section.minPlayedNotes,
       pdfSettings: generated.pdfSettings,
       pages,
     };
@@ -906,6 +1082,7 @@ function buildBook(config, generatedSections) {
     edition: Number((config.book && config.book.edition) || 1),
     contentVersion: Number((config.book && config.book.contentVersion) || 1),
     updatedAt: now,
+    globalAiRules: (config.generation && config.generation.bookGlobalRules) || "",
     pdfSettings: bookSettings,
     sections,
     pages,
@@ -941,6 +1118,7 @@ function createManifest(book) {
     edition: book.edition,
     contentVersion: book.contentVersion,
     updatedAt: book.updatedAt,
+    globalAiRules: book.globalAiRules,
     pdfSettings: book.pdfSettings,
     sections: book.sections.map((section) => ({
       id: section.id,
@@ -948,6 +1126,7 @@ function createManifest(book) {
       prompt: section.prompt,
       sampleJson: section.sampleJson,
       pageCount: section.pageCount,
+      minPlayedNotes: section.minPlayedNotes,
       pdfSettings: section.pdfSettings,
       pages: section.pages.map(createPageManifest),
     })),

@@ -7,6 +7,7 @@ export const BOOK_SLUG = "snare-drum-book";
 export const BOOK_TITLE = "Snare Drum Book";
 export const BOOK_EDITION = 1;
 export const BOOK_CONTENT_VERSION = 3;
+export const DEFAULT_GLOBAL_AI_RULES = "";
 export const DEFAULT_BOOK_SECTIONS = [
   {
     id: "eighth-notes",
@@ -46,6 +47,27 @@ export function normalizeSectionPageCount(value, fallback = 1) {
   return Number.isInteger(normalizedFallback) && normalizedFallback > 0
     ? normalizedFallback
     : 1;
+}
+
+export function normalizeSectionMinPlayedNotes(value, fallback = 0) {
+  const parsed = Number.parseInt(value, 10);
+  const normalizedFallback = Number.parseInt(fallback, 10);
+
+  if (Number.isInteger(parsed) && parsed >= 0) {
+    return parsed;
+  }
+
+  return Number.isInteger(normalizedFallback) && normalizedFallback >= 0
+    ? normalizedFallback
+    : 0;
+}
+
+export function normalizeGlobalAiRules(value) {
+  if (Array.isArray(value)) {
+    return value.filter(Boolean).join("\n");
+  }
+
+  return typeof value === "string" ? value : DEFAULT_GLOBAL_AI_RULES;
 }
 
 export function normalizePdfSettings(pdfSettings = {}) {
@@ -137,6 +159,9 @@ export function createBookSection(sectionNumber = 1, overrides = {}, pdfSettings
       overrides.pageCount ?? template.pageCount,
       overrides.pages?.length || template.pages?.length || 1
     ),
+    minPlayedNotes: normalizeSectionMinPlayedNotes(
+      overrides.minPlayedNotes ?? template.minPlayedNotes
+    ),
     pdfSettings: normalizedSettings,
     pages: overrides.pages || [createBlankPage(1, normalizedSettings)],
   };
@@ -150,6 +175,7 @@ export function createDefaultBook() {
     edition: BOOK_EDITION,
     contentVersion: BOOK_CONTENT_VERSION,
     updatedAt: null,
+    globalAiRules: DEFAULT_GLOBAL_AI_RULES,
     pdfSettings: normalizePdfSettings(),
     sections: DEFAULT_BOOK_SECTIONS.map((section, index) =>
       createBookSection(index + 1, section, normalizePdfSettings())
@@ -200,6 +226,7 @@ export function normalizeBook(rawBook) {
     edition: Number(rawBook.edition || BOOK_EDITION),
     contentVersion: Number(rawBook.contentVersion || BOOK_CONTENT_VERSION),
     updatedAt: rawBook.updatedAt || null,
+    globalAiRules: normalizeGlobalAiRules(rawBook.globalAiRules),
     pdfSettings,
     sections,
     pages,
@@ -250,6 +277,7 @@ function normalizeBookSections(rawBook, pdfSettings) {
       prompt: section.prompt || "",
       sampleJson: normalizeSectionSampleJson(section.sampleJson),
       pageCount: normalizeSectionPageCount(section.pageCount, normalizedPages.length),
+      minPlayedNotes: normalizeSectionMinPlayedNotes(section.minPlayedNotes),
       pdfSettings: sectionPdfSettings,
       pages: normalizedPages.map((page, sectionPageIndex) => {
         const pageNumber = globalPageNumber;

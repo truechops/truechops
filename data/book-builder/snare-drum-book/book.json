@@ -4,7 +4,8 @@
   "title": "Snare Drum Book",
   "edition": 1,
   "contentVersion": 3,
-  "updatedAt": "2026-07-12T22:03:02.979Z",
+  "updatedAt": "2026-07-18T15:21:23.710Z",
+  "globalAiRules": "Prefer the longest rest you can use over a bunch of smaller rests. so, prefer quarter rest over two eight note rests, etc. Utilize dotted eighth notes when relevant. \n\nDo not put a diddle before a flam on sequential sixteenths\nDo not put a cheese before a flam on sequential sixteenths.\nDo not put two cheese in a row on sequential sixteenths.\ndont put a diddle before a cheese",
   "pdfSettings": {
     "columns": 2,
     "rows": 12,
@@ -19,6 +20,7 @@
       "prompt": "Use eighth-note rhythms only. Notes only; no accents or flams.",
       "sampleJson": "{\n  \"title\": \"Eighths\",\n  \"tempo\": 90,\n  \"score\": {\n    \"parts\": {\n      \"snare\": {\n        \"enabled\": true\n      }\n    },\n    \"measures\": [\n      {\n        \"timeSig\": {\n          \"num\": 4,\n          \"type\": 4\n        },\n        \"parts\": [\n          {\n            \"instrument\": \"snare\",\n            \"voices\": [\n              {\n                \"notes\": [\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [],\n                    \"duration\": 8,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [],\n                    \"duration\": 4,\n                    \"dots\": 0,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5\n                  }\n                ],\n                \"tuplets\": []\n              }\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}",
       "pageCount": 5,
+      "minPlayedNotes": 1,
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -32,7 +34,7 @@
           "sectionId": "imported-pages",
           "sectionTitle": "Eighths",
           "sectionPageNumber": 1,
-          "title": "Eighths 1",
+          "title": "Page 1",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -312,7 +314,7 @@
           "sectionId": "imported-pages",
           "sectionTitle": "Eighths",
           "sectionPageNumber": 2,
-          "title": "Eighths 2",
+          "title": "Page 2",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -592,7 +594,7 @@
           "sectionId": "imported-pages",
           "sectionTitle": "Eighths",
           "sectionPageNumber": 3,
-          "title": "Eighths 3",
+          "title": "Page 3",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -872,7 +874,7 @@
           "sectionId": "imported-pages",
           "sectionTitle": "Eighths",
           "sectionPageNumber": 4,
-          "title": "Eighths 4",
+          "title": "Page 4",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -1152,7 +1154,7 @@
           "sectionId": "imported-pages",
           "sectionTitle": "Eighths",
           "sectionPageNumber": 5,
-          "title": "Eighths 5",
+          "title": "Page 5",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -1435,6 +1437,7 @@
       "prompt": "Use eighth-note rhythms with random accents. No flams.",
       "sampleJson": "{\n  \"title\": \"Eighths with Accents\",\n  \"tempo\": 90,\n  \"score\": {\n    \"parts\": {\n      \"snare\": {\n        \"enabled\": true\n      }\n    },\n    \"measures\": [\n      {\n        \"timeSig\": {\n          \"num\": 4,\n          \"type\": 4\n        },\n        \"parts\": [\n          {\n            \"instrument\": \"snare\",\n            \"voices\": [\n              {\n                \"notes\": [\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"a\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [],\n                    \"duration\": 8,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [],\n                    \"duration\": 4,\n                    \"dots\": 0,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"a\"\n                  }\n                ],\n                \"tuplets\": []\n              }\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}",
       "pageCount": 5,
+      "minPlayedNotes": 1,
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -1448,7 +1451,7 @@
           "sectionId": "section-2",
           "sectionTitle": "Eighths with Accents",
           "sectionPageNumber": 1,
-          "title": "Eighths with Accents 1",
+          "title": "Page 1",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -1728,7 +1731,7 @@
           "sectionId": "section-2",
           "sectionTitle": "Eighths with Accents",
           "sectionPageNumber": 2,
-          "title": "Eighths with Accents 2",
+          "title": "Page 2",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -2008,7 +2011,7 @@
           "sectionId": "section-2",
           "sectionTitle": "Eighths with Accents",
           "sectionPageNumber": 3,
-          "title": "Eighths with Accents 3",
+          "title": "Page 3",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -2288,7 +2291,7 @@
           "sectionId": "section-2",
           "sectionTitle": "Eighths with Accents",
           "sectionPageNumber": 4,
-          "title": "Eighths with Accents 4",
+          "title": "Page 4",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -2568,7 +2571,7 @@
           "sectionId": "section-2",
           "sectionTitle": "Eighths with Accents",
           "sectionPageNumber": 5,
-          "title": "Eighths with Accents 5",
+          "title": "Page 5",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -2851,6 +2854,7 @@
       "prompt": "Use eighth-note rhythms with random flams. No accents.",
       "sampleJson": "{\n  \"title\": \"Eighths with flams\",\n  \"tempo\": 90,\n  \"score\": {\n    \"parts\": {\n      \"snare\": {\n        \"enabled\": true\n      }\n    },\n    \"measures\": [\n      {\n        \"timeSig\": {\n          \"num\": 4,\n          \"type\": 4\n        },\n        \"parts\": [\n          {\n            \"instrument\": \"snare\",\n            \"voices\": [\n              {\n                \"notes\": [\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"f\"\n                  },\n                  {\n                    \"notes\": [],\n                    \"duration\": 8,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [],\n                    \"duration\": 4,\n                    \"dots\": 0,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"f\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5\n                  }\n                ],\n                \"tuplets\": []\n              }\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}",
       "pageCount": 5,
+      "minPlayedNotes": 1,
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -2864,7 +2868,7 @@
           "sectionId": "section-3",
           "sectionTitle": "Eighths with flams",
           "sectionPageNumber": 1,
-          "title": "Eighths with flams 1",
+          "title": "Page 1",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -3144,7 +3148,7 @@
           "sectionId": "section-3",
           "sectionTitle": "Eighths with flams",
           "sectionPageNumber": 2,
-          "title": "Eighths with flams 2",
+          "title": "Page 2",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -3424,7 +3428,7 @@
           "sectionId": "section-3",
           "sectionTitle": "Eighths with flams",
           "sectionPageNumber": 3,
-          "title": "Eighths with flams 3",
+          "title": "Page 3",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -3704,7 +3708,7 @@
           "sectionId": "section-3",
           "sectionTitle": "Eighths with flams",
           "sectionPageNumber": 4,
-          "title": "Eighths with flams 4",
+          "title": "Page 4",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -3984,7 +3988,7 @@
           "sectionId": "section-3",
           "sectionTitle": "Eighths with flams",
           "sectionPageNumber": 5,
-          "title": "Eighths with flams 5",
+          "title": "Page 5",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -4267,6 +4271,7 @@
       "prompt": "Use eighth-note rhythms with random flams and accents.",
       "sampleJson": "{\n  \"title\": \"Eights with Flams and Accents\",\n  \"tempo\": 90,\n  \"score\": {\n    \"parts\": {\n      \"snare\": {\n        \"enabled\": true\n      }\n    },\n    \"measures\": [\n      {\n        \"timeSig\": {\n          \"num\": 4,\n          \"type\": 4\n        },\n        \"parts\": [\n          {\n            \"instrument\": \"snare\",\n            \"voices\": [\n              {\n                \"notes\": [\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"f\"\n                  },\n                  {\n                    \"notes\": [],\n                    \"duration\": 8,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [],\n                    \"duration\": 4,\n                    \"dots\": 0,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"f\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"la\"\n                  }\n                ],\n                \"tuplets\": []\n              }\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}",
       "pageCount": 5,
+      "minPlayedNotes": 1,
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -4280,7 +4285,7 @@
           "sectionId": "section-4",
           "sectionTitle": "Eights with Flams and Accents",
           "sectionPageNumber": 1,
-          "title": "Eights with Flams and Accents 1",
+          "title": "Page 1",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -4560,7 +4565,7 @@
           "sectionId": "section-4",
           "sectionTitle": "Eights with Flams and Accents",
           "sectionPageNumber": 2,
-          "title": "Eights with Flams and Accents 2",
+          "title": "Page 2",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -4840,7 +4845,7 @@
           "sectionId": "section-4",
           "sectionTitle": "Eights with Flams and Accents",
           "sectionPageNumber": 3,
-          "title": "Eights with Flams and Accents 3",
+          "title": "Page 3",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -5120,7 +5125,7 @@
           "sectionId": "section-4",
           "sectionTitle": "Eights with Flams and Accents",
           "sectionPageNumber": 4,
-          "title": "Eights with Flams and Accents 4",
+          "title": "Page 4",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -5400,7 +5405,7 @@
           "sectionId": "section-4",
           "sectionTitle": "Eights with Flams and Accents",
           "sectionPageNumber": 5,
-          "title": "Eights with Flams and Accents 5",
+          "title": "Page 5",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -5680,9 +5685,10 @@
     {
       "id": "section-5",
       "title": "Sixteenths",
-      "prompt": "Exercises with random sixteenth notes. No ornaments. \n\nPrefer the longest rest you can use over a bunch of smaller rests. so, prefer quarter rest over two eight note rests, etc. Utilize dotted eighth notes when relevant. ",
+      "prompt": "Exercises with random sixteenth notes. No ornaments. ",
       "sampleJson": "{\n  \"title\": \"Sixteenths\",\n  \"tempo\": 90,\n  \"score\": {\n    \"parts\": {\n      \"snare\": {\n        \"enabled\": true\n      }\n    },\n    \"measures\": [\n      {\n        \"timeSig\": {\n          \"num\": \"4\",\n          \"type\": \"4\"\n        },\n        \"parts\": [\n          {\n            \"instrument\": \"snare\",\n            \"voices\": [\n              {\n                \"notes\": [\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5,\n                    \"dots\": 1\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 4,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"lc\"\n                  }\n                ],\n                \"tuplets\": []\n              }\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}",
       "pageCount": 5,
+      "minPlayedNotes": 4,
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -5696,7 +5702,7 @@
           "sectionId": "section-5",
           "sectionTitle": "Sixteenths",
           "sectionPageNumber": 1,
-          "title": "Sixteenths 1",
+          "title": "Page 1",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -5976,7 +5982,7 @@
           "sectionId": "section-5",
           "sectionTitle": "Sixteenths",
           "sectionPageNumber": 2,
-          "title": "Sixteenths 2",
+          "title": "Page 2",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -6256,7 +6262,7 @@
           "sectionId": "section-5",
           "sectionTitle": "Sixteenths",
           "sectionPageNumber": 3,
-          "title": "Sixteenths 3",
+          "title": "Page 3",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -6536,7 +6542,7 @@
           "sectionId": "section-5",
           "sectionTitle": "Sixteenths",
           "sectionPageNumber": 4,
-          "title": "Sixteenths 4",
+          "title": "Page 4",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -6816,7 +6822,7 @@
           "sectionId": "section-5",
           "sectionTitle": "Sixteenths",
           "sectionPageNumber": 5,
-          "title": "Sixteenths 5",
+          "title": "Page 5",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -7096,9 +7102,10 @@
     {
       "id": "section-6",
       "title": "Sixteenths with stickings",
-      "prompt": "Exercises with random sixteenth notes and stickings\n\nPrefer the longest rest you can use over a bunch of smaller rests. so, prefer quarter rest over two eight note rests, etc. Utilize dotted eighth notes when relevant. ",
+      "prompt": "Exercises with random sixteenth notes and stickings",
       "sampleJson": "{\n  \"title\": \"Sixteenths with stickings\",\n  \"tempo\": 90,\n  \"score\": {\n    \"parts\": {\n      \"snare\": {\n        \"enabled\": true\n      }\n    },\n    \"measures\": [\n      {\n        \"timeSig\": {\n          \"num\": \"4\",\n          \"type\": \"4\"\n        },\n        \"parts\": [\n          {\n            \"instrument\": \"snare\",\n            \"voices\": [\n              {\n                \"notes\": [\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"r\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"r\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"l\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"l\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"r\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"r\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5,\n                    \"dots\": 1,\n                    \"ornaments\": \"l\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"l\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 4,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"l\"\n                  }\n                ],\n                \"tuplets\": []\n              }\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}",
       "pageCount": 5,
+      "minPlayedNotes": 14,
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -7112,7 +7119,7 @@
           "sectionId": "section-6",
           "sectionTitle": "Sixteenths with stickings",
           "sectionPageNumber": 1,
-          "title": "Sixteenths with stickings 1",
+          "title": "Page 1",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -7392,7 +7399,7 @@
           "sectionId": "section-6",
           "sectionTitle": "Sixteenths with stickings",
           "sectionPageNumber": 2,
-          "title": "Sixteenths with stickings 2",
+          "title": "Page 2",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -7672,7 +7679,7 @@
           "sectionId": "section-6",
           "sectionTitle": "Sixteenths with stickings",
           "sectionPageNumber": 3,
-          "title": "Sixteenths with stickings 3",
+          "title": "Page 3",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -7952,7 +7959,7 @@
           "sectionId": "section-6",
           "sectionTitle": "Sixteenths with stickings",
           "sectionPageNumber": 4,
-          "title": "Sixteenths with stickings 4",
+          "title": "Page 4",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -8232,7 +8239,7 @@
           "sectionId": "section-6",
           "sectionTitle": "Sixteenths with stickings",
           "sectionPageNumber": 5,
-          "title": "Sixteenths with stickings 5",
+          "title": "Page 5",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -8512,9 +8519,10 @@
     {
       "id": "section-7",
       "title": "Sixteenths with accents and stickings",
-      "prompt": "Exercises with random sixteenth notes and stickings and accents\n\nPrefer the longest rest you can use over a bunch of smaller rests. so, prefer quarter rest over two eight note rests, etc. Utilize dotted eighth notes when relevant. ",
+      "prompt": "Exercises with random sixteenth notes and stickings and accents",
       "sampleJson": "{\n  \"title\": \"Sixteenths with accents and stickings\",\n  \"tempo\": 90,\n  \"score\": {\n    \"parts\": {\n      \"snare\": {\n        \"enabled\": true\n      }\n    },\n    \"measures\": [\n      {\n        \"timeSig\": {\n          \"num\": \"4\",\n          \"type\": \"4\"\n        },\n        \"parts\": [\n          {\n            \"instrument\": \"snare\",\n            \"voices\": [\n              {\n                \"notes\": [\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"r\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"r\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"la\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"l\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"r\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"ra\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5,\n                    \"dots\": 1,\n                    \"ornaments\": \"l\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"l\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 4,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"la\"\n                  }\n                ],\n                \"tuplets\": []\n              }\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}",
       "pageCount": 5,
+      "minPlayedNotes": 14,
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -8528,7 +8536,7 @@
           "sectionId": "section-7",
           "sectionTitle": "Sixteenths with accents and stickings",
           "sectionPageNumber": 1,
-          "title": "Sixteenths with accents and stickings 1",
+          "title": "Page 1",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -8808,7 +8816,7 @@
           "sectionId": "section-7",
           "sectionTitle": "Sixteenths with accents and stickings",
           "sectionPageNumber": 2,
-          "title": "Sixteenths with accents and stickings 2",
+          "title": "Page 2",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -9088,7 +9096,7 @@
           "sectionId": "section-7",
           "sectionTitle": "Sixteenths with accents and stickings",
           "sectionPageNumber": 3,
-          "title": "Sixteenths with accents and stickings 3",
+          "title": "Page 3",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -9368,7 +9376,7 @@
           "sectionId": "section-7",
           "sectionTitle": "Sixteenths with accents and stickings",
           "sectionPageNumber": 4,
-          "title": "Sixteenths with accents and stickings 4",
+          "title": "Page 4",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -9648,7 +9656,7 @@
           "sectionId": "section-7",
           "sectionTitle": "Sixteenths with accents and stickings",
           "sectionPageNumber": 5,
-          "title": "Sixteenths with accents and stickings 5",
+          "title": "Page 5",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -9928,9 +9936,10 @@
     {
       "id": "section-8",
       "title": "Sixteenths with accents and flams and stickings",
-      "prompt": "Exercises with random sixteenth notes and stickings and accents and flams.\n\nPrefer the longest rest you can use over a bunch of smaller rests. so, prefer quarter rest over two eight note rests, etc. Utilize dotted eighth notes when relevant. ",
+      "prompt": "Exercises with random sixteenth notes and stickings and accents and flams.",
       "sampleJson": "{\n  \"title\": \"Section 8\",\n  \"tempo\": 90,\n  \"score\": {\n    \"parts\": {\n      \"snare\": {\n        \"enabled\": true\n      }\n    },\n    \"measures\": [\n      {\n        \"timeSig\": {\n          \"num\": \"4\",\n          \"type\": \"4\"\n        },\n        \"parts\": [\n          {\n            \"instrument\": \"snare\",\n            \"voices\": [\n              {\n                \"notes\": [\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"r\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"r\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"la\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"lf\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"r\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"ra\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 8,\n                    \"velocity\": 0.5,\n                    \"dots\": 1,\n                    \"ornaments\": \"l\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"l\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 4,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"fa\"\n                  }\n                ],\n                \"tuplets\": []\n              }\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}",
       "pageCount": 5,
+      "minPlayedNotes": 14,
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -9944,7 +9953,7 @@
           "sectionId": "section-8",
           "sectionTitle": "Sixteenths with accents and flams and stickings",
           "sectionPageNumber": 1,
-          "title": "Sixteenths with accents and flams and stickings 1",
+          "title": "Page 1",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -10224,7 +10233,7 @@
           "sectionId": "section-8",
           "sectionTitle": "Sixteenths with accents and flams and stickings",
           "sectionPageNumber": 2,
-          "title": "Sixteenths with accents and flams and stickings 2",
+          "title": "Page 2",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -10504,7 +10513,7 @@
           "sectionId": "section-8",
           "sectionTitle": "Sixteenths with accents and flams and stickings",
           "sectionPageNumber": 3,
-          "title": "Sixteenths with accents and flams and stickings 3",
+          "title": "Page 3",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -10784,7 +10793,7 @@
           "sectionId": "section-8",
           "sectionTitle": "Sixteenths with accents and flams and stickings",
           "sectionPageNumber": 4,
-          "title": "Sixteenths with accents and flams and stickings 4",
+          "title": "Page 4",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -11064,7 +11073,7 @@
           "sectionId": "section-8",
           "sectionTitle": "Sixteenths with accents and flams and stickings",
           "sectionPageNumber": 5,
-          "title": "Sixteenths with accents and flams and stickings 5",
+          "title": "Page 5",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -11344,9 +11353,10 @@
     {
       "id": "section-9",
       "title": "Sixteenths with accents and flams and stickings and diddles",
-      "prompt": "Exercises with random sixteenth notes and stickings and accents and flams and diddles\n\nPrefer the longest rest you can use over a bunch of smaller rests. so, prefer quarter rest over two eight note rests, etc. Utilize dotted eighth notes when relevant. \n\nDo not put a diddle before a flam.",
+      "prompt": "Exercises with random sixteenth notes and stickings and accents and flams and diddles",
       "sampleJson": "{\n  \"title\": \"Sixteenths with accents and flams and stickings and diddles\",\n  \"tempo\": 90,\n  \"score\": {\n    \"parts\": {\n      \"snare\": {\n        \"enabled\": true\n      }\n    },\n    \"measures\": [\n      {\n        \"timeSig\": {\n          \"num\": \"4\",\n          \"type\": \"4\"\n        },\n        \"parts\": [\n          {\n            \"instrument\": \"snare\",\n            \"voices\": [\n              {\n                \"notes\": [\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"ra\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"r\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"l\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"la\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"r\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"r\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"lf\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"ld\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"r\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"lf\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"rd\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"rd\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"ld\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"rd\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"a\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"lc\"\n                  }\n                ],\n                \"tuplets\": []\n              }\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}",
       "pageCount": 5,
+      "minPlayedNotes": 14,
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -11360,7 +11370,7 @@
           "sectionId": "section-9",
           "sectionTitle": "Sixteenths with accents and flams and stickings and diddles",
           "sectionPageNumber": 1,
-          "title": "Sixteenths with accents and flams and stickings and diddles 1",
+          "title": "Page 1",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -11640,7 +11650,7 @@
           "sectionId": "section-9",
           "sectionTitle": "Sixteenths with accents and flams and stickings and diddles",
           "sectionPageNumber": 2,
-          "title": "Sixteenths with accents and flams and stickings and diddles 2",
+          "title": "Page 2",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -11920,7 +11930,7 @@
           "sectionId": "section-9",
           "sectionTitle": "Sixteenths with accents and flams and stickings and diddles",
           "sectionPageNumber": 3,
-          "title": "Sixteenths with accents and flams and stickings and diddles 3",
+          "title": "Page 3",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -12200,7 +12210,7 @@
           "sectionId": "section-9",
           "sectionTitle": "Sixteenths with accents and flams and stickings and diddles",
           "sectionPageNumber": 4,
-          "title": "Sixteenths with accents and flams and stickings and diddles 4",
+          "title": "Page 4",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -12480,7 +12490,7 @@
           "sectionId": "section-9",
           "sectionTitle": "Sixteenths with accents and flams and stickings and diddles",
           "sectionPageNumber": 5,
-          "title": "Sixteenths with accents and flams and stickings and diddles 5",
+          "title": "Page 5",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -12760,9 +12770,10 @@
     {
       "id": "section-10",
       "title": "Sixteenths with all the stuff",
-      "prompt": "Exercises with random sixteenth notes and stickings and accents and flams and diddles and cheese\n\nPrefer the longest rest you can use over a bunch of smaller rests. so, prefer quarter rest over two eight note rests, etc. Utilize dotted eighth notes when relevant. \n\nDo not put a diddle before a flam on sequential sixteenths\nDo not put a cheese before a flam on sequential sixteenths.\nDo not put two cheese in a row on sequential sixteenths.",
+      "prompt": "Exercises with random sixteenth notes and stickings and accents and flams and diddles and cheese\n\n",
       "sampleJson": "{\n  \"title\": \"Sixteenths with all the stuff\",\n  \"tempo\": 90,\n  \"score\": {\n    \"parts\": {\n      \"snare\": {\n        \"enabled\": true\n      }\n    },\n    \"measures\": [\n      {\n        \"timeSig\": {\n          \"num\": \"4\",\n          \"type\": \"4\"\n        },\n        \"parts\": [\n          {\n            \"instrument\": \"snare\",\n            \"voices\": [\n              {\n                \"notes\": [\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"ra\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"r\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"l\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"lac\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"r\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"r\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"lf\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"ld\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"r\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"lf\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"rd\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"rd\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"ld\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"rd\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"a\"\n                  },\n                  {\n                    \"notes\": [\n                      \"C5\"\n                    ],\n                    \"duration\": 16,\n                    \"velocity\": 0.5,\n                    \"ornaments\": \"cl\"\n                  }\n                ],\n                \"tuplets\": []\n              }\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}",
       "pageCount": 5,
+      "minPlayedNotes": 14,
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -12776,7 +12787,7 @@
           "sectionId": "section-10",
           "sectionTitle": "Sixteenths with all the stuff",
           "sectionPageNumber": 1,
-          "title": "Sixteenths with all the stuff 1",
+          "title": "Page 1",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -13056,7 +13067,7 @@
           "sectionId": "section-10",
           "sectionTitle": "Sixteenths with all the stuff",
           "sectionPageNumber": 2,
-          "title": "Sixteenths with all the stuff 2",
+          "title": "Page 2",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -13336,7 +13347,7 @@
           "sectionId": "section-10",
           "sectionTitle": "Sixteenths with all the stuff",
           "sectionPageNumber": 3,
-          "title": "Sixteenths with all the stuff 3",
+          "title": "Page 3",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -13616,7 +13627,7 @@
           "sectionId": "section-10",
           "sectionTitle": "Sixteenths with all the stuff",
           "sectionPageNumber": 4,
-          "title": "Sixteenths with all the stuff 4",
+          "title": "Page 4",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -13896,7 +13907,7 @@
           "sectionId": "section-10",
           "sectionTitle": "Sixteenths with all the stuff",
           "sectionPageNumber": 5,
-          "title": "Sixteenths with all the stuff 5",
+          "title": "Page 5",
           "pdfSettings": {
             "columns": 2,
             "rows": 12,
@@ -14180,7 +14191,7 @@
       "sectionId": "imported-pages",
       "sectionTitle": "Eighths",
       "sectionPageNumber": 1,
-      "title": "Eighths 1",
+      "title": "Page 1",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -14460,7 +14471,7 @@
       "sectionId": "imported-pages",
       "sectionTitle": "Eighths",
       "sectionPageNumber": 2,
-      "title": "Eighths 2",
+      "title": "Page 2",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -14740,7 +14751,7 @@
       "sectionId": "imported-pages",
       "sectionTitle": "Eighths",
       "sectionPageNumber": 3,
-      "title": "Eighths 3",
+      "title": "Page 3",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -15020,7 +15031,7 @@
       "sectionId": "imported-pages",
       "sectionTitle": "Eighths",
       "sectionPageNumber": 4,
-      "title": "Eighths 4",
+      "title": "Page 4",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -15300,7 +15311,7 @@
       "sectionId": "imported-pages",
       "sectionTitle": "Eighths",
       "sectionPageNumber": 5,
-      "title": "Eighths 5",
+      "title": "Page 5",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -15580,7 +15591,7 @@
       "sectionId": "section-2",
       "sectionTitle": "Eighths with Accents",
       "sectionPageNumber": 1,
-      "title": "Eighths with Accents 1",
+      "title": "Page 1",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -15860,7 +15871,7 @@
       "sectionId": "section-2",
       "sectionTitle": "Eighths with Accents",
       "sectionPageNumber": 2,
-      "title": "Eighths with Accents 2",
+      "title": "Page 2",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -16140,7 +16151,7 @@
       "sectionId": "section-2",
       "sectionTitle": "Eighths with Accents",
       "sectionPageNumber": 3,
-      "title": "Eighths with Accents 3",
+      "title": "Page 3",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -16420,7 +16431,7 @@
       "sectionId": "section-2",
       "sectionTitle": "Eighths with Accents",
       "sectionPageNumber": 4,
-      "title": "Eighths with Accents 4",
+      "title": "Page 4",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -16700,7 +16711,7 @@
       "sectionId": "section-2",
       "sectionTitle": "Eighths with Accents",
       "sectionPageNumber": 5,
-      "title": "Eighths with Accents 5",
+      "title": "Page 5",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -16980,7 +16991,7 @@
       "sectionId": "section-3",
       "sectionTitle": "Eighths with flams",
       "sectionPageNumber": 1,
-      "title": "Eighths with flams 1",
+      "title": "Page 1",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -17260,7 +17271,7 @@
       "sectionId": "section-3",
       "sectionTitle": "Eighths with flams",
       "sectionPageNumber": 2,
-      "title": "Eighths with flams 2",
+      "title": "Page 2",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -17540,7 +17551,7 @@
       "sectionId": "section-3",
       "sectionTitle": "Eighths with flams",
       "sectionPageNumber": 3,
-      "title": "Eighths with flams 3",
+      "title": "Page 3",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -17820,7 +17831,7 @@
       "sectionId": "section-3",
       "sectionTitle": "Eighths with flams",
       "sectionPageNumber": 4,
-      "title": "Eighths with flams 4",
+      "title": "Page 4",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -18100,7 +18111,7 @@
       "sectionId": "section-3",
       "sectionTitle": "Eighths with flams",
       "sectionPageNumber": 5,
-      "title": "Eighths with flams 5",
+      "title": "Page 5",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -18380,7 +18391,7 @@
       "sectionId": "section-4",
       "sectionTitle": "Eights with Flams and Accents",
       "sectionPageNumber": 1,
-      "title": "Eights with Flams and Accents 1",
+      "title": "Page 1",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -18660,7 +18671,7 @@
       "sectionId": "section-4",
       "sectionTitle": "Eights with Flams and Accents",
       "sectionPageNumber": 2,
-      "title": "Eights with Flams and Accents 2",
+      "title": "Page 2",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -18940,7 +18951,7 @@
       "sectionId": "section-4",
       "sectionTitle": "Eights with Flams and Accents",
       "sectionPageNumber": 3,
-      "title": "Eights with Flams and Accents 3",
+      "title": "Page 3",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -19220,7 +19231,7 @@
       "sectionId": "section-4",
       "sectionTitle": "Eights with Flams and Accents",
       "sectionPageNumber": 4,
-      "title": "Eights with Flams and Accents 4",
+      "title": "Page 4",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -19500,7 +19511,7 @@
       "sectionId": "section-4",
       "sectionTitle": "Eights with Flams and Accents",
       "sectionPageNumber": 5,
-      "title": "Eights with Flams and Accents 5",
+      "title": "Page 5",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -19780,7 +19791,7 @@
       "sectionId": "section-5",
       "sectionTitle": "Sixteenths",
       "sectionPageNumber": 1,
-      "title": "Sixteenths 1",
+      "title": "Page 1",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -20060,7 +20071,7 @@
       "sectionId": "section-5",
       "sectionTitle": "Sixteenths",
       "sectionPageNumber": 2,
-      "title": "Sixteenths 2",
+      "title": "Page 2",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -20340,7 +20351,7 @@
       "sectionId": "section-5",
       "sectionTitle": "Sixteenths",
       "sectionPageNumber": 3,
-      "title": "Sixteenths 3",
+      "title": "Page 3",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -20620,7 +20631,7 @@
       "sectionId": "section-5",
       "sectionTitle": "Sixteenths",
       "sectionPageNumber": 4,
-      "title": "Sixteenths 4",
+      "title": "Page 4",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -20900,7 +20911,7 @@
       "sectionId": "section-5",
       "sectionTitle": "Sixteenths",
       "sectionPageNumber": 5,
-      "title": "Sixteenths 5",
+      "title": "Page 5",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -21180,7 +21191,7 @@
       "sectionId": "section-6",
       "sectionTitle": "Sixteenths with stickings",
       "sectionPageNumber": 1,
-      "title": "Sixteenths with stickings 1",
+      "title": "Page 1",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -21460,7 +21471,7 @@
       "sectionId": "section-6",
       "sectionTitle": "Sixteenths with stickings",
       "sectionPageNumber": 2,
-      "title": "Sixteenths with stickings 2",
+      "title": "Page 2",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -21740,7 +21751,7 @@
       "sectionId": "section-6",
       "sectionTitle": "Sixteenths with stickings",
       "sectionPageNumber": 3,
-      "title": "Sixteenths with stickings 3",
+      "title": "Page 3",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -22020,7 +22031,7 @@
       "sectionId": "section-6",
       "sectionTitle": "Sixteenths with stickings",
       "sectionPageNumber": 4,
-      "title": "Sixteenths with stickings 4",
+      "title": "Page 4",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -22300,7 +22311,7 @@
       "sectionId": "section-6",
       "sectionTitle": "Sixteenths with stickings",
       "sectionPageNumber": 5,
-      "title": "Sixteenths with stickings 5",
+      "title": "Page 5",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -22580,7 +22591,7 @@
       "sectionId": "section-7",
       "sectionTitle": "Sixteenths with accents and stickings",
       "sectionPageNumber": 1,
-      "title": "Sixteenths with accents and stickings 1",
+      "title": "Page 1",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -22860,7 +22871,7 @@
       "sectionId": "section-7",
       "sectionTitle": "Sixteenths with accents and stickings",
       "sectionPageNumber": 2,
-      "title": "Sixteenths with accents and stickings 2",
+      "title": "Page 2",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -23140,7 +23151,7 @@
       "sectionId": "section-7",
       "sectionTitle": "Sixteenths with accents and stickings",
       "sectionPageNumber": 3,
-      "title": "Sixteenths with accents and stickings 3",
+      "title": "Page 3",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -23420,7 +23431,7 @@
       "sectionId": "section-7",
       "sectionTitle": "Sixteenths with accents and stickings",
       "sectionPageNumber": 4,
-      "title": "Sixteenths with accents and stickings 4",
+      "title": "Page 4",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -23700,7 +23711,7 @@
       "sectionId": "section-7",
       "sectionTitle": "Sixteenths with accents and stickings",
       "sectionPageNumber": 5,
-      "title": "Sixteenths with accents and stickings 5",
+      "title": "Page 5",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -23980,7 +23991,7 @@
       "sectionId": "section-8",
       "sectionTitle": "Sixteenths with accents and flams and stickings",
       "sectionPageNumber": 1,
-      "title": "Sixteenths with accents and flams and stickings 1",
+      "title": "Page 1",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -24260,7 +24271,7 @@
       "sectionId": "section-8",
       "sectionTitle": "Sixteenths with accents and flams and stickings",
       "sectionPageNumber": 2,
-      "title": "Sixteenths with accents and flams and stickings 2",
+      "title": "Page 2",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -24540,7 +24551,7 @@
       "sectionId": "section-8",
       "sectionTitle": "Sixteenths with accents and flams and stickings",
       "sectionPageNumber": 3,
-      "title": "Sixteenths with accents and flams and stickings 3",
+      "title": "Page 3",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -24820,7 +24831,7 @@
       "sectionId": "section-8",
       "sectionTitle": "Sixteenths with accents and flams and stickings",
       "sectionPageNumber": 4,
-      "title": "Sixteenths with accents and flams and stickings 4",
+      "title": "Page 4",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -25100,7 +25111,7 @@
       "sectionId": "section-8",
       "sectionTitle": "Sixteenths with accents and flams and stickings",
       "sectionPageNumber": 5,
-      "title": "Sixteenths with accents and flams and stickings 5",
+      "title": "Page 5",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -25380,7 +25391,7 @@
       "sectionId": "section-9",
       "sectionTitle": "Sixteenths with accents and flams and stickings and diddles",
       "sectionPageNumber": 1,
-      "title": "Sixteenths with accents and flams and stickings and diddles 1",
+      "title": "Page 1",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -25660,7 +25671,7 @@
       "sectionId": "section-9",
       "sectionTitle": "Sixteenths with accents and flams and stickings and diddles",
       "sectionPageNumber": 2,
-      "title": "Sixteenths with accents and flams and stickings and diddles 2",
+      "title": "Page 2",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -25940,7 +25951,7 @@
       "sectionId": "section-9",
       "sectionTitle": "Sixteenths with accents and flams and stickings and diddles",
       "sectionPageNumber": 3,
-      "title": "Sixteenths with accents and flams and stickings and diddles 3",
+      "title": "Page 3",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -26220,7 +26231,7 @@
       "sectionId": "section-9",
       "sectionTitle": "Sixteenths with accents and flams and stickings and diddles",
       "sectionPageNumber": 4,
-      "title": "Sixteenths with accents and flams and stickings and diddles 4",
+      "title": "Page 4",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -26500,7 +26511,7 @@
       "sectionId": "section-9",
       "sectionTitle": "Sixteenths with accents and flams and stickings and diddles",
       "sectionPageNumber": 5,
-      "title": "Sixteenths with accents and flams and stickings and diddles 5",
+      "title": "Page 5",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -26780,7 +26791,7 @@
       "sectionId": "section-10",
       "sectionTitle": "Sixteenths with all the stuff",
       "sectionPageNumber": 1,
-      "title": "Sixteenths with all the stuff 1",
+      "title": "Page 1",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -27060,7 +27071,7 @@
       "sectionId": "section-10",
       "sectionTitle": "Sixteenths with all the stuff",
       "sectionPageNumber": 2,
-      "title": "Sixteenths with all the stuff 2",
+      "title": "Page 2",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -27340,7 +27351,7 @@
       "sectionId": "section-10",
       "sectionTitle": "Sixteenths with all the stuff",
       "sectionPageNumber": 3,
-      "title": "Sixteenths with all the stuff 3",
+      "title": "Page 3",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -27620,7 +27631,7 @@
       "sectionId": "section-10",
       "sectionTitle": "Sixteenths with all the stuff",
       "sectionPageNumber": 4,
-      "title": "Sixteenths with all the stuff 4",
+      "title": "Page 4",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
@@ -27900,7 +27911,7 @@
       "sectionId": "section-10",
       "sectionTitle": "Sixteenths with all the stuff",
       "sectionPageNumber": 5,
-      "title": "Sixteenths with all the stuff 5",
+      "title": "Page 5",
       "pdfSettings": {
         "columns": 2,
         "rows": 12,
