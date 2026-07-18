@@ -246,6 +246,163 @@ async function readJson(filePath) {
   }
 }
 
+function getNoteQuarterUnits(note) {
+  const duration = Number(note.duration || 4);
+  const dotMultiplier = note.dots ? 1.5 : 1;
+  return (4 / duration) * dotMultiplier;
+}
+
+function isRest(note) {
+  return !Array.isArray(note && note.notes) || note.notes.length === 0;
+}
+
+function countPlayedNotes(notes) {
+  return (notes || []).filter((note) => !isRest(note)).length;
+}
+
+function getSectionMinPlayedNotes(section) {
+  const parsed = Number.parseInt(section && section.minPlayedNotes, 10);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : 0;
+}
+
+function getSectionInstructionText(section) {
+  return [
+    section.title || "",
+    section.instructions || section.prompt || "",
+  ].join("\n").toLowerCase();
+}
+
+function getShortestAllowedDuration(section, notes) {
+  const prompt = getSectionInstructionText(section);
+  const durations = (notes || [])
+    .map((note) => Number(note && note.duration))
+    .filter((duration) => [1, 2, 4, 8, 16, 32].includes(duration));
+
+  if (prompt.includes("sixteenth") || durations.includes(16)) {
+    return 16;
+  }
+
+  if (prompt.includes("eighth") || durations.includes(8)) {
+    return 8;
+  }
+
+  return durations.length ? Math.max(...durations) : 4;
+}
+
+function createPlayedNoteFrom(note) {
+  return {
+    ...note,
+    notes: ["C5"],
+    velocity: Number((note && note.velocity) || 0.5),
+  };
+}
+
+function splitIntoPlayedNotes(note, targetDuration) {
+  const targetUnits = 4 / targetDuration;
+  const totalUnits = getNoteQuarterUnits(note);
+  const pieces = Math.round(totalUnits / targetUnits);
+
+  if (pieces <= 1 || Math.abs(pieces * targetUnits - totalUnits) > 0.001) {
+    return null;
+  }
+
+  const ornaments = !isRest(note) && note && note.ornaments != null
+    ? String(note.ornaments)
+    : "";
+
+  return Array.from({ length: pieces }, (_, index) => ({
+    notes: ["C5"],
+    duration: targetDuration,
+    dots: 0,
+    velocity: Number((note && note.velocity) || 0.5),
+    ...(ornaments && index === 0 ? { ornaments } : {}),
+  }));
+}
+
+function enforceMinimumPlayedNotesInNotes(section, notes) {
+  const minimum = getSectionMinPlayedNotes(section);
+
+  if (!minimum || countPlayedNotes(notes) >= minimum) {
+    return notes;
+  }
+
+  let nextNotes = (notes || []).map((note) => ({ ...note }));
+  let playedCount = countPlayedNotes(nextNotes);
+
+  nextNotes = nextNotes.map((note) => {
+    if (playedCount >= minimum || !isRest(note)) {
+      return note;
+    }
+
+    playedCount += 1;
+    return createPlayedNoteFrom(note);
+  });
+
+  if (playedCount >= minimum) {
+    return nextNotes;
+  }
+
+  const targetDuration = getShortestAllowedDuration(section, nextNotes);
+  const expandedNotes = [];
+
+  for (const note of nextNotes) {
+    if (playedCount < minimum) {
+      const pieces = splitIntoPlayedNotes(note, targetDuration);
+
+      if (pieces) {
+        playedCount += pieces.length - (isRest(note) ? 0 : 1);
+        expandedNotes.push(...pieces);
+        continue;
+      }
+    }
+
+    expandedNotes.push(note);
+  }
+
+  return expandedNotes;
+}
+
+function enforceMinimumPlayedNotes(section, score) {
+  const minimum = getSectionMinPlayedNotes(section);
+
+  if (!minimum) {
+    return score;
+  }
+
+  return {
+    ...score,
+    measures: (score.measures || []).map((measure) => ({
+      ...measure,
+      parts: (measure.parts || []).map((part) => ({
+        ...part,
+        voices: (part.voices || []).map((voice) => ({
+          ...voice,
+          notes: enforceMinimumPlayedNotesInNotes(section, voice.notes || []),
+        })),
+      })),
+    })),
+  };
+}
+
+function enforceBookMinPlayedNotes(book) {
+  const sectionsById = Object.fromEntries(
+    (book.sections || []).map((section) => [section.id, section])
+  );
+
+  for (const page of book.pages || []) {
+    const section = sectionsById[page.sectionId];
+
+    if (!section || !getSectionMinPlayedNotes(section)) {
+      continue;
+    }
+
+    for (const line of page.lines || []) {
+      if (!line.score) continue;
+      line.score = enforceMinimumPlayedNotes(section, line.score);
+    }
+  }
+}
+
 async function loadBook(bookData, bookRoot) {
   const {
     createDefaultBook,
@@ -581,6 +738,7 @@ async function main() {
   const { getBookPageQrUrl } = require(path.join(PROJECT_ROOT, "src/lib/book-qr.js"));
   const bookRoot = path.join(PROJECT_ROOT, "data", "book-builder", bookData.BOOK_SLUG);
   const book = await loadBook(bookData, bookRoot);
+  enforceBookMinPlayedNotes(book);
   const pages = options.scope === "page"
     ? [book.pages.find((page) => page.pageNumber === options.page)].filter(Boolean)
     : book.pages;
