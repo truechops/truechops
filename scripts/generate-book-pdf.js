@@ -289,6 +289,30 @@ function getShortestAllowedDuration(section, notes) {
   return durations.length ? Math.max(...durations) : 4;
 }
 
+function shuffleArray(arr) {
+  const result = [...arr];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+function requiresStickings(section) {
+  return /sticking/.test(getSectionInstructionText(section));
+}
+
+function applyStickingsToNotes(notes) {
+  let playedIndex = 0;
+  return notes.map((note) => {
+    if (isRest(note)) return note;
+    const sticking = playedIndex % 2 === 0 ? "R" : "L";
+    playedIndex += 1;
+    const baseOrnaments = String(note.ornaments || "").replace(/[RL]/g, "");
+    return { ...note, ornaments: sticking + baseOrnaments };
+  });
+}
+
 function createPlayedNoteFrom(note) {
   return {
     ...note,
@@ -306,16 +330,11 @@ function splitIntoPlayedNotes(note, targetDuration) {
     return null;
   }
 
-  const ornaments = !isRest(note) && note && note.ornaments != null
-    ? String(note.ornaments)
-    : "";
-
-  return Array.from({ length: pieces }, (_, index) => ({
+  return Array.from({ length: pieces }, () => ({
     notes: ["C5"],
     duration: targetDuration,
     dots: 0,
     velocity: Number((note && note.velocity) || 0.5),
-    ...(ornaments && index === 0 ? { ornaments } : {}),
   }));
 }
 
@@ -328,12 +347,17 @@ function enforceMinimumPlayedNotesInNotes(section, notes) {
 
   let nextNotes = (notes || []).map((note) => ({ ...note }));
   let playedCount = countPlayedNotes(nextNotes);
+  const needed = minimum - playedCount;
 
-  nextNotes = nextNotes.map((note) => {
-    if (playedCount >= minimum || !isRest(note)) {
-      return note;
-    }
+  // Randomly choose which rests to convert so hits are distributed throughout
+  const restIndices = nextNotes.reduce((acc, note, i) => {
+    if (isRest(note)) acc.push(i);
+    return acc;
+  }, []);
+  const convertSet = new Set(shuffleArray(restIndices).slice(0, needed));
 
+  nextNotes = nextNotes.map((note, i) => {
+    if (!isRest(note) || !convertSet.has(i)) return note;
     playedCount += 1;
     return createPlayedNoteFrom(note);
   });
@@ -342,6 +366,7 @@ function enforceMinimumPlayedNotesInNotes(section, notes) {
     return nextNotes;
   }
 
+  // Still short — split notes into shorter durations to get more hits
   const targetDuration = getShortestAllowedDuration(section, nextNotes);
   const expandedNotes = [];
 
@@ -369,16 +394,21 @@ function enforceMinimumPlayedNotes(section, score) {
     return score;
   }
 
+  const needsStickings = requiresStickings(section);
+
   return {
     ...score,
     measures: (score.measures || []).map((measure) => ({
       ...measure,
       parts: (measure.parts || []).map((part) => ({
         ...part,
-        voices: (part.voices || []).map((voice) => ({
-          ...voice,
-          notes: enforceMinimumPlayedNotesInNotes(section, voice.notes || []),
-        })),
+        voices: (part.voices || []).map((voice) => {
+          const enforced = enforceMinimumPlayedNotesInNotes(section, voice.notes || []);
+          return {
+            ...voice,
+            notes: needsStickings ? applyStickingsToNotes(enforced) : enforced,
+          };
+        }),
       })),
     })),
   };

@@ -251,6 +251,45 @@ function isRest(note) {
   return !Array.isArray(note && note.notes) || note.notes.length === 0;
 }
 
+function hashString(value) {
+  let hash = 2166136261;
+  const text = String(value || "");
+
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
+}
+
+function createSeededRandom(seedValue) {
+  let seed = hashString(seedValue);
+
+  return () => {
+    seed += 0x6D2B79F5;
+    let value = seed;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function randomInteger(random, min, max) {
+  return Math.floor(random() * (max - min + 1)) + min;
+}
+
+function shuffledIndexes(length, random) {
+  const indexes = Array.from({ length }, (_, index) => index);
+
+  for (let index = indexes.length - 1; index > 0; index -= 1) {
+    const swapIndex = randomInteger(random, 0, index);
+    [indexes[index], indexes[swapIndex]] = [indexes[swapIndex], indexes[index]];
+  }
+
+  return indexes;
+}
+
 function isPlainEighth(note) {
   return Number(note && note.duration) === 8 && Number((note && note.dots) || 0) === 0;
 }
@@ -414,6 +453,16 @@ function getSectionOrnamentPolicy(section) {
   };
 }
 
+function sectionDisallowsOrnaments(section) {
+  const policy = getSectionOrnamentPolicy(section);
+  return policy.stripAllOrnaments;
+}
+
+function sectionUsesStickings(section) {
+  const prompt = getSectionInstructionText(section);
+  return !sectionDisallowsOrnaments(section) && prompt.includes("sticking");
+}
+
 function applySectionOrnamentPolicy(section, score) {
   const policy = getSectionOrnamentPolicy(section);
 
@@ -520,50 +569,73 @@ function splitIntoPlayedNotes(note, targetDuration) {
   }));
 }
 
-function enforceMinimumPlayedNotesInNotes(section, notes) {
+function enforceMinimumPlayedNotesInNotes(section, notes, lineIndex = 0) {
   const minimum = getSectionMinPlayedNotes(section);
 
   if (!minimum || countPlayedNotes(notes) >= minimum) {
     return notes;
   }
 
+  const random = createSeededRandom(
+    `${section.id || section.title || "section"}:minimum:${lineIndex}:${JSON.stringify(notes)}`
+  );
   let nextNotes = (notes || []).map((note) => ({ ...note }));
   let playedCount = countPlayedNotes(nextNotes);
+  const targetDuration = getShortestAllowedDuration(section, nextNotes);
 
-  nextNotes = nextNotes.map((note) => {
-    if (playedCount >= minimum || !isRest(note)) {
-      return note;
+  const splitNotes = (shouldSplit) => {
+    let changed = false;
+
+    for (const noteIndex of shuffledIndexes(nextNotes.length, random)) {
+      if (playedCount >= minimum) {
+        break;
+      }
+
+      const note = nextNotes[noteIndex];
+
+      if (!shouldSplit(note)) {
+        continue;
+      }
+
+      const pieces = splitIntoPlayedNotes(note, targetDuration);
+
+      if (!pieces) {
+        continue;
+      }
+
+      playedCount += pieces.length - (isRest(note) ? 0 : 1);
+      nextNotes.splice(noteIndex, 1, ...pieces);
+      changed = true;
+    }
+
+    return changed;
+  };
+
+  while (playedCount < minimum && splitNotes((note) => !isRest(note))) {
+    // Keep splitting played values before stealing rest positions.
+  }
+
+  for (const noteIndex of shuffledIndexes(nextNotes.length, random)) {
+    if (playedCount >= minimum) {
+      break;
+    }
+
+    if (!isRest(nextNotes[noteIndex])) {
+      continue;
     }
 
     playedCount += 1;
-    return createPlayedNoteFrom(note);
-  });
-
-  if (playedCount >= minimum) {
-    return nextNotes;
+    nextNotes[noteIndex] = createPlayedNoteFrom(nextNotes[noteIndex]);
   }
 
-  const targetDuration = getShortestAllowedDuration(section, nextNotes);
-  const expandedNotes = [];
-
-  for (const note of nextNotes) {
-    if (playedCount < minimum) {
-      const pieces = splitIntoPlayedNotes(note, targetDuration);
-
-      if (pieces) {
-        playedCount += pieces.length - (isRest(note) ? 0 : 1);
-        expandedNotes.push(...pieces);
-        continue;
-      }
-    }
-
-    expandedNotes.push(note);
+  while (playedCount < minimum && splitNotes(() => true)) {
+    // Converted rests can still be split if the requested minimum is very high.
   }
 
-  return expandedNotes;
+  return nextNotes;
 }
 
-function enforceMinimumPlayedNotes(section, score) {
+function enforceMinimumPlayedNotes(section, score, lineIndex = 0) {
   const minimum = getSectionMinPlayedNotes(section);
 
   if (!minimum) {
@@ -578,14 +650,119 @@ function enforceMinimumPlayedNotes(section, score) {
         ...part,
         voices: (part.voices || []).map((voice) => ({
           ...voice,
-          notes: enforceMinimumPlayedNotesInNotes(section, voice.notes || []),
+          notes: enforceMinimumPlayedNotesInNotes(section, voice.notes || [], lineIndex),
         })),
       })),
     })),
   };
 }
 
-function createFallbackGeneratedScore(section, samplePayload, lineIndex) {
+function getNoteSticking(note) {
+  const match = String((note && note.ornaments) || "").match(/[rl]/);
+  return match ? match[0] : "";
+}
+
+function withPrependedSticking(note, sticking) {
+  const ornaments = String((note && note.ornaments) || "").replace(/[rl]/g, "");
+
+  return {
+    ...note,
+    ornaments: `${sticking}${ornaments}`,
+  };
+}
+
+function ensureStickingsOnNotes(section, notes) {
+  if (!sectionUsesStickings(section)) {
+    return notes;
+  }
+
+  let playedIndex = 0;
+
+  return (notes || []).map((note) => {
+    if (isRest(note)) {
+      return note;
+    }
+
+    const existingSticking = getNoteSticking(note);
+    const sticking = existingSticking || (playedIndex % 2 === 0 ? "r" : "l");
+    playedIndex += 1;
+
+    return existingSticking
+      ? note
+      : withPrependedSticking(note, sticking);
+  });
+}
+
+function removeOrnamentChars(note, chars) {
+  if (note.ornaments == null) {
+    return note;
+  }
+
+  const ornaments = String(note.ornaments).replace(new RegExp(`[${chars}]`, "g"), "");
+
+  if (!ornaments) {
+    const { ornaments: _ornaments, ...rest } = note;
+    return rest;
+  }
+
+  return {
+    ...note,
+    ornaments,
+  };
+}
+
+function cleanSequentialOrnaments(notes) {
+  const cleaned = (notes || []).map((note) => ({ ...note }));
+
+  for (let index = 0; index < cleaned.length; index += 1) {
+    const note = cleaned[index];
+    const next = cleaned[index + 1];
+    const previous = cleaned[index - 1];
+    const isSequentialSixteenth = next &&
+      !isRest(note) &&
+      !isRest(next) &&
+      Number(note.duration) === 16 &&
+      Number(next.duration) === 16;
+    const previousSequentialSixteenth = previous &&
+      !isRest(previous) &&
+      !isRest(note) &&
+      Number(previous.duration) === 16 &&
+      Number(note.duration) === 16;
+
+    if (isSequentialSixteenth && /[dc]/.test(String(note.ornaments || "")) && /f/.test(String(next.ornaments || ""))) {
+      cleaned[index] = removeOrnamentChars(note, "dc");
+    }
+
+    if (previousSequentialSixteenth && /c/.test(String(previous.ornaments || "")) && /c/.test(String(cleaned[index].ornaments || ""))) {
+      cleaned[index] = removeOrnamentChars(cleaned[index], "c");
+    }
+  }
+
+  return cleaned;
+}
+
+function finalizeGeneratedScore(section, score, lineIndex = 0) {
+  const policyScore = applySectionOrnamentPolicy(section, score);
+  const minimumScore = enforceMinimumPlayedNotes(section, policyScore, lineIndex);
+
+  return {
+    ...minimumScore,
+    measures: (minimumScore.measures || []).map((measure) => ({
+      ...measure,
+      parts: (measure.parts || []).map((part) => ({
+        ...part,
+        voices: (part.voices || []).map((voice) => ({
+          ...voice,
+          notes: cleanSequentialOrnaments(
+            ensureStickingsOnNotes(section, voice.notes || [])
+          ),
+        })),
+      })),
+    })),
+  };
+}
+
+function getFallbackGenerationOptions(section, samplePayload) {
   const prompt = getSectionInstructionText(section);
   const sampleNotes = getSampleNotes(samplePayload);
   const sampleDurations = new Set(sampleNotes.map((note) => Number(note.duration)).filter(Boolean));
@@ -610,116 +787,143 @@ function createFallbackGeneratedScore(section, samplePayload, lineIndex) {
   const allowCheese = !noOrnaments && (
     prompt.includes("cheese")
   );
+
+  return {
+    allowAccents,
+    allowCheese,
+    allowDiddles,
+    allowFlams,
+    allowQuarter,
+    allowSixteenth,
+    allowSticking,
+  };
+}
+
+function getDurationBySixteenthUnits(units) {
+  return {
+    1: { duration: 16, dots: 0 },
+    2: { duration: 8, dots: 0 },
+    3: { duration: 8, dots: 1 },
+    4: { duration: 4, dots: 0 },
+  }[units] || { duration: 16, dots: 0 };
+}
+
+function chooseRunChunkUnits(remainingUnits, isRestRun, options, random) {
+  if (!options.allowSixteenth) {
+    return remainingUnits >= 4 && (isRestRun || random() < 0.45) ? 4 : 2;
+  }
+
+  if (isRestRun) {
+    if (remainingUnits >= 4) return 4;
+    if (remainingUnits >= 3) return 3;
+    if (remainingUnits >= 2) return 2;
+    return 1;
+  }
+
+  if (remainingUnits >= 4 && options.allowQuarter && random() < 0.2) return 4;
+  if (remainingUnits >= 3 && random() < 0.18) return 3;
+  if (remainingUnits >= 2 && random() < 0.38) return 2;
+  return 1;
+}
+
+function createFallbackOrnaments(options, random, playedIndex, previousOrnaments) {
+  let ornaments = "";
+
+  if (options.allowSticking) {
+    ornaments += random() < 0.5 ? "r" : "l";
+  }
+
+  if (options.allowFlams && random() < 0.14) {
+    ornaments += "f";
+  }
+
+  if (options.allowAccents && random() < 0.28) {
+    ornaments += "a";
+  }
+
+  if (options.allowDiddles && !ornaments.includes("f") && random() < 0.12) {
+    ornaments += "d";
+  }
+
+  if (
+    options.allowCheese &&
+    !ornaments.includes("f") &&
+    !String(previousOrnaments || "").includes("c") &&
+    random() < 0.1
+  ) {
+    ornaments += "c";
+  }
+
+  return ornaments;
+}
+
+function createRandomPlayedSlots(slotCount, minimumPlayedNotes, random) {
+  const naturalMinimum = Math.ceil(slotCount * (slotCount >= 16 ? 0.45 : 0.35));
+  const lowerBound = Math.min(slotCount, Math.max(minimumPlayedNotes, naturalMinimum));
+  const playedSlotCount = randomInteger(random, lowerBound, slotCount);
+  const playedIndexes = new Set(shuffledIndexes(slotCount, random).slice(0, playedSlotCount));
+
+  return Array.from({ length: slotCount }, (_, index) => playedIndexes.has(index));
+}
+
+function createNotesFromPlayedSlots(slots, unitPerSlot, options, random) {
   const notes = [];
+  let slotIndex = 0;
+  let playedIndex = 0;
 
-  if (allowSixteenth) {
-    const patterns = [
-      [1, 1, 2, 2, 1, 1, 3, 1, 4],
-      [1, 1, 1, 1, 2, 2, 1, 1, 2, 2, 2],
-      [2, 1, 1, 4, 1, 1, 2, 2, 2],
-      [1, 1, 1, 1, 1, 1, 1, 1, 4, 2, 2],
-      [3, 1, 2, 2, 1, 1, 1, 1, 4],
-    ];
-    const pattern = patterns[lineIndex % patterns.length];
-    let noteCount = 0;
+  while (slotIndex < slots.length) {
+    const isPlayedRun = slots[slotIndex];
+    let runSlotCount = 1;
 
-    pattern.forEach((units, patternIndex) => {
-      const seed = lineIndex * 13 + patternIndex * 7 + String(section.id || "").length;
-      const isRest = seed % 11 === 0 || (units >= 4 && seed % 5 === 0);
-      const nextSeed = lineIndex * 13 + (patternIndex + 1) * 7 + String(section.id || "").length;
-      const nextCouldFlam = allowFlams && patternIndex < pattern.length - 1 && nextSeed % 6 === 1;
-      let ornaments = "";
+    while (slots[slotIndex + runSlotCount] === isPlayedRun) {
+      runSlotCount += 1;
+    }
 
-      if (!isRest && allowSticking) {
-        ornaments += noteCount % 2 === 0 ? "r" : "l";
-      }
+    let remainingUnits = runSlotCount * unitPerSlot;
 
-      if (!isRest && allowFlams && seed % 6 === 1) {
-        ornaments += "f";
-      }
-
-      if (!isRest && allowAccents && seed % 4 === 0) {
-        ornaments += "a";
-      }
-
-      if (!isRest && allowDiddles && !nextCouldFlam && !ornaments.includes("f") && seed % 8 === 2) {
-        ornaments += "d";
-      }
-
-      if (!isRest && allowCheese && !nextCouldFlam && !ornaments.includes("f") && !String(notes[notes.length - 1]?.ornaments || "").includes("c") && seed % 10 === 3) {
-        ornaments += "c";
-      }
-
-      const durationByUnits = {
-        1: { duration: 16, dots: 0 },
-        2: { duration: 8, dots: 0 },
-        3: { duration: 8, dots: 1 },
-        4: { duration: 4, dots: 0 },
-      }[units] || { duration: 16, dots: 0 };
+    while (remainingUnits > 0) {
+      const chunkUnits = isPlayedRun
+        ? unitPerSlot
+        : Math.min(
+            remainingUnits,
+            chooseRunChunkUnits(remainingUnits, true, options, random)
+          );
+      const durationByUnits = getDurationBySixteenthUnits(chunkUnits);
+      const previousOrnaments = notes[notes.length - 1]?.ornaments || "";
+      const ornaments = isPlayedRun
+        ? createFallbackOrnaments(options, random, playedIndex, previousOrnaments)
+        : "";
 
       notes.push({
-        notes: isRest ? [] : ["C5"],
+        notes: isPlayedRun ? ["C5"] : [],
         ...durationByUnits,
         velocity: ornaments.includes("a") ? 1 : 0.5,
         ...(ornaments ? { ornaments } : {}),
       });
-      noteCount += isRest ? 0 : 1;
-    });
 
-    const simplifiedNotes = preferQuarterValues(notes);
-
-    return {
-      parts: { snare: { enabled: true } },
-      measures: [{
-        timeSig: { num: 4, type: 4 },
-        parts: [{
-          instrument: "snare",
-          voices: [{ notes: simplifiedNotes, tuplets: [] }],
-        }],
-      }],
-    };
-  }
-
-  for (let beat = 0; beat < 4; beat += 1) {
-    const seed = lineIndex * 7 + beat * 11 + String(section.id || "").length;
-    const useQuarter = allowQuarter && seed % 5 === 0;
-    const quarterRest = allowQuarter && seed % 11 === 0;
-
-    if (useQuarter || quarterRest) {
-      const isRest = quarterRest || seed % 13 === 0;
-      const ornaments = !isRest && allowAccents && seed % 3 === 0 ? "a" : "";
-      notes.push({
-        notes: isRest ? [] : ["C5"],
-        duration: 4,
-        dots: 0,
-        velocity: ornaments.includes("a") ? 1 : 0.5,
-        ...(ornaments ? { ornaments } : {}),
-      });
-      continue;
+      playedIndex += isPlayedRun ? 1 : 0;
+      remainingUnits -= chunkUnits;
     }
 
-    for (let subdivision = 0; subdivision < 2; subdivision += 1) {
-      const subSeed = seed + subdivision * 5;
-      const isRest = subSeed % 7 === 0 || subSeed % 17 === 0;
-      let ornaments = "";
-
-      if (!isRest && allowFlams && subSeed % 6 === 1) {
-        ornaments += "f";
-      }
-
-      if (!isRest && allowAccents && subSeed % 4 === 0) {
-        ornaments += "a";
-      }
-
-      notes.push({
-        notes: isRest ? [] : ["C5"],
-        duration: 8,
-        dots: 0,
-        velocity: ornaments.includes("a") ? 1 : 0.5,
-        ...(ornaments ? { ornaments } : {}),
-      });
-    }
+    slotIndex += runSlotCount;
   }
+
+  return notes;
+}
+
+function createFallbackGeneratedScore(section, samplePayload, lineIndex) {
+  const options = getFallbackGenerationOptions(section, samplePayload);
+  const random = createSeededRandom(
+    `${section.id || section.title || "section"}:fallback:${lineIndex}:${section.instructions || ""}`
+  );
+  const slotCount = options.allowSixteenth ? 16 : 8;
+  const unitPerSlot = options.allowSixteenth ? 1 : 2;
+  const playedSlots = createRandomPlayedSlots(
+    slotCount,
+    getSectionMinPlayedNotes(section),
+    random
+  );
+  const notes = createNotesFromPlayedSlots(playedSlots, unitPerSlot, options, random);
 
   const simplifiedNotes = preferQuarterValues(notes);
 
@@ -756,10 +960,7 @@ function normalizeGeneratedLine(input, section, samplePayload, index) {
     title: (input && input.title) || fallbackLine.title,
     notes: (input && input.notes) || "",
     tempo: getPositiveInteger(input && input.tempo, fallbackLine.tempo),
-    score: enforceMinimumPlayedNotes(
-      section,
-      applySectionOrnamentPolicy(section, score)
-    ),
+    score: finalizeGeneratedScore(section, score, index),
   };
 }
 
@@ -854,6 +1055,11 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
     "",
     `Section title: ${section.title || "Untitled section"}`,
     `Section instructions: ${section.instructions || ""}`,
+    "Randomize played notes and rests across the whole measure. Do not favor beat four or any other beat.",
+    "When sixteenth notes are allowed, sixteenth-note rests may occur on any sixteenth subdivision.",
+    sectionUsesStickings(section)
+      ? "Every played note in this section must include a sticking ornament: either \"r\" or \"l\". Rests must not have stickings."
+      : "",
     section.minPlayedNotes
       ? `Each generated rhythm in this section must have at least ${section.minPlayedNotes} played note events. Rests do not count as played notes.`
       : "",
