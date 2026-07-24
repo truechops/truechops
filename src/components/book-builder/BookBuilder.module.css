@@ -319,7 +319,8 @@
   gap: 4px;
 }
 
-.field span {
+.field span,
+.fieldGroup > span {
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 800;
@@ -347,6 +348,51 @@
 .field textarea:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(150, 9, 9, 0.12);
+}
+
+.fieldGroup {
+  display: grid;
+  gap: 5px;
+}
+
+.pickerGrid {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.pickerOption {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  gap: 6px;
+  min-height: 34px;
+  min-width: 0;
+  padding: 0 8px;
+}
+
+.pickerOption input {
+  flex: 0 0 auto;
+  margin: 0;
+  width: auto;
+}
+
+.pickerOption span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activePickerOption {
+  background: var(--wash);
+  border-color: var(--accent);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .pdfProgress {

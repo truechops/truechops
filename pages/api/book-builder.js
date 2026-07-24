@@ -94,6 +94,8 @@ function createManifest(book) {
       title: section.title,
       prompt: section.prompt,
       sampleJson: section.sampleJson,
+      subdivisions: section.subdivisions,
+      ornaments: section.ornaments,
       pageCount: section.pageCount,
       minPlayedNotes: section.minPlayedNotes,
       pdfSettings: section.pdfSettings,
@@ -314,6 +316,8 @@ function getRelevantPdfBookPayload(book, pages) {
       title: section.title,
       prompt: section.prompt,
       sampleJson: section.sampleJson,
+      subdivisions: section.subdivisions,
+      ornaments: section.ornaments,
       pages: section.pages.map((page) => page.pageNumber),
     })),
     pages: pages.map((page) => ({

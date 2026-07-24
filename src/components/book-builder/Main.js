@@ -20,6 +20,8 @@ import { scoreActions } from "../../store/score";
 import { drawScore, initialize } from "../../lib/vexflow";
 import {
   PDF_COLUMN_OPTIONS,
+  ORNAMENT_OPTIONS,
+  SUBDIVISION_OPTIONS,
   getLinesPerPage,
   getPagePdfSettings,
   createBlankLine,
@@ -29,7 +31,9 @@ import {
   createDefaultBook,
   normalizePdfSettings,
   normalizeSectionMinPlayedNotes,
+  normalizeSectionOrnaments,
   normalizeSectionPageCount,
+  normalizeSectionSubdivisions,
   normalizeBook,
   renumberPages,
   scoreToBookLine,
@@ -57,6 +61,35 @@ function Field({ children, label }) {
       <span>{label}</span>
       {children}
     </label>
+  );
+}
+
+function CheckboxPicker({ label, onToggle, options, value }) {
+  const selectedValues = new Set(value);
+
+  return (
+    <div className={styles.fieldGroup}>
+      <span>{label}</span>
+      <div className={styles.pickerGrid}>
+        {options.map((option) => {
+          const checked = selectedValues.has(option.id);
+
+          return (
+            <label
+              className={`${styles.pickerOption} ${checked ? styles.activePickerOption : ""}`}
+              key={option.id}
+            >
+              <input
+                checked={checked}
+                onChange={() => onToggle(option.id)}
+                type="checkbox"
+              />
+              <span>{option.label}</span>
+            </label>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -230,6 +263,23 @@ function prettyPrintJsonText(value) {
   } catch {
     return value;
   }
+}
+
+function toggleOption(values, optionId, { allowEmpty = true } = {}) {
+  const hasOption = values.includes(optionId);
+  const nextValues = hasOption
+    ? values.filter((value) => value !== optionId)
+    : [...values, optionId];
+
+  return !allowEmpty && nextValues.length === 0 ? values : nextValues;
+}
+
+function optionSummary(options, selectedIds, emptyLabel = "None") {
+  const labels = options
+    .filter((option) => selectedIds.includes(option.id))
+    .map((option) => option.label);
+
+  return labels.length ? labels.join(", ") : emptyLabel;
 }
 
 export default function BookBuilderPanel() {
@@ -587,6 +637,8 @@ export default function BookBuilderPanel() {
       id: createSectionId(title, book.sections),
       title,
       prompt: "",
+      subdivisions: ["eighths"],
+      ornaments: [],
       sampleJson: "",
     }, pdfSettings);
     const nextBook = normalizeBook({
@@ -878,6 +930,10 @@ export default function BookBuilderPanel() {
               <strong>{section.title}</strong>
               <span>
                 Generate {normalizeSectionPageCount(section.pageCount, section.pages.length)} pages
+                {` · ${optionSummary(
+                  SUBDIVISION_OPTIONS,
+                  normalizeSectionSubdivisions(section.subdivisions, section)
+                )}`}
                 {section.pages.length !== normalizeSectionPageCount(section.pageCount, section.pages.length)
                   ? ` / ${section.pages.length} saved`
                   : ""}
@@ -896,7 +952,7 @@ export default function BookBuilderPanel() {
               value={selectedSection.title}
             />
           </Field>
-          <Field label="Pages to generate from prompt">
+          <Field label="Pages to generate">
             <input
               inputMode="numeric"
               min="1"
@@ -928,13 +984,33 @@ export default function BookBuilderPanel() {
               value={normalizeSectionMinPlayedNotes(selectedSection.minPlayedNotes)}
             />
           </Field>
-          <Field label="Local AI prompt">
-            <textarea
-              onChange={(event) => updateSelectedSectionDraft({ prompt: event.target.value })}
-              rows={3}
-              value={selectedSection.prompt || ""}
-            />
-          </Field>
+          <CheckboxPicker
+            label="Subdivisions"
+            onToggle={(optionId) =>
+              updateSelectedSectionDraft({
+                subdivisions: toggleOption(
+                  normalizeSectionSubdivisions(selectedSection.subdivisions, selectedSection),
+                  optionId,
+                  { allowEmpty: false }
+                ),
+              })
+            }
+            options={SUBDIVISION_OPTIONS}
+            value={normalizeSectionSubdivisions(selectedSection.subdivisions, selectedSection)}
+          />
+          <CheckboxPicker
+            label="Ornaments"
+            onToggle={(optionId) =>
+              updateSelectedSectionDraft({
+                ornaments: toggleOption(
+                  normalizeSectionOrnaments(selectedSection.ornaments, selectedSection),
+                  optionId
+                ),
+              })
+            }
+            options={ORNAMENT_OPTIONS}
+            value={normalizeSectionOrnaments(selectedSection.ornaments, selectedSection)}
+          />
           <Field label="Sample JSON">
             <textarea
               onChange={(event) => updateSelectedSectionDraft({ sampleJson: event.target.value })}

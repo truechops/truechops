@@ -43,6 +43,18 @@ const NUMBER_WORDS = {
   eleven: 11,
   twelve: 12,
 };
+const SUBDIVISION_SETTINGS = [
+  { id: "eighths", label: "eighth notes", duration: 8 },
+  { id: "sixteenths", label: "sixteenth notes", duration: 16 },
+  { id: "thirtyseconds", label: "thirty-second notes", duration: 32 },
+];
+const ORNAMENT_SETTINGS = [
+  { id: "stickings", label: "stickings", chars: "rl" },
+  { id: "accents", label: "accents", chars: "a" },
+  { id: "flams", label: "flams", chars: "f" },
+  { id: "diddles", label: "diddles", chars: "d" },
+  { id: "cheese", label: "cheese", chars: "c" },
+];
 
 const args = process.argv.slice(2);
 
@@ -230,6 +242,117 @@ function getSampleNotes(samplePayload) {
     : null;
   const voice = part && part.voices && part.voices[0];
   return Array.isArray(voice && voice.notes) ? voice.notes : [];
+}
+
+function normalizeOptionIds(value, settings) {
+  const validIds = new Set(settings.map((setting) => setting.id));
+  const values = Array.isArray(value)
+    ? value
+    : typeof value === "string"
+      ? value.split(/[, ]+/)
+      : [];
+  const normalized = [];
+
+  for (const item of values) {
+    const id = String(item || "").trim().toLowerCase();
+
+    if (validIds.has(id) && !normalized.includes(id)) {
+      normalized.push(id);
+    }
+  }
+
+  return normalized;
+}
+
+function getSectionLegacyText(section) {
+  return `${section.title || ""}\n${section.instructions || section.prompt || ""}`.toLowerCase();
+}
+
+function inferGenerationSubdivisions(section, samplePayload) {
+  const text = getSectionLegacyText(section);
+  const sampleDurations = new Set(getSampleNotes(samplePayload).map((note) => Number(note.duration)));
+  const allowedDurations = Array.isArray(samplePayload && samplePayload.allowedDurations)
+    ? samplePayload.allowedDurations.map(Number)
+    : [];
+  const subdivisions = [];
+
+  if (text.includes("thirtysecond") || text.includes("thirty-second") || sampleDurations.has(32) || allowedDurations.includes(32)) {
+    subdivisions.push("thirtyseconds");
+  }
+
+  if (text.includes("sixteenth") || sampleDurations.has(16) || allowedDurations.includes(16)) {
+    subdivisions.push("sixteenths");
+  }
+
+  if (text.includes("eighth") || sampleDurations.has(8) || allowedDurations.includes(8)) {
+    subdivisions.push("eighths");
+  }
+
+  return subdivisions.length ? subdivisions : ["eighths"];
+}
+
+function getGenerationSubdivisions(section, samplePayload = getSamplePayload(section)) {
+  const explicit = normalizeOptionIds(section && section.subdivisions, SUBDIVISION_SETTINGS);
+  return explicit.length ? explicit : inferGenerationSubdivisions(section || {}, samplePayload);
+}
+
+function inferGenerationOrnaments(section, samplePayload) {
+  const text = getSectionLegacyText(section);
+  const sampleOrnaments = getSampleNotes(samplePayload)
+    .map((note) => String(note.ornaments || ""))
+    .join("");
+  const noOrnaments = /no\s+ornaments?/.test(text) || /notes?\s+only/.test(text);
+  const ornaments = [];
+
+  if (noOrnaments) {
+    return ornaments;
+  }
+
+  if (text.includes("sticking") || /[rl]/.test(sampleOrnaments)) ornaments.push("stickings");
+  if ((text.includes("accent") || samplePayload?.accents === true || sampleOrnaments.includes("a")) && !/no\s+accents?/.test(text)) ornaments.push("accents");
+  if ((text.includes("flam") || sampleOrnaments.includes("f")) && !/no\s+(?:accents?\s+or\s+)?flams?/.test(text) && !/without\s+flams?/.test(text)) ornaments.push("flams");
+  if (text.includes("diddle") || sampleOrnaments.includes("d")) ornaments.push("diddles");
+  if (text.includes("cheese") || sampleOrnaments.includes("c")) ornaments.push("cheese");
+
+  return ornaments;
+}
+
+function getGenerationOrnaments(section, samplePayload = getSamplePayload(section)) {
+  if (section && Array.isArray(section.ornaments)) {
+    return normalizeOptionIds(section.ornaments, ORNAMENT_SETTINGS);
+  }
+
+  const explicit = normalizeOptionIds(section && section.ornaments, ORNAMENT_SETTINGS);
+  return explicit.length ? explicit : inferGenerationOrnaments(section || {}, samplePayload);
+}
+
+function getMaxSubdivisionDuration(subdivisions) {
+  return Math.max(
+    ...SUBDIVISION_SETTINGS
+      .filter((setting) => subdivisions.includes(setting.id))
+      .map((setting) => setting.duration),
+    8
+  );
+}
+
+function getOptionLabels(settings, selectedIds, emptyLabel) {
+  const labels = settings
+    .filter((setting) => selectedIds.includes(setting.id))
+    .map((setting) => setting.label);
+
+  return labels.length ? labels.join(", ") : emptyLabel;
+}
+
+function createStructuredSectionInstructions(section, samplePayload) {
+  const subdivisions = getGenerationSubdivisions(section, samplePayload);
+  const ornaments = getGenerationOrnaments(section, samplePayload);
+
+  return [
+    `Use these subdivisions only: ${getOptionLabels(SUBDIVISION_SETTINGS, subdivisions, "eighth notes")}.`,
+    ornaments.length
+      ? `Use these ornaments only when musically appropriate: ${getOptionLabels(ORNAMENT_SETTINGS, ornaments, "none")}.`
+      : "Use no ornaments.",
+  ].join("\n");
 }
 
 function normalizePitch(value) {
@@ -435,40 +558,21 @@ function extractGeneratedLineInputs(payload) {
   return payload.lines || payload.examples || payload.rhythms || payload.exercises || [];
 }
 
-function getSectionInstructionText(section) {
-  return [
-    section.title || "",
-    section.globalRules || "",
-    section.instructions || section.prompt || "",
-  ].join("\n").toLowerCase();
-}
-
-function getSectionOrnamentPolicy(section) {
-  const prompt = getSectionInstructionText(section);
-
-  return {
-    stripAllOrnaments: /no\s+ornaments?/.test(prompt) || /notes?\s+only/.test(prompt),
-    stripAccents: /no\s+accents?/.test(prompt) || /without\s+accents?/.test(prompt),
-    stripFlams: /no\s+(?:accents?\s+or\s+)?flams?/.test(prompt) || /without\s+flams?/.test(prompt),
-  };
-}
-
-function sectionDisallowsOrnaments(section) {
-  const policy = getSectionOrnamentPolicy(section);
-  return policy.stripAllOrnaments;
+function getAllowedOrnamentChars(section) {
+  const ornaments = getGenerationOrnaments(section);
+  return ORNAMENT_SETTINGS
+    .filter((setting) => ornaments.includes(setting.id))
+    .map((setting) => setting.chars)
+    .join("");
 }
 
 function sectionUsesStickings(section) {
-  const prompt = getSectionInstructionText(section);
-  return !sectionDisallowsOrnaments(section) && prompt.includes("sticking");
+  return getGenerationOrnaments(section).includes("stickings");
 }
 
 function applySectionOrnamentPolicy(section, score) {
-  const policy = getSectionOrnamentPolicy(section);
-
-  if (!policy.stripAllOrnaments && !policy.stripAccents && !policy.stripFlams) {
-    return score;
-  }
+  const allowedChars = getAllowedOrnamentChars(section);
+  const allowedPattern = allowedChars ? new RegExp(`[^${allowedChars}]`, "g") : /[a-z]/g;
 
   return {
     ...score,
@@ -483,19 +587,12 @@ function applySectionOrnamentPolicy(section, score) {
               return note;
             }
 
-            let ornaments = String(note.ornaments);
-
-            if (policy.stripAllOrnaments) {
-              ornaments = "";
+            if (isRest(note)) {
+              const { ornaments: _ornaments, ...rest } = note;
+              return rest;
             }
 
-            if (policy.stripAccents) {
-              ornaments = ornaments.replace(/a/g, "");
-            }
-
-            if (policy.stripFlams) {
-              ornaments = ornaments.replace(/f/g, "");
-            }
+            const ornaments = String(note.ornaments).replace(allowedPattern, "");
 
             if (!ornaments) {
               const { ornaments: _ornaments, ...rest } = note;
@@ -522,20 +619,12 @@ function countPlayedNotes(notes) {
 }
 
 function getShortestAllowedDuration(section, notes) {
-  const prompt = getSectionInstructionText(section);
+  const subdivisions = getGenerationSubdivisions(section);
   const durations = (notes || [])
     .map((note) => Number(note && note.duration))
     .filter((duration) => [1, 2, 4, 8, 16, 32].includes(duration));
 
-  if (prompt.includes("sixteenth") || durations.includes(16)) {
-    return 16;
-  }
-
-  if (prompt.includes("eighth") || durations.includes(8)) {
-    return 8;
-  }
-
-  return durations.length ? Math.max(...durations) : 4;
+  return Math.max(getMaxSubdivisionDuration(subdivisions), ...durations, 8);
 }
 
 function createPlayedNoteFrom(note, overrides = {}) {
@@ -763,66 +852,49 @@ function finalizeGeneratedScore(section, score, lineIndex = 0) {
 }
 
 function getFallbackGenerationOptions(section, samplePayload) {
-  const prompt = getSectionInstructionText(section);
-  const sampleNotes = getSampleNotes(samplePayload);
-  const sampleDurations = new Set(sampleNotes.map((note) => Number(note.duration)).filter(Boolean));
-  const allowSixteenth = prompt.includes("sixteenth") || sampleDurations.has(16);
-  const allowQuarter = prompt.includes("quarter") || sampleDurations.has(4);
-  const noOrnaments = /no\s+ornaments?/.test(prompt) || /notes?\s+only/.test(prompt);
-  const noAccents = /no\s+accents?/.test(prompt);
-  const noFlams = /no\s+flams?/.test(prompt) || /no\s+accents?\s+or\s+flams?/.test(prompt);
-  const allowAccents = !noOrnaments && !noAccents && (
-    prompt.includes("accent") ||
-    samplePayload.accents === true
-  );
-  const allowFlams = !noOrnaments && !noFlams && (
-    prompt.includes("flam")
-  );
-  const allowSticking = !noOrnaments && (
-    prompt.includes("sticking")
-  );
-  const allowDiddles = !noOrnaments && (
-    prompt.includes("diddle")
-  );
-  const allowCheese = !noOrnaments && (
-    prompt.includes("cheese")
-  );
+  const subdivisions = getGenerationSubdivisions(section, samplePayload);
+  const ornaments = getGenerationOrnaments(section, samplePayload);
+  const maxSubdivisionDuration = getMaxSubdivisionDuration(subdivisions);
 
   return {
-    allowAccents,
-    allowCheese,
-    allowDiddles,
-    allowFlams,
-    allowQuarter,
-    allowSixteenth,
-    allowSticking,
+    allowAccents: ornaments.includes("accents"),
+    allowCheese: ornaments.includes("cheese"),
+    allowDiddles: ornaments.includes("diddles"),
+    allowFlams: ornaments.includes("flams"),
+    allowQuarter: true,
+    allowSixteenth: maxSubdivisionDuration >= 16,
+    allowSticking: ornaments.includes("stickings"),
+    allowThirtySecond: maxSubdivisionDuration >= 32,
+    maxSubdivisionDuration,
+    subdivisions,
   };
 }
 
-function getDurationBySixteenthUnits(units) {
-  return {
-    1: { duration: 16, dots: 0 },
-    2: { duration: 8, dots: 0 },
-    3: { duration: 8, dots: 1 },
-    4: { duration: 4, dots: 0 },
-  }[units] || { duration: 16, dots: 0 };
+function getDurationBySlots(slots, baseDuration) {
+  const quarterUnits = slots * (4 / baseDuration);
+  const rounded = Math.round(quarterUnits * 1000) / 1000;
+  const durationMap = {
+    0.125: { duration: 32, dots: 0 },
+    0.25: { duration: 16, dots: 0 },
+    0.375: { duration: 16, dots: 1 },
+    0.5: { duration: 8, dots: 0 },
+    0.75: { duration: 8, dots: 1 },
+    1: { duration: 4, dots: 0 },
+    1.5: { duration: 4, dots: 1 },
+  };
+
+  return durationMap[rounded] || { duration: baseDuration, dots: 0 };
 }
 
-function chooseRunChunkUnits(remainingUnits, isRestRun, options, random) {
-  if (!options.allowSixteenth) {
-    return remainingUnits >= 4 && (isRestRun || random() < 0.45) ? 4 : 2;
-  }
+function chooseRestChunkSlots(remainingSlots, baseDuration) {
+  const quarterSlots = baseDuration / 4;
 
-  if (isRestRun) {
-    if (remainingUnits >= 4) return 4;
-    if (remainingUnits >= 3) return 3;
-    if (remainingUnits >= 2) return 2;
-    return 1;
-  }
-
-  if (remainingUnits >= 4 && options.allowQuarter && random() < 0.2) return 4;
-  if (remainingUnits >= 3 && random() < 0.18) return 3;
-  if (remainingUnits >= 2 && random() < 0.38) return 2;
+  if (remainingSlots >= quarterSlots) return quarterSlots;
+  if (baseDuration >= 32 && remainingSlots >= 6) return 6;
+  if (remainingSlots >= quarterSlots * 0.75 && quarterSlots * 0.75 >= 3) return quarterSlots * 0.75;
+  if (remainingSlots >= quarterSlots / 2) return quarterSlots / 2;
+  if (baseDuration >= 16 && remainingSlots >= 3) return 3;
+  if (remainingSlots >= 2) return 2;
   return 1;
 }
 
@@ -870,6 +942,7 @@ function createNotesFromPlayedSlots(slots, unitPerSlot, options, random) {
   const notes = [];
   let slotIndex = 0;
   let playedIndex = 0;
+  const baseDuration = options.maxSubdivisionDuration;
 
   while (slotIndex < slots.length) {
     const isPlayedRun = slots[slotIndex];
@@ -884,11 +957,8 @@ function createNotesFromPlayedSlots(slots, unitPerSlot, options, random) {
     while (remainingUnits > 0) {
       const chunkUnits = isPlayedRun
         ? unitPerSlot
-        : Math.min(
-            remainingUnits,
-            chooseRunChunkUnits(remainingUnits, true, options, random)
-          );
-      const durationByUnits = getDurationBySixteenthUnits(chunkUnits);
+        : Math.min(remainingUnits, chooseRestChunkSlots(remainingUnits, baseDuration));
+      const durationByUnits = getDurationBySlots(chunkUnits, baseDuration);
       const previousOrnaments = notes[notes.length - 1]?.ornaments || "";
       const ornaments = isPlayedRun
         ? createFallbackOrnaments(options, random, playedIndex, previousOrnaments)
@@ -916,8 +986,8 @@ function createFallbackGeneratedScore(section, samplePayload, lineIndex) {
   const random = createSeededRandom(
     `${section.id || section.title || "section"}:fallback:${lineIndex}:${section.instructions || ""}`
   );
-  const slotCount = options.allowSixteenth ? 16 : 8;
-  const unitPerSlot = options.allowSixteenth ? 1 : 2;
+  const slotCount = options.maxSubdivisionDuration;
+  const unitPerSlot = 1;
   const playedSlots = createRandomPlayedSlots(
     slotCount,
     getSectionMinPlayedNotes(section),
@@ -997,6 +1067,15 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
     const existingPageCount = Array.isArray(section.pages) && section.pages.length
       ? section.pages.length
       : 1;
+    const sampleJson = getSectionSampleJson(section);
+    const subdivisions = getGenerationSubdivisions(section, sampleJson);
+    const ornaments = getGenerationOrnaments(section, sampleJson);
+    const structuredSection = {
+      ...section,
+      subdivisions,
+      ornaments,
+      sampleJson,
+    };
 
     return {
       id: section.id || `section-${sectionIndex + 1}`,
@@ -1007,8 +1086,10 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
       ),
       minPlayedNotes: getSectionMinPlayedNotes(section),
       globalRules,
-      instructions: section.prompt || section.instructions || "",
-      sampleJson: getSectionSampleJson(section),
+      instructions: createStructuredSectionInstructions(structuredSection, sampleJson),
+      subdivisions,
+      ornaments,
+      sampleJson,
       pdfSettings: sectionPdfSettings,
     };
   });
@@ -1056,7 +1137,7 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
     `Section title: ${section.title || "Untitled section"}`,
     `Section instructions: ${section.instructions || ""}`,
     "Randomize played notes and rests across the whole measure. Do not favor beat four or any other beat.",
-    "When sixteenth notes are allowed, sixteenth-note rests may occur on any sixteenth subdivision.",
+    "Rests may occur on any selected subdivision position, including offbeat sixteenth-note and thirty-second-note positions when those subdivisions are selected.",
     sectionUsesStickings(section)
       ? "Every played note in this section must include a sticking ornament: either \"r\" or \"l\". Rests must not have stickings."
       : "",
@@ -1270,8 +1351,10 @@ function buildBook(config, generatedSections) {
     return {
       id: section.id,
       title: section.title,
-      prompt: section.instructions || "",
+      prompt: "",
       sampleJson: JSON.stringify(section.sampleJson || {}, null, 2),
+      subdivisions: section.subdivisions,
+      ornaments: section.ornaments,
       pageCount: generated.pageCount,
       minPlayedNotes: section.minPlayedNotes,
       pdfSettings: generated.pdfSettings,
@@ -1331,6 +1414,8 @@ function createManifest(book) {
       title: section.title,
       prompt: section.prompt,
       sampleJson: section.sampleJson,
+      subdivisions: section.subdivisions,
+      ornaments: section.ornaments,
       pageCount: section.pageCount,
       minPlayedNotes: section.minPlayedNotes,
       pdfSettings: section.pdfSettings,

@@ -8,18 +8,34 @@ export const BOOK_TITLE = "Snare Drum Book";
 export const BOOK_EDITION = 1;
 export const BOOK_CONTENT_VERSION = 3;
 export const DEFAULT_GLOBAL_AI_RULES = "";
+export const SUBDIVISION_OPTIONS = [
+  { id: "eighths", label: "Eighths", duration: 8 },
+  { id: "sixteenths", label: "Sixteenths", duration: 16 },
+  { id: "thirtyseconds", label: "Thirtyseconds", duration: 32 },
+];
+export const ORNAMENT_OPTIONS = [
+  { id: "stickings", label: "Stickings" },
+  { id: "accents", label: "Accents" },
+  { id: "flams", label: "Flams" },
+  { id: "diddles", label: "Diddles" },
+  { id: "cheese", label: "Cheese" },
+];
 export const DEFAULT_BOOK_SECTIONS = [
   {
     id: "eighth-notes",
     title: "Eighth Notes",
-    prompt: "Generate one-measure snare drum examples using eighth notes only. Keep the examples readable, progressive, and focused on note placement without accents.",
+    prompt: "",
     sampleJson: "{\n  \"rhythmFamily\": \"eighth-notes\",\n  \"allowedDurations\": [8],\n  \"accents\": false\n}",
+    subdivisions: ["eighths"],
+    ornaments: [],
   },
   {
     id: "eighth-notes-accents",
     title: "Eighth Notes with Accents",
-    prompt: "Generate one-measure snare drum examples using eighth notes with clear accent patterns. Keep the examples progressive and avoid changing the rhythmic subdivision.",
+    prompt: "",
     sampleJson: "{\n  \"rhythmFamily\": \"eighth-notes\",\n  \"allowedDurations\": [8],\n  \"accents\": true\n}",
+    subdivisions: ["eighths"],
+    ornaments: ["accents"],
   },
 ];
 export const MEASURES_PER_LINE = 1;
@@ -68,6 +84,123 @@ export function normalizeGlobalAiRules(value) {
   }
 
   return typeof value === "string" ? value : DEFAULT_GLOBAL_AI_RULES;
+}
+
+function parseJsonLoose(value) {
+  if (!value || typeof value !== "string") {
+    return null;
+  }
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function getSampleNotes(sampleJson) {
+  const sample = typeof sampleJson === "string" ? parseJsonLoose(sampleJson) : sampleJson;
+  const score = sample && sample.score && sample.score.measures
+    ? sample.score
+    : sample && sample.measures
+      ? sample
+      : null;
+  const measure = score && score.measures && score.measures[0];
+  const part = measure && Array.isArray(measure.parts)
+    ? measure.parts.find((candidate) => candidate.instrument === "snare") || measure.parts[0]
+    : null;
+  const voice = part && part.voices && part.voices[0];
+  return Array.isArray(voice && voice.notes) ? voice.notes : [];
+}
+
+function normalizeOptionList(value, options, fallback = []) {
+  const validIds = new Set(options.map((option) => option.id));
+  const values = Array.isArray(value)
+    ? value
+    : typeof value === "string"
+      ? value.split(/[, ]+/)
+      : [];
+  const normalized = [];
+
+  for (const item of values) {
+    const id = String(item || "").trim().toLowerCase();
+
+    if (validIds.has(id) && !normalized.includes(id)) {
+      normalized.push(id);
+    }
+  }
+
+  return normalized.length ? normalized : fallback;
+}
+
+function inferSectionSubdivisions(section = {}) {
+  const text = `${section.title || ""}\n${section.prompt || ""}\n${section.instructions || ""}`.toLowerCase();
+  const sample = typeof section.sampleJson === "string"
+    ? parseJsonLoose(section.sampleJson)
+    : section.sampleJson;
+  const durations = new Set(getSampleNotes(section.sampleJson).map((note) => Number(note.duration)));
+  const allowedDurations = Array.isArray(sample && sample.allowedDurations)
+    ? sample.allowedDurations.map(Number)
+    : [];
+  const inferred = [];
+
+  if (text.includes("thirtysecond") || text.includes("thirty-second") || durations.has(32) || allowedDurations.includes(32)) {
+    inferred.push("thirtyseconds");
+  }
+
+  if (text.includes("sixteenth") || durations.has(16) || allowedDurations.includes(16)) {
+    inferred.push("sixteenths");
+  }
+
+  if (text.includes("eighth") || durations.has(8) || allowedDurations.includes(8)) {
+    inferred.push("eighths");
+  }
+
+  return inferred.length ? inferred : ["eighths"];
+}
+
+function inferSectionOrnaments(section = {}) {
+  const text = `${section.title || ""}\n${section.prompt || ""}\n${section.instructions || ""}`.toLowerCase();
+  const sample = typeof section.sampleJson === "string"
+    ? parseJsonLoose(section.sampleJson)
+    : section.sampleJson;
+  const sampleOrnaments = getSampleNotes(section.sampleJson)
+    .map((note) => String(note.ornaments || ""))
+    .join("");
+  const noOrnaments = /no\s+ornaments?/.test(text) || /notes?\s+only/.test(text);
+  const inferred = [];
+
+  if (noOrnaments) {
+    return inferred;
+  }
+
+  if (text.includes("sticking") || /[rl]/.test(sampleOrnaments)) inferred.push("stickings");
+  if ((text.includes("accent") || sample?.accents === true || sampleOrnaments.includes("a")) && !/no\s+accents?/.test(text)) inferred.push("accents");
+  if (text.includes("flam") || sampleOrnaments.includes("f")) {
+    if (!/no\s+(?:accents?\s+or\s+)?flams?/.test(text) && !/without\s+flams?/.test(text)) {
+      inferred.push("flams");
+    }
+  }
+  if (text.includes("diddle") || sampleOrnaments.includes("d")) inferred.push("diddles");
+  if (text.includes("cheese") || sampleOrnaments.includes("c")) inferred.push("cheese");
+
+  return inferred;
+}
+
+export function normalizeSectionSubdivisions(value, section = {}) {
+  return normalizeOptionList(
+    value,
+    SUBDIVISION_OPTIONS,
+    inferSectionSubdivisions(section)
+  );
+}
+
+export function normalizeSectionOrnaments(value, section = {}) {
+  if (Array.isArray(value)) {
+    return normalizeOptionList(value, ORNAMENT_OPTIONS, []);
+  }
+
+  return inferSectionOrnaments(section);
 }
 
 export function normalizePdfSettings(pdfSettings = {}) {
@@ -155,6 +288,14 @@ export function createBookSection(sectionNumber = 1, overrides = {}, pdfSettings
     title,
     prompt: overrides.prompt ?? template.prompt ?? "",
     sampleJson: normalizeSectionSampleJson(overrides.sampleJson ?? template.sampleJson),
+    subdivisions: normalizeSectionSubdivisions(
+      overrides.subdivisions ?? template.subdivisions,
+      { ...template, ...overrides }
+    ),
+    ornaments: normalizeSectionOrnaments(
+      overrides.ornaments ?? template.ornaments,
+      { ...template, ...overrides }
+    ),
     pageCount: normalizeSectionPageCount(
       overrides.pageCount ?? template.pageCount,
       overrides.pages?.length || template.pages?.length || 1
@@ -276,6 +417,8 @@ function normalizeBookSections(rawBook, pdfSettings) {
       title: section.title || `Section ${sectionIndex + 1}`,
       prompt: section.prompt || "",
       sampleJson: normalizeSectionSampleJson(section.sampleJson),
+      subdivisions: normalizeSectionSubdivisions(section.subdivisions, section),
+      ornaments: normalizeSectionOrnaments(section.ornaments, section),
       pageCount: normalizeSectionPageCount(section.pageCount, normalizedPages.length),
       minPlayedNotes: normalizeSectionMinPlayedNotes(section.minPlayedNotes),
       pdfSettings: sectionPdfSettings,
