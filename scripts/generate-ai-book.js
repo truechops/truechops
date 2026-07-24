@@ -413,52 +413,109 @@ function shuffledIndexes(length, random) {
   return indexes;
 }
 
-function isPlainEighth(note) {
-  return Number(note && note.duration) === 8 && Number((note && note.dots) || 0) === 0;
+const THIRTY_SECOND_QUARTER_UNITS = 4 / 32;
+const NOTATION_VALUE_BY_SLOT_COUNT = new Map([
+  [1, { duration: 32, dots: 0 }],
+  [2, { duration: 16, dots: 0 }],
+  [3, { duration: 16, dots: 1 }],
+  [4, { duration: 8, dots: 0 }],
+  [6, { duration: 8, dots: 1 }],
+  [8, { duration: 4, dots: 0 }],
+  [12, { duration: 4, dots: 1 }],
+  [16, { duration: 2, dots: 0 }],
+  [24, { duration: 2, dots: 1 }],
+  [32, { duration: 1, dots: 0 }],
+]);
+const NOTATION_SLOT_COUNTS_DESCENDING = Array.from(NOTATION_VALUE_BY_SLOT_COUNT.keys())
+  .sort((left, right) => right - left);
+
+function getNoteSlotCount(note) {
+  const slots = Math.round(getNoteQuarterUnits(note) / THIRTY_SECOND_QUARTER_UNITS);
+  return Number.isFinite(slots) && slots > 0 ? slots : 0;
 }
 
-function createQuarterRestFrom(note) {
+function getLargestNotationSlotCount(maxSlots) {
+  return NOTATION_SLOT_COUNTS_DESCENDING.find((slotCount) => slotCount <= maxSlots) || 1;
+}
+
+function getNotationValueBySlots(slotCount) {
+  return NOTATION_VALUE_BY_SLOT_COUNT.get(slotCount) || { duration: 32, dots: 0 };
+}
+
+function createRestFromSlots(slotCount, sourceNote) {
   return {
     notes: [],
-    duration: 4,
-    dots: 0,
-    velocity: Number((note && note.velocity) || 0.5),
+    ...getNotationValueBySlots(slotCount),
+    velocity: Number((sourceNote && sourceNote.velocity) || 0.5),
   };
 }
 
-function createQuarterNoteFrom(note) {
+function createPlayedNoteFromSlots(note, slotCount) {
   return {
     ...note,
-    duration: 4,
-    dots: 0,
+    ...getNotationValueBySlots(slotCount),
   };
 }
 
-function preferQuarterValues(notes) {
+function pushCompressedRests(target, slotCount, sourceNote) {
+  let remainingSlots = slotCount;
+
+  while (remainingSlots > 0) {
+    const restSlots = getLargestNotationSlotCount(remainingSlots);
+    target.push(createRestFromSlots(restSlots, sourceNote));
+    remainingSlots -= restSlots;
+  }
+}
+
+function preferLongerValues(notes) {
   const simplified = [];
+  let index = 0;
 
-  for (let index = 0; index < notes.length; index += 1) {
+  while (index < notes.length) {
     const note = notes[index];
-    const next = notes[index + 1];
+    const noteSlots = getNoteSlotCount(note);
 
-    if (next && isPlainEighth(note) && isPlainEighth(next)) {
-      const noteIsRest = isRest(note);
-      const nextIsRest = isRest(next);
-
-      if (noteIsRest && nextIsRest) {
-        simplified.push(createQuarterRestFrom(note));
-        index += 1;
-        continue;
-      }
-
-      if (!noteIsRest && nextIsRest) {
-        simplified.push(createQuarterNoteFrom(note));
-        index += 1;
-        continue;
-      }
+    if (!noteSlots) {
+      simplified.push(note);
+      index += 1;
+      continue;
     }
 
-    simplified.push(note);
+    if (isRest(note)) {
+      let restSlots = 0;
+      const firstRest = note;
+
+      while (index < notes.length && isRest(notes[index])) {
+        restSlots += getNoteSlotCount(notes[index]);
+        index += 1;
+      }
+
+      pushCompressedRests(simplified, restSlots, firstRest);
+      continue;
+    }
+
+    let restSlots = 0;
+    let nextPlayedIndex = index + 1;
+    const firstRest = notes[nextPlayedIndex];
+
+    while (nextPlayedIndex < notes.length && isRest(notes[nextPlayedIndex])) {
+      restSlots += getNoteSlotCount(notes[nextPlayedIndex]);
+      nextPlayedIndex += 1;
+    }
+
+    const totalAvailableSlots = noteSlots + restSlots;
+    const preferredNoteSlots = restSlots
+      ? Math.max(noteSlots, getLargestNotationSlotCount(totalAvailableSlots))
+      : noteSlots;
+    const remainingRestSlots = totalAvailableSlots - preferredNoteSlots;
+
+    simplified.push(createPlayedNoteFromSlots(note, preferredNoteSlots));
+
+    if (remainingRestSlots > 0) {
+      pushCompressedRests(simplified, remainingRestSlots, firstRest || note);
+    }
+
+    index = nextPlayedIndex;
   }
 
   return simplified;
@@ -521,7 +578,7 @@ function normalizeGeneratedScore(value, fallbackScore = createBlankLineScore()) 
     return cloneJson(fallbackScore);
   }
 
-  const simplifiedNotes = preferQuarterValues(notes);
+  const simplifiedNotes = preferLongerValues(notes);
 
   return {
     parts: { snare: { enabled: true } },
@@ -842,8 +899,10 @@ function finalizeGeneratedScore(section, score, lineIndex = 0) {
         ...part,
         voices: (part.voices || []).map((voice) => ({
           ...voice,
-          notes: cleanSequentialOrnaments(
-            ensureStickingsOnNotes(section, voice.notes || [])
+          notes: preferLongerValues(
+            cleanSequentialOrnaments(
+              ensureStickingsOnNotes(section, voice.notes || [])
+            )
           ),
         })),
       })),
@@ -995,7 +1054,7 @@ function createFallbackGeneratedScore(section, samplePayload, lineIndex) {
   );
   const notes = createNotesFromPlayedSlots(playedSlots, unitPerSlot, options, random);
 
-  const simplifiedNotes = preferQuarterValues(notes);
+  const simplifiedNotes = preferLongerValues(notes);
 
   return {
     parts: { snare: { enabled: true } },
