@@ -30,6 +30,7 @@ import {
   createBookSection,
   createDefaultBook,
   normalizePdfSettings,
+  normalizeSectionMaxSameHandStickingRun,
   normalizeSectionMinPlayedNotes,
   normalizeSectionOrnaments,
   normalizeSectionPageCount,
@@ -405,6 +406,7 @@ export default function BookBuilderPanel() {
           sections: savedBook.sections.map((section) => ({
             ...section,
             minPlayedNotes: currentSectionsById[section.id]?.minPlayedNotes ?? section.minPlayedNotes,
+            maxSameHandStickingRun: currentSectionsById[section.id]?.maxSameHandStickingRun ?? section.maxSameHandStickingRun,
           })),
         };
       });
@@ -639,6 +641,7 @@ export default function BookBuilderPanel() {
       prompt: "",
       subdivisions: ["eighths"],
       ornaments: [],
+      maxSameHandStickingRun: normalizeSectionMaxSameHandStickingRun(),
       sampleJson: "",
     }, pdfSettings);
     const nextBook = normalizeBook({
@@ -940,6 +943,9 @@ export default function BookBuilderPanel() {
                 {normalizeSectionMinPlayedNotes(section.minPlayedNotes)
                   ? ` · Min ${normalizeSectionMinPlayedNotes(section.minPlayedNotes)} notes`
                   : ""}
+                {normalizeSectionOrnaments(section.ornaments, section).includes("stickings")
+                  ? ` · Max ${normalizeSectionMaxSameHandStickingRun(section.maxSameHandStickingRun)} same hand`
+                  : ""}
               </span>
             </button>
           ))}
@@ -982,6 +988,19 @@ export default function BookBuilderPanel() {
               }
               type="number"
               value={normalizeSectionMinPlayedNotes(selectedSection.minPlayedNotes)}
+            />
+          </Field>
+          <Field label="Max same-hand stickings">
+            <input
+              inputMode="numeric"
+              min="1"
+              onChange={(event) =>
+                updateSelectedSectionDraft({
+                  maxSameHandStickingRun: normalizeSectionMaxSameHandStickingRun(event.target.value),
+                })
+              }
+              type="number"
+              value={normalizeSectionMaxSameHandStickingRun(selectedSection.maxSameHandStickingRun)}
             />
           </Field>
           <CheckboxPicker

@@ -8,6 +8,7 @@ export const BOOK_TITLE = "Snare Drum Book";
 export const BOOK_EDITION = 1;
 export const BOOK_CONTENT_VERSION = 3;
 export const DEFAULT_GLOBAL_AI_RULES = "";
+export const DEFAULT_MAX_SAME_HAND_STICKING_RUN = 4;
 export const SUBDIVISION_OPTIONS = [
   { id: "eighths", label: "Eighths", duration: 8 },
   { id: "sixteenths", label: "Sixteenths", duration: 16 },
@@ -76,6 +77,19 @@ export function normalizeSectionMinPlayedNotes(value, fallback = 0) {
   return Number.isInteger(normalizedFallback) && normalizedFallback >= 0
     ? normalizedFallback
     : 0;
+}
+
+export function normalizeSectionMaxSameHandStickingRun(value, fallback = DEFAULT_MAX_SAME_HAND_STICKING_RUN) {
+  const parsed = Number.parseInt(value, 10);
+  const normalizedFallback = Number.parseInt(fallback, 10);
+
+  if (Number.isInteger(parsed) && parsed > 0) {
+    return parsed;
+  }
+
+  return Number.isInteger(normalizedFallback) && normalizedFallback > 0
+    ? normalizedFallback
+    : DEFAULT_MAX_SAME_HAND_STICKING_RUN;
 }
 
 export function normalizeGlobalAiRules(value) {
@@ -304,6 +318,9 @@ export function createBookSection(sectionNumber = 1, overrides = {}, pdfSettings
     minPlayedNotes: normalizeSectionMinPlayedNotes(
       overrides.minPlayedNotes ?? template.minPlayedNotes
     ),
+    maxSameHandStickingRun: normalizeSectionMaxSameHandStickingRun(
+      overrides.maxSameHandStickingRun ?? template.maxSameHandStickingRun
+    ),
     pdfSettings: normalizedSettings,
     pages: overrides.pages || [createBlankPage(1, normalizedSettings)],
   };
@@ -422,6 +439,7 @@ function normalizeBookSections(rawBook, pdfSettings) {
       ornaments: normalizeSectionOrnaments(section.ornaments, section),
       pageCount: normalizeSectionPageCount(section.pageCount, normalizedPages.length),
       minPlayedNotes: normalizeSectionMinPlayedNotes(section.minPlayedNotes),
+      maxSameHandStickingRun: normalizeSectionMaxSameHandStickingRun(section.maxSameHandStickingRun),
       pdfSettings: sectionPdfSettings,
       pages: normalizedPages.map((page, sectionPageIndex) => {
         const pageNumber = globalPageNumber;

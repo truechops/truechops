@@ -99,6 +99,7 @@ function createManifest(book) {
       ornaments: section.ornaments,
       pageCount: section.pageCount,
       minPlayedNotes: section.minPlayedNotes,
+      maxSameHandStickingRun: section.maxSameHandStickingRun,
       pdfSettings: section.pdfSettings,
       pages: section.pages.map(createPageManifest),
     })),
@@ -319,6 +320,7 @@ function getRelevantPdfBookPayload(book, pages) {
       sampleJson: section.sampleJson,
       subdivisions: section.subdivisions,
       ornaments: section.ornaments,
+      maxSameHandStickingRun: section.maxSameHandStickingRun,
       pages: section.pages.map((page) => page.pageNumber),
     })),
     pages: pages.map((page) => ({

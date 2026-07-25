@@ -55,6 +55,7 @@ const ORNAMENT_SETTINGS = [
   { id: "diddles", label: "diddles", chars: "d" },
   { id: "cheese", label: "cheese", chars: "c" },
 ];
+const DEFAULT_MAX_SAME_HAND_STICKING_RUN = 4;
 const MAX_UNIQUE_LINE_ATTEMPTS = 250;
 
 const args = process.argv.slice(2);
@@ -761,6 +762,13 @@ function getSectionMinPlayedNotes(section) {
   return getNonNegativeInteger(section && section.minPlayedNotes, 0);
 }
 
+function getSectionMaxSameHandStickingRun(section) {
+  return getPositiveInteger(
+    section && section.maxSameHandStickingRun,
+    DEFAULT_MAX_SAME_HAND_STICKING_RUN
+  );
+}
+
 function countPlayedNotes(notes) {
   return (notes || []).filter((note) => !isRest(note)).length;
 }
@@ -907,6 +915,14 @@ function withPrependedSticking(note, sticking) {
   };
 }
 
+function getOppositeSticking(sticking) {
+  return sticking === "r" ? "l" : "r";
+}
+
+function withSticking(note, sticking) {
+  return withPrependedSticking(note, sticking);
+}
+
 function ensureStickingsOnNotes(section, notes) {
   if (!sectionUsesStickings(section)) {
     return notes;
@@ -929,6 +945,17 @@ function ensureStickingsOnNotes(section, notes) {
   });
 }
 
+function areConsecutiveSixteenthNotes(left, right) {
+  return left &&
+    right &&
+    !isRest(left) &&
+    !isRest(right) &&
+    Number(left.duration) === 16 &&
+    Number(right.duration) === 16 &&
+    Number(left.dots || 0) === 0 &&
+    Number(right.dots || 0) === 0;
+}
+
 function removeOrnamentChars(note, chars) {
   if (note.ornaments == null) {
     return note;
@@ -945,6 +972,83 @@ function removeOrnamentChars(note, chars) {
     ...note,
     ornaments,
   };
+}
+
+function removeDiddleBeforeConsecutiveCheese(notes) {
+  const cleaned = (notes || []).map((note) => ({ ...note }));
+
+  for (let index = 0; index < cleaned.length - 1; index += 1) {
+    const note = cleaned[index];
+    const next = cleaned[index + 1];
+
+    if (
+      areConsecutiveSixteenthNotes(note, next) &&
+      /d/.test(String(note.ornaments || "")) &&
+      /c/.test(String(next.ornaments || ""))
+    ) {
+      cleaned[index + 1] = removeOrnamentChars(next, "c");
+    }
+  }
+
+  return cleaned;
+}
+
+function enforceStickingSequenceRules(section, notes) {
+  const cleaned = removeDiddleBeforeConsecutiveCheese(notes);
+
+  if (!sectionUsesStickings(section)) {
+    return cleaned;
+  }
+
+  const maxSameHandRun = getSectionMaxSameHandStickingRun(section);
+  const nextNotes = cleaned.map((note) => ({ ...note }));
+  let previousNote = null;
+  let previousSticking = "";
+  let sameHandRun = 0;
+
+  for (let index = 0; index < nextNotes.length; index += 1) {
+    const note = nextNotes[index];
+
+    if (isRest(note)) {
+      previousNote = null;
+      previousSticking = "";
+      sameHandRun = 0;
+      continue;
+    }
+
+    const currentSticking = getNoteSticking(note) || (previousSticking === "r" ? "l" : "r");
+    const previousRequiresOpposite = previousNote &&
+      areConsecutiveSixteenthNotes(previousNote, note) &&
+      /[dc]/.test(String(previousNote.ornaments || "")) &&
+      getNoteSticking(previousNote);
+    let nextSticking = currentSticking;
+
+    if (previousRequiresOpposite) {
+      nextSticking = getOppositeSticking(getNoteSticking(previousNote));
+    } else if (
+      maxSameHandRun > 0 &&
+      previousSticking &&
+      currentSticking === previousSticking &&
+      sameHandRun + 1 > maxSameHandRun
+    ) {
+      nextSticking = getOppositeSticking(previousSticking);
+    }
+
+    if (getNoteSticking(note) !== nextSticking) {
+      nextNotes[index] = withSticking(note, nextSticking);
+    }
+
+    if (nextSticking === previousSticking) {
+      sameHandRun += 1;
+    } else {
+      sameHandRun = 1;
+    }
+
+    previousNote = nextNotes[index];
+    previousSticking = nextSticking;
+  }
+
+  return nextNotes;
 }
 
 function cleanSequentialOrnaments(notes) {
@@ -989,11 +1093,14 @@ function finalizeGeneratedScore(section, score, lineIndex = 0) {
         ...part,
         voices: (part.voices || []).map((voice) => ({
           ...voice,
-          notes: preferLongerValues(
-            cleanSequentialOrnaments(
-              ensureStickingsOnNotes(section, voice.notes || [])
+          notes: enforceStickingSequenceRules(
+            section,
+            preferLongerValues(
+              cleanSequentialOrnaments(
+                ensureStickingsOnNotes(section, voice.notes || [])
+              ),
+              getPreferLongerValueOptions()
             ),
-            getPreferLongerValueOptions()
           ),
         })),
       })),
@@ -1241,6 +1348,7 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         existingPageCount || inferPageCount(section)
       ),
       minPlayedNotes: getSectionMinPlayedNotes(section),
+      maxSameHandStickingRun: getSectionMaxSameHandStickingRun(section),
       globalRules,
       instructions: createStructuredSectionInstructions(structuredSection, sampleJson),
       subdivisions,
@@ -1299,6 +1407,12 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
       : "",
     section.minPlayedNotes
       ? `Each generated rhythm in this section must have at least ${section.minPlayedNotes} played note events. Rests do not count as played notes.`
+      : "",
+    sectionUsesStickings(section)
+      ? `Do not use more than ${getSectionMaxSameHandStickingRun(section)} consecutive played notes with the same sticking. Rests reset this count.`
+      : "",
+    sectionUsesStickings(section)
+      ? "When a diddle or cheese is followed immediately by the next sixteenth note, that following note must use the opposite sticking. A diddle must not directly precede a cheese on consecutive sixteenth notes."
       : "",
     `Return exactly ${count} lines. These begin at section line ${offset + 1}.`,
     `The section has ${linesPerPage} lines per PDF page.`,
@@ -1521,6 +1635,7 @@ function buildBook(config, generatedSections) {
       ornaments: section.ornaments,
       pageCount: generated.pageCount,
       minPlayedNotes: section.minPlayedNotes,
+      maxSameHandStickingRun: section.maxSameHandStickingRun,
       pdfSettings: generated.pdfSettings,
       pages,
     };
@@ -1583,6 +1698,7 @@ function createManifest(book) {
       ornaments: section.ornaments,
       pageCount: section.pageCount,
       minPlayedNotes: section.minPlayedNotes,
+      maxSameHandStickingRun: section.maxSameHandStickingRun,
       pdfSettings: section.pdfSettings,
       pages: section.pages.map(createPageManifest),
     })),
