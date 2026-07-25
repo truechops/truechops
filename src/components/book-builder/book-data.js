@@ -240,6 +240,7 @@ export function createBlankLine(pageNumber, lineNumber) {
     notes: "",
     tempo: DEFAULT_TEMPO,
     score: null,
+    exerciseShortForm: "",
     updatedAt: null,
   };
 }
@@ -441,6 +442,7 @@ function normalizeBookSections(rawBook, pdfSettings) {
             sectionPageNumber: sectionPageIndex + 1,
             tempo: Number(line.tempo || DEFAULT_TEMPO),
             score: line.score ? cloneJson(line.score) : null,
+            exerciseShortForm: line.exerciseShortForm || "",
           })),
         };
       }),
@@ -489,6 +491,7 @@ export function renumberPages(pages, pdfSettings = DEFAULT_PDF_SETTINGS) {
         lineNumber: lineIndex + 1,
         tempo: Number(line.tempo || DEFAULT_TEMPO),
         score: line.score ? cloneJson(line.score) : null,
+        exerciseShortForm: line.exerciseShortForm || "",
       })),
     });
 

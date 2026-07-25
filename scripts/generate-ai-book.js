@@ -55,6 +55,7 @@ const ORNAMENT_SETTINGS = [
   { id: "diddles", label: "diddles", chars: "d" },
   { id: "cheese", label: "cheese", chars: "c" },
 ];
+const MAX_UNIQUE_LINE_ATTEMPTS = 250;
 
 const args = process.argv.slice(2);
 
@@ -111,6 +112,7 @@ function createBlankLine(pageNumber, lineNumber) {
     notes: "",
     tempo: 90,
     score: null,
+    exerciseShortForm: "",
     updatedAt: null,
   };
 }
@@ -467,7 +469,52 @@ function pushCompressedRests(target, slotCount, sourceNote) {
   }
 }
 
-function preferLongerValues(notes) {
+function getPreferLongerValueOptions() {
+  return {
+    groupSlots: 8,
+  };
+}
+
+function splitIntoSlotGroups(notes, groupSlots) {
+  if (!groupSlots) {
+    return [notes || []];
+  }
+
+  const groups = [];
+  let group = [];
+  let groupUsedSlots = 0;
+
+  for (const note of notes || []) {
+    const noteSlots = getNoteSlotCount(note);
+
+    if (noteSlots && groupUsedSlots > 0 && groupUsedSlots + noteSlots > groupSlots) {
+      groups.push(group);
+      group = [];
+      groupUsedSlots = 0;
+    }
+
+    group.push(note);
+    groupUsedSlots += noteSlots;
+
+    if (groupUsedSlots >= groupSlots) {
+      groups.push(group);
+      group = [];
+      groupUsedSlots = 0;
+    }
+  }
+
+  if (group.length) {
+    groups.push(group);
+  }
+
+  return groups;
+}
+
+function groupHasPlayedNotes(notes) {
+  return (notes || []).some((note) => !isRest(note));
+}
+
+function preferLongerValuesInGroup(notes) {
   const simplified = [];
   let index = 0;
 
@@ -519,6 +566,24 @@ function preferLongerValues(notes) {
   }
 
   return simplified;
+}
+
+function preferLongerValues(notes, options = {}) {
+  const {
+    groupSlots = 0,
+  } = options;
+
+  return splitIntoSlotGroups(notes, groupSlots).flatMap((group) => {
+    if (!groupHasPlayedNotes(group)) {
+      const restSlots = group.reduce((total, note) => total + getNoteSlotCount(note), 0);
+      const firstRest = group.find((note) => isRest(note)) || group[0];
+      const compressedRests = [];
+      pushCompressedRests(compressedRests, restSlots, firstRest);
+      return compressedRests;
+    }
+
+    return preferLongerValuesInGroup(group);
+  });
 }
 
 function normalizeGeneratedNote(note, fallbackNote = {}) {
@@ -578,8 +643,6 @@ function normalizeGeneratedScore(value, fallbackScore = createBlankLineScore()) 
     return cloneJson(fallbackScore);
   }
 
-  const simplifiedNotes = preferLongerValues(notes);
-
   return {
     parts: { snare: { enabled: true } },
     measures: [{
@@ -590,12 +653,39 @@ function normalizeGeneratedScore(value, fallbackScore = createBlankLineScore()) 
       parts: [{
         instrument: "snare",
         voices: [{
-          notes: simplifiedNotes,
+          notes,
           tuplets: Array.isArray(voice && voice.tuplets) ? voice.tuplets : [],
         }],
       }],
     }],
   };
+}
+
+function normalizeOrnamentText(value) {
+  const ornamentOrder = "rlafdc";
+  const ornaments = String(value || "")
+    .split("")
+    .filter((char, index, chars) => ornamentOrder.includes(char) && chars.indexOf(char) === index)
+    .sort((left, right) => ornamentOrder.indexOf(left) - ornamentOrder.indexOf(right))
+    .join("");
+
+  return ornaments ? `:${ornaments}` : "";
+}
+
+function getExerciseShortForm(score) {
+  const measure = score && score.measures && score.measures[0];
+  const part = measure && Array.isArray(measure.parts)
+    ? measure.parts.find((candidate) => candidate.instrument === "snare") || measure.parts[0]
+    : null;
+  const voice = part && part.voices && part.voices[0];
+  const notes = Array.isArray(voice && voice.notes) ? voice.notes : [];
+
+  return notes.map((note) => {
+    const type = isRest(note) ? "r" : "n";
+    const dots = Number(note.dots || 0);
+    const duration = `${Number(note.duration || 4)}${dots ? ".".repeat(dots) : ""}`;
+    return `${type}${duration}${type === "n" ? normalizeOrnamentText(note.ornaments) : ""}`;
+  }).join(" ");
 }
 
 function extractGeneratedLineInputs(payload) {
@@ -902,7 +992,8 @@ function finalizeGeneratedScore(section, score, lineIndex = 0) {
           notes: preferLongerValues(
             cleanSequentialOrnaments(
               ensureStickingsOnNotes(section, voice.notes || [])
-            )
+            ),
+            getPreferLongerValueOptions()
           ),
         })),
       })),
@@ -943,18 +1034,6 @@ function getDurationBySlots(slots, baseDuration) {
   };
 
   return durationMap[rounded] || { duration: baseDuration, dots: 0 };
-}
-
-function chooseRestChunkSlots(remainingSlots, baseDuration) {
-  const quarterSlots = baseDuration / 4;
-
-  if (remainingSlots >= quarterSlots) return quarterSlots;
-  if (baseDuration >= 32 && remainingSlots >= 6) return 6;
-  if (remainingSlots >= quarterSlots * 0.75 && quarterSlots * 0.75 >= 3) return quarterSlots * 0.75;
-  if (remainingSlots >= quarterSlots / 2) return quarterSlots / 2;
-  if (baseDuration >= 16 && remainingSlots >= 3) return 3;
-  if (remainingSlots >= 2) return 2;
-  return 1;
 }
 
 function createFallbackOrnaments(options, random, playedIndex, previousOrnaments) {
@@ -1014,9 +1093,7 @@ function createNotesFromPlayedSlots(slots, unitPerSlot, options, random) {
     let remainingUnits = runSlotCount * unitPerSlot;
 
     while (remainingUnits > 0) {
-      const chunkUnits = isPlayedRun
-        ? unitPerSlot
-        : Math.min(remainingUnits, chooseRestChunkSlots(remainingUnits, baseDuration));
+      const chunkUnits = unitPerSlot;
       const durationByUnits = getDurationBySlots(chunkUnits, baseDuration);
       const previousOrnaments = notes[notes.length - 1]?.ornaments || "";
       const ornaments = isPlayedRun
@@ -1040,10 +1117,11 @@ function createNotesFromPlayedSlots(slots, unitPerSlot, options, random) {
   return notes;
 }
 
-function createFallbackGeneratedScore(section, samplePayload, lineIndex) {
+function createFallbackGeneratedScore(section, samplePayload, lineIndex, attempt = 0) {
   const options = getFallbackGenerationOptions(section, samplePayload);
+  const retrySeed = attempt ? `:retry:${attempt}` : "";
   const random = createSeededRandom(
-    `${section.id || section.title || "section"}:fallback:${lineIndex}:${section.instructions || ""}`
+    `${section.id || section.title || "section"}:fallback:${lineIndex}${retrySeed}:${section.instructions || ""}`
   );
   const slotCount = options.maxSubdivisionDuration;
   const unitPerSlot = 1;
@@ -1054,43 +1132,62 @@ function createFallbackGeneratedScore(section, samplePayload, lineIndex) {
   );
   const notes = createNotesFromPlayedSlots(playedSlots, unitPerSlot, options, random);
 
-  const simplifiedNotes = preferLongerValues(notes);
-
   return {
     parts: { snare: { enabled: true } },
     measures: [{
       timeSig: { num: 4, type: 4 },
       parts: [{
         instrument: "snare",
-        voices: [{ notes: simplifiedNotes, tuplets: [] }],
+        voices: [{ notes, tuplets: [] }],
       }],
     }],
   };
 }
 
-function createFallbackGeneratedLine(section, samplePayload, index) {
+function createFallbackGeneratedLine(section, samplePayload, index, attempt = 0) {
   return {
     title: `${section.title || "Section"} ${index + 1}`,
     notes: "Generated from section instructions and sample JSON.",
     tempo: getPositiveInteger(samplePayload.tempo, 90),
-    score: createFallbackGeneratedScore(section, samplePayload, index),
+    score: createFallbackGeneratedScore(section, samplePayload, index, attempt),
   };
 }
 
-function normalizeGeneratedLine(input, section, samplePayload, index) {
-  const fallbackLine = createFallbackGeneratedLine(section, samplePayload, index);
+function normalizeGeneratedLine(input, section, samplePayload, index, attempt = 0) {
+  const fallbackLine = createFallbackGeneratedLine(section, samplePayload, index, attempt);
   const fallbackScore = getSampleScore(samplePayload);
   const scoreSource = input && (input.score || input.measures ? input.score || input : null);
   const score = scoreSource
     ? normalizeGeneratedScore(scoreSource, fallbackScore)
     : fallbackLine.score;
+  const finalizedScore = finalizeGeneratedScore(section, score, index);
 
   return {
     title: (input && input.title) || fallbackLine.title,
     notes: (input && input.notes) || "",
     tempo: getPositiveInteger(input && input.tempo, fallbackLine.tempo),
-    score: finalizeGeneratedScore(section, score, index),
+    score: finalizedScore,
+    exerciseShortForm: getExerciseShortForm(finalizedScore),
   };
+}
+
+function createUniqueGeneratedLine(input, section, samplePayload, index, usedExerciseShortForms) {
+  for (let attempt = 0; attempt < MAX_UNIQUE_LINE_ATTEMPTS; attempt += 1) {
+    const candidateInput = attempt === 0 ? input : null;
+    const line = normalizeGeneratedLine(candidateInput, section, samplePayload, index, attempt);
+
+    if (!line.exerciseShortForm || !usedExerciseShortForms.has(line.exerciseShortForm)) {
+      if (line.exerciseShortForm) {
+        usedExerciseShortForms.add(line.exerciseShortForm);
+      }
+
+      return line;
+    }
+  }
+
+  throw new Error(
+    `${section.title || "Section"} line ${index + 1}: could not create a unique exercise after ${MAX_UNIQUE_LINE_ATTEMPTS} attempts.`
+  );
 }
 
 function inferPageCount(section) {
@@ -1315,6 +1412,7 @@ async function generateSectionLines(config, section, sectionIndex, options) {
     12
   );
   const lines = [];
+  const usedExerciseShortForms = options.usedExerciseShortForms || new Set();
 
   console.log(
     `[${sectionIndex + 1}/${config.sections.length}] ${section.title}: generate ${pageCount} pages, ${lineCount} lines`
@@ -1341,7 +1439,13 @@ async function generateSectionLines(config, section, sectionIndex, options) {
     for (let batchIndex = 0; batchIndex < count; batchIndex += 1) {
       const index = offset + batchIndex;
       const input = aiLines[batchIndex] || null;
-      lines.push(normalizeGeneratedLine(input, section, samplePayload, index));
+      lines.push(createUniqueGeneratedLine(
+        input,
+        section,
+        samplePayload,
+        index,
+        usedExerciseShortForms
+      ));
     }
 
     process.stdout.write(`  ${Math.min(offset + count, lineCount)} / ${lineCount}\r`);
@@ -1372,6 +1476,7 @@ function createGeneratedPages(section, generated, now) {
               notes: generatedLine.notes || "",
               tempo: generatedLine.tempo,
               score: generatedLine.score,
+              exerciseShortForm: generatedLine.exerciseShortForm,
               updatedAt: now,
             }
           : line;
@@ -1446,6 +1551,7 @@ function createManifest(book) {
     title: line.title,
     notes: line.notes,
     tempo: line.tempo,
+    exerciseShortForm: line.exerciseShortForm,
     hasScore: Boolean(line.score),
     updatedAt: line.updatedAt,
   });
@@ -1540,11 +1646,13 @@ async function main() {
   console.log(`Output root: ${path.relative(PROJECT_ROOT, bookRoot)}`);
 
   const generatedSections = [];
+  const usedExerciseShortForms = new Set();
 
   for (let sectionIndex = 0; sectionIndex < generationConfig.sections.length; sectionIndex += 1) {
     generatedSections.push(
       await generateSectionLines(generationConfig, generationConfig.sections[sectionIndex], sectionIndex, {
         allowFallback: allowFallback || noLocalAi,
+        usedExerciseShortForms,
       })
     );
   }

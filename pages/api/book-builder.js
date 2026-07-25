@@ -67,6 +67,7 @@ function createManifest(book) {
     title: line.title,
     notes: line.notes,
     tempo: line.tempo,
+    exerciseShortForm: line.exerciseShortForm,
     hasScore: Boolean(line.score),
     updatedAt: line.updatedAt,
   });
