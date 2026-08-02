@@ -24,9 +24,17 @@ const BOOK_ROOT = path.join(process.cwd(), "data", "book-builder", BOOK_SLUG);
 const MANIFEST_PATH = path.join(BOOK_ROOT, "book.json");
 const LINE_NUMBER_CENTER_OFFSET = 1.25;
 const PDF_CACHE_ROOT = process.env.BOOK_PDF_CACHE_DIR || path.join(process.cwd(), ".next", "cache", "book-builder-pdf");
-const SCORE_SVG_CACHE_VERSION = "score-svg-v1";
-const PDF_FILE_CACHE_VERSION = "pdf-v2";
+const SCORE_SVG_CACHE_VERSION = "score-svg-v7";
+const PDF_FILE_CACHE_VERSION = "pdf-v9";
 const SCORE_SVG_MEMORY_CACHE_LIMIT = Number(process.env.BOOK_PDF_SVG_MEMORY_CACHE_LIMIT || 800);
+const PDF_PAGE_WIDTH = 612;
+const PDF_PAGE_HEIGHT = 792;
+const PDF_MARGIN = 24;
+const PDF_HEADER_HEIGHT = 34;
+const PDF_FOOTER_HEIGHT = 46;
+const PDF_COLUMN_GAP = 20;
+const PDF_LINE_NUMBER_WIDTH = 18;
+const PDF_LINE_NUMBER_GAP = 2;
 
 // Module-level flag so setupDom re-runs after a hot-reload (globalThis persists
 // across hot-reloads but module scope resets, clearing this flag).
@@ -97,9 +105,12 @@ function createManifest(book) {
       sampleJson: section.sampleJson,
       subdivisions: section.subdivisions,
       ornaments: section.ornaments,
+      tuplet: section.tuplet,
       pageCount: section.pageCount,
       minPlayedNotes: section.minPlayedNotes,
+      maxPlayedNotes: section.maxPlayedNotes,
       maxSameHandStickingRun: section.maxSameHandStickingRun,
+      requireMaxSameHandStickingRun: section.requireMaxSameHandStickingRun,
       pdfSettings: section.pdfSettings,
       pages: section.pages.map(createPageManifest),
     })),
@@ -320,7 +331,11 @@ function getRelevantPdfBookPayload(book, pages) {
       sampleJson: section.sampleJson,
       subdivisions: section.subdivisions,
       ornaments: section.ornaments,
+      tuplet: section.tuplet,
+      minPlayedNotes: section.minPlayedNotes,
+      maxPlayedNotes: section.maxPlayedNotes,
       maxSameHandStickingRun: section.maxSameHandStickingRun,
+      requireMaxSameHandStickingRun: section.requireMaxSameHandStickingRun,
       pages: section.pages.map((page) => page.pageNumber),
     })),
     pages: pages.map((page) => ({
@@ -543,9 +558,9 @@ async function renderScoreSvg(line, renderKey, pdfSettings) {
 }
 
 function drawSlotSvg(doc, line, svg, x, y, width, height) {
-  const numberWidth = 18;
-  const notationX = x + numberWidth + 2;
-  const notationWidth = width - numberWidth - 2;
+  const numberWidth = PDF_LINE_NUMBER_WIDTH;
+  const notationX = x + numberWidth + PDF_LINE_NUMBER_GAP;
+  const notationWidth = width - numberWidth - PDF_LINE_NUMBER_GAP;
 
   // Always scale to fill the full column width so the right side of each
   // measure aligns with the column edge (prevents empty right-margin space).
@@ -708,12 +723,12 @@ async function renderBookPageAssets(book, page, bookPdfSettings, limitScoreRende
 
 function drawBookPage(doc, book, pageAssets) {
   const { page, pdfSettings, pageLines, svgs, qrSvg } = pageAssets;
-  const pageWidth = 612;
-  const pageHeight = 792;
-  const margin = 24;
-  const headerHeight = 34;
-  const footerHeight = 46;
-  const columnGap = 20;
+  const pageWidth = PDF_PAGE_WIDTH;
+  const pageHeight = PDF_PAGE_HEIGHT;
+  const margin = PDF_MARGIN;
+  const headerHeight = PDF_HEADER_HEIGHT;
+  const footerHeight = PDF_FOOTER_HEIGHT;
+  const columnGap = PDF_COLUMN_GAP;
   const usableWidth = pageWidth - margin * 2 - columnGap * (pdfSettings.columns - 1);
   const columnWidth = usableWidth / pdfSettings.columns;
   const rowHeight = (pageHeight - margin * 2 - headerHeight - footerHeight) / pdfSettings.rows;

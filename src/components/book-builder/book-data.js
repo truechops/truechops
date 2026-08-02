@@ -14,6 +14,17 @@ export const SUBDIVISION_OPTIONS = [
   { id: "sixteenths", label: "Sixteenths", duration: 16 },
   { id: "thirtyseconds", label: "Thirtyseconds", duration: 32 },
 ];
+export const TUPLET_TYPE_OPTIONS = [
+  { id: "quarter", label: "Quarter", type: 4 },
+  { id: "eighth", label: "Eighth", type: 8 },
+  { id: "sixteenth", label: "Sixteenth", type: 16 },
+];
+const LEGACY_TUPLET_OPTIONS = [
+  { id: "eighth-triplets", label: "Eighth triplets", actual: 3, normal: 2, type: 8 },
+  { id: "sixteenth-triplets", label: "Sixteenth triplets", actual: 3, normal: 2, type: 16 },
+  { id: "sixteenth-quintuplets", label: "Sixteenth quintuplets", actual: 5, normal: 4, type: 16 },
+  { id: "sixteenth-septuplets", label: "Sixteenth septuplets", actual: 7, normal: 4, type: 16 },
+];
 export const ORNAMENT_OPTIONS = [
   { id: "stickings", label: "Stickings" },
   { id: "accents", label: "Accents" },
@@ -42,7 +53,6 @@ export const DEFAULT_BOOK_SECTIONS = [
 export const MEASURES_PER_LINE = 1;
 export const PDF_COLUMNS = 2;
 export const PDF_ROWS = 12;
-export const PDF_COLUMN_OPTIONS = [2, 3];
 export const LINES_PER_PAGE = PDF_COLUMNS * PDF_ROWS;
 
 export const DEFAULT_PDF_SETTINGS = {
@@ -52,6 +62,19 @@ export const DEFAULT_PDF_SETTINGS = {
   noteStartPadding: 25,
   noteEndPadding: 25,
 };
+
+export function normalizePdfRows(value, fallback = PDF_ROWS) {
+  const parsed = Number.parseInt(value, 10);
+  const normalizedFallback = Number.parseInt(fallback, 10);
+
+  if (Number.isInteger(parsed) && parsed > 0) {
+    return parsed;
+  }
+
+  return Number.isInteger(normalizedFallback) && normalizedFallback > 0
+    ? normalizedFallback
+    : PDF_ROWS;
+}
 
 export function normalizeSectionPageCount(value, fallback = 1) {
   const parsed = Number.parseInt(value, 10);
@@ -79,6 +102,19 @@ export function normalizeSectionMinPlayedNotes(value, fallback = 0) {
     : 0;
 }
 
+export function normalizeSectionMaxPlayedNotes(value, fallback = 0) {
+  const parsed = Number.parseInt(value, 10);
+  const normalizedFallback = Number.parseInt(fallback, 10);
+
+  if (Number.isInteger(parsed) && parsed >= 0) {
+    return parsed;
+  }
+
+  return Number.isInteger(normalizedFallback) && normalizedFallback >= 0
+    ? normalizedFallback
+    : 0;
+}
+
 export function normalizeSectionMaxSameHandStickingRun(value, fallback = DEFAULT_MAX_SAME_HAND_STICKING_RUN) {
   const parsed = Number.parseInt(value, 10);
   const normalizedFallback = Number.parseInt(fallback, 10);
@@ -90,6 +126,19 @@ export function normalizeSectionMaxSameHandStickingRun(value, fallback = DEFAULT
   return Number.isInteger(normalizedFallback) && normalizedFallback > 0
     ? normalizedFallback
     : DEFAULT_MAX_SAME_HAND_STICKING_RUN;
+}
+
+export function normalizeSectionRequireMaxSameHandStickingRun(value, fallback = false) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    if (value === "true") return true;
+    if (value === "false") return false;
+  }
+
+  return Boolean(fallback);
 }
 
 export function normalizeGlobalAiRules(value) {
@@ -127,6 +176,26 @@ function getSampleNotes(sampleJson) {
   return Array.isArray(voice && voice.notes) ? voice.notes : [];
 }
 
+function getSampleTuplets(sampleJson) {
+  const sample = typeof sampleJson === "string" ? parseJsonLoose(sampleJson) : sampleJson;
+
+  if (Array.isArray(sample && sample.tuplets)) {
+    return sample.tuplets;
+  }
+
+  const score = sample && sample.score && sample.score.measures
+    ? sample.score
+    : sample && sample.measures
+      ? sample
+      : null;
+  const measure = score && score.measures && score.measures[0];
+  const part = measure && Array.isArray(measure.parts)
+    ? measure.parts.find((candidate) => candidate.instrument === "snare") || measure.parts[0]
+    : null;
+  const voice = part && part.voices && part.voices[0];
+  return Array.isArray(voice && voice.tuplets) ? voice.tuplets : [];
+}
+
 function normalizeOptionList(value, options, fallback = []) {
   const validIds = new Set(options.map((option) => option.id));
   const values = Array.isArray(value)
@@ -145,6 +214,53 @@ function normalizeOptionList(value, options, fallback = []) {
   }
 
   return normalized.length ? normalized : fallback;
+}
+
+export function getTupletTypeOptionByValue(value) {
+  const type = Number(value && value.type);
+
+  return TUPLET_TYPE_OPTIONS.find((option) => Number(option.type) === type);
+}
+
+function normalizeTupletConfig(value) {
+  if (!value || value === "none" || value === false) {
+    return null;
+  }
+
+  if (typeof value === "string") {
+    const option = LEGACY_TUPLET_OPTIONS.find((candidate) => candidate.id === value);
+    return option
+      ? {
+          actual: option.actual,
+          normal: option.normal,
+          type: option.type,
+        }
+      : null;
+  }
+
+  const actual = Number.parseInt(value.actual, 10);
+  const normal = Number.parseInt(value.normal, 10);
+  const type = Number.parseInt(value.type, 10);
+
+  if (
+    !Number.isInteger(actual) ||
+    !Number.isInteger(normal) ||
+    !Number.isInteger(type) ||
+    actual < 2 ||
+    actual > 16 ||
+    normal < 2 ||
+    normal > 16 ||
+    normal > type ||
+    !TUPLET_TYPE_OPTIONS.some((option) => option.type === type)
+  ) {
+    return null;
+  }
+
+  return {
+    actual,
+    normal,
+    type,
+  };
 }
 
 function inferSectionSubdivisions(section = {}) {
@@ -171,6 +287,32 @@ function inferSectionSubdivisions(section = {}) {
   }
 
   return inferred.length ? inferred : ["eighths"];
+}
+
+function inferSectionTuplet(section = {}) {
+  const sample = typeof section.sampleJson === "string"
+    ? parseJsonLoose(section.sampleJson)
+    : section.sampleJson;
+  const explicitSampleTuplet = normalizeTupletConfig(sample && sample.tuplet);
+
+  if (explicitSampleTuplet) {
+    return explicitSampleTuplet;
+  }
+
+  const tuplet = getSampleTuplets(section.sampleJson)[0];
+
+  if (!tuplet) {
+    return null;
+  }
+
+  const notes = getSampleNotes(section.sampleJson);
+  const startNote = notes[Number(tuplet.start) || 0];
+
+  return normalizeTupletConfig({
+    actual: tuplet.actual,
+    normal: tuplet.normal,
+    type: startNote?.duration || section.tupletType || 8,
+  });
 }
 
 function inferSectionOrnaments(section = {}) {
@@ -209,6 +351,14 @@ export function normalizeSectionSubdivisions(value, section = {}) {
   );
 }
 
+export function normalizeSectionTuplet(value, section = {}) {
+  if (value === undefined) {
+    return inferSectionTuplet(section);
+  }
+
+  return normalizeTupletConfig(value);
+}
+
 export function normalizeSectionOrnaments(value, section = {}) {
   if (Array.isArray(value)) {
     return normalizeOptionList(value, ORNAMENT_OPTIONS, []);
@@ -218,15 +368,11 @@ export function normalizeSectionOrnaments(value, section = {}) {
 }
 
 export function normalizePdfSettings(pdfSettings = {}) {
-  const columns = PDF_COLUMN_OPTIONS.includes(Number(pdfSettings.columns))
-    ? Number(pdfSettings.columns)
-    : DEFAULT_PDF_SETTINGS.columns;
-
   return {
     ...DEFAULT_PDF_SETTINGS,
     ...pdfSettings,
-    columns,
-    rows: PDF_ROWS,
+    columns: PDF_COLUMNS,
+    rows: normalizePdfRows(pdfSettings.rows, DEFAULT_PDF_SETTINGS.rows),
   };
 }
 
@@ -292,6 +438,9 @@ function normalizeSectionSampleJson(value) {
 export function createBookSection(sectionNumber = 1, overrides = {}, pdfSettings = DEFAULT_PDF_SETTINGS) {
   const template = DEFAULT_BOOK_SECTIONS[sectionNumber - 1] || {};
   const title = overrides.title || template.title || `Section ${sectionNumber}`;
+  const tuplet = Object.prototype.hasOwnProperty.call(overrides, "tuplet")
+    ? overrides.tuplet
+    : template.tuplet;
   const normalizedSettings = normalizePdfSettings({
     ...pdfSettings,
     ...(template.pdfSettings || {}),
@@ -311,6 +460,7 @@ export function createBookSection(sectionNumber = 1, overrides = {}, pdfSettings
       overrides.ornaments ?? template.ornaments,
       { ...template, ...overrides }
     ),
+    tuplet: normalizeSectionTuplet(tuplet, { ...template, ...overrides }),
     pageCount: normalizeSectionPageCount(
       overrides.pageCount ?? template.pageCount,
       overrides.pages?.length || template.pages?.length || 1
@@ -318,8 +468,14 @@ export function createBookSection(sectionNumber = 1, overrides = {}, pdfSettings
     minPlayedNotes: normalizeSectionMinPlayedNotes(
       overrides.minPlayedNotes ?? template.minPlayedNotes
     ),
+    maxPlayedNotes: normalizeSectionMaxPlayedNotes(
+      overrides.maxPlayedNotes ?? template.maxPlayedNotes
+    ),
     maxSameHandStickingRun: normalizeSectionMaxSameHandStickingRun(
       overrides.maxSameHandStickingRun ?? template.maxSameHandStickingRun
+    ),
+    requireMaxSameHandStickingRun: normalizeSectionRequireMaxSameHandStickingRun(
+      overrides.requireMaxSameHandStickingRun ?? template.requireMaxSameHandStickingRun
     ),
     pdfSettings: normalizedSettings,
     pages: overrides.pages || [createBlankPage(1, normalizedSettings)],
@@ -437,9 +593,12 @@ function normalizeBookSections(rawBook, pdfSettings) {
       sampleJson: normalizeSectionSampleJson(section.sampleJson),
       subdivisions: normalizeSectionSubdivisions(section.subdivisions, section),
       ornaments: normalizeSectionOrnaments(section.ornaments, section),
+      tuplet: normalizeSectionTuplet(section.tuplet, section),
       pageCount: normalizeSectionPageCount(section.pageCount, normalizedPages.length),
       minPlayedNotes: normalizeSectionMinPlayedNotes(section.minPlayedNotes),
+      maxPlayedNotes: normalizeSectionMaxPlayedNotes(section.maxPlayedNotes),
       maxSameHandStickingRun: normalizeSectionMaxSameHandStickingRun(section.maxSameHandStickingRun),
+      requireMaxSameHandStickingRun: normalizeSectionRequireMaxSameHandStickingRun(section.requireMaxSameHandStickingRun),
       pdfSettings: sectionPdfSettings,
       pages: normalizedPages.map((page, sectionPageIndex) => {
         const pageNumber = globalPageNumber;

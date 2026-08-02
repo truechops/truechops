@@ -20,6 +20,11 @@ const PADDING = 50;
 const FORMAT_PADDING = 13;
 const MIN_BAR_SIZE = 100;
 const SCORE_MIN_WIDTH = 100;
+const TUPLET_Y_OFFSET = {
+  DEFAULT: -4,
+  WITH_ABOVE_ACCENT: 8,
+};
+const LONGEST_UNBEAMED_TUPLET_DURATION = 4;
 
 export function initialize(id) {
   // Create an SVG renderer and attach it to the DIV element named "vf".
@@ -194,12 +199,16 @@ function getMeasureData(measures, partConfig) {
           vfNotes.push(n);
         });
 
-        tuplets.forEach((tuplet) => {
+        const voiceTuplets = Array.isArray(tuplets) ? tuplets : [];
+
+        voiceTuplets.forEach((tuplet) => {
+          const tupletNotes = notes.slice(tuplet.start, tuplet.end);
           vfTuplets.push(
             new VF.Tuplet(vfNotes.slice(tuplet.start, tuplet.end), {
               num_notes: tuplet.actual,
               notes_occupied: tuplet.normal,
-              bracketed: true,
+              bracketed: false,
+              y_offset: getTupletYOffset(tupletNotes, instrument),
             })
           );
         });
@@ -211,13 +220,9 @@ function getMeasureData(measures, partConfig) {
         });
         vfVoice.addTickables(vfNotes);
         vfVoices.push(vfVoice);
-        vfVoiceBeams.push(
-          VF.Beam.generateBeams(vfNotes, {
-            stem_direction: Vex.Flow.StaveNote.STEM_UP,
-            groups: timeSigs[`${timeSig.num}/${timeSig.type}`].groups.map(group => 
-              new Vex.Flow.Fraction(group[0], group[1]))
-          })
-        );
+        const generatedBeams = getVoiceBeams(vfNotes, notes, voiceTuplets, timeSig);
+        vfTuplets.forEach((vfTuplet) => vfTuplet.setBracketed(false));
+        vfVoiceBeams.push(generatedBeams);
         vfVoiceNotes.push(vfNotes);
       });
 
@@ -387,6 +392,123 @@ function getAdditionalWidthsForBars(widths, remainingWidth) {
   const totalWidth = widths.reduce(reducer, 0);
   const percentages = widths.map((width) => width / totalWidth);
   return percentages.map((percentage) => percentage * remainingWidth);
+}
+
+function createAutomaticBeams(vfNotes, timeSig) {
+  if (vfNotes.length < 2) {
+    return [];
+  }
+
+  return VF.Beam.generateBeams(vfNotes, {
+    stem_direction: Vex.Flow.StaveNote.STEM_UP,
+    groups: timeSigs[`${timeSig.num}/${timeSig.type}`].groups.map(group =>
+      new Vex.Flow.Fraction(group[0], group[1]))
+  });
+}
+
+function hasQuarterOrLongerDuration(jsonNote) {
+  return Number(jsonNote?.duration) <= LONGEST_UNBEAMED_TUPLET_DURATION;
+}
+
+function isJsonRest(jsonNote) {
+  return !Array.isArray(jsonNote?.notes) || jsonNote.notes.length === 0;
+}
+
+function shouldBeamTupletAsSingleGroup(jsonNotes) {
+  const playedNoteCount = jsonNotes.filter((note) => !isJsonRest(note)).length;
+
+  return playedNoteCount > 1 &&
+    jsonNotes.length > 1 &&
+    !jsonNotes.some(hasQuarterOrLongerDuration);
+}
+
+function getTupletBeamStartIndex(jsonNotes) {
+  let startIndex = 0;
+
+  while (startIndex < jsonNotes.length && isJsonRest(jsonNotes[startIndex])) {
+    startIndex += 1;
+  }
+
+  return startIndex;
+}
+
+function createTupletBeams(vfNotes, jsonNotes) {
+  const beamStartIndex = getTupletBeamStartIndex(jsonNotes);
+  const beamVfNotes = vfNotes.slice(beamStartIndex);
+  const beamJsonNotes = jsonNotes.slice(beamStartIndex);
+
+  if (!shouldBeamTupletAsSingleGroup(beamJsonNotes)) {
+    return [];
+  }
+
+  return VF.Beam.generateBeams(beamVfNotes, {
+    beam_rests: true,
+    show_stemlets: false,
+    stem_direction: Vex.Flow.StaveNote.STEM_UP,
+    groups: [new Vex.Flow.Fraction(1, 1)],
+  });
+}
+
+function getVoiceBeams(vfNotes, jsonNotes, tuplets, timeSig) {
+  const forcedTupletRanges = [];
+  const tupletBeams = [];
+
+  tuplets
+    .map((tuplet) => ({
+      end: Math.min(Number(tuplet.end), vfNotes.length),
+      start: Math.max(0, Number(tuplet.start)),
+    }))
+    .filter((tuplet) => Number.isInteger(tuplet.start) &&
+      Number.isInteger(tuplet.end) &&
+      tuplet.end > tuplet.start)
+    .sort((left, right) => left.start - right.start)
+    .forEach((tuplet) => {
+      const tupletJsonNotes = jsonNotes.slice(tuplet.start, tuplet.end);
+
+      const tupletVfNotes = vfNotes.slice(tuplet.start, tuplet.end);
+      const generatedTupletBeams = createTupletBeams(tupletVfNotes, tupletJsonNotes);
+
+      if (!generatedTupletBeams.length) {
+        return;
+      }
+
+      forcedTupletRanges.push(tuplet);
+      tupletBeams.push(...generatedTupletBeams);
+    });
+
+  if (!forcedTupletRanges.length) {
+    return createAutomaticBeams(vfNotes, timeSig);
+  }
+
+  const automaticBeams = [];
+  let cursor = 0;
+
+  forcedTupletRanges.forEach((tuplet) => {
+    if (tuplet.start > cursor) {
+      automaticBeams.push(...createAutomaticBeams(vfNotes.slice(cursor, tuplet.start), timeSig));
+    }
+
+    cursor = Math.max(cursor, tuplet.end);
+  });
+
+  if (cursor < vfNotes.length) {
+    automaticBeams.push(...createAutomaticBeams(vfNotes.slice(cursor), timeSig));
+  }
+
+  return [...automaticBeams, ...tupletBeams];
+}
+
+function hasAboveStaffAccent(jsonNote, instrument) {
+  const ornaments = String(jsonNote?.ornaments || "");
+
+  return ornaments.includes(ACCENT) ||
+    (instrument === "snare" && jsonNote?.notes?.includes("E5"));
+}
+
+function getTupletYOffset(notes, instrument) {
+  return notes.some((note) => hasAboveStaffAccent(note, instrument))
+    ? TUPLET_Y_OFFSET.WITH_ABOVE_ACCENT
+    : TUPLET_Y_OFFSET.DEFAULT;
 }
 
 function addOrnaments(jsonNote, scoreNote, instrument) {

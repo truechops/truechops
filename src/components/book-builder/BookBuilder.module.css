@@ -355,6 +355,29 @@
   gap: 5px;
 }
 
+.toggleField {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 9px;
+}
+
+.toggleField input {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.toggleField span {
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .pickerGrid {
   display: grid;
   gap: 6px;

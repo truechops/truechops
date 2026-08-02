@@ -48,6 +48,17 @@ const SUBDIVISION_SETTINGS = [
   { id: "sixteenths", label: "sixteenth notes", duration: 16 },
   { id: "thirtyseconds", label: "thirty-second notes", duration: 32 },
 ];
+const TUPLET_TYPE_SETTINGS = [
+  { id: "quarter", label: "quarter", type: 4 },
+  { id: "eighth", label: "eighth", type: 8 },
+  { id: "sixteenth", label: "sixteenth", type: 16 },
+];
+const LEGACY_TUPLET_SETTINGS = [
+  { id: "eighth-triplets", actual: 3, normal: 2, type: 8 },
+  { id: "sixteenth-triplets", actual: 3, normal: 2, type: 16 },
+  { id: "sixteenth-quintuplets", actual: 5, normal: 4, type: 16 },
+  { id: "sixteenth-septuplets", actual: 7, normal: 4, type: 16 },
+];
 const ORNAMENT_SETTINGS = [
   { id: "stickings", label: "stickings", chars: "rl" },
   { id: "accents", label: "accents", chars: "a" },
@@ -88,15 +99,11 @@ function getNonNegativeInteger(value, fallback = 0) {
 }
 
 function normalizePdfSettings(pdfSettings = {}) {
-  const columns = [2, 3].includes(Number(pdfSettings.columns))
-    ? Number(pdfSettings.columns)
-    : DEFAULT_PDF_SETTINGS.columns;
-
   return {
     ...DEFAULT_PDF_SETTINGS,
     ...pdfSettings,
-    columns,
-    rows: DEFAULT_PDF_SETTINGS.rows,
+    columns: DEFAULT_PDF_SETTINGS.columns,
+    rows: getPositiveInteger(pdfSettings.rows, DEFAULT_PDF_SETTINGS.rows),
   };
 }
 
@@ -247,6 +254,20 @@ function getSampleNotes(samplePayload) {
   return Array.isArray(voice && voice.notes) ? voice.notes : [];
 }
 
+function getSampleTuplets(samplePayload) {
+  if (Array.isArray(samplePayload && samplePayload.tuplets)) {
+    return samplePayload.tuplets;
+  }
+
+  const score = getSampleScore(samplePayload);
+  const measure = score.measures && score.measures[0];
+  const part = measure && Array.isArray(measure.parts)
+    ? measure.parts.find((candidate) => candidate.instrument === "snare") || measure.parts[0]
+    : null;
+  const voice = part && part.voices && part.voices[0];
+  return Array.isArray(voice && voice.tuplets) ? voice.tuplets : [];
+}
+
 function normalizeOptionIds(value, settings) {
   const validIds = new Set(settings.map((setting) => setting.id));
   const values = Array.isArray(value)
@@ -265,6 +286,53 @@ function normalizeOptionIds(value, settings) {
   }
 
   return normalized;
+}
+
+function getTupletTypeSetting(value) {
+  const type = Number(value && value.type);
+
+  return TUPLET_TYPE_SETTINGS.find((setting) => Number(setting.type) === type);
+}
+
+function normalizeTupletConfig(value) {
+  if (!value || value === "none" || value === false) {
+    return null;
+  }
+
+  if (typeof value === "string") {
+    const setting = LEGACY_TUPLET_SETTINGS.find((candidate) => candidate.id === value);
+    return setting
+      ? {
+          actual: setting.actual,
+          normal: setting.normal,
+          type: setting.type,
+        }
+      : null;
+  }
+
+  const actual = Number.parseInt(value.actual, 10);
+  const normal = Number.parseInt(value.normal, 10);
+  const type = Number.parseInt(value.type, 10);
+
+  if (
+    !Number.isInteger(actual) ||
+    !Number.isInteger(normal) ||
+    !Number.isInteger(type) ||
+    actual < 2 ||
+    actual > 16 ||
+    normal < 2 ||
+    normal > 16 ||
+    normal > type ||
+    !TUPLET_TYPE_SETTINGS.some((setting) => setting.type === type)
+  ) {
+    return null;
+  }
+
+  return {
+    actual,
+    normal,
+    type,
+  };
 }
 
 function getSectionLegacyText(section) {
@@ -297,6 +365,37 @@ function inferGenerationSubdivisions(section, samplePayload) {
 function getGenerationSubdivisions(section, samplePayload = getSamplePayload(section)) {
   const explicit = normalizeOptionIds(section && section.subdivisions, SUBDIVISION_SETTINGS);
   return explicit.length ? explicit : inferGenerationSubdivisions(section || {}, samplePayload);
+}
+
+function inferGenerationTuplet(section, samplePayload) {
+  const explicitSampleTuplet = normalizeTupletConfig(samplePayload && samplePayload.tuplet);
+
+  if (explicitSampleTuplet) {
+    return explicitSampleTuplet;
+  }
+
+  const tuplet = getSampleTuplets(samplePayload)[0];
+
+  if (!tuplet) {
+    return null;
+  }
+
+  const notes = getSampleNotes(samplePayload);
+  const startNote = notes[Number(tuplet.start) || 0];
+
+  return normalizeTupletConfig({
+    actual: tuplet.actual,
+    normal: tuplet.normal,
+    type: startNote?.duration || section?.tupletType || 8,
+  });
+}
+
+function getGenerationTuplet(section, samplePayload = getSamplePayload(section)) {
+  if (section && Object.prototype.hasOwnProperty.call(section, "tuplet")) {
+    return normalizeTupletConfig(section.tuplet);
+  }
+
+  return inferGenerationTuplet(section || {}, samplePayload);
 }
 
 function inferGenerationOrnaments(section, samplePayload) {
@@ -346,15 +445,32 @@ function getOptionLabels(settings, selectedIds, emptyLabel) {
   return labels.length ? labels.join(", ") : emptyLabel;
 }
 
+function getTupletLabel(tuplet) {
+  if (!tuplet) {
+    return "no tuplets";
+  }
+
+  const setting = getTupletTypeSetting(tuplet);
+  const typeLabel = setting?.label || `${tuplet.type}`;
+  return `${tuplet.actual}:${tuplet.normal} ${typeLabel} tuplets`;
+}
+
 function createStructuredSectionInstructions(section, samplePayload) {
   const subdivisions = getGenerationSubdivisions(section, samplePayload);
   const ornaments = getGenerationOrnaments(section, samplePayload);
+  const tuplet = getGenerationTuplet(section, samplePayload);
 
   return [
     `Use these subdivisions only: ${getOptionLabels(SUBDIVISION_SETTINGS, subdivisions, "eighth notes")}.`,
+    tuplet
+      ? `Use this tuplet type: ${getTupletLabel(tuplet)}.`
+      : "Use no tuplets.",
     ornaments.length
       ? `Use these ornaments only when musically appropriate: ${getOptionLabels(ORNAMENT_SETTINGS, ornaments, "none")}.`
       : "Use no ornaments.",
+    ornaments.some((ornament) => ornament === "diddles" || ornament === "cheese")
+      ? "Diddles and cheese may only be used on sixteenth notes or faster; never put them on eighth notes, dotted eighth notes, or quarter notes."
+      : "",
   ].join("\n");
 }
 
@@ -371,6 +487,23 @@ function getNoteQuarterUnits(note) {
 
 function getNotesQuarterUnits(notes) {
   return notes.reduce((total, note) => total + getNoteQuarterUnits(note), 0);
+}
+
+function getTupletForNote(tuplets, noteIndex) {
+  return (tuplets || []).find((tuplet) =>
+    noteIndex >= Number(tuplet.start) && noteIndex < Number(tuplet.end)
+  );
+}
+
+function getVoiceQuarterUnits(voice) {
+  const notes = voice && Array.isArray(voice.notes) ? voice.notes : [];
+  const tuplets = voice && Array.isArray(voice.tuplets) ? voice.tuplets : [];
+
+  return notes.reduce((total, note, noteIndex) => {
+    const tuplet = getTupletForNote(tuplets, noteIndex);
+    const tupletRatio = tuplet ? Number(tuplet.normal) / Number(tuplet.actual) : 1;
+    return total + getNoteQuarterUnits(note) * tupletRatio;
+  }, 0);
 }
 
 function isRest(note) {
@@ -587,6 +720,67 @@ function preferLongerValues(notes, options = {}) {
   });
 }
 
+function preferLongerValuesInTupletVoice(voice) {
+  const notes = Array.isArray(voice && voice.notes) ? voice.notes : [];
+  const tuplets = normalizeVoiceTuplets(voice && voice.tuplets, notes)
+    .sort((left, right) => left.start - right.start);
+
+  if (!tuplets.length) {
+    return {
+      notes: preferLongerValues(notes, getPreferLongerValueOptions()),
+      tuplets: [],
+    };
+  }
+
+  const nextNotes = [];
+  const nextTuplets = [];
+  let cursor = 0;
+
+  for (const tuplet of tuplets) {
+    if (tuplet.start < cursor) {
+      continue;
+    }
+
+    if (tuplet.start > cursor) {
+      nextNotes.push(
+        ...preferLongerValues(
+          notes.slice(cursor, tuplet.start),
+          getPreferLongerValueOptions()
+        )
+      );
+    }
+
+    const tupletStart = nextNotes.length;
+    nextNotes.push(
+      ...preferLongerValues(notes.slice(tuplet.start, tuplet.end), {
+        groupSlots: 0,
+      })
+    );
+    const tupletEnd = nextNotes.length;
+
+    if (tupletEnd > tupletStart) {
+      nextTuplets.push({
+        ...tuplet,
+        start: tupletStart,
+        end: tupletEnd,
+      });
+    }
+
+    cursor = tuplet.end;
+  }
+
+  if (cursor < notes.length) {
+    nextNotes.push(
+      ...preferLongerValues(notes.slice(cursor), getPreferLongerValueOptions())
+    );
+  }
+
+  return {
+    notes: nextNotes,
+    tuplets: nextTuplets,
+  };
+}
+
 function normalizeGeneratedNote(note, fallbackNote = {}) {
   const fallbackDuration = [1, 2, 4, 8, 16, 32].includes(Number(fallbackNote.duration))
     ? Number(fallbackNote.duration)
@@ -609,6 +803,31 @@ function normalizeGeneratedNote(note, fallbackNote = {}) {
       ? { ornaments: String((note && note.ornaments) != null ? note.ornaments : fallbackNote.ornaments || "") }
       : {}),
   };
+}
+
+function normalizeVoiceTuplets(tuplets, notes) {
+  if (!Array.isArray(tuplets)) {
+    return [];
+  }
+
+  return tuplets
+    .map((tuplet) => ({
+      start: Number.parseInt(tuplet && tuplet.start, 10),
+      end: Number.parseInt(tuplet && tuplet.end, 10),
+      actual: Number.parseInt(tuplet && tuplet.actual, 10),
+      normal: Number.parseInt(tuplet && tuplet.normal, 10),
+    }))
+    .filter((tuplet) =>
+      Number.isInteger(tuplet.start) &&
+      Number.isInteger(tuplet.end) &&
+      Number.isInteger(tuplet.actual) &&
+      Number.isInteger(tuplet.normal) &&
+      tuplet.start >= 0 &&
+      tuplet.end > tuplet.start &&
+      tuplet.end <= notes.length &&
+      tuplet.actual > 1 &&
+      tuplet.normal > 0
+    );
 }
 
 function normalizeGeneratedScore(value, fallbackScore = createBlankLineScore()) {
@@ -638,7 +857,8 @@ function normalizeGeneratedScore(value, fallbackScore = createBlankLineScore()) 
   const notes = rawNotes.map((note, index) =>
     normalizeGeneratedNote(note, (fallbackVoice.notes || [])[index] || (fallbackVoice.notes || [])[0])
   );
-  const totalUnits = getNotesQuarterUnits(notes);
+  const tuplets = normalizeVoiceTuplets(voice && voice.tuplets, notes);
+  const totalUnits = getVoiceQuarterUnits({ notes, tuplets });
 
   if (Math.abs(totalUnits - 4) > 0.001) {
     return cloneJson(fallbackScore);
@@ -655,7 +875,7 @@ function normalizeGeneratedScore(value, fallbackScore = createBlankLineScore()) 
         instrument: "snare",
         voices: [{
           notes,
-          tuplets: Array.isArray(voice && voice.tuplets) ? voice.tuplets : [],
+          tuplets,
         }],
       }],
     }],
@@ -680,13 +900,18 @@ function getExerciseShortForm(score) {
     : null;
   const voice = part && part.voices && part.voices[0];
   const notes = Array.isArray(voice && voice.notes) ? voice.notes : [];
-
-  return notes.map((note) => {
+  const tuplets = Array.isArray(voice && voice.tuplets) ? voice.tuplets : [];
+  const notesShortForm = notes.map((note) => {
     const type = isRest(note) ? "r" : "n";
     const dots = Number(note.dots || 0);
     const duration = `${Number(note.duration || 4)}${dots ? ".".repeat(dots) : ""}`;
     return `${type}${duration}${type === "n" ? normalizeOrnamentText(note.ornaments) : ""}`;
   }).join(" ");
+  const tupletShortForm = tuplets
+    .map((tuplet) => `${tuplet.start}-${tuplet.end}:${tuplet.actual}:${tuplet.normal}`)
+    .join(",");
+
+  return tupletShortForm ? `${notesShortForm} |t${tupletShortForm}` : notesShortForm;
 }
 
 function extractGeneratedLineInputs(payload) {
@@ -706,6 +931,20 @@ function extractGeneratedLineInputs(payload) {
   return payload.lines || payload.examples || payload.rhythms || payload.exercises || [];
 }
 
+function scoreHasTuplets(score) {
+  return Boolean(
+    score &&
+    score.measures &&
+    score.measures.some((measure) =>
+      (measure.parts || []).some((part) =>
+        (part.voices || []).some((voice) =>
+          Array.isArray(voice.tuplets) && voice.tuplets.length > 0
+        )
+      )
+    )
+  );
+}
+
 function getAllowedOrnamentChars(section) {
   const ornaments = getGenerationOrnaments(section);
   return ORNAMENT_SETTINGS
@@ -716,6 +955,11 @@ function getAllowedOrnamentChars(section) {
 
 function sectionUsesStickings(section) {
   return getGenerationOrnaments(section).includes("stickings");
+}
+
+function sectionUsesDiddlesOrCheese(section) {
+  const ornaments = getGenerationOrnaments(section);
+  return ornaments.includes("diddles") || ornaments.includes("cheese");
 }
 
 function applySectionOrnamentPolicy(section, score) {
@@ -740,7 +984,10 @@ function applySectionOrnamentPolicy(section, score) {
               return rest;
             }
 
-            const ornaments = String(note.ornaments).replace(allowedPattern, "");
+            const ornaments = cleanDurationRestrictedOrnaments(
+              note,
+              String(note.ornaments).replace(allowedPattern, "")
+            );
 
             if (!ornaments) {
               const { ornaments: _ornaments, ...rest } = note;
@@ -762,6 +1009,10 @@ function getSectionMinPlayedNotes(section) {
   return getNonNegativeInteger(section && section.minPlayedNotes, 0);
 }
 
+function getSectionMaxPlayedNotes(section) {
+  return getNonNegativeInteger(section && section.maxPlayedNotes, 0);
+}
+
 function getSectionMaxSameHandStickingRun(section) {
   return getPositiveInteger(
     section && section.maxSameHandStickingRun,
@@ -769,8 +1020,36 @@ function getSectionMaxSameHandStickingRun(section) {
   );
 }
 
+function getSectionRequireMaxSameHandStickingRun(section) {
+  if (!section) {
+    return false;
+  }
+
+  if (typeof section.requireMaxSameHandStickingRun === "boolean") {
+    return section.requireMaxSameHandStickingRun;
+  }
+
+  return section.requireMaxSameHandStickingRun === "true";
+}
+
 function countPlayedNotes(notes) {
   return (notes || []).filter((note) => !isRest(note)).length;
+}
+
+function getEffectiveSectionMaxPlayedNotes(section) {
+  const maximum = getSectionMaxPlayedNotes(section);
+
+  if (!maximum) {
+    return 0;
+  }
+
+  const minimum = getSectionMinPlayedNotes(section);
+  const requiredSameHandRun = sectionUsesStickings(section) &&
+    getSectionRequireMaxSameHandStickingRun(section)
+    ? getSectionMaxSameHandStickingRun(section)
+    : 0;
+
+  return Math.max(maximum, minimum, requiredSameHandRun);
 }
 
 function getShortestAllowedDuration(section, notes) {
@@ -788,6 +1067,15 @@ function createPlayedNoteFrom(note, overrides = {}) {
     notes: ["C5"],
     velocity: Number((note && note.velocity) || 0.5),
     ...overrides,
+  };
+}
+
+function createRestFrom(note) {
+  return {
+    notes: [],
+    duration: Number(note && note.duration) || 4,
+    dots: Number((note && note.dots) || 0),
+    velocity: Number((note && note.velocity) || 0.5),
   };
 }
 
@@ -879,6 +1167,35 @@ function enforceMinimumPlayedNotesInNotes(section, notes, lineIndex = 0) {
   return nextNotes;
 }
 
+function enforceMinimumPlayedNotesInFixedNoteSlots(section, notes, lineIndex = 0) {
+  const minimum = getSectionMinPlayedNotes(section);
+
+  if (!minimum || countPlayedNotes(notes) >= minimum) {
+    return notes;
+  }
+
+  const random = createSeededRandom(
+    `${section.id || section.title || "section"}:minimum-fixed:${lineIndex}:${JSON.stringify(notes)}`
+  );
+  const nextNotes = (notes || []).map((note) => ({ ...note }));
+  let playedCount = countPlayedNotes(nextNotes);
+
+  for (const noteIndex of shuffledIndexes(nextNotes.length, random)) {
+    if (playedCount >= minimum) {
+      break;
+    }
+
+    if (!isRest(nextNotes[noteIndex])) {
+      continue;
+    }
+
+    playedCount += 1;
+    nextNotes[noteIndex] = createPlayedNoteFrom(nextNotes[noteIndex]);
+  }
+
+  return nextNotes;
+}
+
 function enforceMinimumPlayedNotes(section, score, lineIndex = 0) {
   const minimum = getSectionMinPlayedNotes(section);
 
@@ -894,7 +1211,106 @@ function enforceMinimumPlayedNotes(section, score, lineIndex = 0) {
         ...part,
         voices: (part.voices || []).map((voice) => ({
           ...voice,
-          notes: enforceMinimumPlayedNotesInNotes(section, voice.notes || [], lineIndex),
+          notes: Array.isArray(voice.tuplets) && voice.tuplets.length
+            ? enforceMinimumPlayedNotesInFixedNoteSlots(section, voice.notes || [], lineIndex)
+            : enforceMinimumPlayedNotesInNotes(section, voice.notes || [], lineIndex),
+        })),
+      })),
+    })),
+  };
+}
+
+function getProtectedPlayedIndexesForMaximum(section, notes) {
+  if (
+    !sectionUsesStickings(section) ||
+    !getSectionRequireMaxSameHandStickingRun(section)
+  ) {
+    return new Set();
+  }
+
+  const targetRun = findRequiredMaxSameHandRun(
+    notes,
+    getSectionMaxSameHandStickingRun(section)
+  );
+  const protectedIndexes = new Set();
+
+  if (!targetRun) {
+    return protectedIndexes;
+  }
+
+  for (let index = targetRun.start; index <= targetRun.end; index += 1) {
+    protectedIndexes.add(index);
+  }
+
+  return protectedIndexes;
+}
+
+function enforceMaximumPlayedNotesInNotes(section, notes, lineIndex = 0) {
+  const maximum = getEffectiveSectionMaxPlayedNotes(section);
+  const playedCount = countPlayedNotes(notes);
+
+  if (!maximum || playedCount <= maximum) {
+    return notes;
+  }
+
+  const protectedIndexes = getProtectedPlayedIndexesForMaximum(section, notes);
+  const playedIndexes = (notes || []).reduce((indexes, note, index) => {
+    if (!isRest(note)) {
+      indexes.push(index);
+    }
+
+    return indexes;
+  }, []);
+  const removableIndexes = playedIndexes.filter((index) => !protectedIndexes.has(index));
+  const overflow = playedCount - maximum;
+  const random = createSeededRandom(
+    `${section.id || section.title || "section"}:maximum:${lineIndex}:${JSON.stringify(notes)}`
+  );
+  const indexesToRemove = new Set(
+    shuffledIndexes(removableIndexes.length, random)
+      .slice(0, overflow)
+      .map((shuffleIndex) => removableIndexes[shuffleIndex])
+  );
+  let stillOverflowing = overflow - indexesToRemove.size;
+
+  if (stillOverflowing > 0) {
+    for (const index of shuffledIndexes(playedIndexes.length, random)) {
+      if (!stillOverflowing) {
+        break;
+      }
+
+      const noteIndex = playedIndexes[index];
+
+      if (indexesToRemove.has(noteIndex)) {
+        continue;
+      }
+
+      indexesToRemove.add(noteIndex);
+      stillOverflowing -= 1;
+    }
+  }
+
+  return (notes || []).map((note, index) =>
+    indexesToRemove.has(index) ? createRestFrom(note) : note
+  );
+}
+
+function enforceMaximumPlayedNotes(section, score, lineIndex = 0) {
+  const maximum = getEffectiveSectionMaxPlayedNotes(section);
+
+  if (!maximum) {
+    return score;
+  }
+
+  return {
+    ...score,
+    measures: (score.measures || []).map((measure) => ({
+      ...measure,
+      parts: (measure.parts || []).map((part) => ({
+        ...part,
+        voices: (part.voices || []).map((voice) => ({
+          ...voice,
+          notes: enforceMaximumPlayedNotesInNotes(section, voice.notes || [], lineIndex),
         })),
       })),
     })),
@@ -974,6 +1390,37 @@ function removeOrnamentChars(note, chars) {
   };
 }
 
+function cleanDurationRestrictedOrnaments(note, ornaments = note?.ornaments || "") {
+  const duration = Number(note?.duration);
+  const cleanedOrnaments = duration <= 8
+    ? String(ornaments).replace(/[dc]/g, "")
+    : String(ornaments);
+
+  return cleanedOrnaments;
+}
+
+function enforceDurationOrnamentRules(notes) {
+  return (notes || []).map((note) => {
+    if (isRest(note) || note.ornaments == null) {
+      return note;
+    }
+
+    const ornaments = cleanDurationRestrictedOrnaments(note);
+
+    if (!ornaments) {
+      const { ornaments: _ornaments, ...rest } = note;
+      return rest;
+    }
+
+    return ornaments === note.ornaments
+      ? note
+      : {
+          ...note,
+          ornaments,
+        };
+  });
+}
+
 function removeDiddleBeforeConsecutiveCheese(notes) {
   const cleaned = (notes || []).map((note) => ({ ...note }));
 
@@ -993,14 +1440,194 @@ function removeDiddleBeforeConsecutiveCheese(notes) {
   return cleaned;
 }
 
-function enforceStickingSequenceRules(section, notes) {
-  const cleaned = removeDiddleBeforeConsecutiveCheese(notes);
+function noteCanShareStickingWithPrevious(left, right) {
+  return !(
+    areConsecutiveSixteenthNotes(left, right) &&
+    /[dc]/.test(String(left.ornaments || ""))
+  );
+}
+
+function findRequiredMaxSameHandRun(notes, runLength, { allowCleanup = false } = {}) {
+  if (runLength <= 0) {
+    return null;
+  }
+
+  const candidates = [];
+
+  for (let start = 0; start <= notes.length - runLength; start += 1) {
+    let valid = true;
+
+    for (let offset = 0; offset < runLength; offset += 1) {
+      const note = notes[start + offset];
+
+      if (!note || isRest(note)) {
+        valid = false;
+        break;
+      }
+
+      if (
+        offset > 0 &&
+        !allowCleanup &&
+        !noteCanShareStickingWithPrevious(notes[start + offset - 1], note)
+      ) {
+        valid = false;
+        break;
+      }
+    }
+
+    if (valid) {
+      candidates.push({
+        cleanupInternalOrnaments: allowCleanup,
+        end: start + runLength - 1,
+        start,
+      });
+    }
+  }
+
+  if (!candidates.length) {
+    return null;
+  }
+
+  return candidates[
+    hashString(JSON.stringify(notes)) % candidates.length
+  ];
+}
+
+function removeInternalRequiredRunConflicts(notes, targetRun) {
+  if (!targetRun || !targetRun.cleanupInternalOrnaments) {
+    return notes;
+  }
+
+  const nextNotes = notes.map((note) => ({ ...note }));
+
+  for (let index = targetRun.start; index < targetRun.end; index += 1) {
+    if (!noteCanShareStickingWithPrevious(nextNotes[index], nextNotes[index + 1])) {
+      nextNotes[index] = removeOrnamentChars(nextNotes[index], "dc");
+    }
+  }
+
+  return nextNotes;
+}
+
+function createRequiredRunPlayedNote(section, sourceNote) {
+  const targetDuration = getMaxSubdivisionDuration(getGenerationSubdivisions(section));
+  const ornaments = String((sourceNote && sourceNote.ornaments) || "").replace(/[rl]/g, "");
+
+  return {
+    ...sourceNote,
+    notes: ["C5"],
+    duration: targetDuration,
+    dots: 0,
+    velocity: Number((sourceNote && sourceNote.velocity) || 0.5),
+    ...(ornaments ? { ornaments } : {}),
+  };
+}
+
+function ensureRequiredMaxSameHandRunWindow(section, notes, runLength) {
+  if (findRequiredMaxSameHandRun(notes, runLength)) {
+    return notes;
+  }
+
+  if (findRequiredMaxSameHandRun(notes, runLength, { allowCleanup: true })) {
+    return notes;
+  }
+
+  const targetDuration = getMaxSubdivisionDuration(getGenerationSubdivisions(section));
+  const targetSlots = Math.round((4 / targetDuration) / THIRTY_SECOND_QUARTER_UNITS);
+  const requiredSlots = targetSlots * runLength;
+
+  for (let index = 0; index < notes.length; index += 1) {
+    const noteSlots = getNoteSlotCount(notes[index]);
+
+    if (noteSlots < requiredSlots) {
+      continue;
+    }
+
+    const requiredNotes = Array.from({ length: runLength }, () =>
+      createRequiredRunPlayedNote(section, notes[index])
+    );
+    const remainderSlots = noteSlots - requiredSlots;
+    const replacements = [...requiredNotes];
+
+    if (remainderSlots > 0) {
+      if (isRest(notes[index])) {
+        pushCompressedRests(replacements, remainderSlots, notes[index]);
+      } else {
+        replacements.push(createPlayedNoteFromSlots(notes[index], remainderSlots));
+      }
+    }
+
+    const nextNotes = notes.map((note) => ({ ...note }));
+    nextNotes.splice(index, 1, ...replacements);
+    return nextNotes;
+  }
+
+  return notes;
+}
+
+function ensureRequiredMaxSameHandRunWindowFixed(section, notes, runLength) {
+  if (findRequiredMaxSameHandRun(notes, runLength)) {
+    return notes;
+  }
+
+  if (!runLength || notes.length < runLength) {
+    return notes;
+  }
+
+  const candidates = [];
+
+  for (let start = 0; start <= notes.length - runLength; start += 1) {
+    candidates.push({ start, end: start + runLength - 1 });
+  }
+
+  const targetRun = candidates[
+    hashString(`${section.id || section.title || "section"}:${JSON.stringify(notes)}`) % candidates.length
+  ];
+  const nextNotes = notes.map((note) => ({ ...note }));
+
+  for (let index = targetRun.start; index <= targetRun.end; index += 1) {
+    const note = nextNotes[index] || {};
+    const ornaments = String(note.ornaments || "").replace(/[rl]/g, "");
+
+    nextNotes[index] = {
+      ...note,
+      notes: ["C5"],
+      duration: Number(note.duration || getMaxSubdivisionDuration(getGenerationSubdivisions(section))),
+      dots: Number(note.dots || 0),
+      velocity: Number(note.velocity || 0.5),
+      ...(ornaments ? { ornaments } : {}),
+    };
+  }
+
+  return nextNotes;
+}
+
+function enforceStickingSequenceRules(section, notes, options = {}) {
+  const { preserveNoteCount = false } = options;
+  let cleaned = removeDiddleBeforeConsecutiveCheese(notes);
 
   if (!sectionUsesStickings(section)) {
     return cleaned;
   }
 
   const maxSameHandRun = getSectionMaxSameHandStickingRun(section);
+  const requireMaxRun = getSectionRequireMaxSameHandStickingRun(section);
+
+  if (requireMaxRun) {
+    cleaned = preserveNoteCount
+      ? ensureRequiredMaxSameHandRunWindowFixed(section, cleaned, maxSameHandRun)
+      : ensureRequiredMaxSameHandRunWindow(section, cleaned, maxSameHandRun);
+  }
+
+  let targetRun = requireMaxRun
+    ? findRequiredMaxSameHandRun(cleaned, maxSameHandRun)
+    : null;
+
+  if (!targetRun && requireMaxRun) {
+    targetRun = findRequiredMaxSameHandRun(cleaned, maxSameHandRun, { allowCleanup: true });
+    cleaned = removeInternalRequiredRunConflicts(cleaned, targetRun);
+  }
+
   const nextNotes = cleaned.map((note) => ({ ...note }));
   let previousNote = null;
   let previousSticking = "";
@@ -1013,6 +1640,22 @@ function enforceStickingSequenceRules(section, notes) {
       previousNote = null;
       previousSticking = "";
       sameHandRun = 0;
+      continue;
+    }
+
+    if (targetRun && index === targetRun.start) {
+      const targetSticking = previousSticking
+        ? getOppositeSticking(previousSticking)
+        : getNoteSticking(note) || (hashString(JSON.stringify(targetRun)) % 2 ? "l" : "r");
+
+      for (let runIndex = targetRun.start; runIndex <= targetRun.end; runIndex += 1) {
+        nextNotes[runIndex] = withSticking(nextNotes[runIndex], targetSticking);
+      }
+
+      previousNote = nextNotes[targetRun.end];
+      previousSticking = targetSticking;
+      sameHandRun = targetRun.end - targetRun.start + 1;
+      index = targetRun.end;
       continue;
     }
 
@@ -1084,25 +1727,50 @@ function cleanSequentialOrnaments(notes) {
 function finalizeGeneratedScore(section, score, lineIndex = 0) {
   const policyScore = applySectionOrnamentPolicy(section, score);
   const minimumScore = enforceMinimumPlayedNotes(section, policyScore, lineIndex);
+  const boundedScore = enforceMaximumPlayedNotes(section, minimumScore, lineIndex);
 
   return {
-    ...minimumScore,
-    measures: (minimumScore.measures || []).map((measure) => ({
+    ...boundedScore,
+    measures: (boundedScore.measures || []).map((measure) => ({
       ...measure,
       parts: (measure.parts || []).map((part) => ({
         ...part,
-        voices: (part.voices || []).map((voice) => ({
-          ...voice,
-          notes: enforceStickingSequenceRules(
+        voices: (part.voices || []).map((voice) => {
+          const hasTuplets = Array.isArray(voice.tuplets) && voice.tuplets.length > 0;
+          const cleanedNotes = cleanSequentialOrnaments(
+            ensureStickingsOnNotes(section, voice.notes || [])
+          );
+          const notationVoice = hasTuplets
+            ? preferLongerValuesInTupletVoice({
+                ...voice,
+                notes: cleanedNotes,
+              })
+            : {
+                notes: preferLongerValues(cleanedNotes, getPreferLongerValueOptions()),
+                tuplets: [],
+              };
+          const sequenceNotes = enforceDurationOrnamentRules(
+            enforceStickingSequenceRules(
+              section,
+              notationVoice.notes,
+              { preserveNoteCount: hasTuplets }
+            )
+          );
+          const cappedNotes = enforceMaximumPlayedNotesInNotes(
             section,
-            preferLongerValues(
-              cleanSequentialOrnaments(
-                ensureStickingsOnNotes(section, voice.notes || [])
-              ),
-              getPreferLongerValueOptions()
-            ),
-          ),
-        })),
+            sequenceNotes,
+            `${lineIndex}:final`
+          );
+          const finalNotes = hasTuplets
+            ? cappedNotes
+            : preferLongerValues(cappedNotes, getPreferLongerValueOptions());
+
+          return {
+            ...voice,
+            tuplets: notationVoice.tuplets,
+            notes: enforceDurationOrnamentRules(finalNotes),
+          };
+        }),
       })),
     })),
   };
@@ -1111,6 +1779,7 @@ function finalizeGeneratedScore(section, score, lineIndex = 0) {
 function getFallbackGenerationOptions(section, samplePayload) {
   const subdivisions = getGenerationSubdivisions(section, samplePayload);
   const ornaments = getGenerationOrnaments(section, samplePayload);
+  const tuplet = getGenerationTuplet(section, samplePayload);
   const maxSubdivisionDuration = getMaxSubdivisionDuration(subdivisions);
 
   return {
@@ -1124,6 +1793,7 @@ function getFallbackGenerationOptions(section, samplePayload) {
     allowThirtySecond: maxSubdivisionDuration >= 32,
     maxSubdivisionDuration,
     subdivisions,
+    tuplet,
   };
 }
 
@@ -1174,10 +1844,13 @@ function createFallbackOrnaments(options, random, playedIndex, previousOrnaments
   return ornaments;
 }
 
-function createRandomPlayedSlots(slotCount, minimumPlayedNotes, random) {
+function createRandomPlayedSlots(slotCount, minimumPlayedNotes, maximumPlayedNotes, random) {
   const naturalMinimum = Math.ceil(slotCount * (slotCount >= 16 ? 0.45 : 0.35));
-  const lowerBound = Math.min(slotCount, Math.max(minimumPlayedNotes, naturalMinimum));
-  const playedSlotCount = randomInteger(random, lowerBound, slotCount);
+  const upperBound = maximumPlayedNotes
+    ? Math.min(slotCount, Math.max(maximumPlayedNotes, minimumPlayedNotes))
+    : slotCount;
+  const lowerBound = Math.min(upperBound, Math.max(minimumPlayedNotes, naturalMinimum));
+  const playedSlotCount = randomInteger(random, lowerBound, upperBound);
   const playedIndexes = new Set(shuffledIndexes(slotCount, random).slice(0, playedSlotCount));
 
   return Array.from({ length: slotCount }, (_, index) => playedIndexes.has(index));
@@ -1224,17 +1897,107 @@ function createNotesFromPlayedSlots(slots, unitPerSlot, options, random) {
   return notes;
 }
 
+function getTupletLayout(tuplet) {
+  if (!tuplet) {
+    return null;
+  }
+
+  const groupQuarterUnits = Number(tuplet.normal) * (4 / Number(tuplet.type));
+  const groupCount = Math.floor(4 / groupQuarterUnits);
+  const remainderQuarterUnits = 4 - groupCount * groupQuarterUnits;
+  const remainderSlots = Math.round(remainderQuarterUnits / THIRTY_SECOND_QUARTER_UNITS);
+
+  return groupCount > 0
+    ? { groupCount, remainderSlots }
+    : null;
+}
+
+function createTupletNotesFromPlayedSlots(slots, tuplet, options, random) {
+  const notes = [];
+  let playedIndex = 0;
+
+  for (let slotIndex = 0; slotIndex < slots.length; slotIndex += 1) {
+    const isPlayed = slots[slotIndex];
+    const previousOrnaments = notes[notes.length - 1]?.ornaments || "";
+    const ornaments = isPlayed
+      ? createFallbackOrnaments(options, random, playedIndex, previousOrnaments)
+      : "";
+
+    notes.push({
+      notes: isPlayed ? ["C5"] : [],
+      duration: Number(tuplet.type),
+      dots: 0,
+      velocity: ornaments.includes("a") ? 1 : 0.5,
+      ...(ornaments ? { ornaments } : {}),
+    });
+
+    playedIndex += isPlayed ? 1 : 0;
+  }
+
+  return notes;
+}
+
+function createTupletFallbackGeneratedScore(section, options, random) {
+  const tuplet = options.tuplet;
+  const layout = getTupletLayout(tuplet);
+
+  if (!layout) {
+    return null;
+  }
+
+  const { groupCount, remainderSlots } = layout;
+  const slotCount = groupCount * tuplet.actual;
+  const playedSlots = createRandomPlayedSlots(
+    slotCount,
+    getSectionMinPlayedNotes(section),
+    getEffectiveSectionMaxPlayedNotes(section),
+    random
+  );
+  const notes = createTupletNotesFromPlayedSlots(playedSlots, tuplet, options, random);
+  const tuplets = Array.from({ length: groupCount }, (_, groupIndex) => ({
+    start: groupIndex * tuplet.actual,
+    end: (groupIndex + 1) * tuplet.actual,
+    actual: tuplet.actual,
+    normal: tuplet.normal,
+  }));
+
+  if (remainderSlots > 0) {
+    pushCompressedRests(notes, remainderSlots, { velocity: 0.5 });
+  }
+
+  return {
+    parts: { snare: { enabled: true } },
+    measures: [{
+      timeSig: { num: 4, type: 4 },
+      parts: [{
+        instrument: "snare",
+        voices: [{ notes, tuplets }],
+      }],
+    }],
+  };
+}
+
 function createFallbackGeneratedScore(section, samplePayload, lineIndex, attempt = 0) {
   const options = getFallbackGenerationOptions(section, samplePayload);
   const retrySeed = attempt ? `:retry:${attempt}` : "";
   const random = createSeededRandom(
     `${section.id || section.title || "section"}:fallback:${lineIndex}${retrySeed}:${section.instructions || ""}`
   );
+
+  if (options.tuplet) {
+    const tupletScore = createTupletFallbackGeneratedScore(section, options, random);
+
+    if (tupletScore) {
+      return tupletScore;
+    }
+  }
+
   const slotCount = options.maxSubdivisionDuration;
   const unitPerSlot = 1;
   const playedSlots = createRandomPlayedSlots(
     slotCount,
     getSectionMinPlayedNotes(section),
+    getEffectiveSectionMaxPlayedNotes(section),
     random
   );
   const notes = createNotesFromPlayedSlots(playedSlots, unitPerSlot, options, random);
@@ -1264,8 +2027,12 @@ function normalizeGeneratedLine(input, section, samplePayload, index, attempt = 
   const fallbackLine = createFallbackGeneratedLine(section, samplePayload, index, attempt);
   const fallbackScore = getSampleScore(samplePayload);
   const scoreSource = input && (input.score || input.measures ? input.score || input : null);
-  const score = scoreSource
+  const normalizedScore = scoreSource
     ? normalizeGeneratedScore(scoreSource, fallbackScore)
+    : fallbackLine.score;
+  const expectedTuplet = getGenerationTuplet(section, samplePayload);
+  const score = scoreHasTuplets(normalizedScore) === Boolean(expectedTuplet)
+    ? normalizedScore
     : fallbackLine.score;
   const finalizedScore = finalizeGeneratedScore(section, score, index);
 
@@ -1333,10 +2100,12 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
     const sampleJson = getSectionSampleJson(section);
     const subdivisions = getGenerationSubdivisions(section, sampleJson);
     const ornaments = getGenerationOrnaments(section, sampleJson);
+    const tuplet = getGenerationTuplet(section, sampleJson);
     const structuredSection = {
       ...section,
       subdivisions,
       ornaments,
+      tuplet,
       sampleJson,
     };
 
@@ -1348,11 +2117,14 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         existingPageCount || inferPageCount(section)
       ),
       minPlayedNotes: getSectionMinPlayedNotes(section),
+      maxPlayedNotes: getSectionMaxPlayedNotes(section),
       maxSameHandStickingRun: getSectionMaxSameHandStickingRun(section),
+      requireMaxSameHandStickingRun: getSectionRequireMaxSameHandStickingRun(section),
       globalRules,
       instructions: createStructuredSectionInstructions(structuredSection, sampleJson),
       subdivisions,
       ornaments,
+      tuplet,
       sampleJson,
       pdfSettings: sectionPdfSettings,
     };
@@ -1393,6 +2165,7 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
   const bookGlobalRules = normalizeGlobalAiRules(
     (config.generation && config.generation.bookGlobalRules) || section.globalRules
   );
+  const tuplet = getGenerationTuplet(section, samplePayload);
 
   return [
     ...globalInstructions,
@@ -1400,6 +2173,9 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
     "",
     `Section title: ${section.title || "Untitled section"}`,
     `Section instructions: ${section.instructions || ""}`,
+    tuplet
+      ? `Tuplet type: ${getTupletLabel(tuplet)}. Each voice must include tuplets entries shaped like {"start":0,"end":${tuplet.actual},"actual":${tuplet.actual},"normal":${tuplet.normal}}. The start is inclusive and end is exclusive, using indexes into voice.notes. Use repeated complete tuplet groups of ${tuplet.actual} notes with note duration ${tuplet.type}; if another complete group will not fit in the 4/4 measure, fill the remaining duration with rests.`
+      : "Do not use tuplets. Each generated voice should have an empty tuplets array.",
     "Randomize played notes and rests across the whole measure. Do not favor beat four or any other beat.",
     "Rests may occur on any selected subdivision position, including offbeat sixteenth-note and thirty-second-note positions when those subdivisions are selected.",
     sectionUsesStickings(section)
@@ -1408,11 +2184,20 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
     section.minPlayedNotes
       ? `Each generated rhythm in this section must have at least ${section.minPlayedNotes} played note events. Rests do not count as played notes.`
       : "",
+    section.maxPlayedNotes
+      ? `Each generated rhythm in this section must have no more than ${getEffectiveSectionMaxPlayedNotes(section)} played note events. Rests do not count as played notes.`
+      : "",
     sectionUsesStickings(section)
       ? `Do not use more than ${getSectionMaxSameHandStickingRun(section)} consecutive played notes with the same sticking. Rests reset this count.`
       : "",
+    sectionUsesStickings(section) && getSectionRequireMaxSameHandStickingRun(section)
+      ? `Every generated rhythm in this section must include at least one run of exactly ${getSectionMaxSameHandStickingRun(section)} consecutive played notes with the same sticking.`
+      : "",
     sectionUsesStickings(section)
       ? "When a diddle or cheese is followed immediately by the next sixteenth note, that following note must use the opposite sticking. A diddle must not directly precede a cheese on consecutive sixteenth notes."
+      : "",
+    sectionUsesDiddlesOrCheese(section)
+      ? "Diddles and cheese may only be used on sixteenth notes or faster; never put them on eighth notes, dotted eighth notes, or quarter notes."
       : "",
     `Return exactly ${count} lines. These begin at section line ${offset + 1}.`,
     `The section has ${linesPerPage} lines per PDF page.`,
@@ -1633,9 +2418,12 @@ function buildBook(config, generatedSections) {
       sampleJson: JSON.stringify(section.sampleJson || {}, null, 2),
       subdivisions: section.subdivisions,
       ornaments: section.ornaments,
+      tuplet: section.tuplet,
       pageCount: generated.pageCount,
       minPlayedNotes: section.minPlayedNotes,
+      maxPlayedNotes: section.maxPlayedNotes,
       maxSameHandStickingRun: section.maxSameHandStickingRun,
+      requireMaxSameHandStickingRun: section.requireMaxSameHandStickingRun,
       pdfSettings: generated.pdfSettings,
       pages,
     };
@@ -1696,9 +2484,12 @@ function createManifest(book) {
       sampleJson: section.sampleJson,
       subdivisions: section.subdivisions,
       ornaments: section.ornaments,
+      tuplet: section.tuplet,
       pageCount: section.pageCount,
       minPlayedNotes: section.minPlayedNotes,
+      maxPlayedNotes: section.maxPlayedNotes,
       maxSameHandStickingRun: section.maxSameHandStickingRun,
+      requireMaxSameHandStickingRun: section.requireMaxSameHandStickingRun,
       pdfSettings: section.pdfSettings,
       pages: section.pages.map(createPageManifest),
     })),
@@ -1714,8 +2505,50 @@ function linePath(bookRoot, pageNumber, lineNumber) {
   return path.join(pageDir(bookRoot, pageNumber), `line-${String(lineNumber).padStart(2, "0")}.json`);
 }
 
+function cleanupStaleGeneratedPageFiles(book, bookRoot) {
+  const pagesRoot = path.join(bookRoot, "pages");
+
+  if (!fs.existsSync(pagesRoot)) {
+    return;
+  }
+
+  const activePages = new Map(
+    (book.pages || []).map((page) => [
+      `page-${String(page.pageNumber).padStart(2, "0")}`,
+      new Set((page.lines || []).map((line) =>
+        `line-${String(line.lineNumber).padStart(2, "0")}.json`
+      )),
+    ])
+  );
+
+  for (const entry of fs.readdirSync(pagesRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory() || !/^page-\d+$/.test(entry.name)) {
+      continue;
+    }
+
+    const currentPageDir = path.join(pagesRoot, entry.name);
+    const activeLines = activePages.get(entry.name);
+
+    if (!activeLines) {
+      fs.rmSync(currentPageDir, { recursive: true, force: true });
+      continue;
+    }
+
+    for (const lineEntry of fs.readdirSync(currentPageDir, { withFileTypes: true })) {
+      if (
+        lineEntry.isFile() &&
+        /^line-\d+\.json$/.test(lineEntry.name) &&
+        !activeLines.has(lineEntry.name)
+      ) {
+        fs.rmSync(path.join(currentPageDir, lineEntry.name), { force: true });
+      }
+    }
+  }
+}
+
 function saveBook(book, bookRoot) {
   fs.mkdirSync(bookRoot, { recursive: true });
+  cleanupStaleGeneratedPageFiles(book, bookRoot);
 
   for (const page of book.pages) {
     fs.mkdirSync(pageDir(bookRoot, page.pageNumber), { recursive: true });

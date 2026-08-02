@@ -19,27 +19,48 @@ import Dialog from "../ui/Dialog";
 import { scoreActions } from "../../store/score";
 import { drawScore, initialize } from "../../lib/vexflow";
 import {
-  PDF_COLUMN_OPTIONS,
   ORNAMENT_OPTIONS,
   SUBDIVISION_OPTIONS,
+  TUPLET_TYPE_OPTIONS,
   getLinesPerPage,
   getPagePdfSettings,
+  getTupletTypeOptionByValue,
   createBlankLine,
   createBlankLineScore,
   createBlankPage,
   createBookSection,
   createDefaultBook,
   normalizePdfSettings,
+  normalizeSectionMaxPlayedNotes,
   normalizeSectionMaxSameHandStickingRun,
   normalizeSectionMinPlayedNotes,
   normalizeSectionOrnaments,
   normalizeSectionPageCount,
+  normalizeSectionRequireMaxSameHandStickingRun,
   normalizeSectionSubdivisions,
+  normalizeSectionTuplet,
   normalizeBook,
   renumberPages,
   scoreToBookLine,
 } from "./book-data";
 import styles from "./BookBuilder.module.css";
+
+const TUPLET_COUNT_OPTIONS = Array.from({ length: 15 }, (_, index) => index + 2);
+const DEFAULT_SECTION_TUPLET = { actual: 3, normal: 2, type: 8 };
+
+function getTupletNormalOptions(type) {
+  const maxNormalNotes = Number(type) || DEFAULT_SECTION_TUPLET.type;
+  return TUPLET_COUNT_OPTIONS.filter((count) => count <= maxNormalNotes);
+}
+
+function normalizeTupletPickerUpdate(value) {
+  const maxNormalNotes = Number(value.type) || DEFAULT_SECTION_TUPLET.type;
+
+  return normalizeSectionTuplet({
+    ...value,
+    normal: Math.min(Number(value.normal), maxNormalNotes),
+  });
+}
 
 function IconButton({ children, disabled, icon, onClick, title, variant = "default" }) {
   return (
@@ -283,6 +304,18 @@ function optionSummary(options, selectedIds, emptyLabel = "None") {
   return labels.length ? labels.join(", ") : emptyLabel;
 }
 
+function tupletSummary(section) {
+  const tuplet = normalizeSectionTuplet(section?.tuplet, section || {});
+
+  if (!tuplet) {
+    return "No tuplets";
+  }
+
+  const typeOption = getTupletTypeOptionByValue(tuplet);
+  const typeLabel = typeOption?.label.toLowerCase() || `${tuplet.type}`;
+  return `${tuplet.actual}:${tuplet.normal} ${typeLabel} tuplets`;
+}
+
 export default function BookBuilderPanel() {
   const dispatch = useDispatch();
   const score = useSelector((state) => state.score.present.score);
@@ -313,7 +346,10 @@ export default function BookBuilderPanel() {
   const selectedSection = book.sections[selectedSectionIndex] || book.sections[0];
   const selectedPage = book.pages[selectedPageIndex] || book.pages[0];
   const selectedLine = selectedPage.lines[selectedLineIndex] || selectedPage.lines[0];
+  const selectedTuplet = normalizeSectionTuplet(selectedSection?.tuplet, selectedSection || {});
+  const tupletPickerValue = selectedTuplet || DEFAULT_SECTION_TUPLET;
   const pdfSettings = normalizePdfSettings(book.pdfSettings);
+  const selectedSectionPdfSettings = normalizePdfSettings(selectedSection?.pdfSettings || pdfSettings);
   const selectedPagePdfSettings = getPagePdfSettings(selectedPage, pdfSettings);
   const linesPerPage = getLinesPerPage(selectedPagePdfSettings);
   const totalSlotCount = book.pages.reduce((count, page) => count + page.lines.length, 0);
@@ -325,7 +361,7 @@ export default function BookBuilderPanel() {
   const selectedSectionPageStartIndex = selectedSectionPages
     .slice(0, selectedSectionPageIndex)
     .reduce((count, page) => count + page.lines.length, 0);
-  const slotGridColumns = selectedPagePdfSettings.columns === 3 ? 6 : 4;
+  const slotGridColumns = 4;
   const slotGridRows = Math.ceil(linesPerPage / slotGridColumns);
 
   const filledLineCount = useMemo(
@@ -405,8 +441,11 @@ export default function BookBuilderPanel() {
           globalAiRules: currentBook.globalAiRules,
           sections: savedBook.sections.map((section) => ({
             ...section,
+            tuplet: currentSectionsById[section.id]?.tuplet ?? section.tuplet,
             minPlayedNotes: currentSectionsById[section.id]?.minPlayedNotes ?? section.minPlayedNotes,
+            maxPlayedNotes: currentSectionsById[section.id]?.maxPlayedNotes ?? section.maxPlayedNotes,
             maxSameHandStickingRun: currentSectionsById[section.id]?.maxSameHandStickingRun ?? section.maxSameHandStickingRun,
+            requireMaxSameHandStickingRun: currentSectionsById[section.id]?.requireMaxSameHandStickingRun ?? section.requireMaxSameHandStickingRun,
           })),
         };
       });
@@ -570,10 +609,10 @@ export default function BookBuilderPanel() {
     saveBook(nextBook, `Added page to ${nextSection.title}`);
   }, [book, pdfSettings, saveBook, selectedSectionIndex]);
 
-  const updatePagePdfColumns = useCallback((columns) => {
+  const updatePagePdfRows = useCallback((rows) => {
     const nextPagePdfSettings = normalizePdfSettings({
       ...selectedPagePdfSettings,
-      columns,
+      rows,
     });
     const selectedSectionPageNumber = selectedPage.sectionPageNumber;
     const sectionId = selectedPage.sectionId;
@@ -597,9 +636,42 @@ export default function BookBuilderPanel() {
     );
     saveBook(
       nextBook,
-      `Page ${selectedPage.pageNumber}: ${nextPagePdfSettings.columns} columns / ${nextLinesPerPage} slots`
+      `Page ${selectedPage.pageNumber}: ${nextPagePdfSettings.rows} rows per column / ${nextLinesPerPage} slots`
     );
   }, [book, pdfSettings, saveBook, selectedPage, selectedPagePdfSettings, selectedSection, selectedSectionIndex]);
+
+  const updateSelectedSectionPdfRows = useCallback((rows) => {
+    const nextSectionPdfSettings = normalizePdfSettings({
+      ...selectedSectionPdfSettings,
+      rows,
+    });
+    const sectionId = selectedSection.id;
+    const selectedSectionPageNumber = selectedPage.sectionPageNumber || 1;
+    const nextLinesPerPage = getLinesPerPage(nextSectionPdfSettings);
+    const nextBook = updateBookSection(book, selectedSectionIndex, (section) => ({
+      ...section,
+      pdfSettings: nextSectionPdfSettings,
+      pages: renumberPages(
+        section.pages.map((page) => ({
+          ...page,
+          pdfSettings: nextSectionPdfSettings,
+        })),
+        nextSectionPdfSettings
+      ),
+    }));
+
+    setBook(nextBook);
+    setSelectedPageIndex(
+      getPageIndexForSectionPage(nextBook, sectionId, selectedSectionPageNumber)
+    );
+    setSelectedLineIndex((lineIndex) =>
+      Math.min(lineIndex, nextLinesPerPage - 1)
+    );
+    saveBook(
+      nextBook,
+      `${selectedSection.title}: ${nextSectionPdfSettings.rows} rows per column / ${nextLinesPerPage} slots`
+    );
+  }, [book, saveBook, selectedPage.sectionPageNumber, selectedSection, selectedSectionIndex, selectedSectionPdfSettings]);
 
   const selectSection = useCallback((sectionIndex) => {
     const section = book.sections[sectionIndex];
@@ -641,7 +713,10 @@ export default function BookBuilderPanel() {
       prompt: "",
       subdivisions: ["eighths"],
       ornaments: [],
+      tuplet: null,
+      maxPlayedNotes: normalizeSectionMaxPlayedNotes(),
       maxSameHandStickingRun: normalizeSectionMaxSameHandStickingRun(),
+      requireMaxSameHandStickingRun: false,
       sampleJson: "",
     }, pdfSettings);
     const nextBook = normalizeBook({
@@ -937,14 +1012,24 @@ export default function BookBuilderPanel() {
                   SUBDIVISION_OPTIONS,
                   normalizeSectionSubdivisions(section.subdivisions, section)
                 )}`}
+                {normalizeSectionTuplet(section.tuplet, section)
+                  ? ` · Tuplet ${tupletSummary(section)}`
+                  : ""}
                 {section.pages.length !== normalizeSectionPageCount(section.pageCount, section.pages.length)
                   ? ` / ${section.pages.length} saved`
                   : ""}
                 {normalizeSectionMinPlayedNotes(section.minPlayedNotes)
                   ? ` · Min ${normalizeSectionMinPlayedNotes(section.minPlayedNotes)} notes`
                   : ""}
+                {normalizeSectionMaxPlayedNotes(section.maxPlayedNotes)
+                  ? ` · Max ${normalizeSectionMaxPlayedNotes(section.maxPlayedNotes)} played`
+                  : ""}
                 {normalizeSectionOrnaments(section.ornaments, section).includes("stickings")
                   ? ` · Max ${normalizeSectionMaxSameHandStickingRun(section.maxSameHandStickingRun)} same hand`
+                  : ""}
+                {normalizeSectionOrnaments(section.ornaments, section).includes("stickings") &&
+                normalizeSectionRequireMaxSameHandStickingRun(section.requireMaxSameHandStickingRun)
+                  ? " · Require max"
                   : ""}
               </span>
             </button>
@@ -977,6 +1062,15 @@ export default function BookBuilderPanel() {
               )}
             />
           </Field>
+          <Field label="Rows per column">
+            <input
+              inputMode="numeric"
+              min="1"
+              onChange={(event) => updateSelectedSectionPdfRows(event.target.value)}
+              type="number"
+              value={selectedSectionPdfSettings.rows}
+            />
+          </Field>
           <Field label="Minimum played notes">
             <input
               inputMode="numeric"
@@ -988,6 +1082,19 @@ export default function BookBuilderPanel() {
               }
               type="number"
               value={normalizeSectionMinPlayedNotes(selectedSection.minPlayedNotes)}
+            />
+          </Field>
+          <Field label="Maximum played notes">
+            <input
+              inputMode="numeric"
+              min="0"
+              onChange={(event) =>
+                updateSelectedSectionDraft({
+                  maxPlayedNotes: normalizeSectionMaxPlayedNotes(event.target.value),
+                })
+              }
+              type="number"
+              value={normalizeSectionMaxPlayedNotes(selectedSection.maxPlayedNotes)}
             />
           </Field>
           <Field label="Max same-hand stickings">
@@ -1003,6 +1110,93 @@ export default function BookBuilderPanel() {
               value={normalizeSectionMaxSameHandStickingRun(selectedSection.maxSameHandStickingRun)}
             />
           </Field>
+          <label className={styles.toggleField}>
+            <input
+              checked={normalizeSectionRequireMaxSameHandStickingRun(
+                selectedSection.requireMaxSameHandStickingRun
+              )}
+              onChange={(event) =>
+                updateSelectedSectionDraft({
+                  requireMaxSameHandStickingRun: event.target.checked,
+                })
+              }
+              type="checkbox"
+            />
+            <span>Require max</span>
+          </label>
+          <label className={styles.toggleField}>
+            <input
+              checked={Boolean(selectedTuplet)}
+              onChange={(event) =>
+                updateSelectedSectionDraft({
+                  tuplet: event.target.checked ? DEFAULT_SECTION_TUPLET : null,
+                })
+              }
+              type="checkbox"
+            />
+            <span>Use tuplets</span>
+          </label>
+          {selectedTuplet && (
+            <>
+              <Field label="Actual notes">
+                <select
+                  onChange={(event) =>
+                    updateSelectedSectionDraft({
+                      tuplet: normalizeTupletPickerUpdate({
+                        ...tupletPickerValue,
+                        actual: Number(event.target.value),
+                      }),
+                    })
+                  }
+                  value={tupletPickerValue.actual}
+                >
+                  {TUPLET_COUNT_OPTIONS.map((count) => (
+                    <option key={count} value={count}>
+                      {count}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Normal notes">
+                <select
+                  onChange={(event) =>
+                    updateSelectedSectionDraft({
+                      tuplet: normalizeTupletPickerUpdate({
+                        ...tupletPickerValue,
+                        normal: Number(event.target.value),
+                      }),
+                    })
+                  }
+                  value={tupletPickerValue.normal}
+                >
+                  {getTupletNormalOptions(tupletPickerValue.type).map((count) => (
+                    <option key={count} value={count}>
+                      {count}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Note type">
+                <select
+                  onChange={(event) =>
+                    updateSelectedSectionDraft({
+                      tuplet: normalizeTupletPickerUpdate({
+                        ...tupletPickerValue,
+                        type: Number(event.target.value),
+                      }),
+                    })
+                  }
+                  value={tupletPickerValue.type}
+                >
+                  {TUPLET_TYPE_OPTIONS.map((option) => (
+                    <option key={option.id} value={option.type}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </>
+          )}
           <CheckboxPicker
             label="Subdivisions"
             onToggle={(optionId) =>
@@ -1188,17 +1382,14 @@ export default function BookBuilderPanel() {
         <div className={styles.editorTitle}>
           <h3>Page PDF Settings</h3>
         </div>
-        <Field label="Columns">
-          <select
-            value={selectedPagePdfSettings.columns}
-            onChange={(event) => updatePagePdfColumns(Number(event.target.value))}
-          >
-            {PDF_COLUMN_OPTIONS.map((columns) => (
-              <option key={columns} value={columns}>
-                {columns} columns
-              </option>
-            ))}
-          </select>
+        <Field label="Rows per column">
+          <input
+            inputMode="numeric"
+            min="1"
+            onChange={(event) => updatePagePdfRows(event.target.value)}
+            type="number"
+            value={selectedPagePdfSettings.rows}
+          />
         </Field>
         <Field label="Slots per page">
           <input readOnly value={linesPerPage} />
