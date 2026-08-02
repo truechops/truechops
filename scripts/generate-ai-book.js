@@ -1694,6 +1694,36 @@ function enforceStickingSequenceRules(section, notes, options = {}) {
   return nextNotes;
 }
 
+function enforceDiddleFollowedByOppositeSticking(section, notes) {
+  if (!sectionUsesStickings(section)) {
+    return notes;
+  }
+
+  const nextNotes = (notes || []).map((note) => ({ ...note }));
+
+  for (let index = 0; index < nextNotes.length - 1; index += 1) {
+    const note = nextNotes[index];
+    const next = nextNotes[index + 1];
+
+    if (
+      !areConsecutiveSixteenthNotes(note, next) ||
+      !String(note.ornaments || "").includes("d")
+    ) {
+      continue;
+    }
+
+    const sticking = getNoteSticking(note);
+
+    if (!sticking) {
+      continue;
+    }
+
+    nextNotes[index + 1] = withSticking(next, getOppositeSticking(sticking));
+  }
+
+  return nextNotes;
+}
+
 function cleanSequentialOrnaments(notes) {
   const cleaned = (notes || []).map((note) => ({ ...note }));
 
@@ -1768,7 +1798,10 @@ function finalizeGeneratedScore(section, score, lineIndex = 0) {
           return {
             ...voice,
             tuplets: notationVoice.tuplets,
-            notes: enforceDurationOrnamentRules(finalNotes),
+            notes: enforceDiddleFollowedByOppositeSticking(
+              section,
+              enforceDurationOrnamentRules(finalNotes)
+            ),
           };
         }),
       })),
