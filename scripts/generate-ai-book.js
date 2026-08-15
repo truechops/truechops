@@ -1410,16 +1410,17 @@ function enforceDurationOrnamentRules(notes) {
 function removeDiddleBeforeConsecutiveCheese(notes) {
   const cleaned = (notes || []).map((note) => ({ ...note }));
 
-  for (let index = 0; index < cleaned.length - 1; index += 1) {
+  for (let index = 0; cleaned.length > 1 && index < cleaned.length; index += 1) {
     const note = cleaned[index];
-    const next = cleaned[index + 1];
+    const nextIndex = (index + 1) % cleaned.length;
+    const next = cleaned[nextIndex];
 
     if (
       areConsecutiveSixteenthNotes(note, next) &&
       /d/.test(String(note.ornaments || "")) &&
       /c/.test(String(next.ornaments || ""))
     ) {
-      cleaned[index + 1] = removeOrnamentChars(next, "c");
+      cleaned[nextIndex] = removeOrnamentChars(next, "c");
     }
   }
 
@@ -1686,54 +1687,190 @@ function enforceDiddleFollowedByOppositeSticking(section, notes) {
   }
 
   const nextNotes = (notes || []).map((note) => ({ ...note }));
+  const maximumPasses = Math.max(1, nextNotes.length * 2);
 
-  for (let index = 0; index < nextNotes.length - 1; index += 1) {
-    const note = nextNotes[index];
-    const next = nextNotes[index + 1];
+  for (let pass = 0; pass < maximumPasses; pass += 1) {
+    let changed = false;
 
-    if (
-      !areConsecutiveSixteenthNotes(note, next) ||
-      !String(note.ornaments || "").includes("d")
-    ) {
-      continue;
+    for (let index = 0; nextNotes.length > 1 && index < nextNotes.length; index += 1) {
+      const note = nextNotes[index];
+      const nextIndex = (index + 1) % nextNotes.length;
+      const next = nextNotes[nextIndex];
+
+      if (
+        !areConsecutiveSixteenthNotes(note, next) ||
+        !/[dc]/.test(String(note.ornaments || ""))
+      ) {
+        continue;
+      }
+
+      const sticking = getNoteSticking(note);
+      const requiredSticking = sticking ? getOppositeSticking(sticking) : "";
+
+      if (!requiredSticking || getNoteSticking(next) === requiredSticking) {
+        continue;
+      }
+
+      nextNotes[nextIndex] = withSticking(next, requiredSticking);
+      changed = true;
     }
 
-    const sticking = getNoteSticking(note);
-
-    if (!sticking) {
-      continue;
+    if (!changed) {
+      break;
     }
-
-    nextNotes[index + 1] = withSticking(next, getOppositeSticking(sticking));
   }
 
   return nextNotes;
 }
 
+function getBoundaryStickingRunLength(notes, fromStart, sticking) {
+  let runLength = 0;
+
+  for (
+    let offset = 0;
+    offset < notes.length;
+    offset += 1
+  ) {
+    const index = fromStart ? offset : notes.length - 1 - offset;
+    const note = notes[index];
+
+    if (isRest(note) || getNoteSticking(note) !== sticking) {
+      break;
+    }
+
+    runLength += 1;
+  }
+
+  return runLength;
+}
+
+function repeatingBoundaryViolatesStickingRules(section, notes) {
+  if (!sectionUsesStickings(section) || !Array.isArray(notes) || notes.length < 2) {
+    return false;
+  }
+
+  const first = notes[0];
+  const last = notes[notes.length - 1];
+
+  if (isRest(first) || isRest(last)) {
+    return false;
+  }
+
+  const firstSticking = getNoteSticking(first);
+  const lastSticking = getNoteSticking(last);
+
+  if (
+    areConsecutiveSixteenthNotes(last, first) &&
+    /[dc]/.test(String(last.ornaments || "")) &&
+    firstSticking === lastSticking
+  ) {
+    return true;
+  }
+
+  if (firstSticking !== lastSticking) {
+    return false;
+  }
+
+  const boundaryRunLength = Math.min(
+    notes.length,
+    getBoundaryStickingRunLength(notes, true, firstSticking) +
+      getBoundaryStickingRunLength(notes, false, lastSticking)
+  );
+
+  return boundaryRunLength > getSectionMaxSameHandStickingRun(section);
+}
+
+function repeatingMeasureViolatesStickingRules(section, notes) {
+  if (!sectionUsesStickings(section) || !Array.isArray(notes) || notes.length < 2) {
+    return false;
+  }
+
+  const maximumRun = getSectionMaxSameHandStickingRun(section);
+
+  for (let index = 0; index < notes.length; index += 1) {
+    const note = notes[index];
+    const next = notes[(index + 1) % notes.length];
+
+    if (
+      areConsecutiveSixteenthNotes(note, next) &&
+      /[dc]/.test(String(note.ornaments || "")) &&
+      getNoteSticking(note) === getNoteSticking(next)
+    ) {
+      return true;
+    }
+
+    if (isRest(note) || !getNoteSticking(note)) {
+      continue;
+    }
+
+    let runLength = 1;
+
+    while (runLength < notes.length) {
+      const candidate = notes[(index + runLength) % notes.length];
+
+      if (isRest(candidate) || getNoteSticking(candidate) !== getNoteSticking(note)) {
+        break;
+      }
+
+      runLength += 1;
+    }
+
+    if (maximumRun > 0 && runLength > maximumRun) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function enforceRepeatingMeasureStickingRules(section, notes, options = {}) {
+  if (!sectionUsesStickings(section)) {
+    return notes;
+  }
+
+  let nextNotes = (notes || []).map((note) => ({ ...note }));
+  const maximumAttempts = Math.max(4, nextNotes.length * 2);
+
+  for (let attempt = 0; attempt < maximumAttempts; attempt += 1) {
+    nextNotes = enforceStickingSequenceRules(section, nextNotes, options);
+    nextNotes = enforceDiddleFollowedByOppositeSticking(section, nextNotes);
+
+    if (!repeatingMeasureViolatesStickingRules(section, nextNotes)) {
+      return nextNotes;
+    }
+
+    const boundaryViolation = repeatingBoundaryViolatesStickingRules(section, nextNotes);
+    const lastSticking = getNoteSticking(nextNotes[nextNotes.length - 1]);
+
+    if (boundaryViolation && lastSticking && !isRest(nextNotes[0])) {
+      nextNotes[0] = withSticking(nextNotes[0], getOppositeSticking(lastSticking));
+    }
+  }
+
+  throw new Error(
+    `${section.title || section.id || "Section"}: could not satisfy sticking rules across the repeat boundary.`
+  );
+}
+
 function cleanSequentialOrnaments(notes) {
   const cleaned = (notes || []).map((note) => ({ ...note }));
 
-  for (let index = 0; index < cleaned.length; index += 1) {
+  for (let index = 0; cleaned.length > 1 && index < cleaned.length; index += 1) {
     const note = cleaned[index];
-    const next = cleaned[index + 1];
-    const previous = cleaned[index - 1];
+    const nextIndex = (index + 1) % cleaned.length;
+    const next = cleaned[nextIndex];
     const isSequentialSixteenth = next &&
       !isRest(note) &&
       !isRest(next) &&
       Number(note.duration) === 16 &&
       Number(next.duration) === 16;
-    const previousSequentialSixteenth = previous &&
-      !isRest(previous) &&
-      !isRest(note) &&
-      Number(previous.duration) === 16 &&
-      Number(note.duration) === 16;
 
     if (isSequentialSixteenth && /[dc]/.test(String(note.ornaments || "")) && /f/.test(String(next.ornaments || ""))) {
-      cleaned[index + 1] = removeOrnamentChars(next, "f");
+      cleaned[nextIndex] = removeOrnamentChars(next, "f");
     }
 
-    if (previousSequentialSixteenth && /c/.test(String(previous.ornaments || "")) && /c/.test(String(cleaned[index].ornaments || ""))) {
-      cleaned[index] = removeOrnamentChars(cleaned[index], "c");
+    if (isSequentialSixteenth && /c/.test(String(note.ornaments || "")) && /c/.test(String(cleaned[nextIndex].ornaments || ""))) {
+      cleaned[nextIndex] = removeOrnamentChars(cleaned[nextIndex], "c");
     }
   }
 
@@ -1759,8 +1896,17 @@ function assignInitialStickings(section, notes, lineIndex = 0) {
 }
 
 function areAdjacentPlayedSixteenths(notes, leftIndex, rightIndex) {
-  return Math.abs(leftIndex - rightIndex) === 1 &&
+  const distance = Math.abs(leftIndex - rightIndex);
+  return notes.length > 1 && (distance === 1 || distance === notes.length - 1) &&
     areConsecutiveSixteenthNotes(notes[Math.min(leftIndex, rightIndex)], notes[Math.max(leftIndex, rightIndex)]);
+}
+
+function getCircularNeighbor(notes, noteIndex, offset) {
+  if (!Array.isArray(notes) || notes.length < 2) {
+    return null;
+  }
+
+  return notes[(noteIndex + offset + notes.length) % notes.length];
 }
 
 function canAddRequiredOrnament(notes, noteIndex, ornament) {
@@ -1783,7 +1929,7 @@ function canAddRequiredOrnament(notes, noteIndex, ornament) {
   }
 
   if (ornament === "f") {
-    const previous = notes[noteIndex - 1];
+    const previous = getCircularNeighbor(notes, noteIndex, -1);
 
     if (previous && areConsecutiveSixteenthNotes(previous, note) && /[dc]/.test(String(previous.ornaments || ""))) {
       return false;
@@ -1791,20 +1937,20 @@ function canAddRequiredOrnament(notes, noteIndex, ornament) {
   }
 
   if (ornament === "c") {
-    const previous = notes[noteIndex - 1];
-    const next = notes[noteIndex + 1];
+    const previous = getCircularNeighbor(notes, noteIndex, -1);
+    const next = getCircularNeighbor(notes, noteIndex, 1);
 
     if (previous && areConsecutiveSixteenthNotes(previous, note) && /[dc]/.test(String(previous.ornaments || ""))) {
       return false;
     }
 
-    if (next && areConsecutiveSixteenthNotes(note, next) && /f/.test(String(next.ornaments || ""))) {
+    if (next && areConsecutiveSixteenthNotes(note, next) && /[cf]/.test(String(next.ornaments || ""))) {
       return false;
     }
   }
 
   if (ornament === "d") {
-    const next = notes[noteIndex + 1];
+    const next = getCircularNeighbor(notes, noteIndex, 1);
 
     if (next && areConsecutiveSixteenthNotes(note, next) && /[fc]/.test(String(next.ornaments || ""))) {
       return false;
@@ -1989,7 +2135,7 @@ function finalizeGeneratedScore(section, score, lineIndex = 0) {
             ),
             lineIndex
           );
-          const stickingNotes = enforceStickingSequenceRules(
+          const stickingNotes = enforceRepeatingMeasureStickingRules(
             section,
             assignInitialStickings(section, ornamentedNotes, lineIndex),
             { preserveNoteCount: hasTuplets }
@@ -1998,10 +2144,7 @@ function finalizeGeneratedScore(section, score, lineIndex = 0) {
           return {
             ...voice,
             tuplets: notationVoice.tuplets,
-            notes: enforceDiddleFollowedByOppositeSticking(
-              section,
-              stickingNotes
-            ),
+            notes: stickingNotes,
           };
         }),
       })),
@@ -2431,6 +2574,7 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
     sectionUsesStickings(section)
       ? "When a diddle or cheese is followed immediately by the next sixteenth note, that following note must use the opposite sticking. A diddle must not directly precede a cheese on consecutive sixteenth notes."
       : "",
+    "Every measure repeats. Apply every ornament-sequencing and sticking rule across the repeat boundary, treating the first note as immediately following the last note.",
     sectionUsesDiddlesOrCheese(section)
       ? "Diddles and cheese may only be used on sixteenth notes or faster; never put them on eighth notes, dotted eighth notes, or quarter notes."
       : "",
