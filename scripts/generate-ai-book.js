@@ -962,6 +962,14 @@ function sectionUsesDiddlesOrCheese(section) {
   return ornaments.includes("diddles") || ornaments.includes("cheese");
 }
 
+function getRequiredSectionOrnamentChars(section) {
+  const ornaments = getGenerationOrnaments(section);
+
+  return ORNAMENT_SETTINGS
+    .filter((setting) => setting.id !== "stickings" && ornaments.includes(setting.id))
+    .flatMap((setting) => [...setting.chars]);
+}
+
 function applySectionOrnamentPolicy(section, score) {
   const allowedChars = getAllowedOrnamentChars(section);
   const allowedPattern = allowedChars ? new RegExp(`[^${allowedChars}]`, "g") : /[a-z]/g;
@@ -1337,28 +1345,6 @@ function getOppositeSticking(sticking) {
 
 function withSticking(note, sticking) {
   return withPrependedSticking(note, sticking);
-}
-
-function ensureStickingsOnNotes(section, notes) {
-  if (!sectionUsesStickings(section)) {
-    return notes;
-  }
-
-  let playedIndex = 0;
-
-  return (notes || []).map((note) => {
-    if (isRest(note)) {
-      return note;
-    }
-
-    const existingSticking = getNoteSticking(note);
-    const sticking = existingSticking || (playedIndex % 2 === 0 ? "r" : "l");
-    playedIndex += 1;
-
-    return existingSticking
-      ? note
-      : withPrependedSticking(note, sticking);
-  });
 }
 
 function areConsecutiveSixteenthNotes(left, right) {
@@ -1743,7 +1729,7 @@ function cleanSequentialOrnaments(notes) {
       Number(note.duration) === 16;
 
     if (isSequentialSixteenth && /[dc]/.test(String(note.ornaments || "")) && /f/.test(String(next.ornaments || ""))) {
-      cleaned[index] = removeOrnamentChars(note, "dc");
+      cleaned[index + 1] = removeOrnamentChars(next, "f");
     }
 
     if (previousSequentialSixteenth && /c/.test(String(previous.ornaments || "")) && /c/.test(String(cleaned[index].ornaments || ""))) {
@@ -1752,6 +1738,215 @@ function cleanSequentialOrnaments(notes) {
   }
 
   return cleaned;
+}
+
+function stripStickingsFromNotes(notes) {
+  return (notes || []).map((note) => removeOrnamentChars(note, "rl"));
+}
+
+function assignInitialStickings(section, notes, lineIndex = 0) {
+  if (!sectionUsesStickings(section)) {
+    return notes;
+  }
+
+  const random = createSeededRandom(
+    `${section.id || section.title || "section"}:stickings:${lineIndex}:${JSON.stringify(notes)}`
+  );
+
+  return (notes || []).map((note) =>
+    isRest(note) ? note : withSticking(note, random() < 0.5 ? "r" : "l")
+  );
+}
+
+function areAdjacentPlayedSixteenths(notes, leftIndex, rightIndex) {
+  return Math.abs(leftIndex - rightIndex) === 1 &&
+    areConsecutiveSixteenthNotes(notes[Math.min(leftIndex, rightIndex)], notes[Math.max(leftIndex, rightIndex)]);
+}
+
+function canAddRequiredOrnament(notes, noteIndex, ornament) {
+  const note = notes[noteIndex];
+
+  if (!note || isRest(note)) {
+    return false;
+  }
+
+  const current = String(note.ornaments || "");
+
+  if (ornament === "d" || ornament === "c") {
+    if (Number(note.duration) < 16 || /f/.test(current)) {
+      return false;
+    }
+  }
+
+  if (ornament === "f" && /[dc]/.test(current)) {
+    return false;
+  }
+
+  if (ornament === "f") {
+    const previous = notes[noteIndex - 1];
+
+    if (previous && areConsecutiveSixteenthNotes(previous, note) && /[dc]/.test(String(previous.ornaments || ""))) {
+      return false;
+    }
+  }
+
+  if (ornament === "c") {
+    const previous = notes[noteIndex - 1];
+    const next = notes[noteIndex + 1];
+
+    if (previous && areConsecutiveSixteenthNotes(previous, note) && /[dc]/.test(String(previous.ornaments || ""))) {
+      return false;
+    }
+
+    if (next && areConsecutiveSixteenthNotes(note, next) && /f/.test(String(next.ornaments || ""))) {
+      return false;
+    }
+  }
+
+  if (ornament === "d") {
+    const next = notes[noteIndex + 1];
+
+    if (next && areConsecutiveSixteenthNotes(note, next) && /[fc]/.test(String(next.ornaments || ""))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function addOrnamentToNote(note, ornament) {
+  const ornaments = String(note.ornaments || "");
+
+  return {
+    ...note,
+    ornaments: ornaments.includes(ornament) ? ornaments : `${ornaments}${ornament}`,
+    ...(ornament === "a" ? { velocity: 1 } : {}),
+  };
+}
+
+function getOrnamentFrequencyProfile(section, notes, lineIndex) {
+  const requiredOrnaments = getRequiredSectionOrnamentChars(section);
+  const varietyOrnaments = requiredOrnaments.filter((ornament) => ornament !== "a");
+  const targets = new Map(requiredOrnaments.map((ornament) => [ornament, 1]));
+
+  if (requiredOrnaments.length < 2) {
+    return { featuredOrnament: "", targets, varietyOrnaments };
+  }
+
+  if (requiredOrnaments.includes("a")) {
+    const playedCount = countPlayedNotes(notes);
+    const accentDensity = 1 + (
+      lineIndex + hashString(`${section.id || section.title || "section"}:accents`)
+    ) % 4;
+    targets.set("a", Math.max(1, Math.min(accentDensity, playedCount)));
+  }
+
+  if (!varietyOrnaments.length) {
+    return { featuredOrnament: "", targets, varietyOrnaments };
+  }
+
+  const featuredIndex = (
+    lineIndex + hashString(section.id || section.title || "section")
+  ) % varietyOrnaments.length;
+  const featuredOrnament = varietyOrnaments[featuredIndex];
+  const densityStep = Math.floor(lineIndex / varietyOrnaments.length) % 3;
+  const eligibleCount = (notes || []).filter((note, noteIndex) =>
+    canAddRequiredOrnament(notes, noteIndex, featuredOrnament)
+  ).length;
+  const musicalMaximum = featuredOrnament === "c"
+    ? Math.ceil(eligibleCount / 2)
+    : eligibleCount;
+
+  targets.set(featuredOrnament, Math.max(1, Math.min(2 + densityStep, musicalMaximum)));
+  return { featuredOrnament, targets, varietyOrnaments };
+}
+
+function resetProfiledOrnaments(notes, requiredOrnaments) {
+  const pattern = requiredOrnaments.join("");
+
+  return (notes || []).map((note) => {
+    const hadAccent = String(note.ornaments || "").includes("a");
+    const cleaned = removeOrnamentChars(note, pattern);
+
+    return hadAccent ? { ...cleaned, velocity: 0.5 } : cleaned;
+  });
+}
+
+function ensureRequiredOrnamentsOnNotes(section, notes, lineIndex = 0) {
+  const requiredOrnaments = getRequiredSectionOrnamentChars(section);
+  const shouldApplyFrequencyProfile = requiredOrnaments.length > 1;
+  const nextNotes = shouldApplyFrequencyProfile
+    ? resetProfiledOrnaments(notes, requiredOrnaments)
+    : (notes || []).map((note) => ({ ...note }));
+  const { featuredOrnament, targets, varietyOrnaments } = getOrnamentFrequencyProfile(
+    section,
+    nextNotes,
+    lineIndex
+  );
+  const assignedIndexes = new Set();
+  const placementOrder = [
+    ...varietyOrnaments.filter((ornament) => ornament !== featuredOrnament),
+    ...(featuredOrnament ? [featuredOrnament] : []),
+    ...(requiredOrnaments.includes("a") ? ["a"] : []),
+  ];
+
+  for (const ornament of placementOrder) {
+    const targetCount = targets.get(ornament) || 1;
+
+    while (nextNotes.filter((note) =>
+      !isRest(note) && String(note.ornaments || "").includes(ornament)
+    ).length < targetCount) {
+      const candidates = nextNotes
+        .map((note, index) => ({ index, note }))
+        .filter(({ index, note }) =>
+          !String(note.ornaments || "").includes(ornament) &&
+          canAddRequiredOrnament(nextNotes, index, ornament)
+        )
+        .sort((left, right) => {
+        const leftUsed = assignedIndexes.has(left.index) ? 1 : 0;
+        const rightUsed = assignedIndexes.has(right.index) ? 1 : 0;
+        const leftUseRank = ornament === "a" ? 1 - leftUsed : leftUsed;
+        const rightUseRank = ornament === "a" ? 1 - rightUsed : rightUsed;
+        const leftCount = String(left.note.ornaments || "").length;
+        const rightCount = String(right.note.ornaments || "").length;
+        const leftAdjacentDiddle = ornament === "d" && nextNotes.some((note, index) =>
+          /d/.test(String(note.ornaments || "")) && areAdjacentPlayedSixteenths(nextNotes, left.index, index)
+        ) ? 0 : 1;
+        const rightAdjacentDiddle = ornament === "d" && nextNotes.some((note, index) =>
+          /d/.test(String(note.ornaments || "")) && areAdjacentPlayedSixteenths(nextNotes, right.index, index)
+        ) ? 0 : 1;
+
+        return leftAdjacentDiddle - rightAdjacentDiddle ||
+          leftUseRank - rightUseRank ||
+          leftCount - rightCount ||
+          hashString(`${section.id}:${lineIndex}:${ornament}:${left.index}`) -
+            hashString(`${section.id}:${lineIndex}:${ornament}:${right.index}`);
+        });
+
+      if (!candidates.length) {
+        const placedCount = nextNotes.filter((note) =>
+          !isRest(note) && String(note.ornaments || "").includes(ornament)
+        ).length;
+
+        if (!placedCount) {
+          throw new Error(
+            `${section.title || section.id || "Section"} line ${lineIndex + 1}: ` +
+            `cannot place required ornament "${ornament}" on an eligible played note.`
+          );
+        }
+
+        break;
+      }
+
+      const selected = candidates[0];
+      nextNotes[selected.index] = addOrnamentToNote(nextNotes[selected.index], ornament);
+      if (ornament !== "a") {
+        assignedIndexes.add(selected.index);
+      }
+    }
+  }
+
+  return nextNotes;
 }
 
 function finalizeGeneratedScore(section, score, lineIndex = 0) {
@@ -1768,7 +1963,7 @@ function finalizeGeneratedScore(section, score, lineIndex = 0) {
         voices: (part.voices || []).map((voice) => {
           const hasTuplets = Array.isArray(voice.tuplets) && voice.tuplets.length > 0;
           const cleanedNotes = cleanSequentialOrnaments(
-            ensureStickingsOnNotes(section, voice.notes || [])
+            stripStickingsFromNotes(voice.notes || [])
           );
           const notationVoice = hasTuplets
             ? preferLongerValuesInTupletVoice({
@@ -1779,28 +1974,33 @@ function finalizeGeneratedScore(section, score, lineIndex = 0) {
                 notes: preferLongerValues(cleanedNotes, getPreferLongerValueOptions()),
                 tuplets: [],
               };
-          const sequenceNotes = enforceDurationOrnamentRules(
-            enforceStickingSequenceRules(
-              section,
-              notationVoice.notes,
-              { preserveNoteCount: hasTuplets }
-            )
-          );
           const cappedNotes = enforceMaximumPlayedNotesInNotes(
             section,
-            sequenceNotes,
+            enforceDurationOrnamentRules(notationVoice.notes),
             `${lineIndex}:final`
           );
-          const finalNotes = hasTuplets
+          const notationNotes = hasTuplets
             ? cappedNotes
             : preferLongerValues(cappedNotes, getPreferLongerValueOptions());
+          const ornamentedNotes = ensureRequiredOrnamentsOnNotes(
+            section,
+            removeDiddleBeforeConsecutiveCheese(
+              cleanSequentialOrnaments(enforceDurationOrnamentRules(notationNotes))
+            ),
+            lineIndex
+          );
+          const stickingNotes = enforceStickingSequenceRules(
+            section,
+            assignInitialStickings(section, ornamentedNotes, lineIndex),
+            { preserveNoteCount: hasTuplets }
+          );
 
           return {
             ...voice,
             tuplets: notationVoice.tuplets,
             notes: enforceDiddleFollowedByOppositeSticking(
               section,
-              enforceDurationOrnamentRules(finalNotes)
+              stickingNotes
             ),
           };
         }),
@@ -1848,10 +2048,6 @@ function getDurationBySlots(slots, baseDuration) {
 
 function createFallbackOrnaments(options, random, playedIndex, previousOrnaments) {
   let ornaments = "";
-
-  if (options.allowSticking) {
-    ornaments += random() < 0.5 ? "r" : "l";
-  }
 
   if (options.allowFlams && random() < 0.14) {
     ornaments += "f";
@@ -2212,7 +2408,13 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
     "Randomize played notes and rests across the whole measure. Do not favor beat four or any other beat.",
     "Rests may occur on any selected subdivision position, including offbeat sixteenth-note and thirty-second-note positions when those subdivisions are selected.",
     sectionUsesStickings(section)
-      ? "Every played note in this section must include a sticking ornament: either \"r\" or \"l\". Rests must not have stickings."
+      ? "First choose and place all non-sticking ornaments. Only afterward assign every played note a sticking ornament (\"r\" or \"l\") while applying the sticking rules below. Rests must not have stickings."
+      : "",
+    getRequiredSectionOrnamentChars(section).length
+      ? `Every measure must contain at least one of each selected non-sticking ornament: ${getRequiredSectionOrnamentChars(section).join(", ")}.`
+      : "",
+    getRequiredSectionOrnamentChars(section).length > 1
+      ? "Treat accents independently: they may share notes with any other ornament and must not consume space in the ornament-variety pattern. Rotate variety only among flams, diddles, and cheese, while every selected ornament remains represented. Never place a flam immediately after a diddle or cheese."
       : "",
     section.minPlayedNotes
       ? `Each generated rhythm in this section must have at least ${section.minPlayedNotes} played note events. Rests do not count as played notes.`

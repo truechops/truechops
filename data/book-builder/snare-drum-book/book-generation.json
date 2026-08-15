@@ -31,7 +31,9 @@
       "Use VexFlow-style durations: 4 for quarter notes, 8 for eighth notes, 16 for sixteenth notes.",
       "Prefer quarter rests over two eighth note rests in a row.",
       "Prefer a quarter note over an eighth note followed by an eighth rest.",
-      "Use ornaments only when the section instructions or sampleJson call for them. Accent is \"a\". Flam is \"f\". Stickings are \"r\" and \"l\".",
+      "Use ornaments only when the section instructions or sampleJson call for them. Accent is \"a\". Flam is \"f\". Diddle is \"d\". Cheese is \"c\". Stickings are \"r\" and \"l\".",
+      "Every measure must contain at least one of each non-sticking ornament selected for its section. Place those ornaments before assigning stickings.",
+      "Accents may share notes with any other ornament and do not compete for ornament variety. In sections with multiple ornaments, rotate variety and frequency among flams, diddles, and cheese. Never place a flam immediately after a diddle or cheese.",
       "Return this exact JSON shape and no prose: { \"lines\": [{ \"title\": \"\", \"tempo\": 90, \"score\": {} }] }."
     ]
   }

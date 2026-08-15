@@ -589,12 +589,21 @@ function drawSlotSvg(doc, line, svg, x, y, width, height) {
   const numberWidth = PDF_LINE_NUMBER_WIDTH;
   const notationX = x + numberWidth + PDF_LINE_NUMBER_GAP;
   const notationWidth = width - numberWidth - PDF_LINE_NUMBER_GAP;
-  const scale = notationWidth / svg.width;
-  const svgWidth = notationWidth;
+  const verticalInset = 1;
+  const scale = Math.min(
+    notationWidth / svg.width,
+    (height - verticalInset * 2) / svg.height
+  );
+  const svgWidth = svg.width * scale;
   const svgHeight = svg.height * scale;
+  const svgX = notationX + (notationWidth - svgWidth) / 2;
   const staffCenterInSvg = svg.staffCenterY ?? getMeasureCenterY(svg);
   const slotCenterY = y + height / 2;
-  const svgY = slotCenterY - staffCenterInSvg * scale;
+  const preferredSvgY = slotCenterY - staffCenterInSvg * scale;
+  const svgY = Math.max(
+    y + verticalInset,
+    Math.min(preferredSvgY, y + height - verticalInset - svgHeight)
+  );
   const measureCenterY = slotCenterY;
   const fontSize = 13;
   const lineNumber = String(line.lineNumber);
@@ -612,12 +621,11 @@ function drawSlotSvg(doc, line, svg, x, y, width, height) {
     lineBreak: false,
   });
 
-  // Horizontal clipping keeps columns tidy; vertical bleed protects accents
-  // and other above-staff markings from being cropped.
-  const verticalBleed = Math.min(18, height * 0.28);
+  // Keep every exercise inside its own row so accents, stickings, beams, and
+  // tuplet labels can never overlap neighboring measures.
   doc.save();
-  doc.rect(notationX, y - verticalBleed, notationWidth, height + verticalBleed * 2).clip();
-  SVGtoPDF(doc, svg.source, notationX, svgY, {
+  doc.rect(notationX, y, notationWidth, height).clip();
+  SVGtoPDF(doc, svg.source, svgX, svgY, {
     width: svgWidth,
     height: svgHeight,
     assumePt: true,
