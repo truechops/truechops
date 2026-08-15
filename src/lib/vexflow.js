@@ -57,6 +57,7 @@ export function drawScore(
     measureNotePadding = 0,
     measureNoteStartPadding,
     measureNoteEndPadding,
+    maxMeasureWidth,
     hideTimeSignature = false,
   } = svgConfig;
   let { measures } = score;
@@ -84,8 +85,13 @@ export function drawScore(
     );
 
     systemWidth = minTotalWidth + FORMAT_PADDING;
+    const naturalBarWidth = systemWidth + (firstMeasure ? 20 : 0);
+    const configuredMaxMeasureWidth = Number(maxMeasureWidth);
+    const barWidth = Number.isFinite(configuredMaxMeasureWidth) && configuredMaxMeasureWidth > 0
+      ? Math.min(naturalBarWidth, configuredMaxMeasureWidth)
+      : naturalBarWidth;
 
-    if ((width + systemWidth > svgWidth + PADDING) && barRenderData.length) {
+    if ((width + barWidth > svgWidth + PADDING) && barRenderData.length) {
       renderStaves(
         barRenderData,
         systemWidth - PADDING,
@@ -111,13 +117,13 @@ export function drawScore(
 
     barRenderData.push({
       parts: measureParts,
-      width: systemWidth + (firstMeasure ? 20 : 0),
+      width: barWidth,
       firstMeasure,
       measureIndex,
       timeSig: score.measures[measureIndex].timeSig,
     });
 
-    width += systemWidth + (firstMeasure ? 20 : 0);
+    width += barWidth;
     firstMeasure = false;
     measureIndex++;
   }

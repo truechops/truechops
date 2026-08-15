@@ -19,8 +19,8 @@ const LINE_NUMBER_CENTER_OFFSET = 1.25;
 const PDF_PAGE_WIDTH = 612;
 const PDF_PAGE_HEIGHT = 792;
 const PDF_MARGIN = 24;
-const PDF_HEADER_HEIGHT = 34;
-const PDF_FOOTER_HEIGHT = 46;
+const PDF_HEADER_HEIGHT = 14;
+const PDF_FOOTER_HEIGHT = 32;
 const PDF_COLUMN_GAP = 20;
 const PDF_LINE_NUMBER_WIDTH = 18;
 const PDF_LINE_NUMBER_GAP = 2;
@@ -704,11 +704,6 @@ function drawBookPage(doc, book, pageAssets, bookTitle) {
     align: "right",
     lineBreak: false,
   });
-  doc.font("Times-Italic").fontSize(7.5).text("Read downward", margin - 7, margin + 8, {
-    width: 80,
-    lineBreak: false,
-  });
-
   pageLines.forEach((line, index) => {
     const column = Math.floor(index / pdfSettings.rows);
     const row = index % pdfSettings.rows;
@@ -726,22 +721,10 @@ function drawBookPage(doc, book, pageAssets, bookTitle) {
     );
   });
 
-  doc.font("Times-Roman").fillColor("#111111").fontSize(9).text("*  R = right stick", margin + 18, pageHeight - margin - 2, {
-    lineBreak: false,
-  });
-  doc.fontSize(9).text("L  = left stick", margin + 26, pageHeight - margin + 10, {
-    lineBreak: false,
-  });
-  doc.fontSize(10).text("Repeat each exercise 20 times.", margin, pageHeight - margin + 9, {
-    width: pageWidth - margin * 2,
-    align: "center",
-    lineBreak: false,
-  });
-
-  const contentBottom = margin + headerHeight + rowHeight * pdfSettings.rows;
   const qrSize = 36;
   const qrX = pageWidth - margin - qrSize;
-  const qrY = contentBottom + 5;
+  const qrBottomMargin = 10;
+  const qrY = pageHeight - qrBottomMargin - qrSize;
   SVGtoPDF(doc, qrSvg, qrX, qrY, { width: qrSize, height: qrSize });
 }
 
