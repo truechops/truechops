@@ -346,7 +346,7 @@ function splitIntoPlayedNotes(note, targetDuration) {
   }));
 }
 
-function enforceMinimumPlayedNotesInNotes(section, notes) {
+function enforceMinimumPlayedNotesInNotes(section, notes, { preserveNoteCount = false } = {}) {
   const minimum = getSectionMinPlayedNotes(section);
 
   if (!minimum || countPlayedNotes(notes) >= minimum) {
@@ -371,6 +371,10 @@ function enforceMinimumPlayedNotesInNotes(section, notes) {
   });
 
   if (playedCount >= minimum) {
+    return nextNotes;
+  }
+
+  if (preserveNoteCount) {
     return nextNotes;
   }
 
@@ -411,7 +415,11 @@ function enforceMinimumPlayedNotes(section, score) {
       parts: (measure.parts || []).map((part) => ({
         ...part,
         voices: (part.voices || []).map((voice) => {
-          const enforced = enforceMinimumPlayedNotesInNotes(section, voice.notes || []);
+          const enforced = enforceMinimumPlayedNotesInNotes(
+            section,
+            voice.notes || [],
+            { preserveNoteCount: Array.isArray(voice.tuplets) && voice.tuplets.length > 0 }
+          );
           return {
             ...voice,
             notes: needsStickings ? applyStickingsToNotes(enforced) : enforced,
@@ -604,7 +612,7 @@ function drawSlotSvg(doc, line, svg, x, y, width, height) {
     y + verticalInset,
     Math.min(preferredSvgY, y + height - verticalInset - svgHeight)
   );
-  const measureCenterY = slotCenterY;
+  const measureCenterY = svgY + staffCenterInSvg * scale;
   const fontSize = 13;
   const lineNumber = String(line.lineNumber);
 
@@ -658,15 +666,22 @@ async function renderBookPageAssets(
   const [svgs, qrSvg] = await Promise.all([
     Promise.all(
       pageLines.map((line, index) =>
-        limitScoreRender(() =>
-          renderScoreSvg(
-            line,
-            `${page.pageNumber}-${line.lineNumber}-${index}`,
-            pdfSettings,
-            rendererApi,
-            createBlankLineScore
-          )
-        )
+        limitScoreRender(() => {
+          try {
+            return renderScoreSvg(
+              line,
+              `${page.pageNumber}-${line.lineNumber}-${index}`,
+              pdfSettings,
+              rendererApi,
+              createBlankLineScore
+            );
+          } catch (error) {
+            throw new Error(
+              `Unable to render page ${page.pageNumber}, line ${line.lineNumber}: ${error.message}`,
+              { cause: error }
+            );
+          }
+        })
       )
     ),
     getPracticeQrSvg(book, page, getBookPageQrUrl, qrOrigin),
@@ -686,7 +701,8 @@ function drawBookPage(doc, book, pageAssets, bookTitle) {
   const pageWidth = PDF_PAGE_WIDTH;
   const pageHeight = PDF_PAGE_HEIGHT;
   const margin = PDF_MARGIN;
-  const headerHeight = PDF_HEADER_HEIGHT;
+  const showBookTitle = page.pageNumber === 1;
+  const headerHeight = showBookTitle ? PDF_HEADER_HEIGHT : 0;
   const footerHeight = PDF_FOOTER_HEIGHT;
   const columnGap = PDF_COLUMN_GAP;
   const usableWidth = pageWidth - margin * 2 - columnGap * (pdfSettings.columns - 1);
@@ -694,11 +710,13 @@ function drawBookPage(doc, book, pageAssets, bookTitle) {
   const rowHeight = (pageHeight - margin * 2 - headerHeight - footerHeight) / pdfSettings.rows;
 
   doc.addPage();
-  doc.font("Times-Roman").fillColor("#111111").fontSize(15).text(book.title || bookTitle, margin, 7, {
-    width: pageWidth - margin * 2,
-    align: "center",
-    lineBreak: false,
-  });
+  if (showBookTitle) {
+    doc.font("Times-Roman").fillColor("#111111").fontSize(15).text(book.title || bookTitle, margin, 7, {
+      width: pageWidth - margin * 2,
+      align: "center",
+      lineBreak: false,
+    });
+  }
   doc.font("Times-Bold").fontSize(10).text(String(page.pageNumber), pageWidth - margin - 18, 8, {
     width: 18,
     align: "right",

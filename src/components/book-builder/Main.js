@@ -36,9 +36,11 @@ import {
   normalizeSectionMinPlayedNotes,
   normalizeSectionOrnaments,
   normalizeSectionPageCount,
+  normalizeSectionPlayEveryNote,
   normalizeSectionRequireMaxSameHandStickingRun,
   normalizeSectionSubdivisions,
   normalizeSectionTuplet,
+  normalizeSectionTuplets,
   normalizeBook,
   renumberPages,
   scoreToBookLine,
@@ -47,6 +49,13 @@ import styles from "./BookBuilder.module.css";
 
 const TUPLET_COUNT_OPTIONS = Array.from({ length: 15 }, (_, index) => index + 2);
 const DEFAULT_SECTION_TUPLET = { actual: 3, normal: 2, type: 8 };
+const COMMON_SECTION_TUPLETS = [
+  DEFAULT_SECTION_TUPLET,
+  { actual: 3, normal: 2, type: 16 },
+  { actual: 5, normal: 4, type: 16 },
+  { actual: 7, normal: 4, type: 16 },
+  { actual: 5, normal: 4, type: 8 },
+];
 
 function getTupletNormalOptions(type) {
   const maxNormalNotes = Number(type) || DEFAULT_SECTION_TUPLET.type;
@@ -60,6 +69,19 @@ function normalizeTupletPickerUpdate(value) {
     ...value,
     normal: Math.min(Number(value.normal), maxNormalNotes),
   });
+}
+
+function getNextTupletConfig(tuplets) {
+  return COMMON_SECTION_TUPLETS.find((candidate) =>
+    !tuplets.some((tuplet) =>
+      tuplet.actual === candidate.actual &&
+      tuplet.normal === candidate.normal &&
+      tuplet.type === candidate.type
+    )
+  ) || {
+    ...DEFAULT_SECTION_TUPLET,
+    actual: Math.min(16, Math.max(...tuplets.map((tuplet) => tuplet.actual), 2) + 1),
+  };
 }
 
 function IconButton({ children, disabled, icon, onClick, title, variant = "default" }) {
@@ -305,15 +327,17 @@ function optionSummary(options, selectedIds, emptyLabel = "None") {
 }
 
 function tupletSummary(section) {
-  const tuplet = normalizeSectionTuplet(section?.tuplet, section || {});
+  const tuplets = normalizeSectionTuplets(section?.tuplets ?? section?.tuplet, section || {});
 
-  if (!tuplet) {
+  if (!tuplets.length) {
     return "No tuplets";
   }
 
-  const typeOption = getTupletTypeOptionByValue(tuplet);
-  const typeLabel = typeOption?.label.toLowerCase() || `${tuplet.type}`;
-  return `${tuplet.actual}:${tuplet.normal} ${typeLabel} tuplets`;
+  return tuplets.map((tuplet) => {
+    const typeOption = getTupletTypeOptionByValue(tuplet);
+    const typeLabel = typeOption?.label.toLowerCase() || `${tuplet.type}`;
+    return `${tuplet.actual}:${tuplet.normal} ${typeLabel}`;
+  }).join(", ");
 }
 
 export default function BookBuilderPanel() {
@@ -346,8 +370,10 @@ export default function BookBuilderPanel() {
   const selectedSection = book.sections[selectedSectionIndex] || book.sections[0];
   const selectedPage = book.pages[selectedPageIndex] || book.pages[0];
   const selectedLine = selectedPage.lines[selectedLineIndex] || selectedPage.lines[0];
-  const selectedTuplet = normalizeSectionTuplet(selectedSection?.tuplet, selectedSection || {});
-  const tupletPickerValue = selectedTuplet || DEFAULT_SECTION_TUPLET;
+  const selectedTuplets = normalizeSectionTuplets(
+    selectedSection?.tuplets ?? selectedSection?.tuplet,
+    selectedSection || {}
+  );
   const pdfSettings = normalizePdfSettings(book.pdfSettings);
   const selectedSectionPdfSettings = normalizePdfSettings(selectedSection?.pdfSettings || pdfSettings);
   const selectedPagePdfSettings = getPagePdfSettings(selectedPage, pdfSettings);
@@ -441,9 +467,10 @@ export default function BookBuilderPanel() {
           globalAiRules: currentBook.globalAiRules,
           sections: savedBook.sections.map((section) => ({
             ...section,
-            tuplet: currentSectionsById[section.id]?.tuplet ?? section.tuplet,
+            tuplets: currentSectionsById[section.id]?.tuplets ?? section.tuplets,
             minPlayedNotes: currentSectionsById[section.id]?.minPlayedNotes ?? section.minPlayedNotes,
             maxPlayedNotes: currentSectionsById[section.id]?.maxPlayedNotes ?? section.maxPlayedNotes,
+            playEveryNote: currentSectionsById[section.id]?.playEveryNote ?? section.playEveryNote,
             maxSameHandStickingRun: currentSectionsById[section.id]?.maxSameHandStickingRun ?? section.maxSameHandStickingRun,
             requireMaxSameHandStickingRun: currentSectionsById[section.id]?.requireMaxSameHandStickingRun ?? section.requireMaxSameHandStickingRun,
           })),
@@ -713,8 +740,9 @@ export default function BookBuilderPanel() {
       prompt: "",
       subdivisions: ["eighths"],
       ornaments: [],
-      tuplet: null,
+      tuplets: [],
       maxPlayedNotes: normalizeSectionMaxPlayedNotes(),
+      playEveryNote: false,
       maxSameHandStickingRun: normalizeSectionMaxSameHandStickingRun(),
       requireMaxSameHandStickingRun: false,
       sampleJson: "",
@@ -1012,7 +1040,7 @@ export default function BookBuilderPanel() {
                   SUBDIVISION_OPTIONS,
                   normalizeSectionSubdivisions(section.subdivisions, section)
                 )}`}
-                {normalizeSectionTuplet(section.tuplet, section)
+                {normalizeSectionTuplets(section.tuplets ?? section.tuplet, section).length
                   ? ` · Tuplet ${tupletSummary(section)}`
                   : ""}
                 {section.pages.length !== normalizeSectionPageCount(section.pageCount, section.pages.length)
@@ -1023,6 +1051,9 @@ export default function BookBuilderPanel() {
                   : ""}
                 {normalizeSectionMaxPlayedNotes(section.maxPlayedNotes)
                   ? ` · Max ${normalizeSectionMaxPlayedNotes(section.maxPlayedNotes)} played`
+                  : ""}
+                {normalizeSectionPlayEveryNote(section.playEveryNote)
+                  ? " · No rests"
                   : ""}
                 {normalizeSectionOrnaments(section.ornaments, section).includes("stickings")
                   ? ` · Max ${normalizeSectionMaxSameHandStickingRun(section.maxSameHandStickingRun)} same hand`
@@ -1086,6 +1117,7 @@ export default function BookBuilderPanel() {
           </Field>
           <Field label="Maximum played notes">
             <input
+              disabled={normalizeSectionPlayEveryNote(selectedSection.playEveryNote)}
               inputMode="numeric"
               min="0"
               onChange={(event) =>
@@ -1097,6 +1129,16 @@ export default function BookBuilderPanel() {
               value={normalizeSectionMaxPlayedNotes(selectedSection.maxPlayedNotes)}
             />
           </Field>
+          <label className={styles.toggleField}>
+            <input
+              checked={normalizeSectionPlayEveryNote(selectedSection.playEveryNote)}
+              onChange={(event) =>
+                updateSelectedSectionDraft({ playEveryNote: event.target.checked })
+              }
+              type="checkbox"
+            />
+            <span>No rests — play every note</span>
+          </label>
           <Field label="Max same-hand stickings">
             <input
               inputMode="numeric"
@@ -1124,79 +1166,108 @@ export default function BookBuilderPanel() {
             />
             <span>Require max</span>
           </label>
-          <label className={styles.toggleField}>
-            <input
-              checked={Boolean(selectedTuplet)}
-              onChange={(event) =>
-                updateSelectedSectionDraft({
-                  tuplet: event.target.checked ? DEFAULT_SECTION_TUPLET : null,
-                })
-              }
-              type="checkbox"
-            />
-            <span>Use tuplets</span>
-          </label>
-          {selectedTuplet && (
-            <>
-              <Field label="Actual notes">
-                <select
-                  onChange={(event) =>
+          <div className={styles.tupletEditor}>
+            <div className={styles.tupletEditorHeader}>
+              <span>Tuplet types</span>
+              <button
+                className={styles.button}
+                onClick={() =>
+                  updateSelectedSectionDraft({
+                    tuplets: [...selectedTuplets, getNextTupletConfig(selectedTuplets)],
+                  })
+                }
+                type="button"
+              >
+                <FaPlus /> Add tuplet
+              </button>
+            </div>
+            {selectedTuplets.map((tuplet, tupletIndex) => (
+              <div className={styles.tupletRow} key={`${tuplet.actual}-${tuplet.normal}-${tuplet.type}-${tupletIndex}`}>
+                <Field label="Actual notes">
+                  <select
+                    onChange={(event) =>
+                      updateSelectedSectionDraft({
+                        tuplets: selectedTuplets.map((candidate, index) =>
+                          index === tupletIndex
+                            ? normalizeTupletPickerUpdate({
+                                ...candidate,
+                                actual: Number(event.target.value),
+                              })
+                            : candidate
+                        ),
+                      })
+                    }
+                    value={tuplet.actual}
+                  >
+                    {TUPLET_COUNT_OPTIONS.map((count) => (
+                      <option key={count} value={count}>
+                        {count}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Normal notes">
+                  <select
+                    onChange={(event) =>
+                      updateSelectedSectionDraft({
+                        tuplets: selectedTuplets.map((candidate, index) =>
+                          index === tupletIndex
+                            ? normalizeTupletPickerUpdate({
+                                ...candidate,
+                                normal: Number(event.target.value),
+                              })
+                            : candidate
+                        ),
+                      })
+                    }
+                    value={tuplet.normal}
+                  >
+                    {getTupletNormalOptions(tuplet.type).map((count) => (
+                      <option key={count} value={count}>
+                        {count}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Note type">
+                  <select
+                    onChange={(event) =>
+                      updateSelectedSectionDraft({
+                        tuplets: selectedTuplets.map((candidate, index) =>
+                          index === tupletIndex
+                            ? normalizeTupletPickerUpdate({
+                                ...candidate,
+                                type: Number(event.target.value),
+                              })
+                            : candidate
+                        ),
+                      })
+                    }
+                    value={tuplet.type}
+                  >
+                    {TUPLET_TYPE_OPTIONS.map((option) => (
+                      <option key={option.id} value={option.type}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <button
+                  aria-label={`Remove tuplet ${tupletIndex + 1}`}
+                  className={`${styles.button} ${styles.danger}`}
+                  onClick={() =>
                     updateSelectedSectionDraft({
-                      tuplet: normalizeTupletPickerUpdate({
-                        ...tupletPickerValue,
-                        actual: Number(event.target.value),
-                      }),
+                      tuplets: selectedTuplets.filter((_, index) => index !== tupletIndex),
                     })
                   }
-                  value={tupletPickerValue.actual}
+                  title="Remove tuplet"
+                  type="button"
                 >
-                  {TUPLET_COUNT_OPTIONS.map((count) => (
-                    <option key={count} value={count}>
-                      {count}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Normal notes">
-                <select
-                  onChange={(event) =>
-                    updateSelectedSectionDraft({
-                      tuplet: normalizeTupletPickerUpdate({
-                        ...tupletPickerValue,
-                        normal: Number(event.target.value),
-                      }),
-                    })
-                  }
-                  value={tupletPickerValue.normal}
-                >
-                  {getTupletNormalOptions(tupletPickerValue.type).map((count) => (
-                    <option key={count} value={count}>
-                      {count}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Note type">
-                <select
-                  onChange={(event) =>
-                    updateSelectedSectionDraft({
-                      tuplet: normalizeTupletPickerUpdate({
-                        ...tupletPickerValue,
-                        type: Number(event.target.value),
-                      }),
-                    })
-                  }
-                  value={tupletPickerValue.type}
-                >
-                  {TUPLET_TYPE_OPTIONS.map((option) => (
-                    <option key={option.id} value={option.type}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </>
-          )}
+                  <FaTrash />
+                </button>
+              </div>
+            ))}
+          </div>
           <CheckboxPicker
             label="Subdivisions"
             onToggle={(optionId) =>

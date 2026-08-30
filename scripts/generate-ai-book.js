@@ -367,35 +367,48 @@ function getGenerationSubdivisions(section, samplePayload = getSamplePayload(sec
   return explicit.length ? explicit : inferGenerationSubdivisions(section || {}, samplePayload);
 }
 
-function inferGenerationTuplet(section, samplePayload) {
-  const explicitSampleTuplet = normalizeTupletConfig(samplePayload && samplePayload.tuplet);
+function normalizeTupletConfigs(value) {
+  const values = Array.isArray(value) ? value : value ? [value] : [];
+  const normalized = values.map(normalizeTupletConfig).filter(Boolean);
 
-  if (explicitSampleTuplet) {
-    return explicitSampleTuplet;
-  }
+  return normalized.filter((tuplet, index) =>
+    normalized.findIndex((candidate) =>
+      candidate.actual === tuplet.actual &&
+      candidate.normal === tuplet.normal &&
+      candidate.type === tuplet.type
+    ) === index
+  );
+}
 
-  const tuplet = getSampleTuplets(samplePayload)[0];
+function inferGenerationTuplets(section, samplePayload) {
+  const explicitSampleTuplets = normalizeTupletConfigs([
+    ...(Array.isArray(samplePayload && samplePayload.tuplets) ? samplePayload.tuplets : []),
+    ...(samplePayload && samplePayload.tuplet ? [samplePayload.tuplet] : []),
+  ]);
 
-  if (!tuplet) {
-    return null;
+  if (explicitSampleTuplets.length) {
+    return explicitSampleTuplets;
   }
 
   const notes = getSampleNotes(samplePayload);
-  const startNote = notes[Number(tuplet.start) || 0];
 
-  return normalizeTupletConfig({
+  return normalizeTupletConfigs(getSampleTuplets(samplePayload).map((tuplet) => ({
     actual: tuplet.actual,
     normal: tuplet.normal,
-    type: startNote?.duration || section?.tupletType || 8,
-  });
+    type: notes[Number(tuplet.start) || 0]?.duration || section?.tupletType || 8,
+  })));
 }
 
-function getGenerationTuplet(section, samplePayload = getSamplePayload(section)) {
-  if (section && Object.prototype.hasOwnProperty.call(section, "tuplet")) {
-    return normalizeTupletConfig(section.tuplet);
+function getGenerationTuplets(section, samplePayload = getSamplePayload(section)) {
+  if (section && Object.prototype.hasOwnProperty.call(section, "tuplets")) {
+    return normalizeTupletConfigs(section.tuplets);
   }
 
-  return inferGenerationTuplet(section || {}, samplePayload);
+  if (section && Object.prototype.hasOwnProperty.call(section, "tuplet")) {
+    return normalizeTupletConfigs(section.tuplet);
+  }
+
+  return inferGenerationTuplets(section || {}, samplePayload);
 }
 
 function inferGenerationOrnaments(section, samplePayload) {
@@ -421,7 +434,13 @@ function inferGenerationOrnaments(section, samplePayload) {
 
 function getGenerationOrnaments(section, samplePayload = getSamplePayload(section)) {
   if (section && Array.isArray(section.ornaments)) {
-    return normalizeOptionIds(section.ornaments, ORNAMENT_SETTINGS);
+    const ornaments = normalizeOptionIds(section.ornaments, ORNAMENT_SETTINGS);
+
+    if (getSectionRequireMaxSameHandStickingRun(section) && !ornaments.includes("stickings")) {
+      ornaments.unshift("stickings");
+    }
+
+    return ornaments;
   }
 
   const explicit = normalizeOptionIds(section && section.ornaments, ORNAMENT_SETTINGS);
@@ -458,18 +477,21 @@ function getTupletLabel(tuplet) {
 function createStructuredSectionInstructions(section, samplePayload) {
   const subdivisions = getGenerationSubdivisions(section, samplePayload);
   const ornaments = getGenerationOrnaments(section, samplePayload);
-  const tuplet = getGenerationTuplet(section, samplePayload);
+  const tuplets = getGenerationTuplets(section, samplePayload);
 
   return [
     `Use these subdivisions only: ${getOptionLabels(SUBDIVISION_SETTINGS, subdivisions, "eighth notes")}.`,
-    tuplet
-      ? `Use this tuplet type: ${getTupletLabel(tuplet)}.`
+    tuplets.length
+      ? `Randomly mix these tuplet types with the selected regular subdivisions: ${tuplets.map(getTupletLabel).join(", ")}.`
       : "Use no tuplets.",
     ornaments.length
       ? `Use these ornaments only when musically appropriate: ${getOptionLabels(ORNAMENT_SETTINGS, ornaments, "none")}.`
       : "Use no ornaments.",
+    getSectionPlayEveryNote(section)
+      ? "Use no rests; play every rhythmic position."
+      : "Rests are allowed.",
     ornaments.some((ornament) => ornament === "diddles" || ornament === "cheese")
-      ? "Diddles and cheese may only be used on sixteenth notes or faster; never put them on eighth notes, dotted eighth notes, or quarter notes."
+      ? "Diddles and cheese may only be used on sixteenth notes or faster, except that eighth notes inside a tuplet may use them; never put them on regular eighth notes, dotted eighth notes, or quarter notes."
       : "",
   ].join("\n");
 }
@@ -751,11 +773,9 @@ function preferLongerValuesInTupletVoice(voice) {
     }
 
     const tupletStart = nextNotes.length;
-    nextNotes.push(
-      ...preferLongerValues(notes.slice(tuplet.start, tuplet.end), {
-        groupSlots: 0,
-      })
-    );
+    // Tuplet cardinality is structural: rests still occupy tuplet positions,
+    // so never compress notes inside a complete tuplet group.
+    nextNotes.push(...notes.slice(tuplet.start, tuplet.end).map((note) => ({ ...note })));
     const tupletEnd = nextNotes.length;
 
     if (tupletEnd > tupletStart) {
@@ -980,34 +1000,46 @@ function applySectionOrnamentPolicy(section, score) {
       ...measure,
       parts: (measure.parts || []).map((part) => ({
         ...part,
-        voices: (part.voices || []).map((voice) => ({
-          ...voice,
-          notes: (voice.notes || []).map((note) => {
-            if (note.ornaments == null) {
-              return note;
-            }
+        voices: (part.voices || []).map((voice) => {
+          const tupletNoteIndexes = new Set(
+            (voice.tuplets || []).flatMap((tuplet) =>
+              Array.from(
+                { length: Math.max(0, Number(tuplet.end) - Number(tuplet.start)) },
+                (_, offset) => Number(tuplet.start) + offset
+              )
+            )
+          );
 
-            if (isRest(note)) {
-              const { ornaments: _ornaments, ...rest } = note;
-              return rest;
-            }
+          return {
+            ...voice,
+            notes: (voice.notes || []).map((note, noteIndex) => {
+              if (note.ornaments == null) {
+                return note;
+              }
 
-            const ornaments = cleanDurationRestrictedOrnaments(
-              note,
-              String(note.ornaments).replace(allowedPattern, "")
-            );
+              if (isRest(note)) {
+                const { ornaments: _ornaments, ...rest } = note;
+                return rest;
+              }
 
-            if (!ornaments) {
-              const { ornaments: _ornaments, ...rest } = note;
-              return rest;
-            }
+              const ornaments = cleanDurationRestrictedOrnaments(
+                note,
+                String(note.ornaments).replace(allowedPattern, ""),
+                { allowDiddlesOnEighths: tupletNoteIndexes.has(noteIndex) }
+              );
 
-            return {
-              ...note,
-              ornaments,
-            };
-          }),
-        })),
+              if (!ornaments) {
+                const { ornaments: _ornaments, ...rest } = note;
+                return rest;
+              }
+
+              return {
+                ...note,
+                ornaments,
+              };
+            }),
+          };
+        }),
       })),
     })),
   };
@@ -1019,6 +1051,12 @@ function getSectionMinPlayedNotes(section) {
 
 function getSectionMaxPlayedNotes(section) {
   return getNonNegativeInteger(section && section.maxPlayedNotes, 0);
+}
+
+function getSectionPlayEveryNote(section) {
+  if (!section) return false;
+  if (typeof section.playEveryNote === "boolean") return section.playEveryNote;
+  return section.playEveryNote === "true";
 }
 
 function getSectionMaxSameHandStickingRun(section) {
@@ -1045,6 +1083,10 @@ function countPlayedNotes(notes) {
 }
 
 function getEffectiveSectionMaxPlayedNotes(section) {
+  if (getSectionPlayEveryNote(section)) {
+    return 0;
+  }
+
   const maximum = getSectionMaxPlayedNotes(section);
 
   if (!maximum) {
@@ -1228,6 +1270,28 @@ function enforceMinimumPlayedNotes(section, score, lineIndex = 0) {
   };
 }
 
+function enforcePlayEveryNote(section, score) {
+  if (!getSectionPlayEveryNote(section)) {
+    return score;
+  }
+
+  return {
+    ...score,
+    measures: (score.measures || []).map((measure) => ({
+      ...measure,
+      parts: (measure.parts || []).map((part) => ({
+        ...part,
+        voices: (part.voices || []).map((voice) => ({
+          ...voice,
+          notes: (voice.notes || []).map((note) =>
+            isRest(note) ? { ...note, notes: ["C5"] } : note
+          ),
+        })),
+      })),
+    })),
+  };
+}
+
 function getProtectedPlayedIndexesForMaximum(section, notes) {
   if (
     !sectionUsesStickings(section) ||
@@ -1358,6 +1422,24 @@ function areConsecutiveSixteenthNotes(left, right) {
     Number(right.dots || 0) === 0;
 }
 
+function areConsecutiveOrnamentRuleNotes(notes, leftIndex, rightIndex, options = {}) {
+  const left = notes[leftIndex];
+  const right = notes[rightIndex];
+
+  if (!left || !right || isRest(left) || isRest(right)) {
+    return false;
+  }
+
+  if (areConsecutiveSixteenthNotes(left, right)) {
+    return true;
+  }
+
+  const tupletNoteIndexes = options.tupletNoteIndexes;
+  return Number(left.duration) === 8 &&
+    Number(right.duration) === 8 &&
+    Boolean(tupletNoteIndexes?.has(leftIndex) || tupletNoteIndexes?.has(rightIndex));
+}
+
 function removeOrnamentChars(note, chars) {
   if (note.ornaments == null) {
     return note;
@@ -1376,22 +1458,31 @@ function removeOrnamentChars(note, chars) {
   };
 }
 
-function cleanDurationRestrictedOrnaments(note, ornaments = note?.ornaments || "") {
+function cleanDurationRestrictedOrnaments(
+  note,
+  ornaments = note?.ornaments || "",
+  { allowDiddlesOnEighths = false } = {}
+) {
   const duration = Number(note?.duration);
-  const cleanedOrnaments = duration <= 8
+  const durationDisallowsDiddles = duration < 8 || (duration === 8 && !allowDiddlesOnEighths);
+  const cleanedOrnaments = durationDisallowsDiddles
     ? String(ornaments).replace(/[dc]/g, "")
     : String(ornaments);
 
   return cleanedOrnaments;
 }
 
-function enforceDurationOrnamentRules(notes) {
-  return (notes || []).map((note) => {
+function enforceDurationOrnamentRules(notes, options = {}) {
+  return (notes || []).map((note, noteIndex) => {
     if (isRest(note) || note.ornaments == null) {
       return note;
     }
 
-    const ornaments = cleanDurationRestrictedOrnaments(note);
+    const ornaments = cleanDurationRestrictedOrnaments(note, note.ornaments, {
+      ...options,
+      allowDiddlesOnEighths: options.allowDiddlesOnEighths ||
+        options.tupletNoteIndexes?.has(noteIndex),
+    });
 
     if (!ornaments) {
       const { ornaments: _ornaments, ...rest } = note;
@@ -1407,7 +1498,7 @@ function enforceDurationOrnamentRules(notes) {
   });
 }
 
-function removeDiddleBeforeConsecutiveCheese(notes) {
+function removeDiddleBeforeConsecutiveCheese(notes, options = {}) {
   const cleaned = (notes || []).map((note) => ({ ...note }));
 
   for (let index = 0; cleaned.length > 1 && index < cleaned.length; index += 1) {
@@ -1416,7 +1507,7 @@ function removeDiddleBeforeConsecutiveCheese(notes) {
     const next = cleaned[nextIndex];
 
     if (
-      areConsecutiveSixteenthNotes(note, next) &&
+      areConsecutiveOrnamentRuleNotes(cleaned, index, nextIndex, options) &&
       /d/.test(String(note.ornaments || "")) &&
       /c/.test(String(next.ornaments || ""))
     ) {
@@ -1427,14 +1518,18 @@ function removeDiddleBeforeConsecutiveCheese(notes) {
   return cleaned;
 }
 
-function noteCanShareStickingWithPrevious(left, right) {
+function noteCanShareStickingWithPrevious(notes, leftIndex, rightIndex, options = {}) {
   return !(
-    areConsecutiveSixteenthNotes(left, right) &&
-    /[dc]/.test(String(left.ornaments || ""))
+    areConsecutiveOrnamentRuleNotes(notes, leftIndex, rightIndex, options) &&
+    /[dc]/.test(String(notes[leftIndex]?.ornaments || ""))
   );
 }
 
-function findRequiredMaxSameHandRun(notes, runLength, { allowCleanup = false } = {}) {
+function findRequiredMaxSameHandRun(
+  notes,
+  runLength,
+  { allowCleanup = false, ruleOptions = {} } = {}
+) {
   if (runLength <= 0) {
     return null;
   }
@@ -1455,7 +1550,12 @@ function findRequiredMaxSameHandRun(notes, runLength, { allowCleanup = false } =
       if (
         offset > 0 &&
         !allowCleanup &&
-        !noteCanShareStickingWithPrevious(notes[start + offset - 1], note)
+        !noteCanShareStickingWithPrevious(
+          notes,
+          start + offset - 1,
+          start + offset,
+          ruleOptions
+        )
       ) {
         valid = false;
         break;
@@ -1480,7 +1580,7 @@ function findRequiredMaxSameHandRun(notes, runLength, { allowCleanup = false } =
   ];
 }
 
-function removeInternalRequiredRunConflicts(notes, targetRun) {
+function removeInternalRequiredRunConflicts(notes, targetRun, options = {}) {
   if (!targetRun || !targetRun.cleanupInternalOrnaments) {
     return notes;
   }
@@ -1488,7 +1588,7 @@ function removeInternalRequiredRunConflicts(notes, targetRun) {
   const nextNotes = notes.map((note) => ({ ...note }));
 
   for (let index = targetRun.start; index < targetRun.end; index += 1) {
-    if (!noteCanShareStickingWithPrevious(nextNotes[index], nextNotes[index + 1])) {
+    if (!noteCanShareStickingWithPrevious(nextNotes, index, index + 1, options)) {
       nextNotes[index] = removeOrnamentChars(nextNotes[index], "dc");
     }
   }
@@ -1510,12 +1610,12 @@ function createRequiredRunPlayedNote(section, sourceNote) {
   };
 }
 
-function ensureRequiredMaxSameHandRunWindow(section, notes, runLength) {
-  if (findRequiredMaxSameHandRun(notes, runLength)) {
+function ensureRequiredMaxSameHandRunWindow(section, notes, runLength, options = {}) {
+  if (findRequiredMaxSameHandRun(notes, runLength, { ruleOptions: options })) {
     return notes;
   }
 
-  if (findRequiredMaxSameHandRun(notes, runLength, { allowCleanup: true })) {
+  if (findRequiredMaxSameHandRun(notes, runLength, { allowCleanup: true, ruleOptions: options })) {
     return notes;
   }
 
@@ -1552,8 +1652,8 @@ function ensureRequiredMaxSameHandRunWindow(section, notes, runLength) {
   return notes;
 }
 
-function ensureRequiredMaxSameHandRunWindowFixed(section, notes, runLength) {
-  if (findRequiredMaxSameHandRun(notes, runLength)) {
+function ensureRequiredMaxSameHandRunWindowFixed(section, notes, runLength, options = {}) {
+  if (findRequiredMaxSameHandRun(notes, runLength, { ruleOptions: options })) {
     return notes;
   }
 
@@ -1591,7 +1691,7 @@ function ensureRequiredMaxSameHandRunWindowFixed(section, notes, runLength) {
 
 function enforceStickingSequenceRules(section, notes, options = {}) {
   const { preserveNoteCount = false } = options;
-  let cleaned = removeDiddleBeforeConsecutiveCheese(notes);
+  let cleaned = removeDiddleBeforeConsecutiveCheese(notes, options);
 
   if (!sectionUsesStickings(section)) {
     return cleaned;
@@ -1602,21 +1702,25 @@ function enforceStickingSequenceRules(section, notes, options = {}) {
 
   if (requireMaxRun) {
     cleaned = preserveNoteCount
-      ? ensureRequiredMaxSameHandRunWindowFixed(section, cleaned, maxSameHandRun)
-      : ensureRequiredMaxSameHandRunWindow(section, cleaned, maxSameHandRun);
+      ? ensureRequiredMaxSameHandRunWindowFixed(section, cleaned, maxSameHandRun, options)
+      : ensureRequiredMaxSameHandRunWindow(section, cleaned, maxSameHandRun, options);
   }
 
   let targetRun = requireMaxRun
-    ? findRequiredMaxSameHandRun(cleaned, maxSameHandRun)
+    ? findRequiredMaxSameHandRun(cleaned, maxSameHandRun, { ruleOptions: options })
     : null;
 
   if (!targetRun && requireMaxRun) {
-    targetRun = findRequiredMaxSameHandRun(cleaned, maxSameHandRun, { allowCleanup: true });
-    cleaned = removeInternalRequiredRunConflicts(cleaned, targetRun);
+    targetRun = findRequiredMaxSameHandRun(cleaned, maxSameHandRun, {
+      allowCleanup: true,
+      ruleOptions: options,
+    });
+    cleaned = removeInternalRequiredRunConflicts(cleaned, targetRun, options);
   }
 
   const nextNotes = cleaned.map((note) => ({ ...note }));
   let previousNote = null;
+  let previousIndex = -1;
   let previousSticking = "";
   let sameHandRun = 0;
 
@@ -1625,6 +1729,7 @@ function enforceStickingSequenceRules(section, notes, options = {}) {
 
     if (isRest(note)) {
       previousNote = null;
+      previousIndex = -1;
       previousSticking = "";
       sameHandRun = 0;
       continue;
@@ -1640,6 +1745,7 @@ function enforceStickingSequenceRules(section, notes, options = {}) {
       }
 
       previousNote = nextNotes[targetRun.end];
+      previousIndex = targetRun.end;
       previousSticking = targetSticking;
       sameHandRun = targetRun.end - targetRun.start + 1;
       index = targetRun.end;
@@ -1648,7 +1754,7 @@ function enforceStickingSequenceRules(section, notes, options = {}) {
 
     const currentSticking = getNoteSticking(note) || (previousSticking === "r" ? "l" : "r");
     const previousRequiresOpposite = previousNote &&
-      areConsecutiveSixteenthNotes(previousNote, note) &&
+      areConsecutiveOrnamentRuleNotes(nextNotes, previousIndex, index, options) &&
       /[dc]/.test(String(previousNote.ornaments || "")) &&
       getNoteSticking(previousNote);
     let nextSticking = currentSticking;
@@ -1675,13 +1781,14 @@ function enforceStickingSequenceRules(section, notes, options = {}) {
     }
 
     previousNote = nextNotes[index];
+    previousIndex = index;
     previousSticking = nextSticking;
   }
 
   return nextNotes;
 }
 
-function enforceDiddleFollowedByOppositeSticking(section, notes) {
+function enforceDiddleFollowedByOppositeSticking(section, notes, options = {}) {
   if (!sectionUsesStickings(section)) {
     return notes;
   }
@@ -1696,10 +1803,19 @@ function enforceDiddleFollowedByOppositeSticking(section, notes) {
       const note = nextNotes[index];
       const nextIndex = (index + 1) % nextNotes.length;
       const next = nextNotes[nextIndex];
+      const adjacentDiddlesOnSameHand =
+        !isRest(note) &&
+        !isRest(next) &&
+        /d/.test(String(note.ornaments || "")) &&
+        /d/.test(String(next.ornaments || "")) &&
+        getNoteSticking(note) &&
+        getNoteSticking(note) === getNoteSticking(next);
 
       if (
-        !areConsecutiveSixteenthNotes(note, next) ||
-        !/[dc]/.test(String(note.ornaments || ""))
+        !adjacentDiddlesOnSameHand && (
+          !areConsecutiveOrnamentRuleNotes(nextNotes, index, nextIndex, options) ||
+          !/[dc]/.test(String(note.ornaments || ""))
+        )
       ) {
         continue;
       }
@@ -1744,7 +1860,7 @@ function getBoundaryStickingRunLength(notes, fromStart, sticking) {
   return runLength;
 }
 
-function repeatingBoundaryViolatesStickingRules(section, notes) {
+function repeatingBoundaryViolatesStickingRules(section, notes, options = {}) {
   if (!sectionUsesStickings(section) || !Array.isArray(notes) || notes.length < 2) {
     return false;
   }
@@ -1760,8 +1876,11 @@ function repeatingBoundaryViolatesStickingRules(section, notes) {
   const lastSticking = getNoteSticking(last);
 
   if (
-    areConsecutiveSixteenthNotes(last, first) &&
-    /[dc]/.test(String(last.ornaments || "")) &&
+    (
+      areConsecutiveOrnamentRuleNotes(notes, notes.length - 1, 0, options) &&
+      /[dc]/.test(String(last.ornaments || "")) ||
+      /d/.test(String(last.ornaments || "")) && /d/.test(String(first.ornaments || ""))
+    ) &&
     firstSticking === lastSticking
   ) {
     return true;
@@ -1780,7 +1899,7 @@ function repeatingBoundaryViolatesStickingRules(section, notes) {
   return boundaryRunLength > getSectionMaxSameHandStickingRun(section);
 }
 
-function repeatingMeasureViolatesStickingRules(section, notes) {
+function repeatingMeasureViolatesStickingRules(section, notes, options = {}) {
   if (!sectionUsesStickings(section) || !Array.isArray(notes) || notes.length < 2) {
     return false;
   }
@@ -1792,8 +1911,11 @@ function repeatingMeasureViolatesStickingRules(section, notes) {
     const next = notes[(index + 1) % notes.length];
 
     if (
-      areConsecutiveSixteenthNotes(note, next) &&
-      /[dc]/.test(String(note.ornaments || "")) &&
+      (
+        areConsecutiveOrnamentRuleNotes(notes, index, (index + 1) % notes.length, options) &&
+        /[dc]/.test(String(note.ornaments || "")) ||
+        /d/.test(String(note.ornaments || "")) && /d/.test(String(next.ornaments || ""))
+      ) &&
       getNoteSticking(note) === getNoteSticking(next)
     ) {
       return true;
@@ -1833,13 +1955,13 @@ function enforceRepeatingMeasureStickingRules(section, notes, options = {}) {
 
   for (let attempt = 0; attempt < maximumAttempts; attempt += 1) {
     nextNotes = enforceStickingSequenceRules(section, nextNotes, options);
-    nextNotes = enforceDiddleFollowedByOppositeSticking(section, nextNotes);
+    nextNotes = enforceDiddleFollowedByOppositeSticking(section, nextNotes, options);
 
-    if (!repeatingMeasureViolatesStickingRules(section, nextNotes)) {
+    if (!repeatingMeasureViolatesStickingRules(section, nextNotes, options)) {
       return nextNotes;
     }
 
-    const boundaryViolation = repeatingBoundaryViolatesStickingRules(section, nextNotes);
+    const boundaryViolation = repeatingBoundaryViolatesStickingRules(section, nextNotes, options);
     const lastSticking = getNoteSticking(nextNotes[nextNotes.length - 1]);
 
     if (boundaryViolation && lastSticking && !isRest(nextNotes[0])) {
@@ -1852,24 +1974,25 @@ function enforceRepeatingMeasureStickingRules(section, notes, options = {}) {
   );
 }
 
-function cleanSequentialOrnaments(notes) {
+function cleanSequentialOrnaments(notes, options = {}) {
   const cleaned = (notes || []).map((note) => ({ ...note }));
 
   for (let index = 0; cleaned.length > 1 && index < cleaned.length; index += 1) {
     const note = cleaned[index];
     const nextIndex = (index + 1) % cleaned.length;
     const next = cleaned[nextIndex];
-    const isSequentialSixteenth = next &&
-      !isRest(note) &&
-      !isRest(next) &&
-      Number(note.duration) === 16 &&
-      Number(next.duration) === 16;
+    const isSequentialRulePosition = areConsecutiveOrnamentRuleNotes(
+      cleaned,
+      index,
+      nextIndex,
+      options
+    );
 
-    if (isSequentialSixteenth && /[dc]/.test(String(note.ornaments || "")) && /f/.test(String(next.ornaments || ""))) {
+    if (isSequentialRulePosition && /[dc]/.test(String(note.ornaments || "")) && /f/.test(String(next.ornaments || ""))) {
       cleaned[nextIndex] = removeOrnamentChars(next, "f");
     }
 
-    if (isSequentialSixteenth && /c/.test(String(note.ornaments || "")) && /c/.test(String(cleaned[nextIndex].ornaments || ""))) {
+    if (isSequentialRulePosition && /c/.test(String(note.ornaments || "")) && /c/.test(String(cleaned[nextIndex].ornaments || ""))) {
       cleaned[nextIndex] = removeOrnamentChars(cleaned[nextIndex], "c");
     }
   }
@@ -1881,13 +2004,13 @@ function stripStickingsFromNotes(notes) {
   return (notes || []).map((note) => removeOrnamentChars(note, "rl"));
 }
 
-function assignInitialStickings(section, notes, lineIndex = 0) {
+function assignInitialStickings(section, notes, lineIndex = 0, generationSalt = "") {
   if (!sectionUsesStickings(section)) {
     return notes;
   }
 
   const random = createSeededRandom(
-    `${section.id || section.title || "section"}:stickings:${lineIndex}:${JSON.stringify(notes)}`
+    `${section.id || section.title || "section"}:stickings:${lineIndex}:${generationSalt}:${JSON.stringify(notes)}`
   );
 
   return (notes || []).map((note) =>
@@ -1895,21 +2018,17 @@ function assignInitialStickings(section, notes, lineIndex = 0) {
   );
 }
 
-function areAdjacentPlayedSixteenths(notes, leftIndex, rightIndex) {
+function areAdjacentOrnamentRuleNotes(notes, leftIndex, rightIndex, options = {}) {
   const distance = Math.abs(leftIndex - rightIndex);
-  return notes.length > 1 && (distance === 1 || distance === notes.length - 1) &&
-    areConsecutiveSixteenthNotes(notes[Math.min(leftIndex, rightIndex)], notes[Math.max(leftIndex, rightIndex)]);
-}
-
-function getCircularNeighbor(notes, noteIndex, offset) {
-  if (!Array.isArray(notes) || notes.length < 2) {
-    return null;
+  if (notes.length <= 1 || (distance !== 1 && distance !== notes.length - 1)) {
+    return false;
   }
 
-  return notes[(noteIndex + offset + notes.length) % notes.length];
+  return areConsecutiveOrnamentRuleNotes(notes, leftIndex, rightIndex, options) ||
+    areConsecutiveOrnamentRuleNotes(notes, rightIndex, leftIndex, options);
 }
 
-function canAddRequiredOrnament(notes, noteIndex, ornament) {
+function canAddRequiredOrnament(notes, noteIndex, ornament, options = {}) {
   const note = notes[noteIndex];
 
   if (!note || isRest(note)) {
@@ -1917,9 +2036,12 @@ function canAddRequiredOrnament(notes, noteIndex, ornament) {
   }
 
   const current = String(note.ornaments || "");
+  const allowDiddlesOnEighths = options.allowDiddlesOnEighths ||
+    options.tupletNoteIndexes?.has(noteIndex);
 
   if (ornament === "d" || ornament === "c") {
-    if (Number(note.duration) < 16 || /f/.test(current)) {
+    const duration = Number(note.duration);
+    if (duration < 8 || (duration === 8 && !allowDiddlesOnEighths) || /f/.test(current)) {
       return false;
     }
   }
@@ -1929,30 +2051,50 @@ function canAddRequiredOrnament(notes, noteIndex, ornament) {
   }
 
   if (ornament === "f") {
-    const previous = getCircularNeighbor(notes, noteIndex, -1);
+    const previousIndex = (noteIndex - 1 + notes.length) % notes.length;
+    const previous = notes[previousIndex];
 
-    if (previous && areConsecutiveSixteenthNotes(previous, note) && /[dc]/.test(String(previous.ornaments || ""))) {
+    if (
+      previous &&
+      areConsecutiveOrnamentRuleNotes(notes, previousIndex, noteIndex, options) &&
+      /[dc]/.test(String(previous.ornaments || ""))
+    ) {
       return false;
     }
   }
 
   if (ornament === "c") {
-    const previous = getCircularNeighbor(notes, noteIndex, -1);
-    const next = getCircularNeighbor(notes, noteIndex, 1);
+    const previousIndex = (noteIndex - 1 + notes.length) % notes.length;
+    const nextIndex = (noteIndex + 1) % notes.length;
+    const previous = notes[previousIndex];
+    const next = notes[nextIndex];
 
-    if (previous && areConsecutiveSixteenthNotes(previous, note) && /[dc]/.test(String(previous.ornaments || ""))) {
+    if (
+      previous &&
+      areConsecutiveOrnamentRuleNotes(notes, previousIndex, noteIndex, options) &&
+      /[dc]/.test(String(previous.ornaments || ""))
+    ) {
       return false;
     }
 
-    if (next && areConsecutiveSixteenthNotes(note, next) && /[cf]/.test(String(next.ornaments || ""))) {
+    if (
+      next &&
+      areConsecutiveOrnamentRuleNotes(notes, noteIndex, nextIndex, options) &&
+      /[cf]/.test(String(next.ornaments || ""))
+    ) {
       return false;
     }
   }
 
   if (ornament === "d") {
-    const next = getCircularNeighbor(notes, noteIndex, 1);
+    const nextIndex = (noteIndex + 1) % notes.length;
+    const next = notes[nextIndex];
 
-    if (next && areConsecutiveSixteenthNotes(note, next) && /[fc]/.test(String(next.ornaments || ""))) {
+    if (
+      next &&
+      areConsecutiveOrnamentRuleNotes(notes, noteIndex, nextIndex, options) &&
+      /[fc]/.test(String(next.ornaments || ""))
+    ) {
       return false;
     }
   }
@@ -1970,7 +2112,7 @@ function addOrnamentToNote(note, ornament) {
   };
 }
 
-function getOrnamentFrequencyProfile(section, notes, lineIndex) {
+function getOrnamentFrequencyProfile(section, notes, lineIndex, options = {}) {
   const requiredOrnaments = getRequiredSectionOrnamentChars(section);
   const varietyOrnaments = requiredOrnaments.filter((ornament) => ornament !== "a");
   const targets = new Map(requiredOrnaments.map((ornament) => [ornament, 1]));
@@ -1997,7 +2139,7 @@ function getOrnamentFrequencyProfile(section, notes, lineIndex) {
   const featuredOrnament = varietyOrnaments[featuredIndex];
   const densityStep = Math.floor(lineIndex / varietyOrnaments.length) % 3;
   const eligibleCount = (notes || []).filter((note, noteIndex) =>
-    canAddRequiredOrnament(notes, noteIndex, featuredOrnament)
+    canAddRequiredOrnament(notes, noteIndex, featuredOrnament, options)
   ).length;
   const musicalMaximum = featuredOrnament === "c"
     ? Math.ceil(eligibleCount / 2)
@@ -2018,7 +2160,7 @@ function resetProfiledOrnaments(notes, requiredOrnaments) {
   });
 }
 
-function ensureRequiredOrnamentsOnNotes(section, notes, lineIndex = 0) {
+function ensureRequiredOrnamentsOnNotes(section, notes, lineIndex = 0, options = {}) {
   const requiredOrnaments = getRequiredSectionOrnamentChars(section);
   const shouldApplyFrequencyProfile = requiredOrnaments.length > 1;
   const nextNotes = shouldApplyFrequencyProfile
@@ -2027,7 +2169,8 @@ function ensureRequiredOrnamentsOnNotes(section, notes, lineIndex = 0) {
   const { featuredOrnament, targets, varietyOrnaments } = getOrnamentFrequencyProfile(
     section,
     nextNotes,
-    lineIndex
+    lineIndex,
+    options
   );
   const assignedIndexes = new Set();
   const placementOrder = [
@@ -2046,7 +2189,7 @@ function ensureRequiredOrnamentsOnNotes(section, notes, lineIndex = 0) {
         .map((note, index) => ({ index, note }))
         .filter(({ index, note }) =>
           !String(note.ornaments || "").includes(ornament) &&
-          canAddRequiredOrnament(nextNotes, index, ornament)
+          canAddRequiredOrnament(nextNotes, index, ornament, options)
         )
         .sort((left, right) => {
         const leftUsed = assignedIndexes.has(left.index) ? 1 : 0;
@@ -2056,10 +2199,10 @@ function ensureRequiredOrnamentsOnNotes(section, notes, lineIndex = 0) {
         const leftCount = String(left.note.ornaments || "").length;
         const rightCount = String(right.note.ornaments || "").length;
         const leftAdjacentDiddle = ornament === "d" && nextNotes.some((note, index) =>
-          /d/.test(String(note.ornaments || "")) && areAdjacentPlayedSixteenths(nextNotes, left.index, index)
+          /d/.test(String(note.ornaments || "")) && areAdjacentOrnamentRuleNotes(nextNotes, left.index, index, options)
         ) ? 0 : 1;
         const rightAdjacentDiddle = ornament === "d" && nextNotes.some((note, index) =>
-          /d/.test(String(note.ornaments || "")) && areAdjacentPlayedSixteenths(nextNotes, right.index, index)
+          /d/.test(String(note.ornaments || "")) && areAdjacentOrnamentRuleNotes(nextNotes, right.index, index, options)
         ) ? 0 : 1;
 
         return leftAdjacentDiddle - rightAdjacentDiddle ||
@@ -2070,6 +2213,34 @@ function ensureRequiredOrnamentsOnNotes(section, notes, lineIndex = 0) {
         });
 
       if (!candidates.length) {
+        let repairedTupletTarget = false;
+
+        if ((ornament === "d" || ornament === "c") && options.tupletNoteIndexes?.size) {
+          for (const noteIndex of options.tupletNoteIndexes) {
+            if (String(nextNotes[noteIndex]?.ornaments || "").includes(ornament)) {
+              continue;
+            }
+
+            const repairedNote = removeOrnamentChars(
+              createPlayedNoteFrom(nextNotes[noteIndex]),
+              "f"
+            );
+            const repairedNotes = nextNotes.map((note, index) =>
+              index === noteIndex ? repairedNote : note
+            );
+
+            if (canAddRequiredOrnament(repairedNotes, noteIndex, ornament, options)) {
+              nextNotes[noteIndex] = repairedNote;
+              repairedTupletTarget = true;
+              break;
+            }
+          }
+        }
+
+        if (repairedTupletTarget) {
+          continue;
+        }
+
         const placedCount = nextNotes.filter((note) =>
           !isRest(note) && String(note.ornaments || "").includes(ornament)
         ).length;
@@ -2095,9 +2266,10 @@ function ensureRequiredOrnamentsOnNotes(section, notes, lineIndex = 0) {
   return nextNotes;
 }
 
-function finalizeGeneratedScore(section, score, lineIndex = 0) {
+function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = "") {
   const policyScore = applySectionOrnamentPolicy(section, score);
-  const minimumScore = enforceMinimumPlayedNotes(section, policyScore, lineIndex);
+  const everyNoteScore = enforcePlayEveryNote(section, policyScore);
+  const minimumScore = enforceMinimumPlayedNotes(section, everyNoteScore, lineIndex);
   const boundedScore = enforceMaximumPlayedNotes(section, minimumScore, lineIndex);
 
   return {
@@ -2108,8 +2280,17 @@ function finalizeGeneratedScore(section, score, lineIndex = 0) {
         ...part,
         voices: (part.voices || []).map((voice) => {
           const hasTuplets = Array.isArray(voice.tuplets) && voice.tuplets.length > 0;
+          const sourceTupletNoteIndexes = new Set(
+            (voice.tuplets || []).flatMap((tuplet) =>
+              Array.from(
+                { length: Math.max(0, Number(tuplet.end) - Number(tuplet.start)) },
+                (_, offset) => Number(tuplet.start) + offset
+              )
+            )
+          );
           const cleanedNotes = cleanSequentialOrnaments(
-            stripStickingsFromNotes(voice.notes || [])
+            stripStickingsFromNotes(voice.notes || []),
+            { tupletNoteIndexes: sourceTupletNoteIndexes }
           );
           const notationVoice = hasTuplets
             ? preferLongerValuesInTupletVoice({
@@ -2120,9 +2301,18 @@ function finalizeGeneratedScore(section, score, lineIndex = 0) {
                 notes: preferLongerValues(cleanedNotes, getPreferLongerValueOptions()),
                 tuplets: [],
               };
+          const tupletNoteIndexes = new Set(
+            notationVoice.tuplets.flatMap((tuplet) =>
+              Array.from(
+                { length: Math.max(0, Number(tuplet.end) - Number(tuplet.start)) },
+                (_, offset) => Number(tuplet.start) + offset
+              )
+            )
+          );
+          const durationOrnamentOptions = { tupletNoteIndexes };
           const cappedNotes = enforceMaximumPlayedNotesInNotes(
             section,
-            enforceDurationOrnamentRules(notationVoice.notes),
+            enforceDurationOrnamentRules(notationVoice.notes, durationOrnamentOptions),
             `${lineIndex}:final`
           );
           const notationNotes = hasTuplets
@@ -2131,14 +2321,22 @@ function finalizeGeneratedScore(section, score, lineIndex = 0) {
           const ornamentedNotes = ensureRequiredOrnamentsOnNotes(
             section,
             removeDiddleBeforeConsecutiveCheese(
-              cleanSequentialOrnaments(enforceDurationOrnamentRules(notationNotes))
+              cleanSequentialOrnaments(
+                enforceDurationOrnamentRules(notationNotes, durationOrnamentOptions),
+                durationOrnamentOptions
+              ),
+              durationOrnamentOptions
             ),
-            lineIndex
+            lineIndex,
+            durationOrnamentOptions
           );
           const stickingNotes = enforceRepeatingMeasureStickingRules(
             section,
-            assignInitialStickings(section, ornamentedNotes, lineIndex),
-            { preserveNoteCount: hasTuplets }
+            assignInitialStickings(section, ornamentedNotes, lineIndex, generationSalt),
+            {
+              ...durationOrnamentOptions,
+              preserveNoteCount: hasTuplets,
+            }
           );
 
           return {
@@ -2155,7 +2353,7 @@ function finalizeGeneratedScore(section, score, lineIndex = 0) {
 function getFallbackGenerationOptions(section, samplePayload) {
   const subdivisions = getGenerationSubdivisions(section, samplePayload);
   const ornaments = getGenerationOrnaments(section, samplePayload);
-  const tuplet = getGenerationTuplet(section, samplePayload);
+  const tuplets = getGenerationTuplets(section, samplePayload);
   const maxSubdivisionDuration = getMaxSubdivisionDuration(subdivisions);
 
   return {
@@ -2169,7 +2367,7 @@ function getFallbackGenerationOptions(section, samplePayload) {
     allowThirtySecond: maxSubdivisionDuration >= 32,
     maxSubdivisionDuration,
     subdivisions,
-    tuplet,
+    tuplets,
   };
 }
 
@@ -2269,72 +2467,168 @@ function createNotesFromPlayedSlots(slots, unitPerSlot, options, random) {
   return notes;
 }
 
-function getTupletLayout(tuplet) {
-  if (!tuplet) {
-    return null;
-  }
+function canFillMixedTupletSlots(remainingSlots, slotCounts, memo = new Map()) {
+  if (remainingSlots === 0) return true;
+  if (remainingSlots < 0) return false;
+  if (memo.has(remainingSlots)) return memo.get(remainingSlots);
 
-  const groupQuarterUnits = Number(tuplet.normal) * (4 / Number(tuplet.type));
-  const groupCount = Math.floor(4 / groupQuarterUnits);
-  const remainderQuarterUnits = 4 - groupCount * groupQuarterUnits;
-  const remainderSlots = Math.round(remainderQuarterUnits / THIRTY_SECOND_QUARTER_UNITS);
-
-  return groupCount > 0
-    ? { groupCount, remainderSlots }
-    : null;
+  const canFill = slotCounts.some((slotCount) =>
+    canFillMixedTupletSlots(remainingSlots - slotCount, slotCounts, memo)
+  );
+  memo.set(remainingSlots, canFill);
+  return canFill;
 }
 
-function createTupletNotesFromPlayedSlots(slots, tuplet, options, random) {
-  const notes = [];
-  let playedIndex = 0;
-
-  for (let slotIndex = 0; slotIndex < slots.length; slotIndex += 1) {
-    const isPlayed = slots[slotIndex];
-    const previousOrnaments = notes[notes.length - 1]?.ornaments || "";
-    const ornaments = isPlayed
-      ? createFallbackOrnaments(options, random, playedIndex, previousOrnaments)
-      : "";
-
-    notes.push({
-      notes: isPlayed ? ["C5"] : [],
-      duration: Number(tuplet.type),
-      dots: 0,
-      velocity: ornaments.includes("a") ? 1 : 0.5,
-      ...(ornaments ? { ornaments } : {}),
-    });
-
-    playedIndex += isPlayed ? 1 : 0;
+function getMaximumMixedEventCount(remainingSlots, blocks, usedRegular = false, usedTuplet = false, memo = new Map()) {
+  if (remainingSlots === 0) {
+    return usedRegular && usedTuplet ? 0 : Number.NEGATIVE_INFINITY;
   }
+  if (remainingSlots < 0) return Number.NEGATIVE_INFINITY;
 
-  return notes;
+  const key = `${remainingSlots}:${usedRegular}:${usedTuplet}`;
+  if (memo.has(key)) return memo.get(key);
+
+  const maximum = Math.max(...blocks.map((block) => {
+    const remainderMaximum = getMaximumMixedEventCount(
+      remainingSlots - block.slotCount,
+      blocks,
+      usedRegular || block.kind === "regular",
+      usedTuplet || block.kind === "tuplet",
+      memo
+    );
+    const eventCount = block.kind === "tuplet" ? block.tuplet.actual : 1;
+    return Number.isFinite(remainderMaximum)
+      ? eventCount + remainderMaximum
+      : Number.NEGATIVE_INFINITY;
+  }));
+  memo.set(key, maximum);
+  return maximum;
 }
 
-function createTupletFallbackGeneratedScore(section, options, random) {
-  const tuplet = options.tuplet;
-  const layout = getTupletLayout(tuplet);
+function createMixedTupletFallbackGeneratedScore(section, options, random) {
+  const regularSlotCount = 32 / options.maxSubdivisionDuration;
+  const tupletBlocks = options.tuplets
+    .map((tuplet) => ({
+      kind: "tuplet",
+      slotCount: Number(tuplet.normal) * (32 / Number(tuplet.type)),
+      tuplet,
+    }))
+    .filter((block) => Number.isInteger(block.slotCount) && block.slotCount > 0 && block.slotCount <= 32);
+  const availableBlocks = [
+    { kind: "regular", slotCount: regularSlotCount },
+    ...tupletBlocks,
+  ];
+  const slotCounts = [...new Set(availableBlocks.map((block) => block.slotCount))];
+  const minimumPlayedNotes = getSectionMinPlayedNotes(section);
+  const requireRegularSubdivision = getMaximumMixedEventCount(32, availableBlocks) >= minimumPlayedNotes;
+  let layout = null;
 
-  if (!layout) {
-    return null;
+  for (let attempt = 0; attempt < 200 && !layout; attempt += 1) {
+    const candidate = [];
+    let remainingSlots = 32;
+
+    while (remainingSlots > 0) {
+      const eligible = availableBlocks.filter((block) =>
+        block.slotCount <= remainingSlots &&
+        canFillMixedTupletSlots(remainingSlots - block.slotCount, slotCounts)
+      );
+
+      if (!eligible.length) break;
+
+      const preferred = eligible.filter((block) =>
+        random() < (block.kind === "tuplet" ? 0.68 : 0.42)
+      );
+      const pool = preferred.length ? preferred : eligible;
+      const selected = pool[randomInteger(random, 0, pool.length - 1)];
+      candidate.push(selected);
+      remainingSlots -= selected.slotCount;
+    }
+
+    const hasTuplet = candidate.some((block) => block.kind === "tuplet");
+    const hasRegularSubdivision = candidate.some((block) => block.kind === "regular");
+    const eventCount = candidate.reduce(
+      (count, block) => count + (block.kind === "tuplet" ? block.tuplet.actual : 1),
+      0
+    );
+
+    if (
+      remainingSlots === 0 &&
+      hasTuplet &&
+      eventCount >= minimumPlayedNotes &&
+      (!requireRegularSubdivision || hasRegularSubdivision)
+    ) {
+      layout = candidate;
+    }
   }
 
-  const { groupCount, remainderSlots } = layout;
-  const slotCount = groupCount * tuplet.actual;
+  if (!layout) return null;
+
+  const events = layout.flatMap((block) =>
+    block.kind === "tuplet"
+      ? Array.from({ length: block.tuplet.actual }, () => ({
+          duration: block.tuplet.type,
+          tuplet: block.tuplet,
+        }))
+      : [{ duration: options.maxSubdivisionDuration, tuplet: null }]
+  );
   const playedSlots = createRandomPlayedSlots(
-    slotCount,
+    events.length,
     getSectionMinPlayedNotes(section),
     getEffectiveSectionMaxPlayedNotes(section),
     random
   );
-  const notes = createTupletNotesFromPlayedSlots(playedSlots, tuplet, options, random);
-  const tuplets = Array.from({ length: groupCount }, (_, groupIndex) => ({
-    start: groupIndex * tuplet.actual,
-    end: (groupIndex + 1) * tuplet.actual,
-    actual: tuplet.actual,
-    normal: tuplet.normal,
-  }));
+  const requiresTupletOrnamentTarget =
+    options.maxSubdivisionDuration <= 8 &&
+    (options.allowDiddles || options.allowCheese);
 
-  if (remainderSlots > 0) {
-    pushCompressedRests(notes, remainderSlots, { velocity: 0.5 });
+  if (requiresTupletOrnamentTarget) {
+    const tupletEventIndexes = events
+      .map((event, index) => event.tuplet ? index : -1)
+      .filter((index) => index >= 0);
+    const requiredPlayedTargets = Math.min(
+      tupletEventIndexes.length,
+      options.allowDiddles && options.allowCheese ? 2 : 1
+    );
+
+    shuffledIndexes(tupletEventIndexes.length, random)
+      .slice(0, requiredPlayedTargets)
+      .forEach((index) => {
+        playedSlots[tupletEventIndexes[index]] = true;
+      });
+  }
+  const notes = [];
+  const tuplets = [];
+  let eventIndex = 0;
+
+  for (const block of layout) {
+    const start = notes.length;
+    const blockEventCount = block.kind === "tuplet" ? block.tuplet.actual : 1;
+
+    for (let offset = 0; offset < blockEventCount; offset += 1) {
+      const isPlayed = playedSlots[eventIndex];
+      const previousOrnaments = notes[notes.length - 1]?.ornaments || "";
+      const ornaments = isPlayed
+        ? createFallbackOrnaments(options, random, eventIndex, previousOrnaments)
+        : "";
+
+      notes.push({
+        notes: isPlayed ? ["C5"] : [],
+        duration: block.kind === "tuplet" ? block.tuplet.type : options.maxSubdivisionDuration,
+        dots: 0,
+        velocity: ornaments.includes("a") ? 1 : 0.5,
+        ...(ornaments ? { ornaments } : {}),
+      });
+      eventIndex += 1;
+    }
+
+    if (block.kind === "tuplet") {
+      tuplets.push({
+        start,
+        end: notes.length,
+        actual: block.tuplet.actual,
+        normal: block.tuplet.normal,
+      });
+    }
   }
 
   return {
@@ -2356,8 +2650,8 @@ function createFallbackGeneratedScore(section, samplePayload, lineIndex, attempt
     `${section.id || section.title || "section"}:fallback:${lineIndex}${retrySeed}:${section.instructions || ""}`
   );
 
-  if (options.tuplet) {
-    const tupletScore = createTupletFallbackGeneratedScore(section, options, random);
+  if (options.tuplets.length) {
+    const tupletScore = createMixedTupletFallbackGeneratedScore(section, options, random);
 
     if (tupletScore) {
       return tupletScore;
@@ -2402,11 +2696,11 @@ function normalizeGeneratedLine(input, section, samplePayload, index, attempt = 
   const normalizedScore = scoreSource
     ? normalizeGeneratedScore(scoreSource, fallbackScore)
     : fallbackLine.score;
-  const expectedTuplet = getGenerationTuplet(section, samplePayload);
-  const score = scoreHasTuplets(normalizedScore) === Boolean(expectedTuplet)
+  const allowedTuplets = getGenerationTuplets(section, samplePayload);
+  const score = allowedTuplets.length || !scoreHasTuplets(normalizedScore)
     ? normalizedScore
     : fallbackLine.score;
-  const finalizedScore = finalizeGeneratedScore(section, score, index);
+  const finalizedScore = finalizeGeneratedScore(section, score, index, `attempt:${attempt}`);
 
   return {
     title: (input && input.title) || fallbackLine.title,
@@ -2418,9 +2712,18 @@ function normalizeGeneratedLine(input, section, samplePayload, index, attempt = 
 }
 
 function createUniqueGeneratedLine(input, section, samplePayload, index, usedExerciseShortForms) {
+  let lastError = null;
+
   for (let attempt = 0; attempt < MAX_UNIQUE_LINE_ATTEMPTS; attempt += 1) {
     const candidateInput = attempt === 0 ? input : null;
-    const line = normalizeGeneratedLine(candidateInput, section, samplePayload, index, attempt);
+    let line;
+
+    try {
+      line = normalizeGeneratedLine(candidateInput, section, samplePayload, index, attempt);
+    } catch (error) {
+      lastError = error;
+      continue;
+    }
 
     if (!line.exerciseShortForm || !usedExerciseShortForms.has(line.exerciseShortForm)) {
       if (line.exerciseShortForm) {
@@ -2432,7 +2735,8 @@ function createUniqueGeneratedLine(input, section, samplePayload, index, usedExe
   }
 
   throw new Error(
-    `${section.title || "Section"} line ${index + 1}: could not create a unique exercise after ${MAX_UNIQUE_LINE_ATTEMPTS} attempts.`
+    `${section.title || "Section"} line ${index + 1}: could not create a valid unique exercise after ${MAX_UNIQUE_LINE_ATTEMPTS} attempts.` +
+    (lastError ? ` Last error: ${lastError.message}` : "")
   );
 }
 
@@ -2472,12 +2776,12 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
     const sampleJson = getSectionSampleJson(section);
     const subdivisions = getGenerationSubdivisions(section, sampleJson);
     const ornaments = getGenerationOrnaments(section, sampleJson);
-    const tuplet = getGenerationTuplet(section, sampleJson);
+    const tuplets = getGenerationTuplets(section, sampleJson);
     const structuredSection = {
       ...section,
       subdivisions,
       ornaments,
-      tuplet,
+      tuplets,
       sampleJson,
     };
 
@@ -2490,13 +2794,14 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
       ),
       minPlayedNotes: getSectionMinPlayedNotes(section),
       maxPlayedNotes: getSectionMaxPlayedNotes(section),
+      playEveryNote: getSectionPlayEveryNote(section),
       maxSameHandStickingRun: getSectionMaxSameHandStickingRun(section),
       requireMaxSameHandStickingRun: getSectionRequireMaxSameHandStickingRun(section),
       globalRules,
       instructions: createStructuredSectionInstructions(structuredSection, sampleJson),
       subdivisions,
       ornaments,
-      tuplet,
+      tuplets,
       sampleJson,
       pdfSettings: sectionPdfSettings,
     };
@@ -2537,7 +2842,7 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
   const bookGlobalRules = normalizeGlobalAiRules(
     (config.generation && config.generation.bookGlobalRules) || section.globalRules
   );
-  const tuplet = getGenerationTuplet(section, samplePayload);
+  const tuplets = getGenerationTuplets(section, samplePayload);
 
   return [
     ...globalInstructions,
@@ -2545,11 +2850,15 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
     "",
     `Section title: ${section.title || "Untitled section"}`,
     `Section instructions: ${section.instructions || ""}`,
-    tuplet
-      ? `Tuplet type: ${getTupletLabel(tuplet)}. Each voice must include tuplets entries shaped like {"start":0,"end":${tuplet.actual},"actual":${tuplet.actual},"normal":${tuplet.normal}}. The start is inclusive and end is exclusive, using indexes into voice.notes. Use repeated complete tuplet groups of ${tuplet.actual} notes with note duration ${tuplet.type}; if another complete group will not fit in the 4/4 measure, fill the remaining duration with rests.`
+    tuplets.length
+      ? `Allowed tuplet types: ${tuplets.map(getTupletLabel).join(", ")}. Randomly combine complete groups of any allowed type with each other and with the selected regular subdivisions in the same 4/4 measure. Tuplet entries use inclusive start and exclusive end indexes into voice.notes. Not every line needs every allowed type.`
       : "Do not use tuplets. Each generated voice should have an empty tuplets array.",
-    "Randomize played notes and rests across the whole measure. Do not favor beat four or any other beat.",
-    "Rests may occur on any selected subdivision position, including offbeat sixteenth-note and thirty-second-note positions when those subdivisions are selected.",
+    getSectionPlayEveryNote(section)
+      ? "Use no rests. Play every rhythmic position in the measure, including every note inside tuplets."
+      : "Randomize played notes and rests across the whole measure. Do not favor beat four or any other beat.",
+    getSectionPlayEveryNote(section)
+      ? ""
+      : "Rests may occur on any selected subdivision position, including offbeat sixteenth-note and thirty-second-note positions when those subdivisions are selected.",
     sectionUsesStickings(section)
       ? "First choose and place all non-sticking ornaments. Only afterward assign every played note a sticking ornament (\"r\" or \"l\") while applying the sticking rules below. Rests must not have stickings."
       : "",
@@ -2562,7 +2871,7 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
     section.minPlayedNotes
       ? `Each generated rhythm in this section must have at least ${section.minPlayedNotes} played note events. Rests do not count as played notes.`
       : "",
-    section.maxPlayedNotes
+    section.maxPlayedNotes && !getSectionPlayEveryNote(section)
       ? `Each generated rhythm in this section must have no more than ${getEffectiveSectionMaxPlayedNotes(section)} played note events. Rests do not count as played notes.`
       : "",
     sectionUsesStickings(section)
@@ -2572,11 +2881,11 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
       ? `Every generated rhythm in this section must include at least one run of exactly ${getSectionMaxSameHandStickingRun(section)} consecutive played notes with the same sticking.`
       : "",
     sectionUsesStickings(section)
-      ? "When a diddle or cheese is followed immediately by the next sixteenth note, that following note must use the opposite sticking. A diddle must not directly precede a cheese on consecutive sixteenth notes."
+      ? "Never allow two adjacent diddles on the same hand, including across the repeat boundary. When a diddle or cheese is followed immediately by the next sixteenth note, that following note must use the opposite sticking. A diddle must not directly precede a cheese on consecutive sixteenth notes."
       : "",
     "Every measure repeats. Apply every ornament-sequencing and sticking rule across the repeat boundary, treating the first note as immediately following the last note.",
     sectionUsesDiddlesOrCheese(section)
-      ? "Diddles and cheese may only be used on sixteenth notes or faster; never put them on eighth notes, dotted eighth notes, or quarter notes."
+      ? "Diddles and cheese may only be used on sixteenth notes or faster, except that eighth notes inside a tuplet may use them; never put them on regular eighth notes, dotted eighth notes, or quarter notes."
       : "",
     `Return exactly ${count} lines. These begin at section line ${offset + 1}.`,
     `The section has ${linesPerPage} lines per PDF page.`,
@@ -2797,10 +3106,11 @@ function buildBook(config, generatedSections) {
       sampleJson: JSON.stringify(section.sampleJson || {}, null, 2),
       subdivisions: section.subdivisions,
       ornaments: section.ornaments,
-      tuplet: section.tuplet,
+      tuplets: section.tuplets,
       pageCount: generated.pageCount,
       minPlayedNotes: section.minPlayedNotes,
       maxPlayedNotes: section.maxPlayedNotes,
+      playEveryNote: section.playEveryNote,
       maxSameHandStickingRun: section.maxSameHandStickingRun,
       requireMaxSameHandStickingRun: section.requireMaxSameHandStickingRun,
       pdfSettings: generated.pdfSettings,
@@ -2863,10 +3173,11 @@ function createManifest(book) {
       sampleJson: section.sampleJson,
       subdivisions: section.subdivisions,
       ornaments: section.ornaments,
-      tuplet: section.tuplet,
+      tuplets: section.tuplets,
       pageCount: section.pageCount,
       minPlayedNotes: section.minPlayedNotes,
       maxPlayedNotes: section.maxPlayedNotes,
+      playEveryNote: section.playEveryNote,
       maxSameHandStickingRun: section.maxSameHandStickingRun,
       requireMaxSameHandStickingRun: section.requireMaxSameHandStickingRun,
       pdfSettings: section.pdfSettings,

@@ -355,6 +355,35 @@
   gap: 5px;
 }
 
+.tupletEditor {
+  display: grid;
+  gap: 8px;
+  grid-column: 1 / -1;
+}
+
+.tupletEditorHeader {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.tupletEditorHeader > span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.tupletRow {
+  align-items: end;
+  background: var(--wash);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  padding: 8px;
+}
+
 .toggleField {
   align-items: center;
   background: #fff;

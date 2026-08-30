@@ -72,6 +72,7 @@ function createManifest(book) {
       pageCount: section.pageCount,
       minPlayedNotes: section.minPlayedNotes,
       maxPlayedNotes: section.maxPlayedNotes,
+      playEveryNote: section.playEveryNote,
       maxSameHandStickingRun: section.maxSameHandStickingRun,
       requireMaxSameHandStickingRun: section.requireMaxSameHandStickingRun,
       pdfSettings: section.pdfSettings,

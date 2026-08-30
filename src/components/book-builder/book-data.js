@@ -141,6 +141,19 @@ export function normalizeSectionRequireMaxSameHandStickingRun(value, fallback = 
   return Boolean(fallback);
 }
 
+export function normalizeSectionPlayEveryNote(value, fallback = false) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    if (value === "true") return true;
+    if (value === "false") return false;
+  }
+
+  return Boolean(fallback);
+}
+
 export function normalizeGlobalAiRules(value) {
   if (Array.isArray(value)) {
     return value.filter(Boolean).join("\n");
@@ -289,30 +302,54 @@ function inferSectionSubdivisions(section = {}) {
   return inferred.length ? inferred : ["eighths"];
 }
 
-function inferSectionTuplet(section = {}) {
+function inferSectionTuplets(section = {}) {
   const sample = typeof section.sampleJson === "string"
     ? parseJsonLoose(section.sampleJson)
     : section.sampleJson;
-  const explicitSampleTuplet = normalizeTupletConfig(sample && sample.tuplet);
+  const explicitSampleTuplets = [
+    ...(Array.isArray(sample && sample.tuplets) ? sample.tuplets : []),
+    ...(sample && sample.tuplet ? [sample.tuplet] : []),
+  ]
+    .map(normalizeTupletConfig)
+    .filter(Boolean);
 
-  if (explicitSampleTuplet) {
-    return explicitSampleTuplet;
-  }
-
-  const tuplet = getSampleTuplets(section.sampleJson)[0];
-
-  if (!tuplet) {
-    return null;
+  if (explicitSampleTuplets.length) {
+    return explicitSampleTuplets;
   }
 
   const notes = getSampleNotes(section.sampleJson);
-  const startNote = notes[Number(tuplet.start) || 0];
+  const inferred = getSampleTuplets(section.sampleJson)
+    .map((tuplet) => normalizeTupletConfig({
+      actual: tuplet.actual,
+      normal: tuplet.normal,
+      type: notes[Number(tuplet.start) || 0]?.duration || section.tupletType || 8,
+    }))
+    .filter(Boolean);
 
-  return normalizeTupletConfig({
-    actual: tuplet.actual,
-    normal: tuplet.normal,
-    type: startNote?.duration || section.tupletType || 8,
-  });
+  return inferred.filter((tuplet, index) =>
+    inferred.findIndex((candidate) =>
+      candidate.actual === tuplet.actual &&
+      candidate.normal === tuplet.normal &&
+      candidate.type === tuplet.type
+    ) === index
+  );
+}
+
+export function normalizeSectionTuplets(value, section = {}) {
+  if (value === undefined) {
+    return inferSectionTuplets(section);
+  }
+
+  const values = Array.isArray(value) ? value : [value];
+  const normalized = values.map(normalizeTupletConfig).filter(Boolean);
+
+  return normalized.filter((tuplet, index) =>
+    normalized.findIndex((candidate) =>
+      candidate.actual === tuplet.actual &&
+      candidate.normal === tuplet.normal &&
+      candidate.type === tuplet.type
+    ) === index
+  );
 }
 
 function inferSectionOrnaments(section = {}) {
@@ -352,11 +389,7 @@ export function normalizeSectionSubdivisions(value, section = {}) {
 }
 
 export function normalizeSectionTuplet(value, section = {}) {
-  if (value === undefined) {
-    return inferSectionTuplet(section);
-  }
-
-  return normalizeTupletConfig(value);
+  return normalizeSectionTuplets(value, section)[0] || null;
 }
 
 export function normalizeSectionOrnaments(value, section = {}) {
@@ -438,9 +471,11 @@ function normalizeSectionSampleJson(value) {
 export function createBookSection(sectionNumber = 1, overrides = {}, pdfSettings = DEFAULT_PDF_SETTINGS) {
   const template = DEFAULT_BOOK_SECTIONS[sectionNumber - 1] || {};
   const title = overrides.title || template.title || `Section ${sectionNumber}`;
-  const tuplet = Object.prototype.hasOwnProperty.call(overrides, "tuplet")
-    ? overrides.tuplet
-    : template.tuplet;
+  const tuplets = Object.prototype.hasOwnProperty.call(overrides, "tuplets")
+    ? overrides.tuplets
+    : Object.prototype.hasOwnProperty.call(overrides, "tuplet")
+      ? overrides.tuplet
+      : template.tuplets ?? template.tuplet;
   const normalizedSettings = normalizePdfSettings({
     ...pdfSettings,
     ...(template.pdfSettings || {}),
@@ -460,7 +495,7 @@ export function createBookSection(sectionNumber = 1, overrides = {}, pdfSettings
       overrides.ornaments ?? template.ornaments,
       { ...template, ...overrides }
     ),
-    tuplet: normalizeSectionTuplet(tuplet, { ...template, ...overrides }),
+    tuplets: normalizeSectionTuplets(tuplets, { ...template, ...overrides }),
     pageCount: normalizeSectionPageCount(
       overrides.pageCount ?? template.pageCount,
       overrides.pages?.length || template.pages?.length || 1
@@ -470,6 +505,9 @@ export function createBookSection(sectionNumber = 1, overrides = {}, pdfSettings
     ),
     maxPlayedNotes: normalizeSectionMaxPlayedNotes(
       overrides.maxPlayedNotes ?? template.maxPlayedNotes
+    ),
+    playEveryNote: normalizeSectionPlayEveryNote(
+      overrides.playEveryNote ?? template.playEveryNote
     ),
     maxSameHandStickingRun: normalizeSectionMaxSameHandStickingRun(
       overrides.maxSameHandStickingRun ?? template.maxSameHandStickingRun
@@ -593,10 +631,11 @@ function normalizeBookSections(rawBook, pdfSettings) {
       sampleJson: normalizeSectionSampleJson(section.sampleJson),
       subdivisions: normalizeSectionSubdivisions(section.subdivisions, section),
       ornaments: normalizeSectionOrnaments(section.ornaments, section),
-      tuplet: normalizeSectionTuplet(section.tuplet, section),
+      tuplets: normalizeSectionTuplets(section.tuplets ?? section.tuplet, section),
       pageCount: normalizeSectionPageCount(section.pageCount, normalizedPages.length),
       minPlayedNotes: normalizeSectionMinPlayedNotes(section.minPlayedNotes),
       maxPlayedNotes: normalizeSectionMaxPlayedNotes(section.maxPlayedNotes),
+      playEveryNote: normalizeSectionPlayEveryNote(section.playEveryNote),
       maxSameHandStickingRun: normalizeSectionMaxSameHandStickingRun(section.maxSameHandStickingRun),
       requireMaxSameHandStickingRun: normalizeSectionRequireMaxSameHandStickingRun(section.requireMaxSameHandStickingRun),
       pdfSettings: sectionPdfSettings,

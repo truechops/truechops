@@ -34,6 +34,8 @@
       "Use ornaments only when the section instructions or sampleJson call for them. Accent is \"a\". Flam is \"f\". Diddle is \"d\". Cheese is \"c\". Stickings are \"r\" and \"l\".",
       "Every measure must contain at least one of each non-sticking ornament selected for its section. Place those ornaments before assigning stickings.",
       "Accents may share notes with any other ornament and do not compete for ornament variety. In sections with multiple ornaments, rotate variety and frequency among flams, diddles, and cheese. Never place a flam immediately after a diddle or cheese.",
+      "Never place two adjacent diddles on the same hand. Apply this rule within the measure and across its repeat boundary.",
+      "Apply every sixteenth-note ornament and sticking sequence rule to eighth-note tuplets too: no flam after a diddle or cheese, no cheese after a diddle, no consecutive cheese, and the note after a diddle or cheese must use the opposite sticking.",
       "Every measure repeats. Apply all ornament-sequencing and sticking rules between the last note and the first note as well as within the measure.",
       "Return this exact JSON shape and no prose: { \"lines\": [{ \"title\": \"\", \"tempo\": 90, \"score\": {} }] }."
     ]
