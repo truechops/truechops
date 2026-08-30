@@ -696,13 +696,19 @@ async function renderBookPageAssets(
   };
 }
 
-function drawBookPage(doc, book, pageAssets, bookTitle) {
+function getPageSectionTitle(book, page) {
+  return page.sectionTitle ||
+    (book.sections || []).find((section) => section.id === page.sectionId)?.title ||
+    page.title ||
+    "Exercises";
+}
+
+function drawBookPage(doc, book, pageAssets) {
   const { page, pdfSettings, pageLines, svgs, qrSvg } = pageAssets;
   const pageWidth = PDF_PAGE_WIDTH;
   const pageHeight = PDF_PAGE_HEIGHT;
   const margin = PDF_MARGIN;
-  const showBookTitle = page.pageNumber === 1;
-  const headerHeight = showBookTitle ? PDF_HEADER_HEIGHT : 0;
+  const headerHeight = PDF_HEADER_HEIGHT;
   const footerHeight = PDF_FOOTER_HEIGHT;
   const columnGap = PDF_COLUMN_GAP;
   const usableWidth = pageWidth - margin * 2 - columnGap * (pdfSettings.columns - 1);
@@ -710,13 +716,17 @@ function drawBookPage(doc, book, pageAssets, bookTitle) {
   const rowHeight = (pageHeight - margin * 2 - headerHeight - footerHeight) / pdfSettings.rows;
 
   doc.addPage();
-  if (showBookTitle) {
-    doc.font("Times-Roman").fillColor("#111111").fontSize(15).text(book.title || bookTitle, margin, 7, {
-      width: pageWidth - margin * 2,
+  doc.font("Times-Bold").fillColor("#111111").fontSize(11).text(
+    getPageSectionTitle(book, page),
+    margin + 24,
+    8,
+    {
+      width: pageWidth - margin * 2 - 48,
       align: "center",
       lineBreak: false,
-    });
-  }
+      ellipsis: true,
+    }
+  );
   doc.font("Times-Bold").fontSize(10).text(String(page.pageNumber), pageWidth - margin - 18, 8, {
     width: 18,
     align: "right",
@@ -746,8 +756,102 @@ function drawBookPage(doc, book, pageAssets, bookTitle) {
   SVGtoPDF(doc, qrSvg, qrX, qrY, { width: qrSize, height: qrSize });
 }
 
+function getTableOfContentsEntries(book) {
+  if (Array.isArray(book.tableOfContents) && book.tableOfContents.length) {
+    return book.tableOfContents;
+  }
+
+  return (book.sections || []).map((section) => {
+    const pageNumbers = (section.pages || [])
+      .map((page) => Number.parseInt(page.pageNumber, 10))
+      .filter((pageNumber) => Number.isInteger(pageNumber) && pageNumber > 0);
+
+    return {
+      sectionId: section.id,
+      title: section.title || "Untitled section",
+      pageStart: pageNumbers.length ? Math.min(...pageNumbers) : null,
+      pageEnd: pageNumbers.length ? Math.max(...pageNumbers) : null,
+    };
+  });
+}
+
+function drawTableOfContentsPage(doc, book, bookTitle) {
+  const entries = getTableOfContentsEntries(book);
+  const margin = 48;
+  const pageNumberWidth = 46;
+  const contentWidth = PDF_PAGE_WIDTH - margin * 2;
+  const titleWidth = contentWidth - pageNumberWidth - 12;
+  const rowHeight = Math.min(26, 590 / Math.max(entries.length, 1));
+  const rowFontSize = entries.length > 24 ? 9.5 : 11;
+  const firstRowY = 142;
+
+  doc.addPage();
+  doc
+    .font("Times-Roman")
+    .fillColor("#111111")
+    .fontSize(24)
+    .text(book.title || bookTitle, margin, 48, {
+      width: contentWidth,
+      align: "center",
+      lineBreak: false,
+    });
+  doc
+    .font("Times-Bold")
+    .fontSize(18)
+    .text("Table of Contents", margin, 91, {
+      width: contentWidth,
+      align: "center",
+      lineBreak: false,
+    });
+
+  entries.forEach((entry, index) => {
+    const y = firstRowY + index * rowHeight;
+    const pageLabel = entry.pageStart == null
+      ? ""
+      : entry.pageEnd && entry.pageEnd !== entry.pageStart
+        ? `${entry.pageStart}\u2013${entry.pageEnd}`
+        : String(entry.pageStart);
+    const label = `${index + 1}. ${entry.title}`;
+
+    doc.font("Times-Roman").fontSize(rowFontSize).fillColor("#111111");
+    doc.text(label, margin, y, {
+      width: titleWidth,
+      lineBreak: false,
+      ellipsis: true,
+    });
+    doc.text(pageLabel, margin + contentWidth - pageNumberWidth, y, {
+      width: pageNumberWidth,
+      align: "right",
+      lineBreak: false,
+    });
+
+    const labelWidth = Math.min(doc.widthOfString(label), titleWidth - 8);
+    const leaderStart = margin + labelWidth + 7;
+    const leaderEnd = margin + contentWidth - pageNumberWidth - 7;
+    const leaderY = y + rowFontSize * 0.78;
+
+    if (leaderEnd > leaderStart) {
+      doc
+        .save()
+        .strokeColor("#777777")
+        .lineWidth(0.5)
+        .dash(1, { space: 2 })
+        .moveTo(leaderStart, leaderY)
+        .lineTo(leaderEnd, leaderY)
+        .stroke()
+        .restore();
+    }
+  });
+}
+
 async function renderPdf(book, pages, dependencies) {
-  const { bookData, rendererApi, getBookPageQrUrl, qrOrigin } = dependencies;
+  const {
+    bookData,
+    rendererApi,
+    getBookPageQrUrl,
+    qrOrigin,
+    includeTableOfContents,
+  } = dependencies;
   const { BOOK_TITLE } = bookData;
   const title = pages.length === 1
     ? `${book.title || BOOK_TITLE} Page ${pages[0].pageNumber}`
@@ -767,8 +871,13 @@ async function renderPdf(book, pages, dependencies) {
     )
   );
 
+  if (includeTableOfContents) {
+    drawTableOfContentsPage(doc, book, BOOK_TITLE);
+  }
+
   for (const pageAssetsPromise of pageAssetPromises) {
-    drawBookPage(doc, book, await pageAssetsPromise, BOOK_TITLE);
+    const pageAssets = await pageAssetsPromise;
+    drawBookPage(doc, book, pageAssets);
   }
 
   doc.end();
@@ -801,6 +910,7 @@ async function main() {
     rendererApi,
     getBookPageQrUrl,
     qrOrigin: options.qrOrigin,
+    includeTableOfContents: options.scope === "book",
   });
 
   await fs.mkdir(path.dirname(options.output), { recursive: true });

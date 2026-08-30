@@ -12,6 +12,7 @@ import {
   BOOK_TITLE,
   DEFAULT_PDF_SETTINGS,
   createBlankLineScore,
+  createBookTableOfContents,
   createDefaultBook,
   getLinesPerPage,
   getPagePdfSettings,
@@ -25,7 +26,7 @@ const MANIFEST_PATH = path.join(BOOK_ROOT, "book.json");
 const LINE_NUMBER_CENTER_OFFSET = 1.25;
 const PDF_CACHE_ROOT = process.env.BOOK_PDF_CACHE_DIR || path.join(process.cwd(), ".next", "cache", "book-builder-pdf");
 const SCORE_SVG_CACHE_VERSION = "score-svg-v7";
-const PDF_FILE_CACHE_VERSION = "pdf-v9";
+const PDF_FILE_CACHE_VERSION = "pdf-v10";
 const SCORE_SVG_MEMORY_CACHE_LIMIT = Number(process.env.BOOK_PDF_SVG_MEMORY_CACHE_LIMIT || 800);
 const PDF_PAGE_WIDTH = 612;
 const PDF_PAGE_HEIGHT = 792;
@@ -111,10 +112,11 @@ function createManifest(book) {
       maxPlayedNotes: section.maxPlayedNotes,
       playEveryNote: section.playEveryNote,
       maxSameHandStickingRun: section.maxSameHandStickingRun,
-      requireMaxSameHandStickingRun: section.requireMaxSameHandStickingRun,
+      requiredSameHandStickingRuns: section.requiredSameHandStickingRuns,
       pdfSettings: section.pdfSettings,
       pages: section.pages.map(createPageManifest),
     })),
+    tableOfContents: createBookTableOfContents(book.sections),
     pages: book.pages.map(createPageManifest),
   };
 }
@@ -337,9 +339,10 @@ function getRelevantPdfBookPayload(book, pages) {
       maxPlayedNotes: section.maxPlayedNotes,
       playEveryNote: section.playEveryNote,
       maxSameHandStickingRun: section.maxSameHandStickingRun,
-      requireMaxSameHandStickingRun: section.requireMaxSameHandStickingRun,
+      requiredSameHandStickingRuns: section.requiredSameHandStickingRuns,
       pages: section.pages.map((page) => page.pageNumber),
     })),
+    tableOfContents: createBookTableOfContents(book.sections),
     pages: pages.map((page) => ({
       pageNumber: page.pageNumber,
       sectionId: page.sectionId,
@@ -723,6 +726,13 @@ async function renderBookPageAssets(book, page, bookPdfSettings, limitScoreRende
   };
 }
 
+function getPageSectionTitle(book, page) {
+  return page.sectionTitle ||
+    (book.sections || []).find((section) => section.id === page.sectionId)?.title ||
+    page.title ||
+    "Exercises";
+}
+
 function drawBookPage(doc, book, pageAssets) {
   const { page, pdfSettings, pageLines, svgs, qrSvg } = pageAssets;
   const pageWidth = PDF_PAGE_WIDTH;
@@ -736,10 +746,11 @@ function drawBookPage(doc, book, pageAssets) {
   const rowHeight = (pageHeight - margin * 2 - headerHeight - footerHeight) / pdfSettings.rows;
 
   doc.addPage();
-  doc.font("Times-Roman").fillColor("#111111").fontSize(15).text(book.title || BOOK_TITLE, margin, 7, {
-    width: pageWidth - margin * 2,
+  doc.font("Times-Bold").fillColor("#111111").fontSize(11).text(getPageSectionTitle(book, page), margin + 24, 8, {
+    width: pageWidth - margin * 2 - 48,
     align: "center",
     lineBreak: false,
+    ellipsis: true,
   });
   doc.font("Times-Bold").fontSize(10).text(String(page.pageNumber), pageWidth - margin - 18, 8, {
     width: 18,
@@ -787,6 +798,62 @@ function drawBookPage(doc, book, pageAssets) {
   SVGtoPDF(doc, qrSvg, qrX, qrY, { width: qrSize, height: qrSize });
 }
 
+function drawTableOfContentsPage(doc, book) {
+  const entries = Array.isArray(book.tableOfContents) && book.tableOfContents.length
+    ? book.tableOfContents
+    : createBookTableOfContents(book.sections);
+  const margin = 48;
+  const pageNumberWidth = 46;
+  const contentWidth = PDF_PAGE_WIDTH - margin * 2;
+  const titleWidth = contentWidth - pageNumberWidth - 12;
+  const rowHeight = Math.min(26, 590 / Math.max(entries.length, 1));
+  const rowFontSize = entries.length > 24 ? 9.5 : 11;
+  const firstRowY = 142;
+
+  doc.addPage();
+  doc.font("Times-Roman").fillColor("#111111").fontSize(24).text(
+    book.title || BOOK_TITLE,
+    margin,
+    48,
+    { width: contentWidth, align: "center", lineBreak: false }
+  );
+  doc.font("Times-Bold").fontSize(18).text(
+    "Table of Contents",
+    margin,
+    91,
+    { width: contentWidth, align: "center", lineBreak: false }
+  );
+
+  entries.forEach((entry, index) => {
+    const y = firstRowY + index * rowHeight;
+    const pageLabel = entry.pageStart == null
+      ? ""
+      : entry.pageEnd && entry.pageEnd !== entry.pageStart
+        ? `${entry.pageStart}\u2013${entry.pageEnd}`
+        : String(entry.pageStart);
+    const label = `${index + 1}. ${entry.title}`;
+
+    doc.font("Times-Roman").fontSize(rowFontSize).fillColor("#111111");
+    doc.text(label, margin, y, { width: titleWidth, lineBreak: false, ellipsis: true });
+    doc.text(pageLabel, margin + contentWidth - pageNumberWidth, y, {
+      width: pageNumberWidth,
+      align: "right",
+      lineBreak: false,
+    });
+
+    const labelWidth = Math.min(doc.widthOfString(label), titleWidth - 8);
+    const leaderStart = margin + labelWidth + 7;
+    const leaderEnd = margin + contentWidth - pageNumberWidth - 7;
+
+    if (leaderEnd > leaderStart) {
+      doc.save().strokeColor("#777777").lineWidth(0.5).dash(1, { space: 2 })
+        .moveTo(leaderStart, y + rowFontSize * 0.78)
+        .lineTo(leaderEnd, y + rowFontSize * 0.78)
+        .stroke().restore();
+    }
+  });
+}
+
 async function renderPagePdfFresh(book, pageNumber) {
   const bookPdfSettings = normalizePdfSettings({
     ...DEFAULT_PDF_SETTINGS,
@@ -830,6 +897,8 @@ async function renderFullBookPdfFresh(book) {
   const pageAssetPromises = book.pages.map((page) =>
     renderBookPageAssets(book, page, bookPdfSettings, limitScoreRender)
   );
+
+  drawTableOfContentsPage(doc, book);
 
   for (const pageAssetsPromise of pageAssetPromises) {
     drawBookPage(doc, book, await pageAssetsPromise);

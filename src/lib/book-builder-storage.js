@@ -3,6 +3,7 @@ import path from "path";
 import process from "process";
 import {
   BOOK_SLUG,
+  createBookTableOfContents,
   createDefaultBook,
   normalizeBook,
 } from "../components/book-builder/book-data";
@@ -74,10 +75,11 @@ function createManifest(book) {
       maxPlayedNotes: section.maxPlayedNotes,
       playEveryNote: section.playEveryNote,
       maxSameHandStickingRun: section.maxSameHandStickingRun,
-      requireMaxSameHandStickingRun: section.requireMaxSameHandStickingRun,
+      requiredSameHandStickingRuns: section.requiredSameHandStickingRuns,
       pdfSettings: section.pdfSettings,
       pages: section.pages.map(createPageManifest),
     })),
+    tableOfContents: createBookTableOfContents(book.sections),
     pages: book.pages.map(createPageManifest),
   };
 }

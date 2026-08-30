@@ -141,6 +141,25 @@ export function normalizeSectionRequireMaxSameHandStickingRun(value, fallback = 
   return Boolean(fallback);
 }
 
+export function normalizeSectionRequiredSameHandStickingRuns(value, fallback = []) {
+  const values = Array.isArray(value)
+    ? value
+    : typeof value === "string"
+      ? value.split(/[^0-9]+/)
+      : [];
+  const normalized = values
+    .map((item) => Number.parseInt(item, 10))
+    .filter((item) => Number.isInteger(item) && item > 0 && item <= 32);
+
+  if (normalized.length) {
+    return [...new Set(normalized)].sort((left, right) => left - right);
+  }
+
+  return Array.isArray(fallback) && fallback.length
+    ? normalizeSectionRequiredSameHandStickingRuns(fallback, [])
+    : [];
+}
+
 export function normalizeSectionPlayEveryNote(value, fallback = false) {
   if (typeof value === "boolean") {
     return value;
@@ -481,6 +500,21 @@ export function createBookSection(sectionNumber = 1, overrides = {}, pdfSettings
     ...(template.pdfSettings || {}),
     ...(overrides.pdfSettings || {}),
   });
+  const maxSameHandStickingRun = normalizeSectionMaxSameHandStickingRun(
+    overrides.maxSameHandStickingRun ?? template.maxSameHandStickingRun
+  );
+  const requiredSameHandStickingRuns = Object.prototype.hasOwnProperty.call(
+    overrides,
+    "requiredSameHandStickingRuns"
+  )
+    ? normalizeSectionRequiredSameHandStickingRuns(overrides.requiredSameHandStickingRuns)
+    : Object.prototype.hasOwnProperty.call(template, "requiredSameHandStickingRuns")
+      ? normalizeSectionRequiredSameHandStickingRuns(template.requiredSameHandStickingRuns)
+      : normalizeSectionRequireMaxSameHandStickingRun(
+          overrides.requireMaxSameHandStickingRun ?? template.requireMaxSameHandStickingRun
+        )
+        ? [maxSameHandStickingRun]
+        : [];
 
   return {
     id: overrides.id || template.id || `${slugify(title)}-${sectionNumber}`,
@@ -509,12 +543,8 @@ export function createBookSection(sectionNumber = 1, overrides = {}, pdfSettings
     playEveryNote: normalizeSectionPlayEveryNote(
       overrides.playEveryNote ?? template.playEveryNote
     ),
-    maxSameHandStickingRun: normalizeSectionMaxSameHandStickingRun(
-      overrides.maxSameHandStickingRun ?? template.maxSameHandStickingRun
-    ),
-    requireMaxSameHandStickingRun: normalizeSectionRequireMaxSameHandStickingRun(
-      overrides.requireMaxSameHandStickingRun ?? template.requireMaxSameHandStickingRun
-    ),
+    maxSameHandStickingRun,
+    requiredSameHandStickingRuns,
     pdfSettings: normalizedSettings,
     pages: overrides.pages || [createBlankPage(1, normalizedSettings)],
   };
@@ -533,6 +563,21 @@ export function createDefaultBook() {
     sections: DEFAULT_BOOK_SECTIONS.map((section, index) =>
       createBookSection(index + 1, section, normalizePdfSettings())
     ),
+  });
+}
+
+export function createBookTableOfContents(sections = []) {
+  return (sections || []).map((section) => {
+    const pageNumbers = (section.pages || [])
+      .map((page) => Number.parseInt(page.pageNumber, 10))
+      .filter((pageNumber) => Number.isInteger(pageNumber) && pageNumber > 0);
+
+    return {
+      sectionId: section.id,
+      title: section.title || "Untitled section",
+      pageStart: pageNumbers.length ? Math.min(...pageNumbers) : null,
+      pageEnd: pageNumbers.length ? Math.max(...pageNumbers) : null,
+    };
   });
 }
 
@@ -582,6 +627,7 @@ export function normalizeBook(rawBook) {
     globalAiRules: normalizeGlobalAiRules(rawBook.globalAiRules),
     pdfSettings,
     sections,
+    tableOfContents: createBookTableOfContents(sections),
     pages,
   };
 }
@@ -637,7 +683,14 @@ function normalizeBookSections(rawBook, pdfSettings) {
       maxPlayedNotes: normalizeSectionMaxPlayedNotes(section.maxPlayedNotes),
       playEveryNote: normalizeSectionPlayEveryNote(section.playEveryNote),
       maxSameHandStickingRun: normalizeSectionMaxSameHandStickingRun(section.maxSameHandStickingRun),
-      requireMaxSameHandStickingRun: normalizeSectionRequireMaxSameHandStickingRun(section.requireMaxSameHandStickingRun),
+      requiredSameHandStickingRuns: Object.prototype.hasOwnProperty.call(
+        section,
+        "requiredSameHandStickingRuns"
+      )
+        ? normalizeSectionRequiredSameHandStickingRuns(section.requiredSameHandStickingRuns)
+        : normalizeSectionRequireMaxSameHandStickingRun(section.requireMaxSameHandStickingRun)
+          ? [normalizeSectionMaxSameHandStickingRun(section.maxSameHandStickingRun)]
+          : [],
       pdfSettings: sectionPdfSettings,
       pages: normalizedPages.map((page, sectionPageIndex) => {
         const pageNumber = globalPageNumber;

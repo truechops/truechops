@@ -37,7 +37,7 @@ import {
   normalizeSectionOrnaments,
   normalizeSectionPageCount,
   normalizeSectionPlayEveryNote,
-  normalizeSectionRequireMaxSameHandStickingRun,
+  normalizeSectionRequiredSameHandStickingRuns,
   normalizeSectionSubdivisions,
   normalizeSectionTuplet,
   normalizeSectionTuplets,
@@ -472,7 +472,7 @@ export default function BookBuilderPanel() {
             maxPlayedNotes: currentSectionsById[section.id]?.maxPlayedNotes ?? section.maxPlayedNotes,
             playEveryNote: currentSectionsById[section.id]?.playEveryNote ?? section.playEveryNote,
             maxSameHandStickingRun: currentSectionsById[section.id]?.maxSameHandStickingRun ?? section.maxSameHandStickingRun,
-            requireMaxSameHandStickingRun: currentSectionsById[section.id]?.requireMaxSameHandStickingRun ?? section.requireMaxSameHandStickingRun,
+            requiredSameHandStickingRuns: currentSectionsById[section.id]?.requiredSameHandStickingRuns ?? section.requiredSameHandStickingRuns,
           })),
         };
       });
@@ -744,7 +744,7 @@ export default function BookBuilderPanel() {
       maxPlayedNotes: normalizeSectionMaxPlayedNotes(),
       playEveryNote: false,
       maxSameHandStickingRun: normalizeSectionMaxSameHandStickingRun(),
-      requireMaxSameHandStickingRun: false,
+      requiredSameHandStickingRuns: [],
       sampleJson: "",
     }, pdfSettings);
     const nextBook = normalizeBook({
@@ -1059,8 +1059,10 @@ export default function BookBuilderPanel() {
                   ? ` · Max ${normalizeSectionMaxSameHandStickingRun(section.maxSameHandStickingRun)} same hand`
                   : ""}
                 {normalizeSectionOrnaments(section.ornaments, section).includes("stickings") &&
-                normalizeSectionRequireMaxSameHandStickingRun(section.requireMaxSameHandStickingRun)
-                  ? " · Require max"
+                normalizeSectionRequiredSameHandStickingRuns(section.requiredSameHandStickingRuns).length
+                  ? ` · Require ${normalizeSectionRequiredSameHandStickingRuns(
+                      section.requiredSameHandStickingRuns
+                    ).join(" or ")}`
                   : ""}
               </span>
             </button>
@@ -1152,20 +1154,34 @@ export default function BookBuilderPanel() {
               value={normalizeSectionMaxSameHandStickingRun(selectedSection.maxSameHandStickingRun)}
             />
           </Field>
-          <label className={styles.toggleField}>
-            <input
-              checked={normalizeSectionRequireMaxSameHandStickingRun(
-                selectedSection.requireMaxSameHandStickingRun
-              )}
-              onChange={(event) =>
-                updateSelectedSectionDraft({
-                  requireMaxSameHandStickingRun: event.target.checked,
-                })
-              }
-              type="checkbox"
-            />
-            <span>Require max</span>
-          </label>
+          <CheckboxPicker
+            label="Required same-hand run lengths"
+            onToggle={(runLength) =>
+              updateSelectedSectionDraft({
+                requiredSameHandStickingRuns: toggleOption(
+                  normalizeSectionRequiredSameHandStickingRuns(
+                    selectedSection.requiredSameHandStickingRuns
+                  ),
+                  runLength
+                ).sort((left, right) => left - right),
+              })
+            }
+            options={Array.from(
+              {
+                length: normalizeSectionMaxSameHandStickingRun(
+                  selectedSection.maxSameHandStickingRun
+                ),
+              },
+              (_, index) => ({ id: index + 1, label: String(index + 1) })
+            )}
+            value={normalizeSectionRequiredSameHandStickingRuns(
+              selectedSection.requiredSameHandStickingRuns
+            ).filter(
+              (runLength) => runLength <= normalizeSectionMaxSameHandStickingRun(
+                selectedSection.maxSameHandStickingRun
+              )
+            )}
+          />
           <div className={styles.tupletEditor}>
             <div className={styles.tupletEditorHeader}>
               <span>Tuplet types</span>

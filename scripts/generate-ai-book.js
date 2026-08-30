@@ -436,7 +436,7 @@ function getGenerationOrnaments(section, samplePayload = getSamplePayload(sectio
   if (section && Array.isArray(section.ornaments)) {
     const ornaments = normalizeOptionIds(section.ornaments, ORNAMENT_SETTINGS);
 
-    if (getSectionRequireMaxSameHandStickingRun(section) && !ornaments.includes("stickings")) {
+    if (getSectionRequiredSameHandStickingRuns(section).length && !ornaments.includes("stickings")) {
       ornaments.unshift("stickings");
     }
 
@@ -1066,16 +1066,35 @@ function getSectionMaxSameHandStickingRun(section) {
   );
 }
 
-function getSectionRequireMaxSameHandStickingRun(section) {
-  if (!section) {
-    return false;
+function getSectionRequiredSameHandStickingRuns(section) {
+  const maximum = getSectionMaxSameHandStickingRun(section);
+
+  if (section && Object.prototype.hasOwnProperty.call(section, "requiredSameHandStickingRuns")) {
+    const values = Array.isArray(section.requiredSameHandStickingRuns)
+      ? section.requiredSameHandStickingRuns
+      : String(section.requiredSameHandStickingRuns || "").split(/[^0-9]+/);
+
+    return [...new Set(values
+      .map((value) => Number.parseInt(value, 10))
+      .filter((value) => Number.isInteger(value) && value > 0 && value <= maximum)
+    )].sort((left, right) => left - right);
   }
 
-  if (typeof section.requireMaxSameHandStickingRun === "boolean") {
-    return section.requireMaxSameHandStickingRun;
-  }
+  const legacyRequired = section && (
+    section.requireMaxSameHandStickingRun === true ||
+    section.requireMaxSameHandStickingRun === "true"
+  );
+  return legacyRequired ? [maximum] : [];
+}
 
-  return section.requireMaxSameHandStickingRun === "true";
+function getRequiredSameHandStickingRunForLine(section, lineIndex = 0) {
+  const requiredRuns = getSectionRequiredSameHandStickingRuns(section);
+
+  if (!requiredRuns.length) return 0;
+
+  return requiredRuns[
+    (lineIndex + hashString(section.id || section.title || "section")) % requiredRuns.length
+  ];
 }
 
 function countPlayedNotes(notes) {
@@ -1094,9 +1113,8 @@ function getEffectiveSectionMaxPlayedNotes(section) {
   }
 
   const minimum = getSectionMinPlayedNotes(section);
-  const requiredSameHandRun = sectionUsesStickings(section) &&
-    getSectionRequireMaxSameHandStickingRun(section)
-    ? getSectionMaxSameHandStickingRun(section)
+  const requiredSameHandRun = sectionUsesStickings(section)
+    ? Math.max(0, ...getSectionRequiredSameHandStickingRuns(section))
     : 0;
 
   return Math.max(maximum, minimum, requiredSameHandRun);
@@ -1295,14 +1313,14 @@ function enforcePlayEveryNote(section, score) {
 function getProtectedPlayedIndexesForMaximum(section, notes) {
   if (
     !sectionUsesStickings(section) ||
-    !getSectionRequireMaxSameHandStickingRun(section)
+    !getSectionRequiredSameHandStickingRuns(section).length
   ) {
     return new Set();
   }
 
   const targetRun = findRequiredMaxSameHandRun(
     notes,
-    getSectionMaxSameHandStickingRun(section)
+    Math.max(...getSectionRequiredSameHandStickingRuns(section))
   );
   const protectedIndexes = new Set();
 
@@ -1698,20 +1716,20 @@ function enforceStickingSequenceRules(section, notes, options = {}) {
   }
 
   const maxSameHandRun = getSectionMaxSameHandStickingRun(section);
-  const requireMaxRun = getSectionRequireMaxSameHandStickingRun(section);
+  const requiredRunLength = Number(options.requiredSameHandRunLength) || 0;
 
-  if (requireMaxRun) {
+  if (requiredRunLength) {
     cleaned = preserveNoteCount
-      ? ensureRequiredMaxSameHandRunWindowFixed(section, cleaned, maxSameHandRun, options)
-      : ensureRequiredMaxSameHandRunWindow(section, cleaned, maxSameHandRun, options);
+      ? ensureRequiredMaxSameHandRunWindowFixed(section, cleaned, requiredRunLength, options)
+      : ensureRequiredMaxSameHandRunWindow(section, cleaned, requiredRunLength, options);
   }
 
-  let targetRun = requireMaxRun
-    ? findRequiredMaxSameHandRun(cleaned, maxSameHandRun, { ruleOptions: options })
+  let targetRun = requiredRunLength
+    ? findRequiredMaxSameHandRun(cleaned, requiredRunLength, { ruleOptions: options })
     : null;
 
-  if (!targetRun && requireMaxRun) {
-    targetRun = findRequiredMaxSameHandRun(cleaned, maxSameHandRun, {
+  if (!targetRun && requiredRunLength) {
+    targetRun = findRequiredMaxSameHandRun(cleaned, requiredRunLength, {
       allowCleanup: true,
       ruleOptions: options,
     });
@@ -1942,6 +1960,26 @@ function repeatingMeasureViolatesStickingRules(section, notes, options = {}) {
     }
   }
 
+  const requiredRunLength = Number(options.requiredSameHandRunLength) || 0;
+  if (requiredRunLength) {
+    let previousSticking = "";
+    let runLength = 0;
+    let foundRequiredRun = false;
+
+    for (const note of notes) {
+      const sticking = isRest(note) ? "" : getNoteSticking(note);
+      runLength = sticking && sticking === previousSticking ? runLength + 1 : sticking ? 1 : 0;
+      previousSticking = sticking;
+
+      if (runLength >= requiredRunLength) {
+        foundRequiredRun = true;
+        break;
+      }
+    }
+
+    if (!foundRequiredRun) return true;
+  }
+
   return false;
 }
 
@@ -1988,7 +2026,12 @@ function cleanSequentialOrnaments(notes, options = {}) {
       options
     );
 
-    if (isSequentialRulePosition && /[dc]/.test(String(note.ornaments || "")) && /f/.test(String(next.ornaments || ""))) {
+    if (
+      !isRest(note) &&
+      !isRest(next) &&
+      /[dc]/.test(String(note.ornaments || "")) &&
+      /f/.test(String(next.ornaments || ""))
+    ) {
       cleaned[nextIndex] = removeOrnamentChars(next, "f");
     }
 
@@ -2056,7 +2099,7 @@ function canAddRequiredOrnament(notes, noteIndex, ornament, options = {}) {
 
     if (
       previous &&
-      areConsecutiveOrnamentRuleNotes(notes, previousIndex, noteIndex, options) &&
+      !isRest(previous) &&
       /[dc]/.test(String(previous.ornaments || ""))
     ) {
       return false;
@@ -2079,8 +2122,12 @@ function canAddRequiredOrnament(notes, noteIndex, ornament, options = {}) {
 
     if (
       next &&
-      areConsecutiveOrnamentRuleNotes(notes, noteIndex, nextIndex, options) &&
-      /[cf]/.test(String(next.ornaments || ""))
+      !isRest(next) &&
+      (
+        /f/.test(String(next.ornaments || "")) ||
+        areConsecutiveOrnamentRuleNotes(notes, noteIndex, nextIndex, options) &&
+          /c/.test(String(next.ornaments || ""))
+      )
     ) {
       return false;
     }
@@ -2092,8 +2139,12 @@ function canAddRequiredOrnament(notes, noteIndex, ornament, options = {}) {
 
     if (
       next &&
-      areConsecutiveOrnamentRuleNotes(notes, noteIndex, nextIndex, options) &&
-      /[fc]/.test(String(next.ornaments || ""))
+      !isRest(next) &&
+      (
+        /f/.test(String(next.ornaments || "")) ||
+        areConsecutiveOrnamentRuleNotes(notes, noteIndex, nextIndex, options) &&
+          /c/.test(String(next.ornaments || ""))
+      )
     ) {
       return false;
     }
@@ -2309,7 +2360,13 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
               )
             )
           );
-          const durationOrnamentOptions = { tupletNoteIndexes };
+          const durationOrnamentOptions = {
+            tupletNoteIndexes,
+            requiredSameHandRunLength: getRequiredSameHandStickingRunForLine(
+              section,
+              Number.parseInt(lineIndex, 10) || 0
+            ),
+          };
           const cappedNotes = enforceMaximumPlayedNotesInNotes(
             section,
             enforceDurationOrnamentRules(notationVoice.notes, durationOrnamentOptions),
@@ -2330,9 +2387,13 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
             lineIndex,
             durationOrnamentOptions
           );
+          const finalOrnamentNotes = cleanSequentialOrnaments(
+            ornamentedNotes,
+            durationOrnamentOptions
+          );
           const stickingNotes = enforceRepeatingMeasureStickingRules(
             section,
-            assignInitialStickings(section, ornamentedNotes, lineIndex, generationSalt),
+            assignInitialStickings(section, finalOrnamentNotes, lineIndex, generationSalt),
             {
               ...durationOrnamentOptions,
               preserveNoteCount: hasTuplets,
@@ -2796,7 +2857,7 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
       maxPlayedNotes: getSectionMaxPlayedNotes(section),
       playEveryNote: getSectionPlayEveryNote(section),
       maxSameHandStickingRun: getSectionMaxSameHandStickingRun(section),
-      requireMaxSameHandStickingRun: getSectionRequireMaxSameHandStickingRun(section),
+      requiredSameHandStickingRuns: getSectionRequiredSameHandStickingRuns(section),
       globalRules,
       instructions: createStructuredSectionInstructions(structuredSection, sampleJson),
       subdivisions,
@@ -2877,8 +2938,8 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
     sectionUsesStickings(section)
       ? `Do not use more than ${getSectionMaxSameHandStickingRun(section)} consecutive played notes with the same sticking. Rests reset this count.`
       : "",
-    sectionUsesStickings(section) && getSectionRequireMaxSameHandStickingRun(section)
-      ? `Every generated rhythm in this section must include at least one run of exactly ${getSectionMaxSameHandStickingRun(section)} consecutive played notes with the same sticking.`
+    sectionUsesStickings(section) && getSectionRequiredSameHandStickingRuns(section).length
+      ? `Every generated rhythm in this section must include at least one same-hand sticking run whose length is selected from: ${getSectionRequiredSameHandStickingRuns(section).join(", ")}. Different measures may use different selected lengths, and a measure may contain more than one.`
       : "",
     sectionUsesStickings(section)
       ? "Never allow two adjacent diddles on the same hand, including across the repeat boundary. When a diddle or cheese is followed immediately by the next sixteenth note, that following note must use the opposite sticking. A diddle must not directly precede a cheese on consecutive sixteenth notes."
@@ -3112,7 +3173,7 @@ function buildBook(config, generatedSections) {
       maxPlayedNotes: section.maxPlayedNotes,
       playEveryNote: section.playEveryNote,
       maxSameHandStickingRun: section.maxSameHandStickingRun,
-      requireMaxSameHandStickingRun: section.requireMaxSameHandStickingRun,
+      requiredSameHandStickingRuns: section.requiredSameHandStickingRuns,
       pdfSettings: generated.pdfSettings,
       pages,
     };
@@ -3156,6 +3217,18 @@ function createManifest(book) {
     pdfSettings: page.pdfSettings,
     lines: page.lines.map(createLineManifest),
   });
+  const tableOfContents = book.sections.map((section) => {
+    const pageNumbers = (section.pages || [])
+      .map((page) => Number.parseInt(page.pageNumber, 10))
+      .filter((pageNumber) => Number.isInteger(pageNumber) && pageNumber > 0);
+
+    return {
+      sectionId: section.id,
+      title: section.title || "Untitled section",
+      pageStart: pageNumbers.length ? Math.min(...pageNumbers) : null,
+      pageEnd: pageNumbers.length ? Math.max(...pageNumbers) : null,
+    };
+  });
 
   return {
     book: book.book,
@@ -3179,10 +3252,11 @@ function createManifest(book) {
       maxPlayedNotes: section.maxPlayedNotes,
       playEveryNote: section.playEveryNote,
       maxSameHandStickingRun: section.maxSameHandStickingRun,
-      requireMaxSameHandStickingRun: section.requireMaxSameHandStickingRun,
+      requiredSameHandStickingRuns: section.requiredSameHandStickingRuns,
       pdfSettings: section.pdfSettings,
       pages: section.pages.map(createPageManifest),
     })),
+    tableOfContents,
     pages: book.pages.map(createPageManifest),
   };
 }

@@ -1,7 +1,7 @@
 {
   "pageNumber": 21,
   "lineNumber": 23,
-  "title": "Triplets - 3 in a row 23",
+  "title": "Triplets 23",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -38,7 +38,13 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "r"
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5
                   },
                   {
                     "notes": [
@@ -46,8 +52,8 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
+                    "velocity": 1,
+                    "ornaments": "rda"
                   },
                   {
                     "notes": [
@@ -55,8 +61,23 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
+                    "velocity": 1,
+                    "ornaments": "lda"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "rda"
+                  },
+                  {
+                    "notes": [],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5
                   },
                   {
                     "notes": [
@@ -68,40 +89,10 @@
                     "ornaments": "l"
                   },
                   {
-                    "notes": [
-                      "C5"
-                    ],
+                    "notes": [],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "rfa"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "rfa"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "ld"
+                    "velocity": 0.5
                   },
                   {
                     "notes": [
@@ -111,24 +102,6 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "rf"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "lf"
                   }
                 ],
                 "tuplets": [
@@ -143,18 +116,6 @@
                     "end": 6,
                     "actual": 3,
                     "normal": 2
-                  },
-                  {
-                    "start": 6,
-                    "end": 9,
-                    "actual": 3,
-                    "normal": 2
-                  },
-                  {
-                    "start": 9,
-                    "end": 12,
-                    "actual": 3,
-                    "normal": 2
                   }
                 ]
               }
@@ -164,8 +125,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n8:l n8:r n8:r n8:r n8:l n8:l n8:raf n8:raf n8:ld n8:r n8:rf n8:lf |t0-3:3:2,3-6:3:2,6-9:3:2,9-12:3:2",
-  "updatedAt": "2026-08-30T19:30:02.350Z",
-  "sectionId": "section-21",
+  "exerciseShortForm": "n8:l n8:l r8 n8:rad n8:lad n8:rad r8 n8:l r8 n8:r |t0-3:3:2,3-6:3:2",
+  "updatedAt": "2026-08-30T20:28:02.371Z",
+  "sectionId": "section-20",
   "sectionPageNumber": 1
 }
