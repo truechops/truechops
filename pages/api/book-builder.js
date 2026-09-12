@@ -23,19 +23,20 @@ import { getBookPageQrUrl } from "../../src/lib/book-qr";
 
 const BOOK_ROOT = path.join(process.cwd(), "data", "book-builder", BOOK_SLUG);
 const MANIFEST_PATH = path.join(BOOK_ROOT, "book.json");
-const LINE_NUMBER_CENTER_OFFSET = 1.25;
 const PDF_CACHE_ROOT = process.env.BOOK_PDF_CACHE_DIR || path.join(process.cwd(), ".next", "cache", "book-builder-pdf");
-const SCORE_SVG_CACHE_VERSION = "score-svg-v7";
-const PDF_FILE_CACHE_VERSION = "pdf-v11";
+const SCORE_SVG_CACHE_VERSION = "score-svg-v10";
+const PDF_FILE_CACHE_VERSION = "pdf-v14";
 const SCORE_SVG_MEMORY_CACHE_LIMIT = Number(process.env.BOOK_PDF_SVG_MEMORY_CACHE_LIMIT || 800);
 const PDF_PAGE_WIDTH = 612;
 const PDF_PAGE_HEIGHT = 792;
 const PDF_MARGIN = 24;
-const PDF_HEADER_HEIGHT = 14;
 const PDF_FOOTER_HEIGHT = 46;
-const PDF_COLUMN_GAP = 20;
-const PDF_LINE_NUMBER_WIDTH = 18;
-const PDF_LINE_NUMBER_GAP = 2;
+const CONTINUOUS_SCORE_RENDER_WIDTH = 1060;
+const CONTINUOUS_SYSTEM_SPACING = 160;
+const CONTINUOUS_MEASURE_GAP = 6;
+const CONTINUOUS_MEASURE_MAX_WIDTH_RATIO = 0.315;
+const CONTINUOUS_MEASURE_START_PADDING = 4;
+const CONTINUOUS_MEASURE_END_PADDING = 8;
 
 // Module-level flag so setupDom re-runs after a hot-reload (globalThis persists
 // across hot-reloads but module scope resets, clearing this flag).
@@ -536,7 +537,10 @@ function setupDom() {
   }
 }
 
-async function renderScoreSvgFresh(line, renderKey, pdfSettings) {
+async function renderScoreSvgFresh(
+  line,
+  renderKey
+) {
   setupDom();
 
   const { initialize, drawScore } = await getVexflowModule();
@@ -556,17 +560,21 @@ async function renderScoreSvgFresh(line, renderKey, pdfSettings) {
       null,
       () => {},
       {
-        width: pdfSettings.noteRenderWidth,
+        width: CONTINUOUS_SCORE_RENDER_WIDTH,
         scale: 1,
         hResize: 1,
         vResize: 1,
-        justifyLastRow: true,
-        measureNoteStartPadding: pdfSettings.noteStartPadding,
-        measureNoteEndPadding: pdfSettings.noteEndPadding,
-        hideTimeSignature: true,
-        maxMeasureWidth: pdfSettings.noteRenderWidth,
+        justifyLastRow: false,
+        measureNoteStartPadding: CONTINUOUS_MEASURE_START_PADDING,
+        measureNoteEndPadding: CONTINUOUS_MEASURE_END_PADDING,
+        measureGap: CONTINUOUS_MEASURE_GAP,
+        hideTimeSignature: false,
+        maxMeasureWidth:
+          CONTINUOUS_SCORE_RENDER_WIDTH * CONTINUOUS_MEASURE_MAX_WIDTH_RATIO,
+        showMeasureNumbers: true,
+        systemSpacing: CONTINUOUS_SYSTEM_SPACING,
       },
-      { start: 0, end: 0 }
+      { start: [], end: [] }
     );
 
     const svg = container.querySelector("svg");
@@ -583,7 +591,6 @@ async function renderScoreSvgFresh(line, renderKey, pdfSettings) {
       height: Number.parseFloat(svg.getAttribute("height")),
     };
 
-    rendered.staffCenterY = getMeasureCenterY(rendered);
     return rendered;
   } finally {
     container.remove();
@@ -604,7 +611,7 @@ async function renderScoreSvg(line, renderKey, pdfSettings) {
       return cached;
     }
 
-    const rendered = await renderScoreSvgFresh(line, renderKey, pdfSettings);
+    const rendered = await renderScoreSvgFresh(line, renderKey);
     writeScoreSvgCache(cacheKey, rendered);
     return rendered;
   })().finally(() => {
@@ -615,45 +622,20 @@ async function renderScoreSvg(line, renderKey, pdfSettings) {
   return renderPromise;
 }
 
-function drawSlotSvg(doc, line, svg, x, y, width, height) {
-  const numberWidth = PDF_LINE_NUMBER_WIDTH;
-  const notationX = x + numberWidth + PDF_LINE_NUMBER_GAP;
-  const notationWidth = width - numberWidth - PDF_LINE_NUMBER_GAP;
-
-  // Always scale to fill the full column width so the right side of each
-  // measure aligns with the column edge (prevents empty right-margin space).
-  const scale = notationWidth / svg.width;
-  const svgWidth = notationWidth;
+function drawPageScoreSvg(doc, svg, x, y, width, height) {
+  const scale = width / svg.width;
+  const svgWidth = svg.width * scale;
   const svgHeight = svg.height * scale;
 
-  // Center the SVG on the staff midpoint rather than the SVG bounding box,
-  // since VexFlow adds significant whitespace above the staff.
-  const staffCenterInSvg = svg.staffCenterY ?? getMeasureCenterY(svg);
-  const slotCenterY = y + height / 2;
-  const svgY = slotCenterY - staffCenterInSvg * scale;
-  const measureCenterY = slotCenterY;
+  if (svgHeight > height) {
+    throw new Error(
+      `Continuous score height ${svgHeight.toFixed(1)} exceeds the page area ${height.toFixed(1)}.`
+    );
+  }
 
-  const fontSize = 13;
-  const lineNumber = String(line.lineNumber);
-  doc
-    .font("Times-Roman")
-    .fontSize(fontSize)
-    .fillColor("#111111");
-
-  const numberHeight = doc.currentLineHeight();
-
-  doc.text(lineNumber, x, measureCenterY - numberHeight / 2 + LINE_NUMBER_CENTER_OFFSET, {
-    width: numberWidth,
-    align: "right",
-    lineBreak: false,
-  });
-
-  // Keep the horizontal crop tight, but allow a little vertical bleed so
-  // articulations above the staff (especially accents) are not sliced off.
-  const verticalBleed = Math.min(18, height * 0.28);
   doc.save();
-  doc.rect(notationX, y - verticalBleed, notationWidth, height + verticalBleed * 2).clip();
-  SVGtoPDF(doc, svg.source, notationX, svgY, {
+  doc.rect(x, y, width, height).clip();
+  SVGtoPDF(doc, svg.source, x, y, {
     width: svgWidth,
     height: svgHeight,
     assumePt: true,
@@ -664,19 +646,6 @@ function drawSlotSvg(doc, line, svg, x, y, width, height) {
     warningCallback() {},
   });
   doc.restore();
-}
-
-function getMeasureCenterY(svg) {
-  const staffLineYs = [...svg.source.matchAll(/M[\d.]+ ([\d.]+)L[\d.]+ \1/g)]
-    .map((match) => Number(match[1]))
-    .filter(Number.isFinite)
-    .slice(0, 5);
-
-  if (!staffLineYs.length) {
-    return svg.height / 2;
-  }
-
-  return (Math.min(...staffLineYs) + Math.max(...staffLineYs)) / 2;
 }
 
 function createSampleScore(pattern) {
@@ -750,21 +719,37 @@ async function getPracticeQrSvg(book, page) {
   return qrSvg;
 }
 
+function createContinuousPageScore(pageLines) {
+  const scores = pageLines
+    .map((line) => line.score)
+    .filter((score) => Array.isArray(score?.measures) && score.measures.length > 0);
+
+  if (!scores.length) {
+    return createBlankLineScore();
+  }
+
+  return {
+    ...scores[0],
+    measures: scores.flatMap((score) => score.measures),
+  };
+}
+
 async function renderBookPageAssets(book, page, bookPdfSettings, limitScoreRender) {
   const pdfSettings = getPagePdfSettings(page, bookPdfSettings);
   const linesPerPage = getLinesPerPage(pdfSettings);
   const pageLines = page.lines.slice(0, linesPerPage);
 
-  const [svgs, qrSvg] = await Promise.all([
-    Promise.all(
-      pageLines.map((line, index) =>
-        limitScoreRender(() =>
-          renderScoreSvg(
-            line,
-            `${page.pageNumber}-${line.lineNumber}-${index}`,
-            pdfSettings
-          )
-        )
+  const pageLine = {
+    pageNumber: page.pageNumber,
+    lineNumber: 0,
+    score: createContinuousPageScore(pageLines),
+  };
+  const [scoreSvg, qrSvg] = await Promise.all([
+    limitScoreRender(() =>
+      renderScoreSvg(
+        pageLine,
+        `${page.pageNumber}-continuous`,
+        pdfSettings
       )
     ),
     getPracticeQrSvg(book, page),
@@ -772,24 +757,19 @@ async function renderBookPageAssets(book, page, bookPdfSettings, limitScoreRende
 
   return {
     page,
-    pdfSettings,
-    pageLines,
-    svgs,
+    scoreSvg,
     qrSvg,
   };
 }
 
 function drawBookPage(doc, book, pageAssets) {
-  const { page, pdfSettings, pageLines, svgs, qrSvg } = pageAssets;
+  const { page, scoreSvg, qrSvg } = pageAssets;
   const pageWidth = PDF_PAGE_WIDTH;
   const pageHeight = PDF_PAGE_HEIGHT;
   const margin = PDF_MARGIN;
-  const headerHeight = PDF_HEADER_HEIGHT;
   const footerHeight = PDF_FOOTER_HEIGHT;
-  const columnGap = PDF_COLUMN_GAP;
-  const usableWidth = pageWidth - margin * 2 - columnGap * (pdfSettings.columns - 1);
-  const columnWidth = usableWidth / pdfSettings.columns;
-  const rowHeight = (pageHeight - margin * 2 - headerHeight - footerHeight) / pdfSettings.rows;
+  const contentWidth = pageWidth - margin * 2;
+  const contentHeight = pageHeight - margin * 2 - footerHeight;
 
   doc.addPage();
   doc.font("Times-Bold").fontSize(10).text(String(page.pageNumber), pageWidth - margin - 18, 8, {
@@ -797,27 +777,7 @@ function drawBookPage(doc, book, pageAssets) {
     align: "right",
     lineBreak: false,
   });
-  doc.font("Times-Italic").fontSize(7.5).text("Read downward", margin - 7, 8, {
-    width: 80,
-    lineBreak: false,
-  });
-
-  pageLines.forEach((line, index) => {
-    const column = Math.floor(index / pdfSettings.rows);
-    const row = index % pdfSettings.rows;
-    const x = margin + column * (columnWidth + columnGap);
-    const y = margin + headerHeight + row * rowHeight;
-
-    drawSlotSvg(
-      doc,
-      line,
-      svgs[index],
-      x,
-      y,
-      columnWidth,
-      rowHeight
-    );
-  });
+  drawPageScoreSvg(doc, scoreSvg, margin, margin, contentWidth, contentHeight);
 
   doc.font("Times-Roman").fillColor("#111111").fontSize(9).text("*  R = right stick", margin + 18, pageHeight - margin - 2, {
     lineBreak: false,
@@ -825,13 +785,7 @@ function drawBookPage(doc, book, pageAssets) {
   doc.fontSize(9).text("L  = left stick", margin + 26, pageHeight - margin + 10, {
     lineBreak: false,
   });
-  doc.fontSize(10).text("Repeat each exercise 20 times.", margin, pageHeight - margin + 9, {
-    width: pageWidth - margin * 2,
-    align: "center",
-    lineBreak: false,
-  });
-
-  const contentBottom = margin + headerHeight + rowHeight * pdfSettings.rows;
+  const contentBottom = margin + contentHeight;
   const qrSize = 36;
   const qrX = pageWidth - margin - qrSize;
   const qrY = contentBottom + 5;

@@ -15,14 +15,16 @@ const DEFAULT_OUTPUT_PATH = path.join(
   "snare-drum-book.pdf"
 );
 const DEFAULT_QR_ORIGIN = "https://truechops.com";
-const LINE_NUMBER_CENTER_OFFSET = 1.25;
 const PDF_PAGE_WIDTH = 612;
 const PDF_PAGE_HEIGHT = 792;
 const PDF_MARGIN = 24;
 const PDF_FOOTER_HEIGHT = 32;
-const PDF_COLUMN_GAP = 20;
-const PDF_LINE_NUMBER_WIDTH = 18;
-const PDF_LINE_NUMBER_GAP = 2;
+const CONTINUOUS_SCORE_RENDER_WIDTH = 1060;
+const CONTINUOUS_SYSTEM_SPACING = 160;
+const CONTINUOUS_MEASURE_GAP = 6;
+const CONTINUOUS_MEASURE_MAX_WIDTH_RATIO = 0.315;
+const CONTINUOUS_MEASURE_START_PADDING = 4;
+const CONTINUOUS_MEASURE_END_PADDING = 8;
 
 let domSetup = false;
 let renderCounter = 0;
@@ -525,20 +527,27 @@ async function getPracticeQrSvg(book, page, getBookPageQrUrl, qrOrigin = DEFAULT
   return QRCode.toString(practiceUrl, { type: "svg", margin: 1 });
 }
 
-function getMeasureCenterY(svg) {
-  const staffLineYs = [...svg.source.matchAll(/M[\d.]+ ([\d.]+)L[\d.]+ \1/g)]
-    .map((match) => Number(match[1]))
-    .filter(Number.isFinite)
-    .slice(0, 5);
+function createContinuousPageScore(pageLines, createBlankLineScore) {
+  const scores = pageLines
+    .map((line) => line.score)
+    .filter((score) => Array.isArray(score?.measures) && score.measures.length > 0);
 
-  if (!staffLineYs.length) {
-    return svg.height / 2;
+  if (!scores.length) {
+    return createBlankLineScore();
   }
 
-  return (Math.min(...staffLineYs) + Math.max(...staffLineYs)) / 2;
+  return {
+    ...scores[0],
+    measures: scores.flatMap((score) => score.measures),
+  };
 }
 
-function renderScoreSvg(line, renderKey, pdfSettings, rendererApi, createBlankLineScore) {
+function renderPageScoreSvg(
+  score,
+  renderKey,
+  pageNumber,
+  rendererApi
+) {
   setupDom();
 
   const { initialize, drawScore } = rendererApi;
@@ -554,26 +563,30 @@ function renderScoreSvg(line, renderKey, pdfSettings, rendererApi, createBlankLi
     drawScore(
       renderer,
       context,
-      line.score || createBlankLineScore(),
+      score,
       null,
       () => {},
       {
-        width: pdfSettings.noteRenderWidth,
+        width: CONTINUOUS_SCORE_RENDER_WIDTH,
         scale: 1,
         hResize: 1,
         vResize: 1,
-        justifyLastRow: true,
-        measureNoteStartPadding: pdfSettings.noteStartPadding,
-        measureNoteEndPadding: pdfSettings.noteEndPadding,
-        hideTimeSignature: true,
-        maxMeasureWidth: pdfSettings.noteRenderWidth,
+        justifyLastRow: false,
+        measureNoteStartPadding: CONTINUOUS_MEASURE_START_PADDING,
+        measureNoteEndPadding: CONTINUOUS_MEASURE_END_PADDING,
+        measureGap: CONTINUOUS_MEASURE_GAP,
+        hideTimeSignature: false,
+        maxMeasureWidth:
+          CONTINUOUS_SCORE_RENDER_WIDTH * CONTINUOUS_MEASURE_MAX_WIDTH_RATIO,
+        showMeasureNumbers: true,
+        systemSpacing: CONTINUOUS_SYSTEM_SPACING,
       },
-      { start: 0, end: 0 }
+      { start: [], end: [] }
     );
 
     const svg = container.querySelector("svg");
     if (!svg) {
-      throw new Error(`Unable to render page ${line.pageNumber}, slot ${line.lineNumber}`);
+      throw new Error(`Unable to render page ${pageNumber}`);
     }
 
     svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
@@ -585,54 +598,26 @@ function renderScoreSvg(line, renderKey, pdfSettings, rendererApi, createBlankLi
       height: Number.parseFloat(svg.getAttribute("height")),
     };
 
-    rendered.staffCenterY = getMeasureCenterY(rendered);
     return rendered;
   } finally {
     container.remove();
   }
 }
 
-function drawSlotSvg(doc, line, svg, x, y, width, height) {
-  const numberWidth = PDF_LINE_NUMBER_WIDTH;
-  const notationX = x + numberWidth + PDF_LINE_NUMBER_GAP;
-  const notationWidth = width - numberWidth - PDF_LINE_NUMBER_GAP;
-  const verticalInset = 1;
-  const scale = Math.min(
-    notationWidth / svg.width,
-    (height - verticalInset * 2) / svg.height
-  );
+function drawPageScoreSvg(doc, svg, x, y, width, height) {
+  const scale = width / svg.width;
   const svgWidth = svg.width * scale;
   const svgHeight = svg.height * scale;
-  const svgX = notationX + (notationWidth - svgWidth) / 2;
-  const staffCenterInSvg = svg.staffCenterY ?? getMeasureCenterY(svg);
-  const slotCenterY = y + height / 2;
-  const preferredSvgY = slotCenterY - staffCenterInSvg * scale;
-  const svgY = Math.max(
-    y + verticalInset,
-    Math.min(preferredSvgY, y + height - verticalInset - svgHeight)
-  );
-  const measureCenterY = svgY + staffCenterInSvg * scale;
-  const fontSize = 13;
-  const lineNumber = String(line.lineNumber);
 
-  doc
-    .font("Times-Roman")
-    .fontSize(fontSize)
-    .fillColor("#111111");
+  if (svgHeight > height) {
+    throw new Error(
+      `Continuous score height ${svgHeight.toFixed(1)} exceeds the page area ${height.toFixed(1)}.`
+    );
+  }
 
-  const numberHeight = doc.currentLineHeight();
-
-  doc.text(lineNumber, x, measureCenterY - numberHeight / 2 + LINE_NUMBER_CENTER_OFFSET, {
-    width: numberWidth,
-    align: "right",
-    lineBreak: false,
-  });
-
-  // Keep every exercise inside its own row so accents, stickings, beams, and
-  // tuplet labels can never overlap neighboring measures.
   doc.save();
-  doc.rect(notationX, y, notationWidth, height).clip();
-  SVGtoPDF(doc, svg.source, svgX, svgY, {
+  doc.rect(x, y, width, height).clip();
+  SVGtoPDF(doc, svg.source, x, y, {
     width: svgWidth,
     height: svgHeight,
     assumePt: true,
@@ -662,50 +647,41 @@ async function renderBookPageAssets(
   const pdfSettings = getPagePdfSettings(page, book.pdfSettings);
   const linesPerPage = getLinesPerPage(pdfSettings);
   const pageLines = page.lines.slice(0, linesPerPage);
-  const [svgs, qrSvg] = await Promise.all([
-    Promise.all(
-      pageLines.map((line, index) =>
-        limitScoreRender(() => {
-          try {
-            return renderScoreSvg(
-              line,
-              `${page.pageNumber}-${line.lineNumber}-${index}`,
-              pdfSettings,
-              rendererApi,
-              createBlankLineScore
-            );
-          } catch (error) {
-            throw new Error(
-              `Unable to render page ${page.pageNumber}, line ${line.lineNumber}: ${error.message}`,
-              { cause: error }
-            );
-          }
-        })
-      )
-    ),
+  const pageScore = createContinuousPageScore(pageLines, createBlankLineScore);
+  const [scoreSvg, qrSvg] = await Promise.all([
+    limitScoreRender(() => {
+      try {
+        return renderPageScoreSvg(
+          pageScore,
+          `${page.pageNumber}-continuous`,
+          page.pageNumber,
+          rendererApi
+        );
+      } catch (error) {
+        throw new Error(
+          `Unable to render page ${page.pageNumber}: ${error.message}`,
+          { cause: error }
+        );
+      }
+    }),
     getPracticeQrSvg(book, page, getBookPageQrUrl, qrOrigin),
   ]);
 
   return {
     page,
-    pdfSettings,
-    pageLines,
-    svgs,
+    scoreSvg,
     qrSvg,
   };
 }
 
 function drawBookPage(doc, book, pageAssets) {
-  const { page, pdfSettings, pageLines, svgs, qrSvg } = pageAssets;
+  const { page, scoreSvg, qrSvg } = pageAssets;
   const pageWidth = PDF_PAGE_WIDTH;
   const pageHeight = PDF_PAGE_HEIGHT;
   const margin = PDF_MARGIN;
-  const headerHeight = 0;
   const footerHeight = PDF_FOOTER_HEIGHT;
-  const columnGap = PDF_COLUMN_GAP;
-  const usableWidth = pageWidth - margin * 2 - columnGap * (pdfSettings.columns - 1);
-  const columnWidth = usableWidth / pdfSettings.columns;
-  const rowHeight = (pageHeight - margin * 2 - headerHeight - footerHeight) / pdfSettings.rows;
+  const contentWidth = pageWidth - margin * 2;
+  const contentHeight = pageHeight - margin * 2 - footerHeight;
 
   doc.addPage();
   doc.font("Times-Bold").fontSize(10).text(String(page.pageNumber), pageWidth - margin - 18, 8, {
@@ -713,22 +689,7 @@ function drawBookPage(doc, book, pageAssets) {
     align: "right",
     lineBreak: false,
   });
-  pageLines.forEach((line, index) => {
-    const column = Math.floor(index / pdfSettings.rows);
-    const row = index % pdfSettings.rows;
-    const x = margin + column * (columnWidth + columnGap);
-    const y = margin + headerHeight + row * rowHeight;
-
-    drawSlotSvg(
-      doc,
-      line,
-      svgs[index],
-      x,
-      y,
-      columnWidth,
-      rowHeight
-    );
-  });
+  drawPageScoreSvg(doc, scoreSvg, margin, margin, contentWidth, contentHeight);
 
   const qrSize = 36;
   const qrX = pageWidth - margin - qrSize;

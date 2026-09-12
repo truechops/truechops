@@ -2013,9 +2013,6 @@ function repeatingMeasureViolatesStickingRules(section, notes, options = {}) {
 
     if (!completedRunLengths.includes(requiredRunLength)) return true;
 
-    const otherRequiredRuns = getSectionRequiredSameHandStickingRuns(section)
-      .filter((run) => run !== requiredRunLength);
-    if (otherRequiredRuns.some((run) => completedRunLengths.includes(run))) return true;
   }
 
   return false;
@@ -3001,7 +2998,7 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
       ? `Do not use more than ${getSectionMaxSameHandStickingRun(section)} consecutive played notes with the same sticking. Rests reset this count.`
       : "",
     sectionUsesStickings(section) && getSectionRequiredSameHandStickingRuns(section).length
-      ? `For each generated rhythm, choose exactly one required same-hand sticking run length from: ${getSectionRequiredSameHandStickingRuns(section).join(", ")}. Require that one exact run length for the rhythm; these choices are OR alternatives, not cumulative AND requirements. Unselected run lengths remain allowed and should occur randomly.`
+      ? `For each generated rhythm, choose one target same-hand sticking run length from: ${getSectionRequiredSameHandStickingRuns(section).join(", ")}. Require that exact run length for the rhythm; these choices are OR alternatives, not cumulative AND requirements. Other selected and unselected run lengths remain allowed and should occur randomly.`
       : "",
     sectionUsesStickings(section)
       ? "Never allow two adjacent diddles on the same hand, including across the repeat boundary. When a diddle or cheese is followed immediately by the next sixteenth note, that following note must use the opposite sticking. A diddle must not directly precede a cheese on consecutive sixteenth notes."

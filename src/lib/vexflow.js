@@ -20,11 +20,25 @@ const PADDING = 50;
 const FORMAT_PADDING = 13;
 const MIN_BAR_SIZE = 100;
 const SCORE_MIN_WIDTH = 100;
-const TUPLET_Y_OFFSET = {
-  DEFAULT: -4,
-  WITH_ABOVE_ACCENT: 8,
-};
+const TUPLET_ADJACENT_BRACKET_INSET = 4;
+const TUPLET_BRACKET_TICK_HEIGHT = 8;
+const ACCENTED_TUPLET_NOTEWARD_OFFSET = 5;
+const UNACCENTED_TUPLET_NOTEWARD_OFFSET = -5;
+const FIRST_NOTE_FORMAT_X = 8;
+const MEASURE_RIGHT_EDGE_GUARD = 6;
 const LONGEST_UNBEAMED_TUPLET_DURATION = 4;
+
+function repeatIncludesMeasure(repeatValue, measureIndex) {
+  if (Array.isArray(repeatValue)) {
+    return repeatValue.includes(measureIndex);
+  }
+
+  if (repeatValue instanceof Set) {
+    return repeatValue.has(measureIndex);
+  }
+
+  return repeatValue === measureIndex;
+}
 
 export function initialize(id) {
   // Create an SVG renderer and attach it to the DIV element named "vf".
@@ -57,14 +71,25 @@ export function drawScore(
     measureNotePadding = 0,
     measureNoteStartPadding,
     measureNoteEndPadding,
+    measureGap = 0,
     maxMeasureWidth,
     hideTimeSignature = false,
+    showMeasureNumbers = false,
+    systemSpacing,
   } = svgConfig;
   let { measures } = score;
   let systemWidth = 0;
   const measurePartsArray = getMeasureData(measures, score.parts);
   let measureIndex = 0;
-  STAVE_SPACE = BASE_STAVE_SPACE * measurePartsArray[0].length;
+  const configuredSystemSpacing = Number(systemSpacing);
+  const baseSystemSpacing = Number.isFinite(configuredSystemSpacing) && configuredSystemSpacing > 0
+    ? configuredSystemSpacing
+    : BASE_STAVE_SPACE;
+  const configuredMeasureGap = Number(measureGap);
+  const effectiveMeasureGap = Number.isFinite(configuredMeasureGap) && configuredMeasureGap > 0
+    ? configuredMeasureGap
+    : 0;
+  STAVE_SPACE = baseSystemSpacing * measurePartsArray[0].length;
   const svgWidth = Math.max(svgWidthProposed, SCORE_MIN_WIDTH);
 
   let barRenderData = [];
@@ -91,10 +116,13 @@ export function drawScore(
       ? Math.min(naturalBarWidth, configuredMaxMeasureWidth)
       : naturalBarWidth;
 
-    if ((width + barWidth > svgWidth + PADDING) && barRenderData.length) {
+    const gapBeforeMeasure = barRenderData.length ? effectiveMeasureGap : 0;
+
+    if ((width + gapBeforeMeasure + barWidth > svgWidth) && barRenderData.length) {
+      const remainingWidth = Math.max(svgWidth - width, 0);
       renderStaves(
         barRenderData,
-        systemWidth - PADDING,
+        remainingWidth,
         row,
         context,
         selectedNoteIndex,
@@ -103,17 +131,21 @@ export function drawScore(
         previousTimeSig,
         measureNoteStartPadding,
         measureNoteEndPadding,
-        hideTimeSignature
+        hideTimeSignature,
+        effectiveMeasureGap,
+        showMeasureNumbers
       );
 
-      if(width + systemWidth > maxWidth) {
-        maxWidth = width + systemWidth
+      if(width + remainingWidth > maxWidth) {
+        maxWidth = width + remainingWidth
       }
 
       barRenderData = [];
       width = 0;
       row += 1;
     }
+
+    const appliedGap = barRenderData.length ? effectiveMeasureGap : 0;
 
     barRenderData.push({
       parts: measureParts,
@@ -123,7 +155,7 @@ export function drawScore(
       timeSig: score.measures[measureIndex].timeSig,
     });
 
-    width += barWidth;
+    width += appliedGap + barWidth;
     firstMeasure = false;
     measureIndex++;
   }
@@ -142,7 +174,9 @@ export function drawScore(
       previousTimeSig,
       measureNoteStartPadding,
       measureNoteEndPadding,
-      hideTimeSignature
+      hideTimeSignature,
+      effectiveMeasureGap,
+      showMeasureNumbers
     );
 
     if(width + remainingWidth > maxWidth) {
@@ -208,15 +242,16 @@ function getMeasureData(measures, partConfig) {
         const voiceTuplets = Array.isArray(tuplets) ? tuplets : [];
 
         voiceTuplets.forEach((tuplet) => {
-          const tupletNotes = notes.slice(tuplet.start, tuplet.end);
-          vfTuplets.push(
-            new VF.Tuplet(vfNotes.slice(tuplet.start, tuplet.end), {
-              num_notes: tuplet.actual,
-              notes_occupied: tuplet.normal,
-              bracketed: true,
-              y_offset: getTupletYOffset(tupletNotes, instrument),
-            })
+          const tupletJsonNotes = notes.slice(tuplet.start, tuplet.end);
+          const vfTuplet = new VF.Tuplet(vfNotes.slice(tuplet.start, tuplet.end), {
+            num_notes: tuplet.actual,
+            notes_occupied: tuplet.normal,
+            bracketed: true,
+          });
+          vfTuplet.trueChopsHasAccent = tupletJsonNotes.some((note) =>
+            hasAboveStaffAccent(note, instrument)
           );
+          vfTuplets.push(vfTuplet);
         });
 
         // Create a voice in 4/4 and add the notes from above
@@ -261,7 +296,9 @@ function renderStaves(
   previousTimeSig,
   measureNoteStartPadding,
   measureNoteEndPadding,
-  hideTimeSignature
+  hideTimeSignature,
+  measureGap,
+  showMeasureNumbers
 ) {
 
   const barWidths = barRenderData.map((renderDataBar) => renderDataBar.width);
@@ -299,11 +336,11 @@ function renderStaves(
         staves.push(stave);
       }
 
-      if (repeat.start === measureIndex) {
+      if (repeatIncludesMeasure(repeat.start, measureIndex)) {
         stave.setBegBarType(VF.Barline.type.REPEAT_BEGIN);
       }
 
-      if (repeat.end === measureIndex) {
+      if (repeatIncludesMeasure(repeat.end, measureIndex)) {
         stave.setEndBarType(VF.Barline.type.REPEAT_END);
       }
 
@@ -334,10 +371,28 @@ function renderStaves(
 
       stave.setContext(context).draw();
 
+      if (showMeasureNumbers && partIndex === 0 && renderDataIndex === 0) {
+        context.save();
+        context.setFont("Times New Roman", 9, "bold");
+        context.setFillStyle("#111111");
+        context.fillText(
+          String(measureIndex + 1),
+          stave.getX() + 3,
+          stave.getYForTopText(0)
+        );
+        context.restore();
+      }
+
+      const availableNoteWidth = systemWidth - widthDiff - FORMAT_PADDING -
+        measureNoteEndPadding;
       formatter.format(
         voices,
-        systemWidth - widthDiff - FORMAT_PADDING - measureNoteEndPadding
+        Math.max(
+          availableNoteWidth - FIRST_NOTE_FORMAT_X - MEASURE_RIGHT_EDGE_GUARD,
+          1
+        )
       );
+      alignFirstNotePosition(voices);
 
       xDiff = systemWidth;
 
@@ -346,7 +401,7 @@ function renderStaves(
         vfBeams.map((beam) => beam.setContext(context).draw())
       );
 
-      tuplets.map((vfTuplet) => vfTuplet.setContext(context).draw());
+      drawTuplets(tuplets, context);
       
       notes[0].forEach((note, noteIndex) => {
         // highlight the note if it selected
@@ -382,7 +437,7 @@ function renderStaves(
 
     previousTimeSig.num = timeSig.num;
     previousTimeSig.type = timeSig.type;
-    x += xDiff;
+    x += xDiff + measureGap;
   });
 
   if (numParts > 1) {
@@ -508,17 +563,109 @@ function getVoiceBeams(vfNotes, jsonNotes, tuplets, timeSig) {
   return [...automaticBeams, ...tupletBeams];
 }
 
+function areAdjacentTuplets(leftTuplet, rightTuplet) {
+  const leftNotes = leftTuplet?.getNotes?.() || [];
+  const rightNotes = rightTuplet?.getNotes?.() || [];
+  const leftNote = leftNotes[leftNotes.length - 1];
+  const rightNote = rightNotes[0];
+
+  return leftNote &&
+    rightNote &&
+    leftNote.voiceIndex === rightNote.voiceIndex &&
+    leftNote.noteIndex + 1 === rightNote.noteIndex;
+}
+
+function drawTuplet(vfTuplet, context, insetLeft, insetRight) {
+  const tupletNotes = vfTuplet.getNotes();
+  const firstNote = tupletNotes[0];
+  const lastNote = tupletNotes[tupletNotes.length - 1];
+  const originalGetYPosition = vfTuplet.getYPosition;
+  const originalGetTieLeftX = firstNote.getTieLeftX;
+  const originalGetTieRightX = lastNote.getTieRightX;
+  const originalFillRect = context.fillRect;
+  const yOffset = vfTuplet.trueChopsHasAccent
+    ? ACCENTED_TUPLET_NOTEWARD_OFFSET
+    : UNACCENTED_TUPLET_NOTEWARD_OFFSET;
+
+  vfTuplet.getYPosition = function getNotewardTupletYPosition() {
+    return originalGetYPosition.call(this) + yOffset;
+  };
+
+  if (insetLeft) {
+    firstNote.getTieLeftX = function getInsetTupletTieLeftX() {
+      return originalGetTieLeftX.call(this) + TUPLET_ADJACENT_BRACKET_INSET;
+    };
+  }
+
+  if (insetRight) {
+    lastNote.getTieRightX = function getInsetTupletTieRightX() {
+      return originalGetTieRightX.call(this) - TUPLET_ADJACENT_BRACKET_INSET;
+    };
+  }
+
+  context.fillRect = function fillTupletBracketRect(x, y, width, height) {
+    const shortenedHeight = width === 1 && height === 10
+      ? TUPLET_BRACKET_TICK_HEIGHT
+      : height;
+    return originalFillRect.call(this, x, y, width, shortenedHeight);
+  };
+
+  try {
+    vfTuplet.setContext(context).draw();
+  } finally {
+    context.fillRect = originalFillRect;
+    vfTuplet.getYPosition = originalGetYPosition;
+    firstNote.getTieLeftX = originalGetTieLeftX;
+    lastNote.getTieRightX = originalGetTieRightX;
+  }
+}
+
+function drawTuplets(tuplets, context) {
+  if (!tuplets.length) {
+    return;
+  }
+
+  tuplets.forEach((vfTuplet, index) => {
+    drawTuplet(
+      vfTuplet,
+      context,
+      index > 0 && areAdjacentTuplets(tuplets[index - 1], vfTuplet),
+      index < tuplets.length - 1 && areAdjacentTuplets(vfTuplet, tuplets[index + 1])
+    );
+  });
+}
+
+function alignFirstNotePosition(voices) {
+  const tickContexts = new Set();
+
+  voices.forEach((voice) => {
+    voice.getTickables().forEach((tickable) => {
+      const tickContext = tickable.getTickContext();
+      if (tickContext) {
+        tickContexts.add(tickContext);
+      }
+    });
+  });
+
+  const orderedContexts = [...tickContexts].sort((left, right) => left.getX() - right.getX());
+  const firstContext = orderedContexts[0];
+  if (!firstContext) {
+    return;
+  }
+
+  const xShift = FIRST_NOTE_FORMAT_X - firstContext.getX();
+  orderedContexts.forEach((tickContext) => {
+    tickContext.setX(tickContext.getX() + xShift);
+  });
+}
+
 function hasAboveStaffAccent(jsonNote, instrument) {
   const ornaments = String(jsonNote?.ornaments || "");
 
-  return ornaments.includes(ACCENT) ||
-    (instrument === "snare" && jsonNote?.notes?.includes("E5"));
-}
-
-function getTupletYOffset(notes, instrument) {
-  return notes.some((note) => hasAboveStaffAccent(note, instrument))
-    ? TUPLET_Y_OFFSET.WITH_ABOVE_ACCENT
-    : TUPLET_Y_OFFSET.DEFAULT;
+  return Boolean(ornaments) && (
+    ornaments.includes(ACCENT) ||
+    (instrument === "snare" && jsonNote?.notes?.includes("E5"))
+  );
 }
 
 function addOrnaments(jsonNote, scoreNote, instrument) {

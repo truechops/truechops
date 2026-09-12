@@ -600,9 +600,118 @@ export function createBlankLineScore() {
   };
 }
 
+function isUndottedSixteenth(note) {
+  return Number(note?.duration) === 16 && Number(note?.dots || 0) === 0;
+}
+
+function combineTupletSixteenthNoteRests(notes) {
+  const combined = [];
+
+  for (let index = 0; index < notes.length; index += 1) {
+    const note = notes[index];
+    const nextNote = notes[index + 1];
+    const isPlayedNote = Array.isArray(note?.notes) && note.notes.length > 0;
+    const isFollowingRest = Array.isArray(nextNote?.notes) && nextNote.notes.length === 0;
+
+    if (
+      isPlayedNote &&
+      isFollowingRest &&
+      isUndottedSixteenth(note) &&
+      isUndottedSixteenth(nextNote)
+    ) {
+      combined.push({
+        ...note,
+        duration: 8,
+        dots: 0,
+      });
+      index += 1;
+      continue;
+    }
+
+    combined.push({ ...note });
+  }
+
+  return combined;
+}
+
+function normalizeTupletVoiceNoteValues(voice) {
+  const notes = Array.isArray(voice?.notes) ? voice.notes : [];
+  const tuplets = Array.isArray(voice?.tuplets)
+    ? voice.tuplets
+        .map((tuplet) => ({
+          ...tuplet,
+          start: Number(tuplet?.start),
+          end: Number(tuplet?.end),
+        }))
+        .filter((tuplet) =>
+          Number.isInteger(tuplet.start) &&
+          Number.isInteger(tuplet.end) &&
+          tuplet.start >= 0 &&
+          tuplet.end > tuplet.start &&
+          tuplet.end <= notes.length
+        )
+        .sort((left, right) => left.start - right.start)
+    : [];
+
+  if (!tuplets.length) {
+    return {
+      ...voice,
+      notes: notes.map((note) => ({ ...note })),
+      tuplets: Array.isArray(voice?.tuplets) ? cloneJson(voice.tuplets) : [],
+    };
+  }
+
+  const nextNotes = [];
+  const nextTuplets = [];
+  let cursor = 0;
+
+  tuplets.forEach((tuplet) => {
+    if (tuplet.start < cursor) {
+      return;
+    }
+
+    nextNotes.push(...notes.slice(cursor, tuplet.start).map((note) => ({ ...note })));
+    const tupletStart = nextNotes.length;
+    nextNotes.push(
+      ...combineTupletSixteenthNoteRests(notes.slice(tuplet.start, tuplet.end))
+    );
+    nextTuplets.push({
+      ...tuplet,
+      start: tupletStart,
+      end: nextNotes.length,
+    });
+    cursor = tuplet.end;
+  });
+
+  nextNotes.push(...notes.slice(cursor).map((note) => ({ ...note })));
+
+  return {
+    ...voice,
+    notes: nextNotes,
+    tuplets: nextTuplets,
+  };
+}
+
+export function normalizeTupletNoteValues(score) {
+  if (!score || !Array.isArray(score.measures)) {
+    return score;
+  }
+
+  return {
+    ...score,
+    measures: score.measures.map((measure) => ({
+      ...measure,
+      parts: (measure.parts || []).map((part) => ({
+        ...part,
+        voices: (part.voices || []).map(normalizeTupletVoiceNoteValues),
+      })),
+    })),
+  };
+}
+
 export function scoreToBookLine(score) {
   return score && Array.isArray(score.measures)
-    ? cloneJson(score)
+    ? normalizeTupletNoteValues(cloneJson(score))
     : createBlankLineScore();
 }
 
@@ -710,7 +819,7 @@ function normalizeBookSections(rawBook, pdfSettings) {
             sectionId: id,
             sectionPageNumber: sectionPageIndex + 1,
             tempo: Number(line.tempo || DEFAULT_TEMPO),
-            score: line.score ? cloneJson(line.score) : null,
+            score: line.score ? normalizeTupletNoteValues(cloneJson(line.score)) : null,
             exerciseShortForm: line.exerciseShortForm || "",
           })),
         };
@@ -759,7 +868,7 @@ export function renumberPages(pages, pdfSettings = DEFAULT_PDF_SETTINGS) {
         pageNumber,
         lineNumber: lineIndex + 1,
         tempo: Number(line.tempo || DEFAULT_TEMPO),
-        score: line.score ? cloneJson(line.score) : null,
+        score: line.score ? normalizeTupletNoteValues(cloneJson(line.score)) : null,
         exerciseShortForm: line.exerciseShortForm || "",
       })),
     });
