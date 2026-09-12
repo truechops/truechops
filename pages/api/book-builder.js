@@ -24,17 +24,16 @@ import { getBookPageQrUrl } from "../../src/lib/book-qr";
 const BOOK_ROOT = path.join(process.cwd(), "data", "book-builder", BOOK_SLUG);
 const MANIFEST_PATH = path.join(BOOK_ROOT, "book.json");
 const PDF_CACHE_ROOT = process.env.BOOK_PDF_CACHE_DIR || path.join(process.cwd(), ".next", "cache", "book-builder-pdf");
-const SCORE_SVG_CACHE_VERSION = "score-svg-v10";
-const PDF_FILE_CACHE_VERSION = "pdf-v14";
+const SCORE_SVG_CACHE_VERSION = "score-svg-v11";
+const PDF_FILE_CACHE_VERSION = "pdf-v15";
 const SCORE_SVG_MEMORY_CACHE_LIMIT = Number(process.env.BOOK_PDF_SVG_MEMORY_CACHE_LIMIT || 800);
 const PDF_PAGE_WIDTH = 612;
 const PDF_PAGE_HEIGHT = 792;
 const PDF_MARGIN = 24;
-const PDF_FOOTER_HEIGHT = 46;
-const CONTINUOUS_SCORE_RENDER_WIDTH = 1060;
-const CONTINUOUS_SYSTEM_SPACING = 160;
+const PDF_FOOTER_HEIGHT = 38;
+const CONTINUOUS_SCORE_RENDER_WIDTH = 1100;
+const CONTINUOUS_SYSTEM_SPACING = 119;
 const CONTINUOUS_MEASURE_GAP = 6;
-const CONTINUOUS_MEASURE_MAX_WIDTH_RATIO = 0.315;
 const CONTINUOUS_MEASURE_START_PADDING = 4;
 const CONTINUOUS_MEASURE_END_PADDING = 8;
 
@@ -569,8 +568,6 @@ async function renderScoreSvgFresh(
         measureNoteEndPadding: CONTINUOUS_MEASURE_END_PADDING,
         measureGap: CONTINUOUS_MEASURE_GAP,
         hideTimeSignature: false,
-        maxMeasureWidth:
-          CONTINUOUS_SCORE_RENDER_WIDTH * CONTINUOUS_MEASURE_MAX_WIDTH_RATIO,
         showMeasureNumbers: true,
         systemSpacing: CONTINUOUS_SYSTEM_SPACING,
       },
