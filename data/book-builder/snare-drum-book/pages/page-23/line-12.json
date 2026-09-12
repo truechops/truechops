@@ -29,13 +29,13 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "ra"
+                    "ornaments": "la"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 4,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
@@ -53,22 +53,13 @@
                     "velocity": 0.5
                   },
                   {
-                    "notes": [],
+                    "notes": [
+                      "C5"
+                    ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -83,25 +74,10 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 1,
                     "ornaments": "la"
-                  },
-                  {
-                    "notes": [],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5
                   },
                   {
                     "notes": [
@@ -110,7 +86,7 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "r"
+                    "ornaments": "l"
                   },
                   {
                     "notes": [],
@@ -125,22 +101,16 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "la"
-                  },
-                  {
-                    "notes": [],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5
+                    "ornaments": "ra"
                   },
                   {
                     "notes": [
@@ -155,19 +125,19 @@
                 "tuplets": [
                   {
                     "start": 1,
-                    "end": 6,
+                    "end": 3,
                     "actual": 5,
                     "normal": 4
                   },
                   {
-                    "start": 6,
-                    "end": 11,
+                    "start": 3,
+                    "end": 7,
                     "actual": 5,
                     "normal": 4
                   },
                   {
-                    "start": 12,
-                    "end": 17,
+                    "start": 8,
+                    "end": 12,
                     "actual": 5,
                     "normal": 4
                   }
@@ -179,8 +149,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n8:ra n16:l r16 r16 r16 r16 r16 n16:r n16:l n16:la r16 n8:r r16 n16:l n16:la r16 n16:ra |t1-6:5:4,6-11:5:4,12-17:5:4",
-  "updatedAt": "2026-08-30T20:28:02.371Z",
+  "exerciseShortForm": "n8:la n4:l r16 r16 n16:l n16:r n8:la n8:l r16 n16:r n8:ra n16:ra |t1-3:5:4,3-7:5:4,8-12:5:4",
+  "updatedAt": "2026-09-12T13:21:51.668Z",
   "sectionId": "section-13",
   "sectionPageNumber": 1
 }

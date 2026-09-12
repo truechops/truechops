@@ -19,7 +19,6 @@ const LINE_NUMBER_CENTER_OFFSET = 1.25;
 const PDF_PAGE_WIDTH = 612;
 const PDF_PAGE_HEIGHT = 792;
 const PDF_MARGIN = 24;
-const PDF_HEADER_HEIGHT = 14;
 const PDF_FOOTER_HEIGHT = 32;
 const PDF_COLUMN_GAP = 20;
 const PDF_LINE_NUMBER_WIDTH = 18;
@@ -696,19 +695,12 @@ async function renderBookPageAssets(
   };
 }
 
-function getPageSectionTitle(book, page) {
-  return page.sectionTitle ||
-    (book.sections || []).find((section) => section.id === page.sectionId)?.title ||
-    page.title ||
-    "Exercises";
-}
-
 function drawBookPage(doc, book, pageAssets) {
   const { page, pdfSettings, pageLines, svgs, qrSvg } = pageAssets;
   const pageWidth = PDF_PAGE_WIDTH;
   const pageHeight = PDF_PAGE_HEIGHT;
   const margin = PDF_MARGIN;
-  const headerHeight = PDF_HEADER_HEIGHT;
+  const headerHeight = 0;
   const footerHeight = PDF_FOOTER_HEIGHT;
   const columnGap = PDF_COLUMN_GAP;
   const usableWidth = pageWidth - margin * 2 - columnGap * (pdfSettings.columns - 1);
@@ -716,17 +708,6 @@ function drawBookPage(doc, book, pageAssets) {
   const rowHeight = (pageHeight - margin * 2 - headerHeight - footerHeight) / pdfSettings.rows;
 
   doc.addPage();
-  doc.font("Times-Bold").fillColor("#111111").fontSize(11).text(
-    getPageSectionTitle(book, page),
-    margin + 24,
-    8,
-    {
-      width: pageWidth - margin * 2 - 48,
-      align: "center",
-      lineBreak: false,
-      ellipsis: true,
-    }
-  );
   doc.font("Times-Bold").fontSize(10).text(String(page.pageNumber), pageWidth - margin - 18, 8, {
     width: 18,
     align: "right",

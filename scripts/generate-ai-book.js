@@ -773,9 +773,12 @@ function preferLongerValuesInTupletVoice(voice) {
     }
 
     const tupletStart = nextNotes.length;
-    // Tuplet cardinality is structural: rests still occupy tuplet positions,
-    // so never compress notes inside a complete tuplet group.
-    nextNotes.push(...notes.slice(tuplet.start, tuplet.end).map((note) => ({ ...note })));
+    // Keep the tuplet ratio while using the longest readable values within the
+    // group. VexFlow scales the combined tick duration by actual:normal, so an
+    // eighth here can replace a played sixteenth followed by a sixteenth rest.
+    nextNotes.push(
+      ...preferLongerValues(notes.slice(tuplet.start, tuplet.end))
+    );
     const tupletEnd = nextNotes.length;
 
     if (tupletEnd > tupletStart) {
@@ -1593,8 +1596,13 @@ function findRequiredMaxSameHandRun(
     return null;
   }
 
-  return candidates[
-    hashString(JSON.stringify(notes)) % candidates.length
+  const interiorCandidates = candidates.filter((candidate) =>
+    candidate.start > 0 && candidate.end < notes.length - 1
+  );
+  const candidatePool = interiorCandidates.length ? interiorCandidates : candidates;
+
+  return candidatePool[
+    hashString(JSON.stringify(notes)) % candidatePool.length
   ];
 }
 
@@ -1685,8 +1693,13 @@ function ensureRequiredMaxSameHandRunWindowFixed(section, notes, runLength, opti
     candidates.push({ start, end: start + runLength - 1 });
   }
 
-  const targetRun = candidates[
-    hashString(`${section.id || section.title || "section"}:${JSON.stringify(notes)}`) % candidates.length
+  const interiorCandidates = candidates.filter((candidate) =>
+    candidate.start > 0 && candidate.end < notes.length - 1
+  );
+  const candidatePool = interiorCandidates.length ? interiorCandidates : candidates;
+
+  const targetRun = candidatePool[
+    hashString(`${section.id || section.title || "section"}:${JSON.stringify(notes)}`) % candidatePool.length
   ];
   const nextNotes = notes.map((note) => ({ ...note }));
 
@@ -1717,6 +1730,7 @@ function enforceStickingSequenceRules(section, notes, options = {}) {
 
   const maxSameHandRun = getSectionMaxSameHandStickingRun(section);
   const requiredRunLength = Number(options.requiredSameHandRunLength) || 0;
+  const exclusiveRequiredAlternatives = getSectionRequiredSameHandStickingRuns(section).length > 1;
 
   if (requiredRunLength) {
     cleaned = preserveNoteCount
@@ -1737,6 +1751,12 @@ function enforceStickingSequenceRules(section, notes, options = {}) {
   }
 
   const nextNotes = cleaned.map((note) => ({ ...note }));
+  const stickingRandom = exclusiveRequiredAlternatives
+    ? createSeededRandom(
+        `${section.id || section.title || "section"}:required-alternatives:` +
+        `${options.stickingAttempt || 0}:${JSON.stringify(cleaned)}`
+      )
+    : null;
   let previousNote = null;
   let previousIndex = -1;
   let previousSticking = "";
@@ -1770,14 +1790,22 @@ function enforceStickingSequenceRules(section, notes, options = {}) {
       continue;
     }
 
-    const currentSticking = getNoteSticking(note) || (previousSticking === "r" ? "l" : "r");
+    const currentSticking = exclusiveRequiredAlternatives
+      ? previousSticking
+        ? stickingRandom() < 0.48
+          ? previousSticking
+          : getOppositeSticking(previousSticking)
+        : getNoteSticking(note) || (stickingRandom() < 0.5 ? "r" : "l")
+      : getNoteSticking(note) || (previousSticking === "r" ? "l" : "r");
     const previousRequiresOpposite = previousNote &&
       areConsecutiveOrnamentRuleNotes(nextNotes, previousIndex, index, options) &&
       /[dc]/.test(String(previousNote.ornaments || "")) &&
       getNoteSticking(previousNote);
     let nextSticking = currentSticking;
 
-    if (previousRequiresOpposite) {
+    if (targetRun && previousIndex === targetRun.end) {
+      nextSticking = getOppositeSticking(previousSticking);
+    } else if (previousRequiresOpposite) {
       nextSticking = getOppositeSticking(getNoteSticking(previousNote));
     } else if (
       maxSameHandRun > 0 &&
@@ -1964,20 +1992,30 @@ function repeatingMeasureViolatesStickingRules(section, notes, options = {}) {
   if (requiredRunLength) {
     let previousSticking = "";
     let runLength = 0;
-    let foundRequiredRun = false;
+    const completedRunLengths = [];
 
     for (const note of notes) {
       const sticking = isRest(note) ? "" : getNoteSticking(note);
-      runLength = sticking && sticking === previousSticking ? runLength + 1 : sticking ? 1 : 0;
-      previousSticking = sticking;
 
-      if (runLength >= requiredRunLength) {
-        foundRequiredRun = true;
-        break;
+      if (sticking !== previousSticking && runLength > 0) {
+        completedRunLengths.push(runLength);
       }
+
+      runLength = sticking && sticking === previousSticking
+        ? runLength + 1
+        : sticking
+          ? 1
+          : 0;
+      previousSticking = sticking;
     }
 
-    if (!foundRequiredRun) return true;
+    if (runLength > 0) completedRunLengths.push(runLength);
+
+    if (!completedRunLengths.includes(requiredRunLength)) return true;
+
+    const otherRequiredRuns = getSectionRequiredSameHandStickingRuns(section)
+      .filter((run) => run !== requiredRunLength);
+    if (otherRequiredRuns.some((run) => completedRunLengths.includes(run))) return true;
   }
 
   return false;
@@ -1992,14 +2030,15 @@ function enforceRepeatingMeasureStickingRules(section, notes, options = {}) {
   const maximumAttempts = Math.max(4, nextNotes.length * 2);
 
   for (let attempt = 0; attempt < maximumAttempts; attempt += 1) {
-    nextNotes = enforceStickingSequenceRules(section, nextNotes, options);
-    nextNotes = enforceDiddleFollowedByOppositeSticking(section, nextNotes, options);
+    const attemptOptions = { ...options, stickingAttempt: attempt };
+    nextNotes = enforceStickingSequenceRules(section, nextNotes, attemptOptions);
+    nextNotes = enforceDiddleFollowedByOppositeSticking(section, nextNotes, attemptOptions);
 
-    if (!repeatingMeasureViolatesStickingRules(section, nextNotes, options)) {
+    if (!repeatingMeasureViolatesStickingRules(section, nextNotes, attemptOptions)) {
       return nextNotes;
     }
 
-    const boundaryViolation = repeatingBoundaryViolatesStickingRules(section, nextNotes, options);
+    const boundaryViolation = repeatingBoundaryViolatesStickingRules(section, nextNotes, attemptOptions);
     const lastSticking = getNoteSticking(nextNotes[nextNotes.length - 1]);
 
     if (boundaryViolation && lastSticking && !isRest(nextNotes[0])) {
@@ -2352,7 +2391,7 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
                 notes: preferLongerValues(cleanedNotes, getPreferLongerValueOptions()),
                 tuplets: [],
               };
-          const tupletNoteIndexes = new Set(
+          const preliminaryTupletNoteIndexes = new Set(
             notationVoice.tuplets.flatMap((tuplet) =>
               Array.from(
                 { length: Math.max(0, Number(tuplet.end) - Number(tuplet.start)) },
@@ -2360,21 +2399,44 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
               )
             )
           );
-          const durationOrnamentOptions = {
-            tupletNoteIndexes,
-            requiredSameHandRunLength: getRequiredSameHandStickingRunForLine(
-              section,
-              Number.parseInt(lineIndex, 10) || 0
-            ),
+          const requiredSameHandRunLength = getRequiredSameHandStickingRunForLine(
+            section,
+            Number.parseInt(lineIndex, 10) || 0
+          );
+          const preliminaryDurationOrnamentOptions = {
+            tupletNoteIndexes: preliminaryTupletNoteIndexes,
+            requiredSameHandRunLength,
           };
           const cappedNotes = enforceMaximumPlayedNotesInNotes(
             section,
-            enforceDurationOrnamentRules(notationVoice.notes, durationOrnamentOptions),
+            enforceDurationOrnamentRules(
+              notationVoice.notes,
+              preliminaryDurationOrnamentOptions
+            ),
             `${lineIndex}:final`
           );
-          const notationNotes = hasTuplets
-            ? cappedNotes
-            : preferLongerValues(cappedNotes, getPreferLongerValueOptions());
+          const finalNotationVoice = hasTuplets
+            ? preferLongerValuesInTupletVoice({
+                ...notationVoice,
+                notes: cappedNotes,
+              })
+            : {
+                notes: preferLongerValues(cappedNotes, getPreferLongerValueOptions()),
+                tuplets: [],
+              };
+          const finalTupletNoteIndexes = new Set(
+            finalNotationVoice.tuplets.flatMap((tuplet) =>
+              Array.from(
+                { length: Math.max(0, Number(tuplet.end) - Number(tuplet.start)) },
+                (_, offset) => Number(tuplet.start) + offset
+              )
+            )
+          );
+          const durationOrnamentOptions = {
+            tupletNoteIndexes: finalTupletNoteIndexes,
+            requiredSameHandRunLength,
+          };
+          const notationNotes = finalNotationVoice.notes;
           const ornamentedNotes = ensureRequiredOrnamentsOnNotes(
             section,
             removeDiddleBeforeConsecutiveCheese(
@@ -2402,7 +2464,7 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
 
           return {
             ...voice,
-            tuplets: notationVoice.tuplets,
+            tuplets: finalNotationVoice.tuplets,
             notes: stickingNotes,
           };
         }),
@@ -2939,7 +3001,7 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
       ? `Do not use more than ${getSectionMaxSameHandStickingRun(section)} consecutive played notes with the same sticking. Rests reset this count.`
       : "",
     sectionUsesStickings(section) && getSectionRequiredSameHandStickingRuns(section).length
-      ? `Every generated rhythm in this section must include at least one same-hand sticking run whose length is selected from: ${getSectionRequiredSameHandStickingRuns(section).join(", ")}. Different measures may use different selected lengths, and a measure may contain more than one.`
+      ? `For each generated rhythm, choose exactly one required same-hand sticking run length from: ${getSectionRequiredSameHandStickingRuns(section).join(", ")}. Require that one exact run length for the rhythm; these choices are OR alternatives, not cumulative AND requirements. Unselected run lengths remain allowed and should occur randomly.`
       : "",
     sectionUsesStickings(section)
       ? "Never allow two adjacent diddles on the same hand, including across the repeat boundary. When a diddle or cheese is followed immediately by the next sixteenth note, that following note must use the opposite sticking. A diddle must not directly precede a cheese on consecutive sixteenth notes."

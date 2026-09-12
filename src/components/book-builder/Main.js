@@ -439,7 +439,11 @@ export default function BookBuilderPanel() {
     }
   }, [book, selectedPage, selectedPageIndex, selectedSectionIndex]);
 
-  const saveBook = useCallback(async (nextBook, successMessage = "Saved to disk") => {
+  const saveBook = useCallback(async (
+    nextBook,
+    successMessage = "Saved to disk",
+    saveOptions = {}
+  ) => {
     setIsSaving(true);
 
     try {
@@ -449,7 +453,7 @@ export default function BookBuilderPanel() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ book: normalizedBook }),
+        body: JSON.stringify({ book: normalizedBook, ...saveOptions }),
       });
       const payload = await response.json();
 
@@ -548,8 +552,27 @@ export default function BookBuilderPanel() {
     );
 
     setDeleteDialogOpen(false);
-    saveBook(nextBook, `Cleared page ${selectedPage.pageNumber}, line ${selectedLine.lineNumber}`);
-  }, [book, saveBook, selectedLine.lineNumber, selectedLineIndex, selectedPage.pageNumber, selectedPageIndex]);
+    saveBook(
+      nextBook,
+      `Cleared page ${selectedPage.pageNumber}, line ${selectedLine.lineNumber}`,
+      {
+        clearedLines: [{
+          sectionId: selectedPage.sectionId,
+          sectionPageNumber: selectedPage.sectionPageNumber,
+          lineNumber: selectedLine.lineNumber,
+        }],
+      }
+    );
+  }, [
+    book,
+    saveBook,
+    selectedLine.lineNumber,
+    selectedLineIndex,
+    selectedPage.pageNumber,
+    selectedPage.sectionId,
+    selectedPage.sectionPageNumber,
+    selectedPageIndex,
+  ]);
 
   const insertBlankLineAfter = useCallback(() => {
     const flatLines = selectedSection.pages.flatMap((page) => page.lines);
@@ -1155,7 +1178,7 @@ export default function BookBuilderPanel() {
             />
           </Field>
           <CheckboxPicker
-            label="Required same-hand run lengths"
+            label="Required same-hand run lengths (OR; unchecked lengths stay random)"
             onToggle={(runLength) =>
               updateSelectedSectionDraft({
                 requiredSameHandStickingRuns: toggleOption(

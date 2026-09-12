@@ -26,12 +26,12 @@ const MANIFEST_PATH = path.join(BOOK_ROOT, "book.json");
 const LINE_NUMBER_CENTER_OFFSET = 1.25;
 const PDF_CACHE_ROOT = process.env.BOOK_PDF_CACHE_DIR || path.join(process.cwd(), ".next", "cache", "book-builder-pdf");
 const SCORE_SVG_CACHE_VERSION = "score-svg-v7";
-const PDF_FILE_CACHE_VERSION = "pdf-v10";
+const PDF_FILE_CACHE_VERSION = "pdf-v11";
 const SCORE_SVG_MEMORY_CACHE_LIMIT = Number(process.env.BOOK_PDF_SVG_MEMORY_CACHE_LIMIT || 800);
 const PDF_PAGE_WIDTH = 612;
 const PDF_PAGE_HEIGHT = 792;
 const PDF_MARGIN = 24;
-const PDF_HEADER_HEIGHT = 34;
+const PDF_HEADER_HEIGHT = 14;
 const PDF_FOOTER_HEIGHT = 46;
 const PDF_COLUMN_GAP = 20;
 const PDF_LINE_NUMBER_WIDTH = 18;
@@ -168,10 +168,63 @@ async function loadBook() {
   });
 }
 
-async function saveBook(rawBook) {
-  const now = new Date().toISOString();
-  const book = normalizeBook({
+function getStableLineKey(page, line) {
+  return [
+    line.sectionId || page.sectionId || "",
+    line.sectionPageNumber || page.sectionPageNumber || 1,
+    line.lineNumber || 1,
+  ].join(":");
+}
+
+function preserveExistingGeneratedLines(rawBook, existingBook, clearedLines = []) {
+  const clearedKeys = new Set((clearedLines || []).map((line) => [
+    line.sectionId || "",
+    line.sectionPageNumber || 1,
+    line.lineNumber || 1,
+  ].join(":")));
+  const existingLines = new Map();
+
+  for (const page of existingBook.pages || []) {
+    for (const line of page.lines || []) {
+      existingLines.set(getStableLineKey(page, line), line);
+    }
+  }
+
+  return {
     ...rawBook,
+    sections: (rawBook.sections || []).map((section) => ({
+      ...section,
+      pages: (section.pages || []).map((page) => ({
+        ...page,
+        lines: (page.lines || []).map((line) => {
+          const key = getStableLineKey(page, line);
+          const existingLine = existingLines.get(key);
+
+          if (line.score || !existingLine?.score || clearedKeys.has(key)) {
+            return line;
+          }
+
+          return {
+            ...line,
+            title: line.title || existingLine.title,
+            notes: line.notes || existingLine.notes,
+            tempo: line.tempo || existingLine.tempo,
+            score: existingLine.score,
+            exerciseShortForm: existingLine.exerciseShortForm,
+            updatedAt: existingLine.updatedAt,
+          };
+        }),
+      })),
+    })),
+  };
+}
+
+async function saveBook(rawBook, { clearedLines = [] } = {}) {
+  const now = new Date().toISOString();
+  const existingBook = await loadBook();
+  const mergedBook = preserveExistingGeneratedLines(rawBook, existingBook, clearedLines);
+  const book = normalizeBook({
+    ...mergedBook,
     updatedAt: now,
   });
 
@@ -726,13 +779,6 @@ async function renderBookPageAssets(book, page, bookPdfSettings, limitScoreRende
   };
 }
 
-function getPageSectionTitle(book, page) {
-  return page.sectionTitle ||
-    (book.sections || []).find((section) => section.id === page.sectionId)?.title ||
-    page.title ||
-    "Exercises";
-}
-
 function drawBookPage(doc, book, pageAssets) {
   const { page, pdfSettings, pageLines, svgs, qrSvg } = pageAssets;
   const pageWidth = PDF_PAGE_WIDTH;
@@ -746,18 +792,12 @@ function drawBookPage(doc, book, pageAssets) {
   const rowHeight = (pageHeight - margin * 2 - headerHeight - footerHeight) / pdfSettings.rows;
 
   doc.addPage();
-  doc.font("Times-Bold").fillColor("#111111").fontSize(11).text(getPageSectionTitle(book, page), margin + 24, 8, {
-    width: pageWidth - margin * 2 - 48,
-    align: "center",
-    lineBreak: false,
-    ellipsis: true,
-  });
   doc.font("Times-Bold").fontSize(10).text(String(page.pageNumber), pageWidth - margin - 18, 8, {
     width: 18,
     align: "right",
     lineBreak: false,
   });
-  doc.font("Times-Italic").fontSize(7.5).text("Read downward", margin - 7, margin + 8, {
+  doc.font("Times-Italic").fontSize(7.5).text("Read downward", margin - 7, 8, {
     width: 80,
     lineBreak: false,
   });
@@ -975,7 +1015,9 @@ export default async function handler(req, res) {
         return;
       }
 
-      const book = await saveBook(req.body.book);
+      const book = await saveBook(req.body.book, {
+        clearedLines: req.body.clearedLines,
+      });
       setNoStoreHeaders(res);
       res.status(200).json({ book });
       return;

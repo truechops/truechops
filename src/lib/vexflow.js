@@ -213,7 +213,7 @@ function getMeasureData(measures, partConfig) {
             new VF.Tuplet(vfNotes.slice(tuplet.start, tuplet.end), {
               num_notes: tuplet.actual,
               notes_occupied: tuplet.normal,
-              bracketed: false,
+              bracketed: true,
               y_offset: getTupletYOffset(tupletNotes, instrument),
             })
           );
@@ -227,7 +227,7 @@ function getMeasureData(measures, partConfig) {
         vfVoice.addTickables(vfNotes);
         vfVoices.push(vfVoice);
         const generatedBeams = getVoiceBeams(vfNotes, notes, voiceTuplets, timeSig);
-        vfTuplets.forEach((vfTuplet) => vfTuplet.setBracketed(false));
+        vfTuplets.forEach((vfTuplet) => vfTuplet.setBracketed(true));
         vfVoiceBeams.push(generatedBeams);
         vfVoiceNotes.push(vfNotes);
       });
@@ -406,6 +406,8 @@ function createAutomaticBeams(vfNotes, timeSig) {
   }
 
   return VF.Beam.generateBeams(vfNotes, {
+    beam_rests: false,
+    show_stemlets: false,
     stem_direction: Vex.Flow.StaveNote.STEM_UP,
     groups: timeSigs[`${timeSig.num}/${timeSig.type}`].groups.map(group =>
       new Vex.Flow.Fraction(group[0], group[1]))
@@ -420,39 +422,40 @@ function isJsonRest(jsonNote) {
   return !Array.isArray(jsonNote?.notes) || jsonNote.notes.length === 0;
 }
 
-function shouldBeamTupletAsSingleGroup(jsonNotes) {
-  const playedNoteCount = jsonNotes.filter((note) => !isJsonRest(note)).length;
-
-  return playedNoteCount > 1 &&
-    jsonNotes.length > 1 &&
+function shouldBeamTupletSegment(jsonNotes) {
+  return jsonNotes.length > 1 &&
+    !jsonNotes.some(isJsonRest) &&
     !jsonNotes.some(hasQuarterOrLongerDuration);
 }
 
-function getTupletBeamStartIndex(jsonNotes) {
-  let startIndex = 0;
-
-  while (startIndex < jsonNotes.length && isJsonRest(jsonNotes[startIndex])) {
-    startIndex += 1;
-  }
-
-  return startIndex;
-}
-
 function createTupletBeams(vfNotes, jsonNotes) {
-  const beamStartIndex = getTupletBeamStartIndex(jsonNotes);
-  const beamVfNotes = vfNotes.slice(beamStartIndex);
-  const beamJsonNotes = jsonNotes.slice(beamStartIndex);
+  const beams = [];
+  let segmentStart = 0;
 
-  if (!shouldBeamTupletAsSingleGroup(beamJsonNotes)) {
-    return [];
+  while (segmentStart < jsonNotes.length) {
+    while (segmentStart < jsonNotes.length && isJsonRest(jsonNotes[segmentStart])) {
+      segmentStart += 1;
+    }
+
+    let segmentEnd = segmentStart;
+    while (segmentEnd < jsonNotes.length && !isJsonRest(jsonNotes[segmentEnd])) {
+      segmentEnd += 1;
+    }
+
+    const segmentJsonNotes = jsonNotes.slice(segmentStart, segmentEnd);
+    if (shouldBeamTupletSegment(segmentJsonNotes)) {
+      beams.push(...VF.Beam.generateBeams(vfNotes.slice(segmentStart, segmentEnd), {
+        beam_rests: false,
+        show_stemlets: false,
+        stem_direction: Vex.Flow.StaveNote.STEM_UP,
+        groups: [new Vex.Flow.Fraction(1, 1)],
+      }));
+    }
+
+    segmentStart = Math.max(segmentEnd, segmentStart + 1);
   }
 
-  return VF.Beam.generateBeams(beamVfNotes, {
-    beam_rests: true,
-    show_stemlets: false,
-    stem_direction: Vex.Flow.StaveNote.STEM_UP,
-    groups: [new Vex.Flow.Fraction(1, 1)],
-  });
+  return beams;
 }
 
 function getVoiceBeams(vfNotes, jsonNotes, tuplets, timeSig) {
@@ -474,11 +477,12 @@ function getVoiceBeams(vfNotes, jsonNotes, tuplets, timeSig) {
       const tupletVfNotes = vfNotes.slice(tuplet.start, tuplet.end);
       const generatedTupletBeams = createTupletBeams(tupletVfNotes, tupletJsonNotes);
 
+      forcedTupletRanges.push(tuplet);
+
       if (!generatedTupletBeams.length) {
         return;
       }
 
-      forcedTupletRanges.push(tuplet);
       tupletBeams.push(...generatedTupletBeams);
     });
 
