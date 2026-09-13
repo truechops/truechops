@@ -72,7 +72,9 @@ export function drawScore(
     measureNoteStartPadding,
     measureNoteEndPadding,
     measureGap = 0,
+    minimumNoteSpacing = 0,
     maxMeasureWidth,
+    measuresPerLine,
     hideTimeSignature = false,
     showMeasureNumbers = false,
     systemSpacing,
@@ -89,6 +91,16 @@ export function drawScore(
   const effectiveMeasureGap = Number.isFinite(configuredMeasureGap) && configuredMeasureGap > 0
     ? configuredMeasureGap
     : 0;
+  const configuredMinimumNoteSpacing = Number(minimumNoteSpacing);
+  const effectiveMinimumNoteSpacing = Number.isFinite(configuredMinimumNoteSpacing) &&
+    configuredMinimumNoteSpacing > 0
+    ? configuredMinimumNoteSpacing
+    : 0;
+  const configuredMeasuresPerLine = Number.parseInt(measuresPerLine, 10);
+  const effectiveMeasuresPerLine = Number.isInteger(configuredMeasuresPerLine) &&
+    configuredMeasuresPerLine > 0
+    ? configuredMeasuresPerLine
+    : Number.POSITIVE_INFINITY;
   STAVE_SPACE = baseSystemSpacing * measurePartsArray[0].length;
   const svgWidth = Math.max(svgWidthProposed, SCORE_MIN_WIDTH);
 
@@ -105,9 +117,21 @@ export function drawScore(
     var formatter = new VF.Formatter();
     voices.map((v) => formatter.joinVoices(v));
 
-    let minTotalWidth = Math.ceil(
-      Math.max(formatter.preCalculateMinTotalWidth(voices.flat()), MIN_BAR_SIZE)
+    const opticalSpacingWeight = Math.max(
+      0,
+      ...measureParts.flatMap((measurePart) =>
+        measurePart.opticalSpacingWeights || []
+      )
     );
+    const notationMinWidth = formatter.preCalculateMinTotalWidth(voices.flat());
+    const rhythmMinWidth = Math.max(
+      notationMinWidth,
+      opticalSpacingWeight * effectiveMinimumNoteSpacing
+    );
+    let minTotalWidth = Math.ceil(Math.max(
+      rhythmMinWidth,
+      MIN_BAR_SIZE
+    ));
 
     systemWidth = minTotalWidth + FORMAT_PADDING;
     const naturalBarWidth = systemWidth + (firstMeasure ? 20 : 0);
@@ -118,7 +142,13 @@ export function drawScore(
 
     const gapBeforeMeasure = barRenderData.length ? effectiveMeasureGap : 0;
 
-    if ((width + gapBeforeMeasure + barWidth > svgWidth) && barRenderData.length) {
+    if (
+      barRenderData.length &&
+      (
+        barRenderData.length >= effectiveMeasuresPerLine ||
+        width + gapBeforeMeasure + barWidth > svgWidth
+      )
+    ) {
       const remainingWidth = Math.max(svgWidth - width, 0);
       renderStaves(
         barRenderData,
@@ -213,8 +243,10 @@ function getMeasureData(measures, partConfig) {
       let vfVoiceBeams = [];
       let vfVoiceNotes = [];
       let vfTuplets = [];
+      let opticalSpacingWeights = [];
       voices.forEach((voice, voiceIndex) => {
         const { notes, tuplets } = voice;
+        const voiceTuplets = Array.isArray(tuplets) ? tuplets : [];
         var vfNotes = [];
         notes.forEach((note, noteIndex) => {
           const n = getNote(
@@ -239,7 +271,9 @@ function getMeasureData(measures, partConfig) {
           vfNotes.push(n);
         });
 
-        const voiceTuplets = Array.isArray(tuplets) ? tuplets : [];
+        opticalSpacingWeights.push(
+          getVoiceOpticalSpacingWeight(notes, voiceTuplets)
+        );
 
         voiceTuplets.forEach((tuplet) => {
           const tupletJsonNotes = notes.slice(tuplet.start, tuplet.end);
@@ -274,6 +308,7 @@ function getMeasureData(measures, partConfig) {
         notes: vfVoiceNotes,
         beams: vfVoiceBeams,
         tuplets: vfTuplets,
+        opticalSpacingWeights,
         instrument,
       });
     });
@@ -282,6 +317,39 @@ function getMeasureData(measures, partConfig) {
   });
 
   return measurePartsArray;
+}
+
+function getVoiceOpticalSpacingWeight(notes, tuplets) {
+  return notes.reduce((total, note, noteIndex) => {
+    const duration = Number(note?.duration);
+    if (!Number.isFinite(duration) || duration <= 0) {
+      return total + 1;
+    }
+
+    const containingTuplet = tuplets.find((tuplet) =>
+      noteIndex >= Number(tuplet.start) && noteIndex < Number(tuplet.end)
+    );
+    const tupletActual = Number(containingTuplet?.actual);
+    const tupletNormal = Number(containingTuplet?.normal);
+    const tupletDurationRatio = Number.isFinite(tupletActual) &&
+      tupletActual > 0 &&
+      Number.isFinite(tupletNormal) &&
+      tupletNormal > 0
+      ? tupletNormal / tupletActual
+      : 1;
+    const dotCount = Math.max(0, Number(note?.dots) || 0);
+    let dotDurationRatio = 1;
+
+    for (let dotIndex = 1; dotIndex <= dotCount; dotIndex += 1) {
+      dotDurationRatio += 1 / (2 ** dotIndex);
+    }
+
+    const sixteenthDurationUnits = Math.max(
+      (16 / duration) * tupletDurationRatio * dotDurationRatio,
+      0.0625
+    );
+    return total + Math.sqrt(sixteenthDurationUnits);
+  }, 0);
 }
 
 //Render the staves onto the score.

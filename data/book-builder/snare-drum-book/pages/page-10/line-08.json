@@ -1,7 +1,7 @@
 {
   "pageNumber": 10,
   "lineNumber": 8,
-  "title": "16s: stickings, accents, flams, diddles, cheese 8",
+  "title": "16s: stickings, accents, flams, diddles, cheese 1 8",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -23,10 +23,13 @@
               {
                 "notes": [
                   {
-                    "notes": [],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 1,
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -34,8 +37,17 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "rfa"
+                    "velocity": 0.5,
+                    "ornaments": "rd"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -53,7 +65,25 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "lda"
+                    "ornaments": "rda"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "ld"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "rd"
                   },
                   {
                     "notes": [
@@ -89,40 +119,7 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lca"
-                  },
-                  {
-                    "notes": [],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "lc"
+                    "ornaments": "rf"
                   }
                 ],
                 "tuplets": []
@@ -133,8 +130,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r16 n16:raf n8:l n16:lad n8:r n16:lc n16:r n8:r n16:lac r16 n8:r n16:lc",
-  "updatedAt": "2026-09-12T15:54:02.764Z",
+  "exerciseShortForm": "n8.:l n16:rd n16:l n8:l n16:rad n16:ld n16:rd n8:r n16:lc n16:r n8:rf",
+  "updatedAt": "2026-09-13T19:03:01.100Z",
   "sectionId": "section-18",
   "sectionPageNumber": 1
 }

@@ -1,7 +1,7 @@
 {
   "pageNumber": 21,
   "lineNumber": 15,
-  "title": "Triplets 15",
+  "title": "Triplets 1 15",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -26,6 +26,30 @@
                     "notes": [
                       "C5"
                     ],
+                    "duration": 4,
+                    "dots": 1,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "rda"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
                     "duration": 8,
                     "dots": 0,
                     "velocity": 1,
@@ -44,34 +68,7 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "ld"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "rda"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
+                    "duration": 4,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
@@ -93,35 +90,23 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 3,
+                    "end": 1,
                     "actual": 3,
                     "normal": 2
                   },
                   {
-                    "start": 3,
+                    "start": 1,
+                    "end": 4,
+                    "actual": 3,
+                    "normal": 2
+                  },
+                  {
+                    "start": 4,
                     "end": 6,
                     "actual": 3,
                     "normal": 2
@@ -134,8 +119,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n8:lad n8:rad n8:ld n8:rad n8:l n8:r n8:l n8:r n8:r n8:l |t0-3:3:2,3-6:3:2",
-  "updatedAt": "2026-09-12T15:54:02.764Z",
+  "exerciseShortForm": "n4.:l r8 n8:rad n8:lad n8:rad n4:r n8:l n8:r |t0-1:3:2,1-4:3:2,4-6:3:2",
+  "updatedAt": "2026-09-13T19:03:01.100Z",
   "sectionId": "section-20",
   "sectionPageNumber": 1
 }

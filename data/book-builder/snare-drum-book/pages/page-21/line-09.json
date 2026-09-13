@@ -1,7 +1,7 @@
 {
   "pageNumber": 21,
   "lineNumber": 9,
-  "title": "Triplets 9",
+  "title": "Triplets 1 9",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -35,10 +35,34 @@
                     "notes": [
                       "C5"
                     ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "lda"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
                     "duration": 4,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -56,22 +80,7 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lda"
+                    "ornaments": "ld"
                   },
                   {
                     "notes": [
@@ -94,14 +103,20 @@
                 ],
                 "tuplets": [
                   {
-                    "start": 1,
-                    "end": 3,
+                    "start": 0,
+                    "end": 2,
                     "actual": 3,
                     "normal": 2
                   },
                   {
-                    "start": 4,
-                    "end": 7,
+                    "start": 3,
+                    "end": 5,
+                    "actual": 3,
+                    "normal": 2
+                  },
+                  {
+                    "start": 5,
+                    "end": 8,
                     "actual": 3,
                     "normal": 2
                   }
@@ -113,8 +128,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n4:r n4:l n8:rd n8:l r8 n8:lad n8:rd n8:l |t1-3:3:2,4-7:3:2",
-  "updatedAt": "2026-09-12T15:54:02.764Z",
+  "exerciseShortForm": "n4:r n8:lad n8:r r8 n4:r n8:rd n8:ld n8:rd n8:l |t0-2:3:2,3-5:3:2,5-8:3:2",
+  "updatedAt": "2026-09-13T19:03:01.100Z",
   "sectionId": "section-20",
   "sectionPageNumber": 1
 }

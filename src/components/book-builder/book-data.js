@@ -50,20 +50,39 @@ export const DEFAULT_BOOK_SECTIONS = [
     ornaments: ["accents"],
   },
 ];
-export const MEASURES_PER_LINE = 1;
-export const PDF_COLUMNS = 2;
-export const PDF_ROWS = 12;
-export const LINES_PER_PAGE = PDF_COLUMNS * PDF_ROWS;
+export const MEASURES_PER_SCORE = 1;
+export const PDF_PAGE_WIDTH = 612;
+export const PDF_PAGE_HEIGHT = 792;
+export const PDF_PAGE_MARGIN = 24;
+export const PDF_PAGE_FOOTER_HEIGHT = 38;
+export const SCORE_RENDER_BASE_WIDTH = 1100;
+export const SCORE_RENDER_ROOT_PADDING = 50;
+export const SCORE_MEASURE_GAP = 6;
+export const SCORE_MEASURE_START_PADDING = 4;
+export const SCORE_MEASURE_END_PADDING = 8;
+export const SCORE_MINIMUM_NOTE_SPACING = 22;
 
 export const DEFAULT_PDF_SETTINGS = {
-  columns: PDF_COLUMNS,
-  rows: PDF_ROWS,
-  noteRenderWidth: 420,
-  noteStartPadding: 25,
-  noteEndPadding: 25,
+  measuresPerLine: 2,
+  lineSpacing: 130,
+  noteSize: 100,
 };
 
-export function normalizePdfRows(value, fallback = PDF_ROWS) {
+function normalizeBoundedNumber(value, fallback, minimum, maximum, integer = false) {
+  const parser = integer ? Number.parseInt : Number.parseFloat;
+  const parsed = parser(value, 10);
+  const parsedFallback = parser(fallback, 10);
+  const safeFallback = Number.isFinite(parsedFallback) ? parsedFallback : minimum;
+
+  return Math.min(
+    maximum,
+    Math.max(minimum, Number.isFinite(parsed) ? parsed : safeFallback)
+  );
+}
+
+// Kept for callers that still import the legacy helper. Page capacity is now
+// derived from note size and line spacing instead of a manually selected row count.
+export function normalizePdfRows(value, fallback = 10) {
   const parsed = Number.parseInt(value, 10);
   const normalizedFallback = Number.parseInt(fallback, 10);
 
@@ -73,7 +92,7 @@ export function normalizePdfRows(value, fallback = PDF_ROWS) {
 
   return Number.isInteger(normalizedFallback) && normalizedFallback > 0
     ? normalizedFallback
-    : PDF_ROWS;
+    : 10;
 }
 
 export function normalizeSectionPageCount(value, fallback = 1) {
@@ -419,18 +438,86 @@ export function normalizeSectionOrnaments(value, section = {}) {
   return inferSectionOrnaments(section);
 }
 
+export function normalizePageGenerationSettings(value = {}, fallback = {}) {
+  const pageSettings = value && typeof value === "object" ? value : {};
+  const source = {
+    ...fallback,
+    ...pageSettings,
+  };
+  const maxSameHandStickingRun = normalizeSectionMaxSameHandStickingRun(
+    source.maxSameHandStickingRun
+  );
+  const requiredSameHandStickingRuns = Object.prototype.hasOwnProperty.call(
+    pageSettings,
+    "requiredSameHandStickingRuns"
+  )
+    ? normalizeSectionRequiredSameHandStickingRuns(pageSettings.requiredSameHandStickingRuns)
+    : normalizeSectionRequiredSameHandStickingRuns(fallback.requiredSameHandStickingRuns);
+
+  return {
+    prompt: source.prompt ?? source.instructions ?? "",
+    sampleJson: normalizeSectionSampleJson(source.sampleJson),
+    subdivisions: normalizeSectionSubdivisions(source.subdivisions, source),
+    ornaments: normalizeSectionOrnaments(source.ornaments, source),
+    tuplets: normalizeSectionTuplets(source.tuplets ?? source.tuplet, source),
+    minPlayedNotes: normalizeSectionMinPlayedNotes(source.minPlayedNotes),
+    maxPlayedNotes: normalizeSectionMaxPlayedNotes(source.maxPlayedNotes),
+    playEveryNote: normalizeSectionPlayEveryNote(source.playEveryNote),
+    maxSameHandStickingRun,
+    requiredSameHandStickingRuns: requiredSameHandStickingRuns.filter(
+      (runLength) => runLength <= maxSameHandStickingRun
+    ),
+  };
+}
+
 export function normalizePdfSettings(pdfSettings = {}) {
   return {
-    ...DEFAULT_PDF_SETTINGS,
-    ...pdfSettings,
-    columns: PDF_COLUMNS,
-    rows: normalizePdfRows(pdfSettings.rows, DEFAULT_PDF_SETTINGS.rows),
+    measuresPerLine: normalizeBoundedNumber(
+      pdfSettings.measuresPerLine,
+      DEFAULT_PDF_SETTINGS.measuresPerLine,
+      1,
+      8,
+      true
+    ),
+    lineSpacing: normalizeBoundedNumber(
+      pdfSettings.lineSpacing,
+      DEFAULT_PDF_SETTINGS.lineSpacing,
+      90,
+      240
+    ),
+    noteSize: normalizeBoundedNumber(
+      pdfSettings.noteSize,
+      DEFAULT_PDF_SETTINGS.noteSize,
+      60,
+      160
+    ),
   };
+}
+
+export function getScoreRenderWidth(pdfSettings) {
+  const { noteSize } = normalizePdfSettings(pdfSettings);
+  const noteScale = noteSize / DEFAULT_PDF_SETTINGS.noteSize;
+
+  return ((SCORE_RENDER_BASE_WIDTH + SCORE_RENDER_ROOT_PADDING) / noteScale) -
+    SCORE_RENDER_ROOT_PADDING;
+}
+
+export function getSystemsPerPage(pdfSettings) {
+  const normalizedSettings = normalizePdfSettings(pdfSettings);
+  const contentWidth = PDF_PAGE_WIDTH - PDF_PAGE_MARGIN * 2;
+  const contentHeight = PDF_PAGE_HEIGHT - PDF_PAGE_MARGIN * 2 - PDF_PAGE_FOOTER_HEIGHT;
+  const renderedSvgWidth = getScoreRenderWidth(normalizedSettings) + SCORE_RENDER_ROOT_PADDING;
+  const pdfScale = contentWidth / renderedSvgWidth;
+
+  return Math.max(
+    1,
+    Math.floor(contentHeight / (normalizedSettings.lineSpacing * pdfScale))
+  );
 }
 
 export function getLinesPerPage(pdfSettings) {
   const normalizedSettings = normalizePdfSettings(pdfSettings);
-  return normalizedSettings.columns * normalizedSettings.rows;
+  return normalizedSettings.measuresPerLine * getSystemsPerPage(normalizedSettings);
 }
 
 export function getPagePdfSettings(page, bookPdfSettings = DEFAULT_PDF_SETTINGS) {
@@ -442,6 +529,10 @@ export function getPagePdfSettings(page, bookPdfSettings = DEFAULT_PDF_SETTINGS)
 
 export function getPageLinesPerPage(page, bookPdfSettings = DEFAULT_PDF_SETTINGS) {
   return getLinesPerPage(getPagePdfSettings(page, bookPdfSettings));
+}
+
+export function getPageGenerationSettings(page, section = {}) {
+  return normalizePageGenerationSettings(page?.generationSettings, section);
 }
 
 export function createBlankLine(pageNumber, lineNumber) {
@@ -457,7 +548,11 @@ export function createBlankLine(pageNumber, lineNumber) {
   };
 }
 
-export function createBlankPage(pageNumber, pdfSettings = DEFAULT_PDF_SETTINGS) {
+export function createBlankPage(
+  pageNumber,
+  pdfSettings = DEFAULT_PDF_SETTINGS,
+  generationSettings = {}
+) {
   const normalizedSettings = normalizePdfSettings(pdfSettings);
   const linesPerPage = getLinesPerPage(normalizedSettings);
 
@@ -465,6 +560,7 @@ export function createBlankPage(pageNumber, pdfSettings = DEFAULT_PDF_SETTINGS) 
     pageNumber,
     title: `Page ${pageNumber}`,
     pdfSettings: normalizedSettings,
+    generationSettings: normalizePageGenerationSettings(generationSettings),
     lines: Array.from({ length: linesPerPage }, (_, index) =>
       createBlankLine(pageNumber, index + 1)
     ),
@@ -546,7 +642,11 @@ export function createBookSection(sectionNumber = 1, overrides = {}, pdfSettings
     maxSameHandStickingRun,
     requiredSameHandStickingRuns,
     pdfSettings: normalizedSettings,
-    pages: overrides.pages || [createBlankPage(1, normalizedSettings)],
+    pages: overrides.pages || [createBlankPage(
+      1,
+      normalizedSettings,
+      { ...template, ...overrides }
+    )],
   };
 }
 
@@ -594,9 +694,24 @@ export function createBlankLineScore() {
         enabled: true,
       },
     },
-    measures: Array.from({ length: MEASURES_PER_LINE }, () =>
+    measures: Array.from({ length: MEASURES_PER_SCORE }, () =>
       _.cloneDeep(getEmptyMeasure(timeSig, ["snare"]))
     ),
+  };
+}
+
+export function createContinuousPageScore(pageLines = []) {
+  const scores = pageLines
+    .map((line) => line?.score)
+    .filter((score) => Array.isArray(score?.measures) && score.measures.length > 0);
+
+  if (!scores.length) {
+    return createBlankLineScore();
+  }
+
+  return {
+    ...cloneJson(scores[0]),
+    measures: scores.flatMap((score) => cloneJson(score.measures)),
   };
 }
 
@@ -812,6 +927,7 @@ function normalizeBookSections(rawBook, pdfSettings) {
           sectionTitle: section.title,
           sectionPageNumber: sectionPageIndex + 1,
           title: page.title || `${section.title} ${sectionPageIndex + 1}`,
+          generationSettings: getPageGenerationSettings(page, section),
           lines: page.lines.map((line, lineIndex) => ({
             ...line,
             pageNumber,
@@ -828,41 +944,28 @@ function normalizeBookSections(rawBook, pdfSettings) {
   });
 }
 
-function isBlankLine(line) {
-  return !line || (!line.score && !line.title && !line.notes);
-}
-
 export function renumberPages(pages, pdfSettings = DEFAULT_PDF_SETTINGS) {
   const normalizedBookSettings = normalizePdfSettings(pdfSettings);
-  const flatLines = pages.flatMap((page) => page.lines || []);
-  const pageSettings = pages.map((page) =>
-    getPagePdfSettings(page, normalizedBookSettings)
-  );
-  const minimumLinesPerPage = getLinesPerPage(normalizedBookSettings);
+  const sourcePages = Array.isArray(pages) && pages.length
+    ? pages
+    : [createBlankPage(1, normalizedBookSettings)];
 
-  while (flatLines.length > minimumLinesPerPage && isBlankLine(flatLines[flatLines.length - 1])) {
-    flatLines.pop();
-  }
-
-  const nextPages = [];
-  let nextLineIndex = 0;
-
-  while (nextLineIndex < flatLines.length || nextPages.length === 0) {
-    const pageIndex = nextPages.length;
+  return sourcePages.map((sourcePage, pageIndex) => {
     const pageNumber = pageIndex + 1;
-    const pagePdfSettings = pageSettings[pageIndex] || normalizedBookSettings;
+    const pagePdfSettings = getPagePdfSettings(sourcePage, normalizedBookSettings);
     const linesPerPage = getLinesPerPage(pagePdfSettings);
-    const pageLines = flatLines.slice(nextLineIndex, nextLineIndex + linesPerPage);
+    const pageLines = (sourcePage.lines || []).slice(0, linesPerPage);
 
     while (pageLines.length < linesPerPage) {
       pageLines.push(createBlankLine(pageNumber, pageLines.length + 1));
     }
 
-    nextPages.push({
+    return {
+      ...sourcePage,
       pageNumber,
-      title: `Page ${pageNumber}`,
+      title: sourcePage.title || `Page ${pageNumber}`,
       pdfSettings: pagePdfSettings,
-      lines: pageLines.slice(0, linesPerPage).map((line, lineIndex) => ({
+      lines: pageLines.map((line, lineIndex) => ({
         ...createBlankLine(pageNumber, lineIndex + 1),
         ...line,
         pageNumber,
@@ -871,10 +974,6 @@ export function renumberPages(pages, pdfSettings = DEFAULT_PDF_SETTINGS) {
         score: line.score ? normalizeTupletNoteValues(cloneJson(line.score)) : null,
         exerciseShortForm: line.exerciseShortForm || "",
       })),
-    });
-
-    nextLineIndex += linesPerPage;
-  }
-
-  return nextPages;
+    };
+  });
 }

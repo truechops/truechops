@@ -13,7 +13,8 @@
   flex-direction: column;
   gap: 8px;
   min-height: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 12px;
   width: 50%;
 }
@@ -215,12 +216,111 @@
 }
 
 .lineGrid {
-  flex: 1;
+  flex: 0 0 auto;
   display: grid;
   gap: 4px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-template-rows: repeat(6, minmax(40px, 1fr));
   min-height: 0;
+}
+
+.layoutControls {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.layoutSummary {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.livePreview {
+  background: var(--wash);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  min-height: 180px;
+  overflow: hidden;
+  padding: 12px;
+  position: relative;
+}
+
+.previewSheets {
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+}
+
+.previewPaper {
+  aspect-ratio: 612 / 792;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(20, 20, 17, 0.14);
+  max-width: 500px;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.previewScore {
+  overflow: hidden;
+  position: absolute;
+}
+
+.previewScore :global(svg) {
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.previewPageNumber {
+  font-family: "Times New Roman", serif;
+  font-size: clamp(7px, 1.4vw, 12px);
+  font-weight: 700;
+  position: absolute;
+  right: 3.9%;
+  top: 1%;
+}
+
+.previewFooter {
+  align-items: center;
+  bottom: 0;
+  display: flex;
+  font-family: "Times New Roman", serif;
+  font-size: clamp(5px, 1vw, 9px);
+  justify-content: space-between;
+  left: 6.8%;
+  position: absolute;
+  right: 3.9%;
+}
+
+.previewFooter i {
+  border: 3px dotted #222;
+  display: block;
+  height: 58%;
+  width: 7.2%;
+}
+
+.previewContinuation {
+  color: #777;
+  font-size: clamp(5px, 1vw, 9px);
+  left: 3.9%;
+  position: absolute;
+  top: 1%;
+}
+
+.previewRenderHost {
+  left: -100000px;
+  position: fixed;
+  top: 0;
+}
+
+.previewError {
+  color: var(--accent);
+  font-size: 0.82rem;
+  padding: 24px;
+  text-align: center;
 }
 
 .lineSlot {
@@ -561,5 +661,9 @@
   .lineGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-rows: none;
+  }
+
+  .layoutControls {
+    grid-template-columns: 1fr;
   }
 }

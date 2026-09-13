@@ -1,7 +1,7 @@
 {
   "pageNumber": 23,
   "lineNumber": 4,
-  "title": "16 quintuplets 4",
+  "title": "16 quintuplets 1 4",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -23,24 +23,6 @@
               {
                 "notes": [
                   {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "ra"
-                  },
-                  {
                     "notes": [],
                     "duration": 8,
                     "dots": 0,
@@ -59,6 +41,24 @@
                     "notes": [
                       "C5"
                     ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "ra"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
@@ -70,8 +70,8 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "ra"
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -79,8 +79,14 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "la"
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [],
+                    "duration": 8,
+                    "dots": 1,
+                    "velocity": 0.5
                   },
                   {
                     "notes": [
@@ -97,8 +103,8 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "la"
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -107,22 +113,19 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "la"
+                    "ornaments": "r"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 4,
-                    "end": 9,
+                    "start": 3,
+                    "end": 7,
+                    "actual": 5,
+                    "normal": 4
+                  },
+                  {
+                    "start": 7,
+                    "end": 10,
                     "actual": 5,
                     "normal": 4
                   }
@@ -134,8 +137,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n8:r n8:ra r8 n8:l n16:l n16:ra n16:la n16:r n16:la n8:l n8:la |t4-9:5:4",
-  "updatedAt": "2026-09-12T15:54:02.764Z",
+  "exerciseShortForm": "r8 n8:l n8:l n8:ra n16:l n16:l n16:l r8. n16:r n16:r n8:r |t3-7:5:4,7-10:5:4",
+  "updatedAt": "2026-09-13T19:03:01.100Z",
   "sectionId": "section-13",
   "sectionPageNumber": 1
 }

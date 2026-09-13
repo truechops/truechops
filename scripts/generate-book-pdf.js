@@ -18,12 +18,7 @@ const DEFAULT_QR_ORIGIN = "https://truechops.com";
 const PDF_PAGE_WIDTH = 612;
 const PDF_PAGE_HEIGHT = 792;
 const PDF_MARGIN = 24;
-const PDF_FOOTER_HEIGHT = 32;
-const CONTINUOUS_SCORE_RENDER_WIDTH = 1100;
-const CONTINUOUS_SYSTEM_SPACING = 132;
-const CONTINUOUS_MEASURE_GAP = 6;
-const CONTINUOUS_MEASURE_START_PADDING = 4;
-const CONTINUOUS_MEASURE_END_PADDING = 8;
+const PDF_FOOTER_HEIGHT = 38;
 const MIN_CONTINUATION_SYSTEMS = 3;
 
 let domSetup = false;
@@ -527,26 +522,13 @@ async function getPracticeQrSvg(book, page, getBookPageQrUrl, qrOrigin = DEFAULT
   return QRCode.toString(practiceUrl, { type: "svg", margin: 1 });
 }
 
-function createContinuousPageScore(pageLines, createBlankLineScore) {
-  const scores = pageLines
-    .map((line) => line.score)
-    .filter((score) => Array.isArray(score?.measures) && score.measures.length > 0);
-
-  if (!scores.length) {
-    return createBlankLineScore();
-  }
-
-  return {
-    ...scores[0],
-    measures: scores.flatMap((score) => score.measures),
-  };
-}
-
 function renderPageScoreSvg(
   score,
   renderKey,
   pageNumber,
-  rendererApi
+  rendererApi,
+  pdfSettings,
+  bookData
 ) {
   setupDom();
 
@@ -567,17 +549,19 @@ function renderPageScoreSvg(
       null,
       () => {},
       {
-        width: CONTINUOUS_SCORE_RENDER_WIDTH,
+        width: bookData.getScoreRenderWidth(pdfSettings),
         scale: 1,
         hResize: 1,
         vResize: 1,
-        justifyLastRow: false,
-        measureNoteStartPadding: CONTINUOUS_MEASURE_START_PADDING,
-        measureNoteEndPadding: CONTINUOUS_MEASURE_END_PADDING,
-        measureGap: CONTINUOUS_MEASURE_GAP,
+        justifyLastRow: true,
+        measureNoteStartPadding: bookData.SCORE_MEASURE_START_PADDING,
+        measureNoteEndPadding: bookData.SCORE_MEASURE_END_PADDING,
+        measureGap: bookData.SCORE_MEASURE_GAP,
+        minimumNoteSpacing: bookData.SCORE_MINIMUM_NOTE_SPACING,
+        measuresPerLine: pdfSettings.measuresPerLine,
         hideTimeSignature: false,
         showMeasureNumbers: true,
-        systemSpacing: CONTINUOUS_SYSTEM_SPACING,
+        systemSpacing: pdfSettings.lineSpacing,
       },
       { start: [], end: [] }
     );
@@ -602,12 +586,12 @@ function renderPageScoreSvg(
   }
 }
 
-function getPageScoreSlices(svg, width, height) {
+function getPageScoreSlices(svg, width, height, lineSpacing) {
   const scale = width / svg.width;
-  const systemHeight = CONTINUOUS_SYSTEM_SPACING * scale;
+  const systemHeight = lineSpacing * scale;
   const totalSystems = Math.max(
     1,
-    Math.round(svg.height / CONTINUOUS_SYSTEM_SPACING)
+    Math.round(svg.height / lineSpacing)
   );
   const maxSystemsPerPage = Math.max(1, Math.floor(height / systemHeight));
   const minimumContinuationSystems = Math.min(
@@ -636,12 +620,12 @@ function getPageScoreSlices(svg, width, height) {
   return slices;
 }
 
-function drawPageScoreSvg(doc, svg, x, y, width, height, slice) {
+function drawPageScoreSvg(doc, svg, x, y, width, height, slice, lineSpacing) {
   const scale = width / svg.width;
   const svgWidth = svg.width * scale;
   const svgHeight = svg.height * scale;
-  const sliceTop = slice.systemStart * CONTINUOUS_SYSTEM_SPACING * scale;
-  const sliceHeight = slice.systemCount * CONTINUOUS_SYSTEM_SPACING * scale;
+  const sliceTop = slice.systemStart * lineSpacing * scale;
+  const sliceHeight = slice.systemCount * lineSpacing * scale;
 
   if (sliceHeight > height) {
     throw new Error(
@@ -674,14 +658,14 @@ async function renderBookPageAssets(
   limitScoreRender
 ) {
   const {
-    createBlankLineScore,
+    createContinuousPageScore,
     getLinesPerPage,
     getPagePdfSettings,
   } = bookData;
   const pdfSettings = getPagePdfSettings(page, book.pdfSettings);
   const linesPerPage = getLinesPerPage(pdfSettings);
   const pageLines = page.lines.slice(0, linesPerPage);
-  const pageScore = createContinuousPageScore(pageLines, createBlankLineScore);
+  const pageScore = createContinuousPageScore(pageLines);
   const [scoreSvg, qrSvg] = await Promise.all([
     limitScoreRender(() => {
       try {
@@ -689,7 +673,9 @@ async function renderBookPageAssets(
           pageScore,
           `${page.pageNumber}-continuous`,
           page.pageNumber,
-          rendererApi
+          rendererApi,
+          pdfSettings,
+          bookData
         );
       } catch (error) {
         throw new Error(
@@ -703,20 +689,26 @@ async function renderBookPageAssets(
 
   return {
     page,
+    pdfSettings,
     scoreSvg,
     qrSvg,
   };
 }
 
 function drawBookPage(doc, book, pageAssets) {
-  const { page, scoreSvg, qrSvg } = pageAssets;
+  const { page, pdfSettings, scoreSvg, qrSvg } = pageAssets;
   const pageWidth = PDF_PAGE_WIDTH;
   const pageHeight = PDF_PAGE_HEIGHT;
   const margin = PDF_MARGIN;
   const footerHeight = PDF_FOOTER_HEIGHT;
   const contentWidth = pageWidth - margin * 2;
   const contentHeight = pageHeight - margin * 2 - footerHeight;
-  const slices = getPageScoreSlices(scoreSvg, contentWidth, contentHeight);
+  const slices = getPageScoreSlices(
+    scoreSvg,
+    contentWidth,
+    contentHeight,
+    pdfSettings.lineSpacing
+  );
 
   slices.forEach((slice) => {
     doc.addPage();
@@ -732,7 +724,8 @@ function drawBookPage(doc, book, pageAssets) {
       margin,
       contentWidth,
       contentHeight,
-      slice
+      slice,
+      pdfSettings.lineSpacing
     );
 
     const qrSize = 36;

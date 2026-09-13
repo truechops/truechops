@@ -22,12 +22,16 @@ const DEFAULT_BOOK_PATH = path.join(
 );
 
 const DEFAULT_PDF_SETTINGS = {
-  columns: 2,
-  rows: 12,
-  noteRenderWidth: 420,
-  noteStartPadding: 25,
-  noteEndPadding: 25,
+  measuresPerLine: 2,
+  lineSpacing: 130,
+  noteSize: 100,
 };
+const PDF_PAGE_WIDTH = 612;
+const PDF_PAGE_HEIGHT = 792;
+const PDF_PAGE_MARGIN = 24;
+const PDF_PAGE_FOOTER_HEIGHT = 38;
+const SCORE_RENDER_BASE_WIDTH = 1100;
+const SCORE_RENDER_ROOT_PADDING = 50;
 
 const NUMBER_WORDS = {
   one: 1,
@@ -98,18 +102,53 @@ function getNonNegativeInteger(value, fallback = 0) {
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
 }
 
+function getBoundedNumber(value, fallback, minimum, maximum, integer = false) {
+  const parser = integer ? Number.parseInt : Number.parseFloat;
+  const parsed = parser(value, 10);
+  const safeValue = Number.isFinite(parsed) ? parsed : fallback;
+  return Math.min(maximum, Math.max(minimum, safeValue));
+}
+
 function normalizePdfSettings(pdfSettings = {}) {
   return {
-    ...DEFAULT_PDF_SETTINGS,
-    ...pdfSettings,
-    columns: DEFAULT_PDF_SETTINGS.columns,
-    rows: getPositiveInteger(pdfSettings.rows, DEFAULT_PDF_SETTINGS.rows),
+    measuresPerLine: getBoundedNumber(
+      pdfSettings.measuresPerLine,
+      DEFAULT_PDF_SETTINGS.measuresPerLine,
+      1,
+      8,
+      true
+    ),
+    lineSpacing: getBoundedNumber(
+      pdfSettings.lineSpacing,
+      DEFAULT_PDF_SETTINGS.lineSpacing,
+      90,
+      240
+    ),
+    noteSize: getBoundedNumber(
+      pdfSettings.noteSize,
+      DEFAULT_PDF_SETTINGS.noteSize,
+      60,
+      160
+    ),
   };
 }
 
 function getLinesPerPage(pdfSettings) {
   const normalized = normalizePdfSettings(pdfSettings);
-  return normalized.columns * normalized.rows;
+  const noteScale = normalized.noteSize / DEFAULT_PDF_SETTINGS.noteSize;
+  const scoreRenderWidth = (
+    (SCORE_RENDER_BASE_WIDTH + SCORE_RENDER_ROOT_PADDING) / noteScale
+  ) - SCORE_RENDER_ROOT_PADDING;
+  const renderedSvgWidth = scoreRenderWidth + SCORE_RENDER_ROOT_PADDING;
+  const contentWidth = PDF_PAGE_WIDTH - PDF_PAGE_MARGIN * 2;
+  const contentHeight = PDF_PAGE_HEIGHT - PDF_PAGE_MARGIN * 2 - PDF_PAGE_FOOTER_HEIGHT;
+  const pdfScale = contentWidth / renderedSvgWidth;
+  const systemsPerPage = Math.max(
+    1,
+    Math.floor(contentHeight / (normalized.lineSpacing * pdfScale))
+  );
+
+  return normalized.measuresPerLine * systemsPerPage;
 }
 
 function createBlankLine(pageNumber, lineNumber) {
@@ -125,7 +164,7 @@ function createBlankLine(pageNumber, lineNumber) {
   };
 }
 
-function createBlankPage(pageNumber, pdfSettings) {
+function createBlankPage(pageNumber, pdfSettings, generationSettings = {}) {
   const normalizedSettings = normalizePdfSettings(pdfSettings);
   const linesPerPage = getLinesPerPage(normalizedSettings);
 
@@ -133,6 +172,7 @@ function createBlankPage(pageNumber, pdfSettings) {
     pageNumber,
     title: `Page ${pageNumber}`,
     pdfSettings: normalizedSettings,
+    generationSettings,
     lines: Array.from({ length: linesPerPage }, (_, index) =>
       createBlankLine(pageNumber, index + 1)
     ),
@@ -2879,7 +2919,33 @@ function inferPageCount(section) {
 }
 
 function getSectionSampleJson(section) {
+  if (section.sampleJson && typeof section.sampleJson === "object") {
+    return section.sampleJson;
+  }
+
   return parseJsonLoose(section.sampleJson) || {};
+}
+
+function collapseLegacyContinuationPages(section, pages) {
+  if (pages.length <= 1) {
+    return pages;
+  }
+
+  const firstTitle = String(pages[0].title || "").trim();
+  const allPagesShareTitle = firstTitle && pages.every(
+    (page) => String(page.title || "").trim() === firstTitle
+  );
+  const legacyGeneratedTitle = `${section.title || "Section"} 1`;
+
+  if (!allPagesShareTitle || firstTitle !== legacyGeneratedTitle) {
+    return pages;
+  }
+
+  // The previous line-oriented model duplicated a source page when its saved
+  // rhythm count exceeded a newly selected page capacity. These duplicates all
+  // retained the original "Section 1" title. A page is now an explicit recipe,
+  // so keep the latest copy rather than generating each continuation again.
+  return [pages[pages.length - 1]];
 }
 
 function createGenerationSectionsFromBook(book, globalRules = "") {
@@ -2890,40 +2956,57 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
       ...bookPdfSettings,
       ...(section.pdfSettings || {}),
     });
-    const existingPageCount = Array.isArray(section.pages) && section.pages.length
-      ? section.pages.length
-      : 1;
-    const sampleJson = getSectionSampleJson(section);
-    const subdivisions = getGenerationSubdivisions(section, sampleJson);
-    const ornaments = getGenerationOrnaments(section, sampleJson);
-    const tuplets = getGenerationTuplets(section, sampleJson);
-    const structuredSection = {
-      ...section,
-      subdivisions,
-      ornaments,
-      tuplets,
-      sampleJson,
-    };
+    const savedPages = Array.isArray(section.pages) && section.pages.length
+      ? section.pages
+      : [{}];
+    const sourcePages = collapseLegacyContinuationPages(section, savedPages);
+    const pages = sourcePages.map((page, pageIndex) => {
+      const pageSource = {
+        ...section,
+        ...(page.generationSettings || {}),
+      };
+      const sampleJson = getSectionSampleJson(pageSource);
+      const subdivisions = getGenerationSubdivisions(pageSource, sampleJson);
+      const ornaments = getGenerationOrnaments(pageSource, sampleJson);
+      const tuplets = getGenerationTuplets(pageSource, sampleJson);
+      const structuredPage = {
+        ...pageSource,
+        subdivisions,
+        ornaments,
+        tuplets,
+        sampleJson,
+      };
+
+      return {
+        id: `${section.id || `section-${sectionIndex + 1}`}-page-${pageIndex + 1}`,
+        title: page.title || `${section.title || `Section ${sectionIndex + 1}`} ${pageIndex + 1}`,
+        sectionTitle: section.title || `Section ${sectionIndex + 1}`,
+        pageCount: 1,
+        minPlayedNotes: getSectionMinPlayedNotes(pageSource),
+        maxPlayedNotes: getSectionMaxPlayedNotes(pageSource),
+        playEveryNote: getSectionPlayEveryNote(pageSource),
+        maxSameHandStickingRun: getSectionMaxSameHandStickingRun(pageSource),
+        requiredSameHandStickingRuns: getSectionRequiredSameHandStickingRuns(pageSource),
+        globalRules,
+        instructions: createStructuredSectionInstructions(structuredPage, sampleJson),
+        prompt: pageSource.prompt || pageSource.instructions || "",
+        subdivisions,
+        ornaments,
+        tuplets,
+        sampleJson,
+        pdfSettings: normalizePdfSettings({
+          ...sectionPdfSettings,
+          ...(page.pdfSettings || {}),
+        }),
+      };
+    });
 
     return {
+      ...section,
       id: section.id || `section-${sectionIndex + 1}`,
       title: section.title || `Section ${sectionIndex + 1}`,
-      pageCount: getPositiveInteger(
-        section.pageCount,
-        existingPageCount || inferPageCount(section)
-      ),
-      minPlayedNotes: getSectionMinPlayedNotes(section),
-      maxPlayedNotes: getSectionMaxPlayedNotes(section),
-      playEveryNote: getSectionPlayEveryNote(section),
-      maxSameHandStickingRun: getSectionMaxSameHandStickingRun(section),
-      requiredSameHandStickingRuns: getSectionRequiredSameHandStickingRuns(section),
-      globalRules,
-      instructions: createStructuredSectionInstructions(structuredSection, sampleJson),
-      subdivisions,
-      ornaments,
-      tuplets,
-      sampleJson,
       pdfSettings: sectionPdfSettings,
+      pages,
     };
   });
 }
@@ -3122,7 +3205,7 @@ async function generateSectionLines(config, section, sectionIndex, options) {
   const usedExerciseShortForms = options.usedExerciseShortForms || new Set();
 
   console.log(
-    `[${sectionIndex + 1}/${config.sections.length}] ${section.title}: generate ${pageCount} pages, ${lineCount} lines`
+    `[${sectionIndex + 1}/${options.totalPageCount || config.sections.length}] ${section.sectionTitle || section.title} · ${section.title}: generate ${lineCount} rhythms`
   );
 
   for (let offset = 0; offset < lineCount; offset += batchSize) {
@@ -3167,9 +3250,28 @@ async function generateSectionLines(config, section, sectionIndex, options) {
   };
 }
 
+function createStoredPageGenerationSettings(pageConfig) {
+  return {
+    prompt: pageConfig.prompt || "",
+    sampleJson: JSON.stringify(pageConfig.sampleJson || {}, null, 2),
+    subdivisions: pageConfig.subdivisions,
+    ornaments: pageConfig.ornaments,
+    tuplets: pageConfig.tuplets,
+    minPlayedNotes: pageConfig.minPlayedNotes,
+    maxPlayedNotes: pageConfig.maxPlayedNotes,
+    playEveryNote: pageConfig.playEveryNote,
+    maxSameHandStickingRun: pageConfig.maxSameHandStickingRun,
+    requiredSameHandStickingRuns: pageConfig.requiredSameHandStickingRuns,
+  };
+}
+
 function createGeneratedPages(section, generated, now) {
   return Array.from({ length: generated.pageCount }, (_, pageIndex) => {
-    const page = createBlankPage(pageIndex + 1, generated.pdfSettings);
+    const page = createBlankPage(
+      pageIndex + 1,
+      generated.pdfSettings,
+      createStoredPageGenerationSettings(section)
+    );
 
     return {
       ...page,
@@ -3198,13 +3300,16 @@ function buildBook(config, generatedSections) {
   let globalPageNumber = 1;
 
   const sections = config.sections.map((section, sectionIndex) => {
-    const generated = generatedSections[sectionIndex];
-    const pages = createGeneratedPages(section, generated, now).map((page, sectionPageIndex) => {
+    const generatedPages = generatedSections[sectionIndex];
+    const pages = section.pages.map((pageConfig, sectionPageIndex) => {
+      const generated = generatedPages[sectionPageIndex];
+      const page = createGeneratedPages(pageConfig, generated, now)[0];
       const pageNumber = globalPageNumber;
       globalPageNumber += 1;
 
       return {
         ...page,
+        title: pageConfig.title || `${section.title} ${sectionPageIndex + 1}`,
         pageNumber,
         sectionId: section.id,
         sectionTitle: section.title,
@@ -3218,22 +3323,23 @@ function buildBook(config, generatedSections) {
         })),
       };
     });
+    const firstPageConfig = section.pages[0] || {};
 
     return {
       id: section.id,
       title: section.title,
-      prompt: "",
-      sampleJson: JSON.stringify(section.sampleJson || {}, null, 2),
-      subdivisions: section.subdivisions,
-      ornaments: section.ornaments,
-      tuplets: section.tuplets,
-      pageCount: generated.pageCount,
-      minPlayedNotes: section.minPlayedNotes,
-      maxPlayedNotes: section.maxPlayedNotes,
-      playEveryNote: section.playEveryNote,
-      maxSameHandStickingRun: section.maxSameHandStickingRun,
-      requiredSameHandStickingRuns: section.requiredSameHandStickingRuns,
-      pdfSettings: generated.pdfSettings,
+      prompt: section.prompt || "",
+      sampleJson: section.sampleJson || JSON.stringify(firstPageConfig.sampleJson || {}, null, 2),
+      subdivisions: section.subdivisions || firstPageConfig.subdivisions,
+      ornaments: section.ornaments || firstPageConfig.ornaments,
+      tuplets: section.tuplets || firstPageConfig.tuplets,
+      pageCount: pages.length,
+      minPlayedNotes: section.minPlayedNotes ?? firstPageConfig.minPlayedNotes,
+      maxPlayedNotes: section.maxPlayedNotes ?? firstPageConfig.maxPlayedNotes,
+      playEveryNote: section.playEveryNote ?? firstPageConfig.playEveryNote,
+      maxSameHandStickingRun: section.maxSameHandStickingRun ?? firstPageConfig.maxSameHandStickingRun,
+      requiredSameHandStickingRuns: section.requiredSameHandStickingRuns || firstPageConfig.requiredSameHandStickingRuns,
+      pdfSettings: section.pdfSettings,
       pages,
     };
   });
@@ -3274,6 +3380,7 @@ function createManifest(book) {
     sectionPageNumber: page.sectionPageNumber,
     title: page.title,
     pdfSettings: page.pdfSettings,
+    generationSettings: page.generationSettings,
     lines: page.lines.map(createLineManifest),
   });
   const tableOfContents = book.sections.map((section) => {
@@ -3419,14 +3526,28 @@ async function main() {
 
   const generatedSections = [];
   const usedExerciseShortForms = new Set();
+  const totalPageCount = generationConfig.sections.reduce(
+    (count, section) => count + section.pages.length,
+    0
+  );
+  let pageProgress = 0;
 
   for (let sectionIndex = 0; sectionIndex < generationConfig.sections.length; sectionIndex += 1) {
-    generatedSections.push(
-      await generateSectionLines(generationConfig, generationConfig.sections[sectionIndex], sectionIndex, {
-        allowFallback: allowFallback || noLocalAi,
-        usedExerciseShortForms,
-      })
-    );
+    const section = generationConfig.sections[sectionIndex];
+    const generatedPages = [];
+
+    for (const pageConfig of section.pages) {
+      generatedPages.push(
+        await generateSectionLines(generationConfig, pageConfig, pageProgress, {
+          allowFallback: allowFallback || noLocalAi,
+          usedExerciseShortForms,
+          totalPageCount,
+        })
+      );
+      pageProgress += 1;
+    }
+
+    generatedSections.push(generatedPages);
   }
 
   const book = buildBook(generationConfig, generatedSections);
