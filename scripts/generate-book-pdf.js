@@ -20,10 +20,11 @@ const PDF_PAGE_HEIGHT = 792;
 const PDF_MARGIN = 24;
 const PDF_FOOTER_HEIGHT = 32;
 const CONTINUOUS_SCORE_RENDER_WIDTH = 1100;
-const CONTINUOUS_SYSTEM_SPACING = 119;
+const CONTINUOUS_SYSTEM_SPACING = 132;
 const CONTINUOUS_MEASURE_GAP = 6;
 const CONTINUOUS_MEASURE_START_PADDING = 4;
 const CONTINUOUS_MEASURE_END_PADDING = 8;
+const MIN_CONTINUATION_SYSTEMS = 3;
 
 let domSetup = false;
 let renderCounter = 0;
@@ -601,20 +602,56 @@ function renderPageScoreSvg(
   }
 }
 
-function drawPageScoreSvg(doc, svg, x, y, width, height) {
+function getPageScoreSlices(svg, width, height) {
+  const scale = width / svg.width;
+  const systemHeight = CONTINUOUS_SYSTEM_SPACING * scale;
+  const totalSystems = Math.max(
+    1,
+    Math.round(svg.height / CONTINUOUS_SYSTEM_SPACING)
+  );
+  const maxSystemsPerPage = Math.max(1, Math.floor(height / systemHeight));
+  const minimumContinuationSystems = Math.min(
+    MIN_CONTINUATION_SYSTEMS,
+    maxSystemsPerPage
+  );
+  const slices = [];
+  let systemStart = 0;
+
+  while (systemStart < totalSystems) {
+    const remainingSystems = totalSystems - systemStart;
+    let systemCount = Math.min(maxSystemsPerPage, remainingSystems);
+    const continuationSystems = remainingSystems - systemCount;
+
+    if (
+      continuationSystems > 0 &&
+      continuationSystems < minimumContinuationSystems
+    ) {
+      systemCount -= minimumContinuationSystems - continuationSystems;
+    }
+
+    slices.push({ systemStart, systemCount });
+    systemStart += systemCount;
+  }
+
+  return slices;
+}
+
+function drawPageScoreSvg(doc, svg, x, y, width, height, slice) {
   const scale = width / svg.width;
   const svgWidth = svg.width * scale;
   const svgHeight = svg.height * scale;
+  const sliceTop = slice.systemStart * CONTINUOUS_SYSTEM_SPACING * scale;
+  const sliceHeight = slice.systemCount * CONTINUOUS_SYSTEM_SPACING * scale;
 
-  if (svgHeight > height) {
+  if (sliceHeight > height) {
     throw new Error(
-      `Continuous score height ${svgHeight.toFixed(1)} exceeds the page area ${height.toFixed(1)}.`
+      `Continuous score slice height ${sliceHeight.toFixed(1)} exceeds the page area ${height.toFixed(1)}.`
     );
   }
 
   doc.save();
-  doc.rect(x, y, width, height).clip();
-  SVGtoPDF(doc, svg.source, x, y, {
+  doc.rect(x, y, width, sliceHeight).clip();
+  SVGtoPDF(doc, svg.source, x, y - sliceTop, {
     width: svgWidth,
     height: svgHeight,
     assumePt: true,
@@ -679,20 +716,31 @@ function drawBookPage(doc, book, pageAssets) {
   const footerHeight = PDF_FOOTER_HEIGHT;
   const contentWidth = pageWidth - margin * 2;
   const contentHeight = pageHeight - margin * 2 - footerHeight;
+  const slices = getPageScoreSlices(scoreSvg, contentWidth, contentHeight);
 
-  doc.addPage();
-  doc.font("Times-Bold").fontSize(10).text(String(page.pageNumber), pageWidth - margin - 18, 8, {
-    width: 18,
-    align: "right",
-    lineBreak: false,
+  slices.forEach((slice) => {
+    doc.addPage();
+    doc.font("Times-Bold").fontSize(10).text(String(page.pageNumber), pageWidth - margin - 18, 8, {
+      width: 18,
+      align: "right",
+      lineBreak: false,
+    });
+    drawPageScoreSvg(
+      doc,
+      scoreSvg,
+      margin,
+      margin,
+      contentWidth,
+      contentHeight,
+      slice
+    );
+
+    const qrSize = 36;
+    const qrX = pageWidth - margin - qrSize;
+    const qrBottomMargin = 10;
+    const qrY = pageHeight - qrBottomMargin - qrSize;
+    SVGtoPDF(doc, qrSvg, qrX, qrY, { width: qrSize, height: qrSize });
   });
-  drawPageScoreSvg(doc, scoreSvg, margin, margin, contentWidth, contentHeight);
-
-  const qrSize = 36;
-  const qrX = pageWidth - margin - qrSize;
-  const qrBottomMargin = 10;
-  const qrY = pageHeight - qrBottomMargin - qrSize;
-  SVGtoPDF(doc, qrSvg, qrX, qrY, { width: qrSize, height: qrSize });
 }
 
 function getTableOfContentsEntries(book) {
