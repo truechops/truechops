@@ -87,7 +87,7 @@ const styles = {
     boxSizing: "border-box",
     minHeight: "134px",
     width: "100%",
-    padding: "16px 46px 14px",
+    padding: "16px 36px 14px",
     fontFamily: "Georgia, serif",
     border: "1px solid #d7d7d7",
     borderRadius: "14px",
@@ -99,7 +99,7 @@ const styles = {
   exerciseRowSelected: {
     background: "#f1f7ff",
     border: "2px solid #1e5ea8",
-    padding: "15px 45px 13px",
+    padding: "15px 35px 13px",
   },
   exerciseNumber: {
     alignItems: "center",
@@ -214,7 +214,7 @@ function RhythmPreview({ line }) {
     container.innerHTML = "";
     const { renderer, context } = initialize(previewId);
     const scoreWidth = Math.max(
-      300,
+      100,
       Math.floor(previewWidth / EDITOR_SCORE_SCALE - VEXFLOW_RENDER_PADDING)
     );
     drawScore(
@@ -232,6 +232,21 @@ function RhythmPreview({ line }) {
       },
       {}
     );
+
+    const svg = container.querySelector("svg");
+    if (svg) {
+      const renderedWidth = Number.parseFloat(svg.getAttribute("width"));
+      const renderedHeight = Number.parseFloat(svg.getAttribute("height"));
+
+      if (renderedWidth > 0 && renderedHeight > 0) {
+        svg.setAttribute("viewBox", `0 0 ${renderedWidth} ${renderedHeight}`);
+        svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+        svg.style.display = "block";
+        svg.style.height = "auto";
+        svg.style.maxWidth = "100%";
+        svg.style.width = "100%";
+      }
+    }
   }, [line.score, previewId, previewWidth]);
 
   if (!line.score) {
