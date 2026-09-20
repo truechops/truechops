@@ -131,15 +131,13 @@ const styles = {
     fontWeight: 700,
     height: "34px",
     justifyContent: "center",
+    pointerEvents: "none",
+    position: "absolute",
+    right: "-20px",
+    top: "50%",
+    transform: "translateY(-50%)",
     width: "34px",
-  },
-  selectionOrderSlot: {
-    alignItems: "center",
-    display: "flex",
-    flex: "0 0 46px",
-    justifyContent: "flex-end",
-    marginLeft: "12px",
-    width: "46px",
+    zIndex: 1,
   },
   exerciseButtonEmpty: {
     color: "#bbb",
@@ -149,10 +147,9 @@ const styles = {
   preview: {
     flex: "1 1 auto",
     minWidth: 0,
-    overflow: "hidden",
+    overflow: "visible",
   },
   previewInner: {
-    marginLeft: "-10px",
     overflow: "visible",
   },
   blankPreview: {
@@ -415,14 +412,12 @@ export default function PagePractice() {
                     type="button"
                   >
                     <RhythmPreview line={line} />
-                    <span aria-hidden="true" style={styles.selectionOrderSlot}>
-                      {isSelected && (
-                        <span style={styles.selectionOrder}>
-                          {selectionIndex + 1}
-                        </span>
-                      )}
-                    </span>
                   </button>
+                  {isSelected && (
+                    <span aria-hidden="true" style={styles.selectionOrder}>
+                      {selectionIndex + 1}
+                    </span>
+                  )}
                 </div>
               );
             })}
