@@ -35,7 +35,7 @@ const BOOK_ROOT = path.join(process.cwd(), "data", "book-builder", BOOK_SLUG);
 const MANIFEST_PATH = path.join(BOOK_ROOT, "book.json");
 const PDF_CACHE_ROOT = process.env.BOOK_PDF_CACHE_DIR || path.join(process.cwd(), ".next", "cache", "book-builder-pdf");
 const SCORE_SVG_CACHE_VERSION = "score-svg-v25";
-const PDF_FILE_CACHE_VERSION = "pdf-v29";
+const PDF_FILE_CACHE_VERSION = "pdf-v30";
 const SCORE_SVG_MEMORY_CACHE_LIMIT = Number(process.env.BOOK_PDF_SVG_MEMORY_CACHE_LIMIT || 800);
 const MIN_CONTINUATION_SYSTEMS = 3;
 
@@ -101,6 +101,7 @@ function createManifest(book) {
     contentVersion: book.contentVersion,
     updatedAt: book.updatedAt,
     globalAiRules: book.globalAiRules,
+    globalOrnamentDensity: book.globalOrnamentDensity,
     pdfSettings: book.pdfSettings,
     sections: book.sections.map((section) => ({
       id: section.id,

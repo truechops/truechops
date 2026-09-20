@@ -17,7 +17,7 @@ const DEFAULT_OUTPUT_PATH = path.join(
 const DEFAULT_QR_ORIGIN = "https://truechops.com";
 const PDF_PAGE_WIDTH = 612;
 const PDF_PAGE_HEIGHT = 792;
-const PDF_MARGIN = 24;
+const PDF_MARGIN = 28;
 const PDF_FOOTER_HEIGHT = 38;
 const MIN_CONTINUATION_SYSTEMS = 3;
 

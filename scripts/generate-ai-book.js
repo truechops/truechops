@@ -26,9 +26,10 @@ const DEFAULT_PDF_SETTINGS = {
   lineSpacing: 130,
   noteSize: 100,
 };
+const DEFAULT_GLOBAL_ORNAMENT_DENSITY = 100;
 const PDF_PAGE_WIDTH = 612;
 const PDF_PAGE_HEIGHT = 792;
-const PDF_PAGE_MARGIN = 24;
+const PDF_PAGE_MARGIN = 28;
 const PDF_PAGE_FOOTER_HEIGHT = 38;
 const SCORE_RENDER_BASE_WIDTH = 1100;
 const SCORE_RENDER_ROOT_PADDING = 50;
@@ -100,6 +101,10 @@ function getPositiveInteger(value, fallback) {
 function getNonNegativeInteger(value, fallback = 0) {
   const parsed = Number.parseInt(value, 10);
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+function normalizeGlobalOrnamentDensity(value, fallback = DEFAULT_GLOBAL_ORNAMENT_DENSITY) {
+  return getBoundedNumber(value, fallback, 25, 200, true);
 }
 
 function getBoundedNumber(value, fallback, minimum, maximum, integer = false) {
@@ -404,6 +409,15 @@ function inferGenerationSubdivisions(section, samplePayload) {
 
 function getGenerationSubdivisions(section, samplePayload = getSamplePayload(section)) {
   const explicit = normalizeOptionIds(section && section.subdivisions, SUBDIVISION_SETTINGS);
+
+  if (
+    section &&
+    Object.prototype.hasOwnProperty.call(section, "subdivisions") &&
+    (explicit.length || getGenerationTuplets(section, samplePayload).length)
+  ) {
+    return explicit;
+  }
+
   return explicit.length ? explicit : inferGenerationSubdivisions(section || {}, samplePayload);
 }
 
@@ -520,18 +534,27 @@ function createStructuredSectionInstructions(section, samplePayload) {
   const tuplets = getGenerationTuplets(section, samplePayload);
 
   return [
-    `Use these subdivisions only: ${getOptionLabels(SUBDIVISION_SETTINGS, subdivisions, "eighth notes")}.`,
+    subdivisions.length
+      ? `Use these regular subdivisions only: ${getOptionLabels(SUBDIVISION_SETTINGS, subdivisions, "none")}.`
+      : "Use no regular note subdivisions.",
     tuplets.length
-      ? `Randomly mix these tuplet types with the selected regular subdivisions: ${tuplets.map(getTupletLabel).join(", ")}.`
+      ? `${subdivisions.length ? "Randomly mix" : "Use"} complete groups of these tuplet types${subdivisions.length ? " with the selected regular subdivisions" : ""}: ${tuplets.map(getTupletLabel).join(", ")}.`
       : "Use no tuplets.",
     ornaments.length
       ? `Use these ornaments only when musically appropriate: ${getOptionLabels(ORNAMENT_SETTINGS, ornaments, "none")}.`
       : "Use no ornaments.",
+    ornaments.some((ornament) => ornament !== "stickings")
+      ? `Use the global ornament density setting of ${normalizeGlobalOrnamentDensity(section.globalOrnamentDensity)}%, where 100% is the normal frequency.`
+      : "",
     getSectionPlayEveryNote(section)
       ? "Use no rests; play every rhythmic position."
       : "Rests are allowed.",
+    "Never create a tuplet group made entirely of rests. Replace its full duration with the simplest equivalent ordinary rest or rests outside a tuplet.",
     ornaments.some((ornament) => ornament === "diddles" || ornament === "cheese")
       ? "Diddles and cheese may only be used on sixteenth notes or faster, except that eighth notes inside a tuplet may use them; never put them on regular eighth notes, dotted eighth notes, or quarter notes."
+      : "",
+    ornaments.includes("diddles")
+      ? "Distribute diddles across the measure by default. Occasional adjacent diddles are allowed for variety, but avoid clustering most or all diddles together."
       : "",
   ].join("\n");
 }
@@ -812,12 +835,29 @@ function preferLongerValuesInTupletVoice(voice) {
       );
     }
 
+    const tupletNotes = notes.slice(tuplet.start, tuplet.end);
+    if (!groupHasPlayedNotes(tupletNotes)) {
+      const rawRestSlots = tupletNotes.reduce(
+        (total, note) => total + getNoteSlotCount(note),
+        0
+      );
+      const effectiveRestSlots = Math.max(
+        1,
+        Math.round(rawRestSlots * Number(tuplet.normal) / Number(tuplet.actual))
+      );
+      const firstRest = tupletNotes[0];
+
+      pushCompressedRests(nextNotes, effectiveRestSlots, firstRest);
+      cursor = tuplet.end;
+      continue;
+    }
+
     const tupletStart = nextNotes.length;
     // Keep the tuplet ratio while using the longest readable values within the
     // group. VexFlow scales the combined tick duration by actual:normal, so an
     // eighth here can replace a played sixteenth followed by a sixteenth rest.
     nextNotes.push(
-      ...preferLongerValues(notes.slice(tuplet.start, tuplet.end))
+      ...preferLongerValues(tupletNotes)
     );
     const tupletEnd = nextNotes.length;
 
@@ -2239,6 +2279,40 @@ function addOrnamentToNote(note, ornament) {
   };
 }
 
+function getNearestOrnamentDistance(notes, noteIndex, ornament) {
+  const ornamentIndexes = (notes || []).flatMap((note, index) =>
+    String(note.ornaments || "").includes(ornament) ? [index] : []
+  );
+
+  if (!ornamentIndexes.length) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  return Math.min(...ornamentIndexes.map((ornamentIndex) => {
+    const directDistance = Math.abs(noteIndex - ornamentIndex);
+    return Math.min(directDistance, notes.length - directDistance);
+  }));
+}
+
+function getOrnamentPlacementRandomValue(section, lineIndex, ornament, placedCount, noteIndex) {
+  return createSeededRandom(
+    `${section.id || section.title || "section"}:${lineIndex}:${ornament}:${placedCount}:${noteIndex}:placement`
+  )();
+}
+
+function getScaledOrnamentTarget(section, baseTarget, maximumTarget, lineIndex, ornament) {
+  const density = normalizeGlobalOrnamentDensity(section.globalOrnamentDensity);
+  const exactTarget = baseTarget * density / 100;
+  const lowerTarget = Math.floor(exactTarget);
+  const fractionalTarget = exactTarget - lowerTarget;
+  const random = createSeededRandom(
+    `${section.id || section.title || "section"}:${lineIndex}:${ornament}:${density}:density`
+  );
+  const scaledTarget = lowerTarget + (random() < fractionalTarget ? 1 : 0);
+
+  return Math.max(1, Math.min(maximumTarget, scaledTarget));
+}
+
 function getOrnamentFrequencyProfile(section, notes, lineIndex, options = {}) {
   const requiredOrnaments = getRequiredSectionOrnamentChars(section);
   const varietyOrnaments = requiredOrnaments.filter((ornament) => ornament !== "a");
@@ -2250,10 +2324,13 @@ function getOrnamentFrequencyProfile(section, notes, lineIndex, options = {}) {
 
   if (requiredOrnaments.includes("a")) {
     const playedCount = countPlayedNotes(notes);
-    const accentDensity = 1 + (
+    const accentDensity = 2 + (
       lineIndex + hashString(`${section.id || section.title || "section"}:accents`)
-    ) % 4;
-    targets.set("a", Math.max(1, Math.min(accentDensity, playedCount)));
+    ) % 3;
+    targets.set(
+      "a",
+      getScaledOrnamentTarget(section, accentDensity, playedCount, lineIndex, "a")
+    );
   }
 
   if (!varietyOrnaments.length) {
@@ -2265,14 +2342,27 @@ function getOrnamentFrequencyProfile(section, notes, lineIndex, options = {}) {
   ) % varietyOrnaments.length;
   const featuredOrnament = varietyOrnaments[featuredIndex];
   const densityStep = Math.floor(lineIndex / varietyOrnaments.length) % 3;
-  const eligibleCount = (notes || []).filter((note, noteIndex) =>
-    canAddRequiredOrnament(notes, noteIndex, featuredOrnament, options)
-  ).length;
-  const musicalMaximum = featuredOrnament === "c"
-    ? Math.ceil(eligibleCount / 2)
-    : eligibleCount;
 
-  targets.set(featuredOrnament, Math.max(1, Math.min(2 + densityStep, musicalMaximum)));
+  for (const ornament of varietyOrnaments) {
+    const eligibleCount = (notes || []).filter((note, noteIndex) =>
+      canAddRequiredOrnament(notes, noteIndex, ornament, options)
+    ).length;
+    const musicalMaximum = ornament === "c"
+      ? Math.ceil(eligibleCount / 2)
+      : eligibleCount;
+    const baseTarget = ornament === featuredOrnament
+      ? 3 + (densityStep % 2)
+      : 1;
+
+    targets.set(ornament, getScaledOrnamentTarget(
+      section,
+      baseTarget,
+      musicalMaximum,
+      lineIndex,
+      ornament
+    ));
+  }
+
   return { featuredOrnament, targets, varietyOrnaments };
 }
 
@@ -2312,6 +2402,12 @@ function ensureRequiredOrnamentsOnNotes(section, notes, lineIndex = 0, options =
     while (nextNotes.filter((note) =>
       !isRest(note) && String(note.ornaments || "").includes(ornament)
     ).length < targetCount) {
+      const placedOrnamentCount = nextNotes.filter((note) =>
+        !isRest(note) && String(note.ornaments || "").includes(ornament)
+      ).length;
+      const allowAdjacentDiddle = ornament === "d" &&
+        placedOrnamentCount === 1 &&
+        hashString(`${section.id || section.title || "section"}:${lineIndex}:adjacent-diddles`) % 5 === 0;
       const candidates = nextNotes
         .map((note, index) => ({ index, note }))
         .filter(({ index, note }) =>
@@ -2319,24 +2415,55 @@ function ensureRequiredOrnamentsOnNotes(section, notes, lineIndex = 0, options =
           canAddRequiredOrnament(nextNotes, index, ornament, options)
         )
         .sort((left, right) => {
-        const leftUsed = assignedIndexes.has(left.index) ? 1 : 0;
-        const rightUsed = assignedIndexes.has(right.index) ? 1 : 0;
-        const leftUseRank = ornament === "a" ? 1 - leftUsed : leftUsed;
-        const rightUseRank = ornament === "a" ? 1 - rightUsed : rightUsed;
-        const leftCount = String(left.note.ornaments || "").length;
-        const rightCount = String(right.note.ornaments || "").length;
-        const leftAdjacentDiddle = ornament === "d" && nextNotes.some((note, index) =>
-          /d/.test(String(note.ornaments || "")) && areAdjacentOrnamentRuleNotes(nextNotes, left.index, index, options)
-        ) ? 0 : 1;
-        const rightAdjacentDiddle = ornament === "d" && nextNotes.some((note, index) =>
-          /d/.test(String(note.ornaments || "")) && areAdjacentOrnamentRuleNotes(nextNotes, right.index, index, options)
-        ) ? 0 : 1;
+          const leftUsed = assignedIndexes.has(left.index) ? 1 : 0;
+          const rightUsed = assignedIndexes.has(right.index) ? 1 : 0;
+          const leftUseRank = ornament === "a" ? 1 - leftUsed : leftUsed;
+          const rightUseRank = ornament === "a" ? 1 - rightUsed : rightUsed;
+          const leftCount = String(left.note.ornaments || "").length;
+          const rightCount = String(right.note.ornaments || "").length;
+          const leftDiddleDistance = ornament === "d"
+            ? getNearestOrnamentDistance(nextNotes, left.index, ornament)
+            : 0;
+          const rightDiddleDistance = ornament === "d"
+            ? getNearestOrnamentDistance(nextNotes, right.index, ornament)
+            : 0;
+          const leftAdjacentDiddle = ornament === "d" && nextNotes.some((note, index) =>
+            /d/.test(String(note.ornaments || "")) &&
+            areAdjacentOrnamentRuleNotes(nextNotes, left.index, index, options)
+          );
+          const rightAdjacentDiddle = ornament === "d" && nextNotes.some((note, index) =>
+            /d/.test(String(note.ornaments || "")) &&
+            areAdjacentOrnamentRuleNotes(nextNotes, right.index, index, options)
+          );
+          const leftDiddleSpacingRank = ornament !== "d"
+            ? 0
+            : allowAdjacentDiddle
+              ? Number(!leftAdjacentDiddle)
+              : leftDiddleDistance >= 3 ? 0 : leftDiddleDistance === 2 ? 1 : 2;
+          const rightDiddleSpacingRank = ornament !== "d"
+            ? 0
+            : allowAdjacentDiddle
+              ? Number(!rightAdjacentDiddle)
+              : rightDiddleDistance >= 3 ? 0 : rightDiddleDistance === 2 ? 1 : 2;
+          const leftRandomValue = getOrnamentPlacementRandomValue(
+            section,
+            lineIndex,
+            ornament,
+            placedOrnamentCount,
+            left.index
+          );
+          const rightRandomValue = getOrnamentPlacementRandomValue(
+            section,
+            lineIndex,
+            ornament,
+            placedOrnamentCount,
+            right.index
+          );
 
-        return leftAdjacentDiddle - rightAdjacentDiddle ||
-          leftUseRank - rightUseRank ||
-          leftCount - rightCount ||
-          hashString(`${section.id}:${lineIndex}:${ornament}:${left.index}`) -
-            hashString(`${section.id}:${lineIndex}:${ornament}:${right.index}`);
+          return leftUseRank - rightUseRank ||
+            leftDiddleSpacingRank - rightDiddleSpacingRank ||
+            leftCount - rightCount ||
+            leftRandomValue - rightRandomValue;
         });
 
       if (!candidates.length) {
@@ -2526,6 +2653,9 @@ function getFallbackGenerationOptions(section, samplePayload) {
     allowSticking: ornaments.includes("stickings"),
     allowThirtySecond: maxSubdivisionDuration >= 32,
     maxSubdivisionDuration,
+    ornamentDensityFactor: normalizeGlobalOrnamentDensity(
+      section.globalOrnamentDensity
+    ) / 100,
     subdivisions,
     tuplets,
   };
@@ -2549,16 +2679,20 @@ function getDurationBySlots(slots, baseDuration) {
 
 function createFallbackOrnaments(options, random, playedIndex, previousOrnaments) {
   let ornaments = "";
+  const densityFactor = options.ornamentDensityFactor || 1;
 
-  if (options.allowFlams && random() < 0.14) {
+  if (options.allowFlams && random() < Math.min(0.95, 0.18 * densityFactor)) {
     ornaments += "f";
   }
 
-  if (options.allowAccents && random() < 0.28) {
+  if (options.allowAccents && random() < Math.min(0.95, 0.32 * densityFactor)) {
     ornaments += "a";
   }
 
-  if (options.allowDiddles && !ornaments.includes("f") && random() < 0.12) {
+  const adjacentDiddleChance = (
+    String(previousOrnaments || "").includes("d") ? 0.03 : 0.15
+  ) * densityFactor;
+  if (options.allowDiddles && !ornaments.includes("f") && random() < adjacentDiddleChance) {
     ornaments += "d";
   }
 
@@ -2566,7 +2700,7 @@ function createFallbackOrnaments(options, random, playedIndex, previousOrnaments
     options.allowCheese &&
     !ornaments.includes("f") &&
     !String(previousOrnaments || "").includes("c") &&
-    random() < 0.1
+    random() < Math.min(0.95, 0.12 * densityFactor)
   ) {
     ornaments += "c";
   }
@@ -2639,24 +2773,38 @@ function canFillMixedTupletSlots(remainingSlots, slotCounts, memo = new Map()) {
   return canFill;
 }
 
-function getMaximumMixedEventCount(remainingSlots, blocks, usedRegular = false, usedTuplet = false, memo = new Map()) {
+function getMaximumMixedEventCount(
+  remainingSlots,
+  blocks,
+  requireRegular,
+  usedRegular = false,
+  usedTuplet = false,
+  memo = new Map()
+) {
   if (remainingSlots === 0) {
-    return usedRegular && usedTuplet ? 0 : Number.NEGATIVE_INFINITY;
+    return usedTuplet && (!requireRegular || usedRegular)
+      ? 0
+      : Number.NEGATIVE_INFINITY;
   }
   if (remainingSlots < 0) return Number.NEGATIVE_INFINITY;
 
-  const key = `${remainingSlots}:${usedRegular}:${usedTuplet}`;
+  const key = `${remainingSlots}:${requireRegular}:${usedRegular}:${usedTuplet}`;
   if (memo.has(key)) return memo.get(key);
 
   const maximum = Math.max(...blocks.map((block) => {
     const remainderMaximum = getMaximumMixedEventCount(
       remainingSlots - block.slotCount,
       blocks,
+      requireRegular,
       usedRegular || block.kind === "regular",
       usedTuplet || block.kind === "tuplet",
       memo
     );
-    const eventCount = block.kind === "tuplet" ? block.tuplet.actual : 1;
+    const eventCount = block.kind === "tuplet"
+      ? block.tuplet.actual
+      : block.kind === "regular"
+        ? 1
+        : 0;
     return Number.isFinite(remainderMaximum)
       ? eventCount + remainderMaximum
       : Number.NEGATIVE_INFINITY;
@@ -2674,13 +2822,20 @@ function createMixedTupletFallbackGeneratedScore(section, options, random) {
       tuplet,
     }))
     .filter((block) => Number.isInteger(block.slotCount) && block.slotCount > 0 && block.slotCount <= 32);
-  const availableBlocks = [
-    { kind: "regular", slotCount: regularSlotCount },
-    ...tupletBlocks,
-  ];
+  const regularBlocks = options.subdivisions.length
+    ? [{ kind: "regular", slotCount: regularSlotCount }]
+    : [];
+  const restBlocks = options.subdivisions.length
+    ? []
+    : NOTATION_SLOT_COUNTS_DESCENDING.map((slotCount) => ({
+        kind: "rest",
+        slotCount,
+      }));
+  const availableBlocks = [...regularBlocks, ...tupletBlocks, ...restBlocks];
   const slotCounts = [...new Set(availableBlocks.map((block) => block.slotCount))];
   const minimumPlayedNotes = getSectionMinPlayedNotes(section);
-  const requireRegularSubdivision = getMaximumMixedEventCount(32, availableBlocks) >= minimumPlayedNotes;
+  const requireRegularSubdivision = options.subdivisions.length > 0 &&
+    getMaximumMixedEventCount(32, availableBlocks, true) >= minimumPlayedNotes;
   let layout = null;
 
   for (let attempt = 0; attempt < 200 && !layout; attempt += 1) {
@@ -2696,7 +2851,7 @@ function createMixedTupletFallbackGeneratedScore(section, options, random) {
       if (!eligible.length) break;
 
       const preferred = eligible.filter((block) =>
-        random() < (block.kind === "tuplet" ? 0.68 : 0.42)
+        random() < (block.kind === "tuplet" ? 0.68 : block.kind === "regular" ? 0.42 : 0.18)
       );
       const pool = preferred.length ? preferred : eligible;
       const selected = pool[randomInteger(random, 0, pool.length - 1)];
@@ -2707,7 +2862,9 @@ function createMixedTupletFallbackGeneratedScore(section, options, random) {
     const hasTuplet = candidate.some((block) => block.kind === "tuplet");
     const hasRegularSubdivision = candidate.some((block) => block.kind === "regular");
     const eventCount = candidate.reduce(
-      (count, block) => count + (block.kind === "tuplet" ? block.tuplet.actual : 1),
+      (count, block) => count + (
+        block.kind === "tuplet" ? block.tuplet.actual : block.kind === "regular" ? 1 : 0
+      ),
       0
     );
 
@@ -2727,16 +2884,30 @@ function createMixedTupletFallbackGeneratedScore(section, options, random) {
     block.kind === "tuplet"
       ? Array.from({ length: block.tuplet.actual }, () => ({
           duration: block.tuplet.type,
+          dots: 0,
           tuplet: block.tuplet,
         }))
-      : [{ duration: options.maxSubdivisionDuration, tuplet: null }]
+      : block.kind === "regular"
+        ? [{ duration: options.maxSubdivisionDuration, dots: 0, tuplet: null }]
+        : [{
+            ...getNotationValueBySlots(block.slotCount),
+            forceRest: true,
+            tuplet: null,
+          }]
   );
-  const playedSlots = createRandomPlayedSlots(
-    events.length,
+  const playableEventIndexes = events
+    .map((event, index) => event.forceRest ? -1 : index)
+    .filter((index) => index >= 0);
+  const playableSlots = createRandomPlayedSlots(
+    playableEventIndexes.length,
     getSectionMinPlayedNotes(section),
     getEffectiveSectionMaxPlayedNotes(section),
     random
   );
+  const playedSlots = Array.from({ length: events.length }, () => false);
+  playableEventIndexes.forEach((eventIndex, playableIndex) => {
+    playedSlots[eventIndex] = playableSlots[playableIndex];
+  });
   const requiresTupletOrnamentTarget =
     options.maxSubdivisionDuration <= 8 &&
     (options.allowDiddles || options.allowCheese);
@@ -2773,8 +2944,8 @@ function createMixedTupletFallbackGeneratedScore(section, options, random) {
 
       notes.push({
         notes: isPlayed ? ["C5"] : [],
-        duration: block.kind === "tuplet" ? block.tuplet.type : options.maxSubdivisionDuration,
-        dots: 0,
+        duration: events[eventIndex].duration,
+        dots: events[eventIndex].dots || 0,
         velocity: ornaments.includes("a") ? 1 : 0.5,
         ...(ornaments ? { ornaments } : {}),
       });
@@ -2950,6 +3121,9 @@ function collapseLegacyContinuationPages(section, pages) {
 
 function createGenerationSectionsFromBook(book, globalRules = "") {
   const bookPdfSettings = normalizePdfSettings(book.pdfSettings);
+  const globalOrnamentDensity = normalizeGlobalOrnamentDensity(
+    book.globalOrnamentDensity
+  );
 
   return (book.sections || []).map((section, sectionIndex) => {
     const sectionPdfSettings = normalizePdfSettings({
@@ -2974,6 +3148,7 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         subdivisions,
         ornaments,
         tuplets,
+        globalOrnamentDensity,
         sampleJson,
       };
 
@@ -2988,6 +3163,7 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         maxSameHandStickingRun: getSectionMaxSameHandStickingRun(pageSource),
         requiredSameHandStickingRuns: getSectionRequiredSameHandStickingRuns(pageSource),
         globalRules,
+        globalOrnamentDensity,
         instructions: createStructuredSectionInstructions(structuredPage, sampleJson),
         prompt: pageSource.prompt || pageSource.instructions || "",
         subdivisions,
@@ -3014,6 +3190,9 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
 function createGenerationConfig(config, sourceBook) {
   const configGeneration = config.generation || {};
   const bookGlobalRules = normalizeGlobalAiRules(sourceBook.globalAiRules);
+  const globalOrnamentDensity = normalizeGlobalOrnamentDensity(
+    sourceBook.globalOrnamentDensity ?? config.book?.globalOrnamentDensity
+  );
 
   return {
     ...config,
@@ -3029,12 +3208,16 @@ function createGenerationConfig(config, sourceBook) {
       title: sourceBook.title || (config.book && config.book.title) || "Snare Drum Book",
       edition: Number(sourceBook.edition || (config.book && config.book.edition) || 1),
       contentVersion: Number(sourceBook.contentVersion || (config.book && config.book.contentVersion) || 1),
+      globalOrnamentDensity,
       pdfSettings: normalizePdfSettings({
         ...((config.book && config.book.pdfSettings) || {}),
         ...(sourceBook.pdfSettings || {}),
       }),
     },
-    sections: createGenerationSectionsFromBook(sourceBook, bookGlobalRules),
+    sections: createGenerationSectionsFromBook(
+      { ...sourceBook, globalOrnamentDensity },
+      bookGlobalRules
+    ),
   };
 }
 
@@ -3046,6 +3229,7 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
     (config.generation && config.generation.bookGlobalRules) || section.globalRules
   );
   const tuplets = getGenerationTuplets(section, samplePayload);
+  const subdivisions = getGenerationSubdivisions(section, samplePayload);
 
   return [
     ...globalInstructions,
@@ -3053,20 +3237,29 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
     "",
     `Section title: ${section.title || "Untitled section"}`,
     `Section instructions: ${section.instructions || ""}`,
+    subdivisions.length
+      ? `Allowed regular subdivisions: ${getOptionLabels(SUBDIVISION_SETTINGS, subdivisions, "none")}.`
+      : "Use no regular played-note subdivisions. Ordinary rests may still be used to complete the measure.",
     tuplets.length
-      ? `Allowed tuplet types: ${tuplets.map(getTupletLabel).join(", ")}. Randomly combine complete groups of any allowed type with each other and with the selected regular subdivisions in the same 4/4 measure. Tuplet entries use inclusive start and exclusive end indexes into voice.notes. Not every line needs every allowed type.`
+      ? `Allowed tuplet types: ${tuplets.map(getTupletLabel).join(", ")}. Randomly combine complete groups of any allowed type with each other${subdivisions.length ? " and with the selected regular subdivisions" : ""} in the same 4/4 measure. Tuplet entries use inclusive start and exclusive end indexes into voice.notes. Not every line needs every allowed type.`
       : "Do not use tuplets. Each generated voice should have an empty tuplets array.",
+    "Never create a tuplet group whose notes are all rests. Replace the entire group with the simplest duration-equivalent ordinary rest or rests and omit that tuplet entry.",
     getSectionPlayEveryNote(section)
       ? "Use no rests. Play every rhythmic position in the measure, including every note inside tuplets."
       : "Randomize played notes and rests across the whole measure. Do not favor beat four or any other beat.",
     getSectionPlayEveryNote(section)
       ? ""
-      : "Rests may occur on any selected subdivision position, including offbeat sixteenth-note and thirty-second-note positions when those subdivisions are selected.",
+      : subdivisions.length
+        ? "Rests may occur on any selected subdivision position, including offbeat sixteenth-note and thirty-second-note positions when those subdivisions are selected."
+        : "Rests may separate tuplet groups or complete the measure, but must use ordinary non-tuplet rest notation.",
     sectionUsesStickings(section)
       ? "First choose and place all non-sticking ornaments. Only afterward assign every played note a sticking ornament (\"r\" or \"l\") while applying the sticking rules below. Rests must not have stickings."
       : "",
     getRequiredSectionOrnamentChars(section).length
       ? `Every measure must contain at least one of each selected non-sticking ornament: ${getRequiredSectionOrnamentChars(section).join(", ")}.`
+      : "",
+    getRequiredSectionOrnamentChars(section).length
+      ? `Use the global ornament density setting of ${normalizeGlobalOrnamentDensity(section.globalOrnamentDensity)}%, where 100% is the normal frequency.`
       : "",
     getRequiredSectionOrnamentChars(section).length > 1
       ? "Treat accents independently: they may share notes with any other ornament and must not consume space in the ornament-variety pattern. Rotate variety only among flams, diddles, and cheese, while every selected ornament remains represented. Never place a flam immediately after a diddle or cheese."
@@ -3089,6 +3282,9 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
     "Every measure repeats. Apply every ornament-sequencing and sticking rule across the repeat boundary, treating the first note as immediately following the last note.",
     sectionUsesDiddlesOrCheese(section)
       ? "Diddles and cheese may only be used on sixteenth notes or faster, except that eighth notes inside a tuplet may use them; never put them on regular eighth notes, dotted eighth notes, or quarter notes."
+      : "",
+    getGenerationOrnaments(section).includes("diddles")
+      ? "Distribute diddles across the measure by default. Occasional adjacent diddles are allowed for variety, but avoid clustering most or all diddles together."
       : "",
     `Return exactly ${count} lines. These begin at section line ${offset + 1}.`,
     `The section has ${linesPerPage} lines per PDF page.`,
@@ -3352,6 +3548,9 @@ function buildBook(config, generatedSections) {
     title: (config.book && config.book.title) || "Snare Drum Book",
     edition: Number((config.book && config.book.edition) || 1),
     contentVersion: Number((config.book && config.book.contentVersion) || 1),
+    globalOrnamentDensity: normalizeGlobalOrnamentDensity(
+      config.book && config.book.globalOrnamentDensity
+    ),
     updatedAt: now,
     globalAiRules: (config.generation && config.generation.bookGlobalRules) || "",
     pdfSettings: bookSettings,
@@ -3404,6 +3603,7 @@ function createManifest(book) {
     contentVersion: book.contentVersion,
     updatedAt: book.updatedAt,
     globalAiRules: book.globalAiRules,
+    globalOrnamentDensity: book.globalOrnamentDensity,
     pdfSettings: book.pdfSettings,
     sections: book.sections.map((section) => ({
       id: section.id,

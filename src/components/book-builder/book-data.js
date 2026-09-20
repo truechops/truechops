@@ -8,6 +8,7 @@ export const BOOK_TITLE = "Snare Drum Book";
 export const BOOK_EDITION = 1;
 export const BOOK_CONTENT_VERSION = 3;
 export const DEFAULT_GLOBAL_AI_RULES = "";
+export const DEFAULT_GLOBAL_ORNAMENT_DENSITY = 100;
 export const DEFAULT_MAX_SAME_HAND_STICKING_RUN = 4;
 export const SUBDIVISION_OPTIONS = [
   { id: "eighths", label: "Eighths", duration: 8 },
@@ -53,7 +54,7 @@ export const DEFAULT_BOOK_SECTIONS = [
 export const MEASURES_PER_SCORE = 1;
 export const PDF_PAGE_WIDTH = 612;
 export const PDF_PAGE_HEIGHT = 792;
-export const PDF_PAGE_MARGIN = 24;
+export const PDF_PAGE_MARGIN = 28;
 export const PDF_PAGE_FOOTER_HEIGHT = 38;
 export const SCORE_RENDER_BASE_WIDTH = 1100;
 export const SCORE_RENDER_ROOT_PADDING = 50;
@@ -198,6 +199,13 @@ export function normalizeGlobalAiRules(value) {
   }
 
   return typeof value === "string" ? value : DEFAULT_GLOBAL_AI_RULES;
+}
+
+export function normalizeGlobalOrnamentDensity(
+  value,
+  fallback = DEFAULT_GLOBAL_ORNAMENT_DENSITY
+) {
+  return normalizeBoundedNumber(value, fallback, 25, 200, true);
 }
 
 function parseJsonLoose(value) {
@@ -419,6 +427,15 @@ function inferSectionOrnaments(section = {}) {
 }
 
 export function normalizeSectionSubdivisions(value, section = {}) {
+  if (Array.isArray(value)) {
+    const normalized = normalizeOptionList(value, SUBDIVISION_OPTIONS, []);
+    const tuplets = normalizeSectionTuplets(section.tuplets ?? section.tuplet, section);
+
+    if (normalized.length || tuplets.length) {
+      return normalized;
+    }
+  }
+
   return normalizeOptionList(
     value,
     SUBDIVISION_OPTIONS,
@@ -659,6 +676,7 @@ export function createDefaultBook() {
     contentVersion: BOOK_CONTENT_VERSION,
     updatedAt: null,
     globalAiRules: DEFAULT_GLOBAL_AI_RULES,
+    globalOrnamentDensity: DEFAULT_GLOBAL_ORNAMENT_DENSITY,
     pdfSettings: normalizePdfSettings(),
     sections: DEFAULT_BOOK_SECTIONS.map((section, index) =>
       createBookSection(index + 1, section, normalizePdfSettings())
@@ -749,6 +767,51 @@ function combineTupletSixteenthNoteRests(notes) {
   return combined;
 }
 
+const ORDINARY_REST_VALUES = [
+  { duration: 1, dots: 0, quarterUnits: 4 },
+  { duration: 2, dots: 1, quarterUnits: 3 },
+  { duration: 2, dots: 0, quarterUnits: 2 },
+  { duration: 4, dots: 1, quarterUnits: 1.5 },
+  { duration: 4, dots: 0, quarterUnits: 1 },
+  { duration: 8, dots: 1, quarterUnits: 0.75 },
+  { duration: 8, dots: 0, quarterUnits: 0.5 },
+  { duration: 16, dots: 1, quarterUnits: 0.375 },
+  { duration: 16, dots: 0, quarterUnits: 0.25 },
+  { duration: 32, dots: 1, quarterUnits: 0.1875 },
+  { duration: 32, dots: 0, quarterUnits: 0.125 },
+];
+
+function isRestNote(note) {
+  return !Array.isArray(note?.notes) || note.notes.length === 0;
+}
+
+function getNoteQuarterUnits(note) {
+  const duration = Number(note?.duration || 4);
+  const dotMultiplier = Number(note?.dots || 0) > 0 ? 1.5 : 1;
+  return (4 / duration) * dotMultiplier;
+}
+
+function createOrdinaryRests(quarterUnits, sourceNote) {
+  const rests = [];
+  let remainingUnits = quarterUnits;
+
+  while (remainingUnits > 0.0001) {
+    const value = ORDINARY_REST_VALUES.find(
+      (candidate) => candidate.quarterUnits <= remainingUnits + 0.0001
+    ) || ORDINARY_REST_VALUES[ORDINARY_REST_VALUES.length - 1];
+
+    rests.push({
+      notes: [],
+      duration: value.duration,
+      dots: value.dots,
+      velocity: Number(sourceNote?.velocity || 0.5),
+    });
+    remainingUnits -= value.quarterUnits;
+  }
+
+  return rests;
+}
+
 function normalizeTupletVoiceNoteValues(voice) {
   const notes = Array.isArray(voice?.notes) ? voice.notes : [];
   const tuplets = Array.isArray(voice?.tuplets)
@@ -786,9 +849,23 @@ function normalizeTupletVoiceNoteValues(voice) {
     }
 
     nextNotes.push(...notes.slice(cursor, tuplet.start).map((note) => ({ ...note })));
+    const tupletNotes = notes.slice(tuplet.start, tuplet.end);
+
+    if (tupletNotes.length && tupletNotes.every(isRestNote)) {
+      const tupletRatio = Number(tuplet.normal) / Number(tuplet.actual);
+      const ordinaryRestUnits = tupletNotes.reduce(
+        (total, note) => total + getNoteQuarterUnits(note),
+        0
+      ) * tupletRatio;
+
+      nextNotes.push(...createOrdinaryRests(ordinaryRestUnits, tupletNotes[0]));
+      cursor = tuplet.end;
+      return;
+    }
+
     const tupletStart = nextNotes.length;
     nextNotes.push(
-      ...combineTupletSixteenthNoteRests(notes.slice(tuplet.start, tuplet.end))
+      ...combineTupletSixteenthNoteRests(tupletNotes)
     );
     nextTuplets.push({
       ...tuplet,
@@ -849,6 +926,9 @@ export function normalizeBook(rawBook) {
     contentVersion: Number(rawBook.contentVersion || BOOK_CONTENT_VERSION),
     updatedAt: rawBook.updatedAt || null,
     globalAiRules: normalizeGlobalAiRules(rawBook.globalAiRules),
+    globalOrnamentDensity: normalizeGlobalOrnamentDensity(
+      rawBook.globalOrnamentDensity
+    ),
     pdfSettings,
     sections,
     tableOfContents: createBookTableOfContents(sections),

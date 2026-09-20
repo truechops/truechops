@@ -42,6 +42,7 @@ import {
   normalizeSectionTuplet,
   normalizeSectionTuplets,
   normalizeBook,
+  normalizeGlobalOrnamentDensity,
   renumberPages,
 } from "./book-data";
 import styles from "./BookBuilder.module.css";
@@ -471,6 +472,14 @@ export default function BookBuilderPanel() {
     saveBook(bookRef.current, "Saved page settings");
   }, [saveBook]);
 
+  const updateGlobalOrnamentDensity = useCallback((value) => {
+    setBook((currentBook) => ({
+      ...currentBook,
+      globalOrnamentDensity: normalizeGlobalOrnamentDensity(value),
+    }));
+    setStatus("Global ornament density updated. Save the book to keep it.");
+  }, [setBook]);
+
   const addPage = useCallback(() => {
     const nextBook = updateBookSection(book, selectedSectionIndex, (section) => ({
       ...section,
@@ -795,6 +804,26 @@ export default function BookBuilderPanel() {
         </IconButton>
       </div>
 
+      <section className={styles.editor}>
+        <div className={styles.editorTitle}>
+          <h3>Book settings</h3>
+        </div>
+        <Field label="Global ornament density (%)">
+          <input
+            inputMode="numeric"
+            min="25"
+            max="200"
+            onChange={(event) => updateGlobalOrnamentDensity(event.target.value)}
+            step="5"
+            type="number"
+            value={book.globalOrnamentDensity}
+          />
+        </Field>
+        <p className={styles.layoutSummary}>
+          100% is the normal ornament frequency. This setting applies to every page the next time rhythms are generated.
+        </p>
+      </section>
+
       <section className={styles.sectionManager}>
         <div className={styles.sectionHeader}>
           <div>
@@ -1107,7 +1136,7 @@ export default function BookBuilderPanel() {
                 subdivisions: toggleOption(
                   selectedPageGenerationSettings.subdivisions,
                   optionId,
-                  { allowEmpty: false }
+                  { allowEmpty: selectedTuplets.length > 0 }
                 ),
               })
             }
