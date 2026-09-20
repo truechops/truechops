@@ -87,7 +87,7 @@ const styles = {
     boxSizing: "border-box",
     minHeight: "134px",
     width: "100%",
-    padding: "16px 16px 14px 46px",
+    padding: "16px 46px 14px",
     fontFamily: "Georgia, serif",
     border: "1px solid #d7d7d7",
     borderRadius: "14px",
@@ -99,7 +99,7 @@ const styles = {
   exerciseRowSelected: {
     background: "#f1f7ff",
     border: "2px solid #1e5ea8",
-    padding: "15px 15px 13px 45px",
+    padding: "15px 45px 13px",
   },
   exerciseNumber: {
     alignItems: "center",
@@ -147,10 +147,10 @@ const styles = {
   preview: {
     flex: "1 1 auto",
     minWidth: 0,
-    overflow: "visible",
+    overflow: "hidden",
   },
   previewInner: {
-    overflow: "visible",
+    overflow: "hidden",
   },
   blankPreview: {
     color: "#aaa",
