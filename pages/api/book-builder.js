@@ -34,8 +34,8 @@ import { getBookPageQrUrl } from "../../src/lib/book-qr";
 const BOOK_ROOT = path.join(process.cwd(), "data", "book-builder", BOOK_SLUG);
 const MANIFEST_PATH = path.join(BOOK_ROOT, "book.json");
 const PDF_CACHE_ROOT = process.env.BOOK_PDF_CACHE_DIR || path.join(process.cwd(), ".next", "cache", "book-builder-pdf");
-const SCORE_SVG_CACHE_VERSION = "score-svg-v18";
-const PDF_FILE_CACHE_VERSION = "pdf-v22";
+const SCORE_SVG_CACHE_VERSION = "score-svg-v25";
+const PDF_FILE_CACHE_VERSION = "pdf-v29";
 const SCORE_SVG_MEMORY_CACHE_LIMIT = Number(process.env.BOOK_PDF_SVG_MEMORY_CACHE_LIMIT || 800);
 const MIN_CONTINUATION_SYSTEMS = 3;
 
@@ -800,8 +800,8 @@ function drawBookPage(doc, book, pageAssets) {
 
   slices.forEach((slice) => {
     doc.addPage();
-    doc.font("Times-Bold").fontSize(10).text(String(page.pageNumber), pageWidth - margin - 18, 8, {
-      width: 18,
+    doc.font("Times-Bold").fontSize(13).text(String(page.pageNumber), pageWidth - margin - 24, 7, {
+      width: 24,
       align: "right",
       lineBreak: false,
     });
@@ -816,16 +816,9 @@ function drawBookPage(doc, book, pageAssets) {
       pdfSettings.lineSpacing
     );
 
-    doc.font("Times-Roman").fillColor("#111111").fontSize(9).text("*  R = right stick", margin + 18, pageHeight - margin - 2, {
-      lineBreak: false,
-    });
-    doc.fontSize(9).text("L  = left stick", margin + 26, pageHeight - margin + 10, {
-      lineBreak: false,
-    });
-    const contentBottom = margin + contentHeight;
     const qrSize = 36;
     const qrX = pageWidth - margin - qrSize;
-    const qrY = contentBottom + 5;
+    const qrY = pageHeight - 10 - qrSize;
     SVGtoPDF(doc, qrSvg, qrX, qrY, { width: qrSize, height: qrSize });
   });
 }

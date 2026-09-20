@@ -712,8 +712,8 @@ function drawBookPage(doc, book, pageAssets) {
 
   slices.forEach((slice) => {
     doc.addPage();
-    doc.font("Times-Bold").fontSize(10).text(String(page.pageNumber), pageWidth - margin - 18, 8, {
-      width: 18,
+    doc.font("Times-Bold").fontSize(13).text(String(page.pageNumber), pageWidth - margin - 24, 7, {
+      width: 24,
       align: "right",
       lineBreak: false,
     });

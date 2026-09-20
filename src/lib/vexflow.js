@@ -27,6 +27,8 @@ const UNACCENTED_TUPLET_NOTEWARD_OFFSET = -5;
 const FIRST_NOTE_FORMAT_X = 8;
 const MEASURE_RIGHT_EDGE_GUARD = 6;
 const LONGEST_UNBEAMED_TUPLET_DURATION = 4;
+const MEASURE_NUMBER_FONT_SIZE = 15;
+const MEASURE_NUMBER_GAP = 6;
 
 function repeatIncludesMeasure(repeatValue, measureIndex) {
   if (Array.isArray(repeatValue)) {
@@ -68,7 +70,6 @@ export function drawScore(
     hResize,
     vResize,
     justifyLastRow,
-    measureNotePadding = 0,
     measureNoteStartPadding,
     measureNoteEndPadding,
     measureGap = 0,
@@ -103,6 +104,10 @@ export function drawScore(
     : Number.POSITIVE_INFINITY;
   STAVE_SPACE = baseSystemSpacing * measurePartsArray[0].length;
   const svgWidth = Math.max(svgWidthProposed, SCORE_MIN_WIDTH);
+  const fixedMeasureWidth = Number.isFinite(effectiveMeasuresPerLine)
+    ? (svgWidth - effectiveMeasureGap * (effectiveMeasuresPerLine - 1)) /
+      effectiveMeasuresPerLine
+    : null;
 
   let barRenderData = [];
   let width = measurePartsArray[0].length > 1 ? 100 : 0;
@@ -136,9 +141,10 @@ export function drawScore(
     systemWidth = minTotalWidth + FORMAT_PADDING;
     const naturalBarWidth = systemWidth + (firstMeasure ? 20 : 0);
     const configuredMaxMeasureWidth = Number(maxMeasureWidth);
-    const barWidth = Number.isFinite(configuredMaxMeasureWidth) && configuredMaxMeasureWidth > 0
+    const naturalOrCappedBarWidth = Number.isFinite(configuredMaxMeasureWidth) && configuredMaxMeasureWidth > 0
       ? Math.min(naturalBarWidth, configuredMaxMeasureWidth)
       : naturalBarWidth;
+    const barWidth = fixedMeasureWidth || naturalOrCappedBarWidth;
 
     const gapBeforeMeasure = barRenderData.length ? effectiveMeasureGap : 0;
 
@@ -146,7 +152,8 @@ export function drawScore(
       barRenderData.length &&
       (
         barRenderData.length >= effectiveMeasuresPerLine ||
-        width + gapBeforeMeasure + barWidth > svgWidth
+        (!Number.isFinite(effectiveMeasuresPerLine) &&
+          width + gapBeforeMeasure + barWidth > svgWidth)
       )
     ) {
       const remainingWidth = Math.max(svgWidth - width, 0);
@@ -406,6 +413,9 @@ function renderStaves(
 
       if (repeatIncludesMeasure(repeat.start, measureIndex)) {
         stave.setBegBarType(VF.Barline.type.REPEAT_BEGIN);
+      } else if (renderDataIndex > 0) {
+        // Adjacent measures share the previous measure's ending barline.
+        stave.setBegBarType(VF.Barline.type.NONE);
       }
 
       if (repeatIncludesMeasure(repeat.end, measureIndex)) {
@@ -440,13 +450,19 @@ function renderStaves(
       stave.setContext(context).draw();
 
       if (showMeasureNumbers && partIndex === 0 && renderDataIndex === 0) {
+        const measureNumber = String(measureIndex + 1);
         context.save();
-        context.setFont("Times New Roman", 9, "bold");
+        context.setFont("Times New Roman", MEASURE_NUMBER_FONT_SIZE, "bold");
         context.setFillStyle("#111111");
+        const numberMetrics = context.measureText(measureNumber);
+        const staffCenterY = (
+          stave.getYForLine(0) +
+          stave.getYForLine(stave.getNumLines() - 1)
+        ) / 2;
         context.fillText(
-          String(measureIndex + 1),
-          stave.getX() + 3,
-          stave.getYForTopText(0)
+          measureNumber,
+          stave.getX() - MEASURE_NUMBER_GAP - numberMetrics.width,
+          staffCenterY - numberMetrics.y - numberMetrics.height / 2
         );
         context.restore();
       }
@@ -736,6 +752,19 @@ function hasAboveStaffAccent(jsonNote, instrument) {
   );
 }
 
+function getStickingAnnotation(text) {
+  const annotation = new VF.Annotation(text);
+  const setTextLine = annotation.setTextLine.bind(annotation);
+
+  annotation.setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM);
+  annotation.setFont("Times New Roman", 12, "normal");
+  // Keep stickings on a dedicated line beneath the staff without allowing
+  // VexFlow to push them past the system boundary and clip the final row.
+  annotation.setTextLine = () => setTextLine(1.7);
+
+  return annotation;
+}
+
 function addOrnaments(jsonNote, scoreNote, instrument) {
   if (jsonNote.ornaments) {
     if (jsonNote.ornaments.includes(CHEESE)) {
@@ -772,16 +801,10 @@ function addOrnaments(jsonNote, scoreNote, instrument) {
 
     //right sticking - add 'R' annotation
     if (jsonNote.ornaments.includes(RIGHT_STICKING)) {
-      const annotation = new VF.Annotation("R");
-      annotation.setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM);
-
-      scoreNote.addModifier(annotation, 0);
+      scoreNote.addModifier(getStickingAnnotation("R"), 0);
     } else if (jsonNote.ornaments.includes(LEFT_STICKING)) {
       //left sticking - add 'L' annotation
-      const annotation = new VF.Annotation("L");
-      annotation.setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM);
-
-      scoreNote.addModifier(annotation, 0);
+      scoreNote.addModifier(getStickingAnnotation("L"), 0);
     }
   }
 }

@@ -262,7 +262,6 @@ function PageLayoutPreview({ page, pdfSettings }) {
                 style={{ left: contentLeft, top: contentTop, width: contentWidth }}
               />
               <div className={styles.previewFooter} style={{ height: footerHeight }}>
-                <span>* R = right stick<br />&nbsp;&nbsp;L = left stick</span>
                 <i aria-label="QR code position" />
               </div>
               {previewSlices.length > 1 && (
@@ -470,17 +469,6 @@ export default function BookBuilderPanel() {
 
   const saveMetadata = useCallback(() => {
     saveBook(bookRef.current, "Saved page settings");
-  }, [saveBook]);
-
-  const updateGlobalAiRulesDraft = useCallback((globalAiRules) => {
-    setBook((currentBook) => ({
-      ...currentBook,
-      globalAiRules,
-    }));
-  }, [setBook]);
-
-  const saveGlobalAiRules = useCallback(() => {
-    saveBook(bookRef.current, "Saved global AI rules");
   }, [saveBook]);
 
   const addPage = useCallback(() => {
@@ -810,27 +798,6 @@ export default function BookBuilderPanel() {
       <section className={styles.sectionManager}>
         <div className={styles.sectionHeader}>
           <div>
-            <span className={styles.eyebrow}>AI rules</span>
-            <h3>Book-wide generation rules</h3>
-          </div>
-          <div className={styles.sectionActions}>
-            <IconButton icon={<FaSave />} onClick={saveGlobalAiRules} title="Save global AI rules" variant="iconOnly">
-              Save rules
-            </IconButton>
-          </div>
-        </div>
-        <Field label="Global AI rules">
-          <textarea
-            onChange={(event) => updateGlobalAiRulesDraft(event.target.value)}
-            rows={4}
-            value={book.globalAiRules || ""}
-          />
-        </Field>
-      </section>
-
-      <section className={styles.sectionManager}>
-        <div className={styles.sectionHeader}>
-          <div>
             <span className={styles.eyebrow}>Sections</span>
             <h3>{selectedSection.title}</h3>
           </div>
@@ -922,15 +889,6 @@ export default function BookBuilderPanel() {
               value={selectedPage.title || ""}
             />
           </Field>
-          <Field label="Page instructions">
-            <textarea
-              onChange={(event) =>
-                updateSelectedPageGenerationDraft({ prompt: event.target.value })
-              }
-              rows={3}
-              value={selectedPageGenerationSettings.prompt || ""}
-            />
-          </Field>
           <Field label="Measures per line">
             <input
               inputMode="numeric"
@@ -970,7 +928,7 @@ export default function BookBuilderPanel() {
             />
           </Field>
           <p className={styles.layoutSummary}>
-            This page generates {linesPerPage} rhythms automatically: {systemsPerPage} staff lines × {selectedPagePdfSettings.measuresPerLine} measures. Dense measures wrap early instead of overflowing.
+            This page generates {linesPerPage} rhythms automatically: {systemsPerPage} staff lines × {selectedPagePdfSettings.measuresPerLine} measures.
           </p>
           <Field label="Minimum played notes">
             <input
