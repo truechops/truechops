@@ -150,7 +150,10 @@ const styles = {
     overflow: "hidden",
   },
   previewInner: {
+    display: "flex",
+    justifyContent: "center",
     overflow: "hidden",
+    width: "100%",
   },
   blankPreview: {
     color: "#aaa",
@@ -168,8 +171,8 @@ const styles = {
   },
 };
 
-const EDITOR_SCORE_SCALE = 0.75;
 const VEXFLOW_RENDER_PADDING = 50;
+const RHYTHM_PREVIEW_WIDTH = "86%";
 
 function getPageLabel(pageRef) {
   return pageRef ? `Page ${pageRef.page}` : "Book page";
@@ -215,7 +218,7 @@ function RhythmPreview({ line }) {
     const { renderer, context } = initialize(previewId);
     const scoreWidth = Math.max(
       100,
-      Math.floor(previewWidth / EDITOR_SCORE_SCALE - VEXFLOW_RENDER_PADDING)
+      Math.floor(previewWidth - VEXFLOW_RENDER_PADDING)
     );
     drawScore(
       renderer,
@@ -225,9 +228,9 @@ function RhythmPreview({ line }) {
       () => {},
       {
         width: scoreWidth,
-        scale: EDITOR_SCORE_SCALE,
-        hResize: EDITOR_SCORE_SCALE,
-        vResize: EDITOR_SCORE_SCALE,
+        scale: 1,
+        hResize: 1,
+        vResize: 1,
         justifyLastRow: true,
       },
       {}
@@ -243,8 +246,8 @@ function RhythmPreview({ line }) {
         svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
         svg.style.display = "block";
         svg.style.height = "auto";
-        svg.style.maxWidth = "100%";
-        svg.style.width = "100%";
+        svg.style.maxWidth = RHYTHM_PREVIEW_WIDTH;
+        svg.style.width = RHYTHM_PREVIEW_WIDTH;
       }
     }
   }, [line.score, previewId, previewWidth]);
