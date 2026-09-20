@@ -131,8 +131,15 @@ const styles = {
     fontWeight: 700,
     height: "34px",
     justifyContent: "center",
-    marginLeft: "12px",
     width: "34px",
+  },
+  selectionOrderSlot: {
+    alignItems: "center",
+    display: "flex",
+    flex: "0 0 46px",
+    justifyContent: "flex-end",
+    marginLeft: "12px",
+    width: "46px",
   },
   exerciseButtonEmpty: {
     color: "#bbb",
@@ -408,11 +415,13 @@ export default function PagePractice() {
                     type="button"
                   >
                     <RhythmPreview line={line} />
-                    {isSelected && (
-                      <span aria-hidden="true" style={styles.selectionOrder}>
-                        {selectionIndex + 1}
-                      </span>
-                    )}
+                    <span aria-hidden="true" style={styles.selectionOrderSlot}>
+                      {isSelected && (
+                        <span style={styles.selectionOrder}>
+                          {selectionIndex + 1}
+                        </span>
+                      )}
+                    </span>
                   </button>
                 </div>
               );
