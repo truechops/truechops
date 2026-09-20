@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { useDispatch } from "react-redux";
 import { appActions } from "../../store/app";
-import { handleScannedPracticePage } from "../../lib/practice-set-storage";
 
 const styles = {
   page: {
@@ -55,10 +54,11 @@ export default function QrLanding({ token }) {
           throw new Error(result.error || "QR code not recognized.");
         }
 
-        handleScannedPracticePage(result.pageRef);
-
         if (!cancelled) {
-          router.replace("/book");
+          router.replace({
+            pathname: "/book",
+            query: { token: result.pageRef.token },
+          });
         }
       } catch (resolveError) {
         if (!cancelled) {
@@ -76,11 +76,11 @@ export default function QrLanding({ token }) {
 
   return (
     <div style={styles.page}>
-      <p style={styles.title}>Build your three-page Practice Set</p>
+      <p style={styles.title}>Choose rhythms to practice</p>
       {error ? (
         <p style={styles.error}>{error}</p>
       ) : (
-        <p style={styles.message}>Opening your Practice Set…</p>
+        <p style={styles.message}>Opening this book page…</p>
       )}
     </div>
   );

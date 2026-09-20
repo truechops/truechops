@@ -7,21 +7,6 @@ function setNoStoreHeaders(res) {
   res.setHeader("Expires", "0");
 }
 
-function parseActiveTokens(req) {
-  const headerValue = req.headers["x-practice-set-tokens"];
-  const queryValue = req.query.activeTokens;
-  const rawValue = Array.isArray(headerValue)
-    ? headerValue.join(",")
-    : headerValue || (Array.isArray(queryValue) ? queryValue.join(",") : queryValue) || "";
-
-  return [...new Set(
-    String(rawValue)
-      .split(",")
-      .map((token) => token.trim())
-      .filter(Boolean)
-  )];
-}
-
 export default async function handler(req, res) {
   setNoStoreHeaders(res);
 
@@ -33,17 +18,8 @@ export default async function handler(req, res) {
 
   try {
     const token = String(req.query.token || "").trim();
-    const activeTokens = parseActiveTokens(req);
-
     if (!token) {
       res.status(400).json({ error: "Missing page token." });
-      return;
-    }
-
-    if (activeTokens.length > 3 || !activeTokens.includes(token)) {
-      res.status(403).json({
-        error: "That page is not in this device's Practice Set.",
-      });
       return;
     }
 
@@ -52,17 +28,6 @@ export default async function handler(req, res) {
 
     if (!resolved) {
       res.status(404).json({ error: "Page not found." });
-      return;
-    }
-
-    const knownActiveTokens = activeTokens.filter((activeToken) =>
-      Boolean(findBookQrPage(book, activeToken))
-    );
-
-    if (knownActiveTokens.length > 3 || !knownActiveTokens.includes(token)) {
-      res.status(403).json({
-        error: "That page is not in this device's Practice Set.",
-      });
       return;
     }
 
