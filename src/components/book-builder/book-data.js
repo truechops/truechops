@@ -724,7 +724,7 @@ export function createContinuousPageScore(pageLines = []) {
     .filter((score) => Array.isArray(score?.measures) && score.measures.length > 0);
 
   if (!scores.length) {
-    return createBlankLineScore();
+    return null;
   }
 
   return {

@@ -171,11 +171,19 @@ function PageLayoutPreview({ page, pdfSettings }) {
 
     try {
       const normalizedSettings = normalizePdfSettings(pdfSettings);
+      const pageScore = createContinuousPageScore(page.lines);
+
+      if (!pageScore) {
+        setPreviewSlices([]);
+        setPreviewError("This page has no generated rhythms. Save its settings, then regenerate the book.");
+        return;
+      }
+
       const { renderer, context } = initialize(renderId);
       drawScore(
         renderer,
         context,
-        createContinuousPageScore(page.lines),
+        pageScore,
         null,
         () => {},
         {

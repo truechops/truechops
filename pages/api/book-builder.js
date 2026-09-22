@@ -816,11 +816,18 @@ async function renderBookPageAssets(book, page, bookPdfSettings, limitScoreRende
   const pdfSettings = getPagePdfSettings(page, bookPdfSettings);
   const linesPerPage = getLinesPerPage(pdfSettings);
   const pageLines = page.lines.slice(0, linesPerPage);
+  const pageScore = createContinuousPageScore(pageLines);
+
+  if (!pageScore) {
+    throw new Error(
+      `Page ${page.pageNumber} has no generated rhythms. Save its settings, then regenerate the book.`
+    );
+  }
 
   const pageLine = {
     pageNumber: page.pageNumber,
     lineNumber: 0,
-    score: createContinuousPageScore(pageLines),
+    score: pageScore,
   };
   const [scoreSvg, qrSvg] = await Promise.all([
     limitScoreRender(() =>
