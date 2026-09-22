@@ -24,9 +24,12 @@ import {
   createBookTableOfContents,
   createDefaultBook,
   getLinesPerPage,
+  getPageGenerationSettings,
   getPagePdfSettings,
   getScoreRenderWidth,
   normalizeBook,
+  normalizeGlobalAiRules,
+  normalizeGlobalOrnamentDensity,
   normalizePdfSettings,
 } from "../../src/components/book-builder/book-data";
 import { getBookPageQrUrl } from "../../src/lib/book-qr";
@@ -103,23 +106,27 @@ function createManifest(book) {
     globalAiRules: book.globalAiRules,
     globalOrnamentDensity: book.globalOrnamentDensity,
     pdfSettings: book.pdfSettings,
-    sections: book.sections.map((section) => ({
-      id: section.id,
-      title: section.title,
-      prompt: section.prompt,
-      sampleJson: section.sampleJson,
-      subdivisions: section.subdivisions,
-      ornaments: section.ornaments,
-      tuplets: section.tuplets,
-      pageCount: section.pageCount,
-      minPlayedNotes: section.minPlayedNotes,
-      maxPlayedNotes: section.maxPlayedNotes,
-      playEveryNote: section.playEveryNote,
-      maxSameHandStickingRun: section.maxSameHandStickingRun,
-      requiredSameHandStickingRuns: section.requiredSameHandStickingRuns,
-      pdfSettings: section.pdfSettings,
-      pages: section.pages.map(createPageManifest),
-    })),
+    sections: book.sections.map((section) => {
+      const firstPageSettings = getPageGenerationSettings(section.pages?.[0], section);
+
+      return {
+        id: section.id,
+        title: section.title,
+        prompt: firstPageSettings.prompt,
+        sampleJson: firstPageSettings.sampleJson,
+        subdivisions: firstPageSettings.subdivisions,
+        ornaments: firstPageSettings.ornaments,
+        tuplets: firstPageSettings.tuplets,
+        pageCount: section.pageCount,
+        minPlayedNotes: firstPageSettings.minPlayedNotes,
+        maxPlayedNotes: firstPageSettings.maxPlayedNotes,
+        playEveryNote: firstPageSettings.playEveryNote,
+        maxSameHandStickingRun: firstPageSettings.maxSameHandStickingRun,
+        requiredSameHandStickingRuns: firstPageSettings.requiredSameHandStickingRuns,
+        pdfSettings: section.pdfSettings,
+        pages: section.pages.map(createPageManifest),
+      };
+    }),
     tableOfContents: createBookTableOfContents(book.sections),
     pages: book.pages.map(createPageManifest),
   };
@@ -180,6 +187,36 @@ function getStableLineKey(page, line) {
   ].join(":");
 }
 
+function getStablePageKey(page) {
+  return [
+    page.sectionId || "",
+    page.sectionPageNumber || 1,
+  ].join(":");
+}
+
+function getPageGenerationFingerprint(page, section) {
+  return JSON.stringify(getPageGenerationSettings(page, section));
+}
+
+function getBookGenerationFingerprint(book) {
+  return JSON.stringify({
+    globalAiRules: normalizeGlobalAiRules(book?.globalAiRules),
+    globalOrnamentDensity: normalizeGlobalOrnamentDensity(
+      book?.globalOrnamentDensity
+    ),
+  });
+}
+
+function clearGeneratedLine(line) {
+  return {
+    ...line,
+    notes: "",
+    score: null,
+    exerciseShortForm: "",
+    updatedAt: null,
+  };
+}
+
 function preserveExistingGeneratedLines(rawBook, existingBook, clearedLines = []) {
   const clearedKeys = new Set((clearedLines || []).map((line) => [
     line.sectionId || "",
@@ -187,10 +224,18 @@ function preserveExistingGeneratedLines(rawBook, existingBook, clearedLines = []
     line.lineNumber || 1,
   ].join(":")));
   const existingLines = new Map();
+  const existingPages = new Map();
+  const bookGenerationSettingsChanged =
+    getBookGenerationFingerprint(rawBook) !==
+    getBookGenerationFingerprint(existingBook);
 
-  for (const page of existingBook.pages || []) {
-    for (const line of page.lines || []) {
-      existingLines.set(getStableLineKey(page, line), line);
+  for (const section of existingBook.sections || []) {
+    for (const page of section.pages || []) {
+      existingPages.set(getStablePageKey(page), { page, section });
+
+      for (const line of page.lines || []) {
+        existingLines.set(getStableLineKey(page, line), line);
+      }
     }
   }
 
@@ -198,27 +243,39 @@ function preserveExistingGeneratedLines(rawBook, existingBook, clearedLines = []
     ...rawBook,
     sections: (rawBook.sections || []).map((section) => ({
       ...section,
-      pages: (section.pages || []).map((page) => ({
-        ...page,
-        lines: (page.lines || []).map((line) => {
-          const key = getStableLineKey(page, line);
-          const existingLine = existingLines.get(key);
+      pages: (section.pages || []).map((page) => {
+        const existing = existingPages.get(getStablePageKey(page));
+        const pageGenerationSettingsChanged = Boolean(existing) &&
+          getPageGenerationFingerprint(page, section) !==
+            getPageGenerationFingerprint(existing.page, existing.section);
+        const invalidatePage = bookGenerationSettingsChanged || pageGenerationSettingsChanged;
 
-          if (line.score || !existingLine?.score || clearedKeys.has(key)) {
-            return line;
-          }
+        return {
+          ...page,
+          lines: (page.lines || []).map((line) => {
+            if (invalidatePage) {
+              return clearGeneratedLine(line);
+            }
 
-          return {
-            ...line,
-            title: line.title || existingLine.title,
-            notes: line.notes || existingLine.notes,
-            tempo: line.tempo || existingLine.tempo,
-            score: existingLine.score,
-            exerciseShortForm: existingLine.exerciseShortForm,
-            updatedAt: existingLine.updatedAt,
-          };
-        }),
-      })),
+            const key = getStableLineKey(page, line);
+            const existingLine = existingLines.get(key);
+
+            if (line.score || !existingLine?.score || clearedKeys.has(key)) {
+              return line;
+            }
+
+            return {
+              ...line,
+              title: line.title || existingLine.title,
+              notes: line.notes || existingLine.notes,
+              tempo: line.tempo || existingLine.tempo,
+              score: existingLine.score,
+              exerciseShortForm: existingLine.exerciseShortForm,
+              updatedAt: existingLine.updatedAt,
+            };
+          }),
+        };
+      }),
     })),
   };
 }

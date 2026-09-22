@@ -336,6 +336,16 @@ function toggleOption(values, optionId, { allowEmpty = true } = {}) {
   return !allowEmpty && nextValues.length === 0 ? values : nextValues;
 }
 
+function clearGeneratedPageLines(lines = []) {
+  return lines.map((line) => ({
+    ...line,
+    notes: "",
+    score: null,
+    exerciseShortForm: "",
+    updatedAt: null,
+  }));
+}
+
 export default function BookBuilderPanel() {
   const [book, setBookState] = useState(createDefaultBook());
   const bookRef = useRef(book);
@@ -562,11 +572,12 @@ export default function BookBuilderPanel() {
                 },
                 selectedSection
               ),
+              lines: clearGeneratedPageLines(page.lines),
             }
           : page
       )
     );
-    setStatus("Page rhythm settings updated. Save the page to keep them.");
+    setStatus("Page rhythm settings updated. Existing rhythms cleared; save, then regenerate them.");
   }, [selectedPageIndex, selectedSection, setBook]);
 
   const selectSection = useCallback((sectionIndex) => {

@@ -26,7 +26,7 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
+                    "duration": 4,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
@@ -74,15 +74,6 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
                     "ornaments": "r"
                   },
                   {
@@ -93,6 +84,15 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -125,7 +125,13 @@
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 3,
+                    "end": 2,
+                    "actual": 3,
+                    "normal": 2
+                  },
+                  {
+                    "start": 2,
+                    "end": 5,
                     "actual": 3,
                     "normal": 2
                   },
@@ -149,9 +155,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n8:l n8:rad n8:lad n8:r n8:l n8:l n8:r n8:l n8:lad n8:r n8:l |t0-3:3:2,5-8:3:2,8-11:3:2",
-  "updatedAt": "2026-09-20T22:59:06.532Z",
+  "exerciseShortForm": "n4:l n8:rad n8:lad n8:r n8:l n8:r n8:l n8:r n8:lad n8:r n8:l |t0-2:3:2,2-5:3:2,5-8:3:2,8-11:3:2",
+  "updatedAt": "2026-09-21T02:22:50.305Z",
   "sectionId": "section-20",
-  "sectionPageNumber": 1,
-  "hasScore": true
+  "sectionPageNumber": 1
 }

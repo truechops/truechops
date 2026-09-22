@@ -805,10 +805,11 @@ function preferLongerValues(notes, options = {}) {
   });
 }
 
-function preferLongerValuesInTupletVoice(voice) {
+function preferLongerValuesInTupletVoice(voice, configuredTuplets = []) {
   const notes = Array.isArray(voice && voice.notes) ? voice.notes : [];
   const tuplets = normalizeVoiceTuplets(voice && voice.tuplets, notes)
     .sort((left, right) => left.start - right.start);
+  const normalizedConfiguredTuplets = normalizeTupletConfigs(configuredTuplets);
 
   if (!tuplets.length) {
     return {
@@ -853,11 +854,19 @@ function preferLongerValuesInTupletVoice(voice) {
     }
 
     const tupletStart = nextNotes.length;
-    // Keep the tuplet ratio while using the longest readable values within the
-    // group. VexFlow scales the combined tick duration by actual:normal, so an
-    // eighth here can replace a played sixteenth followed by a sixteenth rest.
+    const configuredTuplet = normalizedConfiguredTuplets.find((candidate) =>
+      Number(candidate.actual) === Number(tuplet.actual) &&
+      Number(candidate.normal) === Number(tuplet.normal)
+    );
+    const preserveConfiguredSubdivision = Number(configuredTuplet?.type) >= 16;
+
+    // Eighth-note tuplets may use longer equivalent values for readability,
+    // but sixteenth-note and faster tuplets must retain their configured note
+    // type so an unselected regular subdivision never appears in the group.
     nextNotes.push(
-      ...preferLongerValues(tupletNotes)
+      ...(preserveConfiguredSubdivision
+        ? tupletNotes.map((note) => ({ ...note }))
+        : preferLongerValues(tupletNotes))
     );
     const tupletEnd = nextNotes.length;
 
@@ -2525,6 +2534,7 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
   const everyNoteScore = enforcePlayEveryNote(section, policyScore);
   const minimumScore = enforceMinimumPlayedNotes(section, everyNoteScore, lineIndex);
   const boundedScore = enforceMaximumPlayedNotes(section, minimumScore, lineIndex);
+  const configuredTuplets = getGenerationTuplets(section);
 
   return {
     ...boundedScore,
@@ -2550,7 +2560,7 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
             ? preferLongerValuesInTupletVoice({
                 ...voice,
                 notes: cleanedNotes,
-              })
+              }, configuredTuplets)
             : {
                 notes: preferLongerValues(cleanedNotes, getPreferLongerValueOptions()),
                 tuplets: [],
@@ -2583,7 +2593,7 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
             ? preferLongerValuesInTupletVoice({
                 ...notationVoice,
                 notes: cappedNotes,
-              })
+              }, configuredTuplets)
             : {
                 notes: preferLongerValues(cappedNotes, getPreferLongerValueOptions()),
                 tuplets: [],
@@ -2825,7 +2835,9 @@ function createMixedTupletFallbackGeneratedScore(section, options, random) {
   const regularBlocks = options.subdivisions.length
     ? [{ kind: "regular", slotCount: regularSlotCount }]
     : [];
-  const restBlocks = options.subdivisions.length
+  const tupletSlotCounts = [...new Set(tupletBlocks.map((block) => block.slotCount))];
+  const tupletsCanFillMeasure = canFillMixedTupletSlots(32, tupletSlotCounts);
+  const restBlocks = options.subdivisions.length || tupletsCanFillMeasure
     ? []
     : NOTATION_SLOT_COUNTS_DESCENDING.map((slotCount) => ({
         kind: "rest",
@@ -3524,17 +3536,18 @@ function buildBook(config, generatedSections) {
     return {
       id: section.id,
       title: section.title,
-      prompt: section.prompt || "",
+      prompt: firstPageConfig.prompt ?? section.prompt ?? "",
       sampleJson: section.sampleJson || JSON.stringify(firstPageConfig.sampleJson || {}, null, 2),
-      subdivisions: section.subdivisions || firstPageConfig.subdivisions,
-      ornaments: section.ornaments || firstPageConfig.ornaments,
-      tuplets: section.tuplets || firstPageConfig.tuplets,
+      subdivisions: firstPageConfig.subdivisions ?? section.subdivisions,
+      ornaments: firstPageConfig.ornaments ?? section.ornaments,
+      tuplets: firstPageConfig.tuplets ?? section.tuplets,
       pageCount: pages.length,
-      minPlayedNotes: section.minPlayedNotes ?? firstPageConfig.minPlayedNotes,
-      maxPlayedNotes: section.maxPlayedNotes ?? firstPageConfig.maxPlayedNotes,
-      playEveryNote: section.playEveryNote ?? firstPageConfig.playEveryNote,
-      maxSameHandStickingRun: section.maxSameHandStickingRun ?? firstPageConfig.maxSameHandStickingRun,
-      requiredSameHandStickingRuns: section.requiredSameHandStickingRuns || firstPageConfig.requiredSameHandStickingRuns,
+      minPlayedNotes: firstPageConfig.minPlayedNotes ?? section.minPlayedNotes,
+      maxPlayedNotes: firstPageConfig.maxPlayedNotes ?? section.maxPlayedNotes,
+      playEveryNote: firstPageConfig.playEveryNote ?? section.playEveryNote,
+      maxSameHandStickingRun: firstPageConfig.maxSameHandStickingRun ?? section.maxSameHandStickingRun,
+      requiredSameHandStickingRuns:
+        firstPageConfig.requiredSameHandStickingRuns ?? section.requiredSameHandStickingRuns,
       pdfSettings: section.pdfSettings,
       pages,
     };
