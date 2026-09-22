@@ -893,6 +893,37 @@ function preferLongerValuesInTupletVoice(voice, configuredTuplets = []) {
   };
 }
 
+function getTupletPositionByNoteIndex(notes, tuplets, configuredTuplets = []) {
+  const positions = new Map();
+  const normalizedConfiguredTuplets = normalizeTupletConfigs(configuredTuplets);
+
+  for (const tuplet of normalizeVoiceTuplets(tuplets, notes)) {
+    const configuredTuplet = normalizedConfiguredTuplets.find((candidate) =>
+      Number(candidate.actual) === Number(tuplet.actual) &&
+      Number(candidate.normal) === Number(tuplet.normal)
+    );
+    const configuredType = Number(configuredTuplet?.type);
+
+    if (!configuredType) {
+      continue;
+    }
+
+    const configuredUnit = 4 / configuredType;
+    let position = 0;
+
+    for (let noteIndex = tuplet.start; noteIndex < tuplet.end; noteIndex += 1) {
+      positions.set(noteIndex, {
+        actual: Number(tuplet.actual),
+        position: Math.round(position) % Number(tuplet.actual),
+        type: configuredType,
+      });
+      position += getNoteQuarterUnits(notes[noteIndex]) / configuredUnit;
+    }
+  }
+
+  return positions;
+}
+
 function normalizeGeneratedNote(note, fallbackNote = {}) {
   const fallbackDuration = [1, 2, 4, 8, 16, 32].includes(Number(fallbackNote.duration))
     ? Number(fallbackNote.duration)
@@ -2309,6 +2340,53 @@ function getOrnamentPlacementRandomValue(section, lineIndex, ornament, placedCou
   )();
 }
 
+function getDiddleTupletPositionRank(
+  section,
+  notes,
+  noteIndex,
+  lineIndex,
+  placedCount,
+  options = {}
+) {
+  const positionInfo = options.tupletPositionByNoteIndex?.get(noteIndex);
+
+  if (
+    Number(positionInfo?.actual) !== 3 ||
+    Number(positionInfo?.type) !== 8
+  ) {
+    return 0;
+  }
+
+  const usageCounts = [0, 0, 0];
+
+  for (let index = 0; index < notes.length; index += 1) {
+    if (!String(notes[index]?.ornaments || "").includes("d")) {
+      continue;
+    }
+
+    const existingPosition = options.tupletPositionByNoteIndex?.get(index);
+
+    if (
+      Number(existingPosition?.actual) === 3 &&
+      Number(existingPosition?.type) === 8
+    ) {
+      usageCounts[existingPosition.position] += 1;
+    }
+  }
+
+  const preferredPosition = Math.floor(
+    createSeededRandom(
+      `${section.id || section.title || "section"}:${lineIndex}:${placedCount}:diddle-triplet-position`
+    )() * 3
+  );
+  const positionDistance = Math.min(
+    Math.abs(positionInfo.position - preferredPosition),
+    3 - Math.abs(positionInfo.position - preferredPosition)
+  );
+
+  return usageCounts[positionInfo.position] * 3 + positionDistance;
+}
+
 function getScaledOrnamentTarget(section, baseTarget, maximumTarget, lineIndex, ornament) {
   const density = normalizeGlobalOrnamentDensity(section.globalOrnamentDensity);
   const exactTarget = baseTarget * density / 100;
@@ -2444,16 +2522,42 @@ function ensureRequiredOrnamentsOnNotes(section, notes, lineIndex = 0, options =
             /d/.test(String(note.ornaments || "")) &&
             areAdjacentOrnamentRuleNotes(nextNotes, right.index, index, options)
           );
-          const leftDiddleSpacingRank = ornament !== "d"
+          const leftDiddleAdjacencyRank = ornament !== "d"
             ? 0
             : allowAdjacentDiddle
               ? Number(!leftAdjacentDiddle)
-              : leftDiddleDistance >= 3 ? 0 : leftDiddleDistance === 2 ? 1 : 2;
-          const rightDiddleSpacingRank = ornament !== "d"
+              : Number(leftAdjacentDiddle);
+          const rightDiddleAdjacencyRank = ornament !== "d"
             ? 0
             : allowAdjacentDiddle
               ? Number(!rightAdjacentDiddle)
-              : rightDiddleDistance >= 3 ? 0 : rightDiddleDistance === 2 ? 1 : 2;
+              : Number(rightAdjacentDiddle);
+          const leftDiddleTupletPositionRank = ornament === "d"
+            ? getDiddleTupletPositionRank(
+                section,
+                nextNotes,
+                left.index,
+                lineIndex,
+                placedOrnamentCount,
+                options
+              )
+            : 0;
+          const rightDiddleTupletPositionRank = ornament === "d"
+            ? getDiddleTupletPositionRank(
+                section,
+                nextNotes,
+                right.index,
+                lineIndex,
+                placedOrnamentCount,
+                options
+              )
+            : 0;
+          const leftDiddleSpacingRank = ornament !== "d"
+            ? 0
+            : leftDiddleDistance >= 3 ? 0 : leftDiddleDistance === 2 ? 1 : 2;
+          const rightDiddleSpacingRank = ornament !== "d"
+            ? 0
+            : rightDiddleDistance >= 3 ? 0 : rightDiddleDistance === 2 ? 1 : 2;
           const leftRandomValue = getOrnamentPlacementRandomValue(
             section,
             lineIndex,
@@ -2470,6 +2574,8 @@ function ensureRequiredOrnamentsOnNotes(section, notes, lineIndex = 0, options =
           );
 
           return leftUseRank - rightUseRank ||
+            leftDiddleAdjacencyRank - rightDiddleAdjacencyRank ||
+            leftDiddleTupletPositionRank - rightDiddleTupletPositionRank ||
             leftDiddleSpacingRank - rightDiddleSpacingRank ||
             leftCount - rightCount ||
             leftRandomValue - rightRandomValue;
@@ -2579,6 +2685,11 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
           );
           const preliminaryDurationOrnamentOptions = {
             tupletNoteIndexes: preliminaryTupletNoteIndexes,
+            tupletPositionByNoteIndex: getTupletPositionByNoteIndex(
+              notationVoice.notes,
+              notationVoice.tuplets,
+              configuredTuplets
+            ),
             requiredSameHandRunLength,
           };
           const cappedNotes = enforceMaximumPlayedNotesInNotes(
@@ -2608,6 +2719,11 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
           );
           const durationOrnamentOptions = {
             tupletNoteIndexes: finalTupletNoteIndexes,
+            tupletPositionByNoteIndex: getTupletPositionByNoteIndex(
+              finalNotationVoice.notes,
+              finalNotationVoice.tuplets,
+              configuredTuplets
+            ),
             requiredSameHandRunLength,
           };
           const notationNotes = finalNotationVoice.notes;
