@@ -41,6 +41,7 @@ function createManifest(book) {
     title: line.title,
     notes: line.notes,
     tempo: line.tempo,
+    exerciseShortForm: line.exerciseShortForm,
     hasScore: Boolean(line.score),
     updatedAt: line.updatedAt,
   });
@@ -59,6 +60,7 @@ function createManifest(book) {
   return {
     book: book.book,
     structureVersion: book.structureVersion,
+    groups: book.groups,
     globalAiRules: book.globalAiRules,
     globalOrnamentDensity: book.globalOrnamentDensity,
     slug: book.slug,
@@ -69,6 +71,10 @@ function createManifest(book) {
     pdfSettings: book.pdfSettings,
     sections: book.sections.map((section) => ({
       id: section.id,
+      groupId: section.groupId,
+      rhythmSpan: section.rhythmSpan,
+      studyFamily: section.studyFamily,
+      density: section.density,
       primaryRhythms: section.primaryRhythms,
       secondaryRhythms: section.secondaryRhythms,
       title: section.title,
@@ -86,7 +92,7 @@ function createManifest(book) {
       pdfSettings: section.pdfSettings,
       pages: section.pages.map(createPageManifest),
     })),
-    tableOfContents: createBookTableOfContents(book.sections),
+    tableOfContents: createBookTableOfContents(book.sections, book.groups),
     pages: book.pages.map(createPageManifest),
   };
 }

@@ -7,6 +7,7 @@ const { JSDOM } = require("jsdom");
 const PDFDocument = require("pdfkit");
 const SVGtoPDF = require("svg-to-pdfkit");
 const QRCode = require("qrcode");
+const { drawBookTableOfContents } = require("../src/lib/book-toc");
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const DEFAULT_OUTPUT_PATH = path.join(
@@ -418,7 +419,7 @@ function enforceMinimumPlayedNotes(section, score) {
           );
           return {
             ...voice,
-            notes: needsStickings ? applyStickingsToNotes(enforced) : enforced,
+            notes: needsStickings && enforced !== voice.notes ? applyStickingsToNotes(enforced) : enforced,
           };
         }),
       })),
@@ -744,95 +745,6 @@ function drawBookPage(doc, book, pageAssets) {
   });
 }
 
-function getTableOfContentsEntries(book) {
-  if (Array.isArray(book.tableOfContents) && book.tableOfContents.length) {
-    return book.tableOfContents;
-  }
-
-  return (book.sections || []).map((section) => {
-    const pageNumbers = (section.pages || [])
-      .map((page) => Number.parseInt(page.pageNumber, 10))
-      .filter((pageNumber) => Number.isInteger(pageNumber) && pageNumber > 0);
-
-    return {
-      sectionId: section.id,
-      title: section.title || "Untitled section",
-      pageStart: pageNumbers.length ? Math.min(...pageNumbers) : null,
-      pageEnd: pageNumbers.length ? Math.max(...pageNumbers) : null,
-    };
-  });
-}
-
-function drawTableOfContentsPage(doc, book, bookTitle) {
-  const entries = getTableOfContentsEntries(book);
-  const margin = 48;
-  const pageNumberWidth = 46;
-  const contentWidth = PDF_PAGE_WIDTH - margin * 2;
-  const titleWidth = contentWidth - pageNumberWidth - 12;
-  const rowHeight = Math.min(26, 590 / Math.max(entries.length, 1));
-  const rowFontSize = entries.length > 24 ? 9.5 : 11;
-  const firstRowY = 142;
-
-  doc.addPage();
-  doc
-    .font("Times-Roman")
-    .fillColor("#111111")
-    .fontSize(24)
-    .text(book.title || bookTitle, margin, 48, {
-      width: contentWidth,
-      align: "center",
-      lineBreak: false,
-    });
-  doc
-    .font("Times-Bold")
-    .fontSize(18)
-    .text("Table of Contents", margin, 91, {
-      width: contentWidth,
-      align: "center",
-      lineBreak: false,
-    });
-
-  entries.forEach((entry, index) => {
-    const y = firstRowY + index * rowHeight;
-    const pageLabel = entry.pageStart == null
-      ? ""
-      : entry.pageEnd && entry.pageEnd !== entry.pageStart
-        ? `${entry.pageStart}\u2013${entry.pageEnd}`
-        : String(entry.pageStart);
-    const indent = entry.subsectionId ? 14 : 0;
-    const label = entry.subsectionId ? entry.title : `${entry.sectionNumber || index + 1}. ${entry.title}`;
-
-    doc.font(entry.subsectionId ? "Times-Roman" : "Times-Bold").fontSize(rowFontSize).fillColor("#111111");
-    doc.text(label, margin + indent, y, {
-      width: titleWidth - indent,
-      lineBreak: false,
-      ellipsis: true,
-    });
-    doc.text(pageLabel, margin + contentWidth - pageNumberWidth, y, {
-      width: pageNumberWidth,
-      align: "right",
-      lineBreak: false,
-    });
-
-    const labelWidth = Math.min(doc.widthOfString(label), titleWidth - indent - 8);
-    const leaderStart = margin + indent + labelWidth + 7;
-    const leaderEnd = margin + contentWidth - pageNumberWidth - 7;
-    const leaderY = y + rowFontSize * 0.78;
-
-    if (leaderEnd > leaderStart) {
-      doc
-        .save()
-        .strokeColor("#777777")
-        .lineWidth(0.5)
-        .dash(1, { space: 2 })
-        .moveTo(leaderStart, leaderY)
-        .lineTo(leaderEnd, leaderY)
-        .stroke()
-        .restore();
-    }
-  });
-}
-
 async function renderPdf(book, pages, dependencies) {
   const {
     bookData,
@@ -861,7 +773,7 @@ async function renderPdf(book, pages, dependencies) {
   );
 
   if (includeTableOfContents) {
-    drawTableOfContentsPage(doc, book, BOOK_TITLE);
+    drawBookTableOfContents(doc, book);
   }
 
   for (const pageAssetsPromise of pageAssetPromises) {

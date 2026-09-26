@@ -33,12 +33,13 @@ import {
   normalizePdfSettings,
 } from "../../src/components/book-builder/book-data";
 import { getBookPageQrUrl } from "../../src/lib/book-qr";
+import { drawBookTableOfContents } from "../../src/lib/book-toc";
 
 const BOOK_ROOT = path.join(process.cwd(), "data", "book-builder", BOOK_SLUG);
 const MANIFEST_PATH = path.join(BOOK_ROOT, "book.json");
 const PDF_CACHE_ROOT = process.env.BOOK_PDF_CACHE_DIR || path.join(process.cwd(), ".next", "cache", "book-builder-pdf");
 const SCORE_SVG_CACHE_VERSION = "score-svg-v25";
-const PDF_FILE_CACHE_VERSION = "pdf-v31";
+const PDF_FILE_CACHE_VERSION = "pdf-v32";
 const SCORE_SVG_MEMORY_CACHE_LIMIT = Number(process.env.BOOK_PDF_SVG_MEMORY_CACHE_LIMIT || 800);
 const MIN_CONTINUATION_SYSTEMS = 3;
 
@@ -100,6 +101,7 @@ function createManifest(book) {
   return {
     book: book.book,
     structureVersion: book.structureVersion,
+    groups: book.groups,
     slug: book.slug,
     title: book.title,
     edition: book.edition,
@@ -113,6 +115,10 @@ function createManifest(book) {
 
       return {
         id: section.id,
+        groupId: section.groupId,
+        rhythmSpan: section.rhythmSpan,
+        studyFamily: section.studyFamily,
+        density: section.density,
         primaryRhythms: section.primaryRhythms,
         secondaryRhythms: section.secondaryRhythms,
         title: section.title,
@@ -131,7 +137,7 @@ function createManifest(book) {
         pages: section.pages.map(createPageManifest),
       };
     }),
-    tableOfContents: createBookTableOfContents(book.sections),
+    tableOfContents: createBookTableOfContents(book.sections, book.groups),
     pages: book.pages.map(createPageManifest),
   };
 }
@@ -289,7 +295,7 @@ function preserveExistingGeneratedLines(rawBook, existingBook, clearedLines = []
 async function saveBook(rawBook, { clearedLines = [] } = {}) {
   const now = new Date().toISOString();
   const existingBook = await loadBook();
-  const mergedBook = preserveExistingGeneratedLines(rawBook, existingBook, clearedLines);
+  const mergedBook = preserveExistingGeneratedLines(normalizeBook(rawBook), existingBook, clearedLines);
   const book = normalizeBook({
     ...mergedBook,
     updatedAt: now,
@@ -436,6 +442,7 @@ async function writeScoreSvgCache(cacheKey, rendered) {
 
 function getRelevantPdfBookPayload(book, pages) {
   return {
+    groups: book.groups,
     book: book.book,
     slug: book.slug,
     title: book.title,
@@ -458,7 +465,7 @@ function getRelevantPdfBookPayload(book, pages) {
       requiredSameHandStickingRuns: section.requiredSameHandStickingRuns,
       pages: section.pages.map((page) => page.pageNumber),
     })),
-    tableOfContents: createBookTableOfContents(book.sections),
+    tableOfContents: createBookTableOfContents(book.sections, book.groups),
     pages: pages.map((page) => ({
       pageNumber: page.pageNumber,
       sectionId: page.sectionId,
@@ -894,63 +901,6 @@ function drawBookPage(doc, book, pageAssets) {
   });
 }
 
-function drawTableOfContentsPage(doc, book) {
-  const entries = Array.isArray(book.tableOfContents) && book.tableOfContents.length
-    ? book.tableOfContents
-    : createBookTableOfContents(book.sections);
-  const margin = 48;
-  const pageNumberWidth = 46;
-  const contentWidth = PDF_PAGE_WIDTH - margin * 2;
-  const titleWidth = contentWidth - pageNumberWidth - 12;
-  const rowHeight = Math.min(26, 590 / Math.max(entries.length, 1));
-  const rowFontSize = entries.length > 24 ? 9.5 : 11;
-  const firstRowY = 142;
-
-  doc.addPage();
-  doc.font("Times-Roman").fillColor("#111111").fontSize(24).text(
-    book.title || BOOK_TITLE,
-    margin,
-    48,
-    { width: contentWidth, align: "center", lineBreak: false }
-  );
-  doc.font("Times-Bold").fontSize(18).text(
-    "Table of Contents",
-    margin,
-    91,
-    { width: contentWidth, align: "center", lineBreak: false }
-  );
-
-  entries.forEach((entry, index) => {
-    const y = firstRowY + index * rowHeight;
-    const pageLabel = entry.pageStart == null
-      ? ""
-      : entry.pageEnd && entry.pageEnd !== entry.pageStart
-        ? `${entry.pageStart}\u2013${entry.pageEnd}`
-        : String(entry.pageStart);
-    const indent = entry.subsectionId ? 14 : 0;
-    const label = entry.subsectionId ? entry.title : `${entry.sectionNumber || index + 1}. ${entry.title}`;
-
-    doc.font(entry.subsectionId ? "Times-Roman" : "Times-Bold").fontSize(rowFontSize).fillColor("#111111");
-    doc.text(label, margin + indent, y, { width: titleWidth - indent, lineBreak: false, ellipsis: true });
-    doc.text(pageLabel, margin + contentWidth - pageNumberWidth, y, {
-      width: pageNumberWidth,
-      align: "right",
-      lineBreak: false,
-    });
-
-    const labelWidth = Math.min(doc.widthOfString(label), titleWidth - indent - 8);
-    const leaderStart = margin + indent + labelWidth + 7;
-    const leaderEnd = margin + contentWidth - pageNumberWidth - 7;
-
-    if (leaderEnd > leaderStart) {
-      doc.save().strokeColor("#777777").lineWidth(0.5).dash(1, { space: 2 })
-        .moveTo(leaderStart, y + rowFontSize * 0.78)
-        .lineTo(leaderEnd, y + rowFontSize * 0.78)
-        .stroke().restore();
-    }
-  });
-}
-
 async function renderPagePdfFresh(book, pageNumber) {
   const bookPdfSettings = normalizePdfSettings({
     ...DEFAULT_PDF_SETTINGS,
@@ -995,7 +945,7 @@ async function renderFullBookPdfFresh(book) {
     renderBookPageAssets(book, page, bookPdfSettings, limitScoreRender)
   );
 
-  drawTableOfContentsPage(doc, book);
+  drawBookTableOfContents(doc, book);
 
   for (const pageAssetsPromise of pageAssetPromises) {
     drawBookPage(doc, book, await pageAssetsPromise);
@@ -1089,8 +1039,9 @@ export default async function handler(req, res) {
 
 export const config = {
   api: {
+    responseLimit: "64mb",
     bodyParser: {
-      sizeLimit: "10mb",
+      sizeLimit: "64mb",
     },
   },
 };

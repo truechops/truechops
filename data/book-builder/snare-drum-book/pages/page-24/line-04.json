@@ -1,7 +1,7 @@
 {
   "pageNumber": 24,
   "lineNumber": 4,
-  "title": "Triplets - 3 in a row 1 4",
+  "title": "Accents with stickings and flams 4",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -26,17 +26,8 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
+                    "duration": 4,
+                    "dots": 1,
                     "velocity": 0.5,
                     "ornaments": "r"
                   },
@@ -48,24 +39,6 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "ld"
                   },
                   {
                     "notes": [
@@ -84,6 +57,15 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 4,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "rfa"
                   },
                   {
                     "notes": [
@@ -100,8 +82,8 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "rd"
+                    "velocity": 1,
+                    "ornaments": "lfa"
                   },
                   {
                     "notes": [
@@ -109,8 +91,8 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lda"
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -120,26 +102,23 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "ld"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 3,
+                    "end": 1,
                     "actual": 3,
                     "normal": 2
                   },
                   {
-                    "start": 3,
+                    "start": 1,
+                    "end": 4,
+                    "actual": 3,
+                    "normal": 2
+                  },
+                  {
+                    "start": 4,
                     "end": 6,
                     "actual": 3,
                     "normal": 2
@@ -147,12 +126,6 @@
                   {
                     "start": 6,
                     "end": 9,
-                    "actual": 3,
-                    "normal": 2
-                  },
-                  {
-                    "start": 9,
-                    "end": 12,
                     "actual": 3,
                     "normal": 2
                   }
@@ -164,8 +137,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n8:r n8:r n8:l n8:l n8:ld n8:r n8:l n8:raf n8:rd n8:lad n8:r n8:ld |t0-3:3:2,3-6:3:2,6-9:3:2,9-12:3:2",
-  "updatedAt": "2026-09-22T01:35:20.524Z",
-  "sectionId": "section-21",
-  "sectionPageNumber": 1
+  "exerciseShortForm": "n4.:r n8:l n8:r n8:l n4:raf n8:raf n8:laf n8:l n8:r |t0-1:3:2,1-4:3:2,4-6:3:2,6-9:3:2",
+  "updatedAt": "2026-09-26T19:50:08.317Z",
+  "sectionId": "one-quarter-eighth-triplets-sparse",
+  "sectionPageNumber": 5
 }

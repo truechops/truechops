@@ -45,6 +45,7 @@ import {
   renumberPages,
 } from "./book-data";
 import styles from "./BookBuilder.module.css";
+import { normalizeRhythmSpan, normalizeStickingTail, rhythmSpanLabel } from "../../lib/book-structure";
 
 const TUPLET_COUNT_OPTIONS = Array.from({ length: 15 }, (_, index) => index + 2);
 const DEFAULT_SECTION_TUPLET = { actual: 3, normal: 2, type: 8 };
@@ -441,6 +442,7 @@ export default function BookBuilderPanel() {
   const [isSaving, setIsSaving] = useState(false);
   const [deleteSectionDialogOpen, setDeleteSectionDialogOpen] = useState(false);
   const [deleteSubsectionDialogOpen, setDeleteSubsectionDialogOpen] = useState(false);
+  const [deleteGroupDialogOpen, setDeleteGroupDialogOpen] = useState(false);
   const [pdfDownload, setPdfDownload] = useState({ active: false, label: "", loaded: 0, total: 0 });
 
   const setBook = useCallback((nextBookOrUpdater) => {
@@ -454,6 +456,8 @@ export default function BookBuilderPanel() {
   }, []);
 
   const selectedSection = book.sections[selectedSectionIndex] || book.sections[0];
+  const selectedGroup = book.groups.find((group) => group.id === selectedSection.groupId) || book.groups[0];
+  const groupSections = book.sections.filter((section) => section.groupId === selectedGroup.id);
   const selectedPage = book.pages[selectedPageIndex] || book.pages[0];
   const selectedPageGenerationSettings = getPageGenerationSettings(
     selectedPage,
@@ -683,6 +687,52 @@ export default function BookBuilderPanel() {
     setStatus("Section rhythms updated. Save, then regenerate the subsections.");
   };
 
+  const updateGroup = (updates) => {
+    const nextBook = normalizeBook({
+      ...book,
+      groups: book.groups.map((group) => group.id === selectedGroup.id ? { ...group, ...updates } : group),
+      sections: book.sections.map((section) => updates.rhythmSpan && section.groupId === selectedGroup.id
+        ? { ...section, pages: section.pages.map((page) => ({ ...page, lines: clearGeneratedPageLines(page.lines) })) }
+        : section),
+    });
+    setBook(nextBook);
+    setStatus(updates.rhythmSpan ? "Span updated for this group. Save, then regenerate its pages." : "Group title updated. Save to keep it.");
+  };
+
+  const addGroup = (duplicate = false) => {
+    const id = createSectionId("span-group", book.groups);
+    const title = duplicate ? `${selectedGroup.title} copy` : "New span group";
+    const group = { id, title, rhythmSpan: { ...selectedGroup.rhythmSpan } };
+    const sections = duplicate ? groupSections.map((section, index) => ({
+      ...section,
+      id: `${id}-section-${index + 1}`,
+      groupId: id,
+      pages: section.pages.map((page, pageIndex) => ({
+        ...page, subsectionId: `${id}-section-${index + 1}-topic-${pageIndex + 1}`,
+        lines: clearGeneratedPageLines(page.lines),
+      })),
+    })) : [createBookSection(book.sections.length + 1, {
+      id: `${id}-section-1`, groupId: id, title: "New section",
+      primaryRhythms: { subdivisions: ["sixteenths"], tuplets: [], ornaments: [] },
+    }, pdfSettings)];
+    const nextBook = normalizeBook({ ...book, groups: [...book.groups, group], sections: [...book.sections, ...sections] });
+    const sectionIndex = nextBook.sections.findIndex((section) => section.groupId === id);
+    setSelectedSectionIndex(sectionIndex);
+    setSelectedPageIndex(getPageIndexForSectionPage(nextBook, nextBook.sections[sectionIndex].id, 1));
+    saveBook(nextBook, duplicate ? "Duplicated span group" : "Added span group");
+  };
+
+  const deleteGroup = () => {
+    const nextBook = normalizeBook({ ...book,
+      groups: book.groups.filter((group) => group.id !== selectedGroup.id),
+      sections: book.sections.filter((section) => section.groupId !== selectedGroup.id),
+    });
+    setDeleteGroupDialogOpen(false);
+    setSelectedSectionIndex(0);
+    setSelectedPageIndex(0);
+    saveBook(nextBook, "Deleted span group");
+  };
+
   const changeSubsectionOrder = (direction, remove = false) => {
     const from = selectedPage.sectionPageNumber - 1;
     const pages = [...selectedSection.pages];
@@ -701,6 +751,7 @@ export default function BookBuilderPanel() {
     const title = `Section ${sectionNumber}`;
     const nextSection = createBookSection(sectionNumber, {
       id: createSectionId(title, book.sections),
+      groupId: selectedGroup.id,
       title,
       primaryRhythms: { subdivisions: ["eighths"], tuplets: [], ornaments: [] },
       secondaryRhythms: { subdivisions: [], tuplets: [], ornaments: [] },
@@ -718,7 +769,7 @@ export default function BookBuilderPanel() {
       ...book,
       sections: [...book.sections, nextSection],
     });
-    const nextSectionIndex = nextBook.sections.length - 1;
+    const nextSectionIndex = nextBook.sections.findIndex((section) => section.id === nextSection.id);
 
     setBook(nextBook);
     setSelectedSectionIndex(nextSectionIndex);
@@ -730,12 +781,12 @@ export default function BookBuilderPanel() {
       )
     );
     saveBook(nextBook, "Added section");
-  }, [book, pdfSettings, saveBook, setBook]);
+  }, [book, pdfSettings, saveBook, setBook, selectedGroup.id]);
 
   const moveSelectedSection = useCallback((direction) => {
     const toIndex = selectedSectionIndex + direction;
 
-    if (toIndex < 0 || toIndex >= book.sections.length) {
+    if (toIndex < 0 || toIndex >= book.sections.length || book.sections[toIndex].groupId !== selectedGroup.id) {
       return;
     }
 
@@ -754,10 +805,10 @@ export default function BookBuilderPanel() {
       )
     );
     saveBook(nextBook, "Moved section");
-  }, [book, saveBook, selectedSectionIndex, setBook]);
+  }, [book, saveBook, selectedSectionIndex, setBook, selectedGroup.id]);
 
   const deleteSelectedSection = useCallback(() => {
-    if (book.sections.length <= 1) {
+    if (groupSections.length <= 1) {
       return;
     }
 
@@ -776,7 +827,7 @@ export default function BookBuilderPanel() {
       )
     );
     saveBook(nextBook, "Deleted section");
-  }, [book, saveBook, selectedSectionIndex, setBook]);
+  }, [book, saveBook, selectedSectionIndex, setBook, groupSections.length]);
 
   const uploadPageJson = useCallback((event) => {
     const file = event.target.files?.[0];
@@ -929,6 +980,37 @@ export default function BookBuilderPanel() {
 
       <section className={styles.sectionManager}>
         <div className={styles.sectionHeader}>
+          <h3>Rhythmic span groups</h3>
+          <div className={styles.sectionActions}>
+            <IconButton icon={<FaPlus />} onClick={() => addGroup()}>Add group</IconButton>
+            <IconButton icon={<FaPlus />} onClick={() => addGroup(true)}>Duplicate group</IconButton>
+            <IconButton icon={<FaTrash />} disabled={book.groups.length === 1} onClick={() => setDeleteGroupDialogOpen(true)}>Delete group</IconButton>
+          </div>
+        </div>
+        <div className={styles.sectionTabs}>
+          {book.groups.map((group) => (
+            <button key={group.id} type="button"
+              className={`${styles.sectionTab} ${group.id === selectedGroup.id ? styles.activeSectionTab : ""}`}
+              onClick={() => selectSection(book.sections.findIndex((section) => section.groupId === group.id))}>
+              <strong>{group.title}</strong><span>{rhythmSpanLabel(group.rhythmSpan)}</span>
+            </button>
+          ))}
+        </div>
+        <Field label="Span group title"><input value={selectedGroup.title} onChange={(event) => updateGroup({ title: event.target.value })} /></Field>
+        <div className={styles.layoutControls}>
+          <Field label="Span count"><input type="number" min="1" max={selectedGroup.rhythmSpan.unit}
+            value={selectedGroup.rhythmSpan.count}
+            onChange={(event) => updateGroup({ rhythmSpan: normalizeRhythmSpan({ ...selectedGroup.rhythmSpan, count: event.target.value }) })} /></Field>
+          <Field label="Span note value"><select value={selectedGroup.rhythmSpan.unit}
+            onChange={(event) => updateGroup({ rhythmSpan: normalizeRhythmSpan({ ...selectedGroup.rhythmSpan, unit: event.target.value }) })}>
+            {[{ value: 1, label: "Whole" }, { value: 2, label: "Half" }, { value: 4, label: "Quarter" }, { value: 8, label: "Eighth" }, { value: 16, label: "Sixteenth" }, { value: 32, label: "Thirty-second" }].map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </select></Field>
+        </div>
+        <p className={styles.layoutSummary}>Primary groups keep their note count and stretch across this span. For example, 1 quarter and 2 eighths have the same length; four notes over 3 sixteenths form a 4:3 group. Secondary rhythms fill the remaining space in 4/4.</p>
+      </section>
+
+      <section className={styles.sectionManager}>
+        <div className={styles.sectionHeader}>
           <div>
             <span className={styles.eyebrow}>Sections</span>
             <h3>{selectedSection.title}</h3>
@@ -938,7 +1020,7 @@ export default function BookBuilderPanel() {
               Add
             </IconButton>
             <IconButton
-              disabled={selectedSectionIndex === 0}
+              disabled={selectedSection.id === groupSections[0]?.id}
               icon={<FaArrowUp />}
               onClick={() => moveSelectedSection(-1)}
               title="Move section earlier"
@@ -947,7 +1029,7 @@ export default function BookBuilderPanel() {
               Up
             </IconButton>
             <IconButton
-              disabled={selectedSectionIndex === book.sections.length - 1}
+              disabled={selectedSection.id === groupSections[groupSections.length - 1]?.id}
               icon={<FaArrowDown />}
               onClick={() => moveSelectedSection(1)}
               title="Move section later"
@@ -956,7 +1038,7 @@ export default function BookBuilderPanel() {
               Down
             </IconButton>
             <IconButton
-              disabled={book.sections.length <= 1}
+              disabled={groupSections.length <= 1}
               icon={<FaTrash />}
               onClick={() => setDeleteSectionDialogOpen(true)}
               title="Delete section"
@@ -968,7 +1050,7 @@ export default function BookBuilderPanel() {
         </div>
 
         <div className={styles.sectionTabs}>
-          {book.sections.map((section, sectionIndex) => (
+          {book.sections.map((section, sectionIndex) => section.groupId === selectedGroup.id && (
             <button
               className={`${styles.sectionTab} ${sectionIndex === selectedSectionIndex ? styles.activeSectionTab : ""}`}
               key={section.id}
@@ -1153,6 +1235,27 @@ export default function BookBuilderPanel() {
             )}
             value={selectedPageGenerationSettings.requiredSameHandStickingRuns}
           />
+          <label className={styles.toggleField}>
+            <input type="checkbox" checked={Boolean(selectedPageGenerationSettings.stickingTail)}
+              onChange={(event) => updateSelectedPageGenerationDraft({ stickingTail: event.target.checked
+                ? { count: 5, maxSameHandStickingRun: 4, requiredSameHandStickingRuns: [3, 4] } : null })} />
+            <span>Use separate sticking rules for the final printed rows</span>
+          </label>
+          {selectedPageGenerationSettings.stickingTail && <>
+            <Field label="Final staff rows"><input type="number" min="1" max={systemsPerPage}
+              value={selectedPageGenerationSettings.stickingTail.count}
+              onChange={(event) => updateSelectedPageGenerationDraft({ stickingTail: normalizeStickingTail({ ...selectedPageGenerationSettings.stickingTail, count: event.target.value }) })} /></Field>
+            <Field label="Final rows: maximum same-hand run"><input type="number" min="1" max="32"
+              value={selectedPageGenerationSettings.stickingTail.maxSameHandStickingRun}
+              onChange={(event) => updateSelectedPageGenerationDraft({ stickingTail: normalizeStickingTail({ ...selectedPageGenerationSettings.stickingTail, maxSameHandStickingRun: event.target.value }) })} /></Field>
+            <CheckboxPicker label="Final rows: required same-hand run lengths (OR)"
+              options={Array.from({ length: selectedPageGenerationSettings.stickingTail.maxSameHandStickingRun }, (_, i) => ({ id: i + 1, label: String(i + 1) }))}
+              value={selectedPageGenerationSettings.stickingTail.requiredSameHandStickingRuns}
+              onToggle={(id) => updateSelectedPageGenerationDraft({ stickingTail: normalizeStickingTail({ ...selectedPageGenerationSettings.stickingTail,
+                requiredSameHandStickingRuns: toggleOption(selectedPageGenerationSettings.stickingTail.requiredSameHandStickingRuns, id),
+              }) })} />
+            <p className={styles.layoutSummary}>Applies to the last {Math.min(systemsPerPage, selectedPageGenerationSettings.stickingTail.count)} printed rows ({Math.min(linesPerPage, selectedPageGenerationSettings.stickingTail.count * selectedPagePdfSettings.measuresPerLine)} exercises), when stickings are selected.</p>
+          </>}
           <Field label="Sample JSON">
             <textarea
               onChange={(event) =>
@@ -1186,6 +1289,12 @@ export default function BookBuilderPanel() {
         <PageLayoutPreview page={selectedPage} pdfSettings={selectedPagePdfSettings} />
       </section>
 
+      <Dialog
+        isOpen={deleteGroupDialogOpen}
+        message={`Delete span group "${selectedGroup.title}" and all its sections and pages?`}
+        onCancel={() => setDeleteGroupDialogOpen(false)}
+        onOk={deleteGroup}
+      />
       <Dialog
         isOpen={deleteSubsectionDialogOpen}
         message={`Delete subsection "${selectedPage.title}" and its exercises?`}

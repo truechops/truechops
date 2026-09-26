@@ -1,7 +1,7 @@
 {
   "pageNumber": 23,
   "lineNumber": 17,
-  "title": "Triplets 1 17",
+  "title": "Accents with stickings and diddles 17",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -28,8 +28,8 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
+                    "velocity": 1,
+                    "ornaments": "lda"
                   },
                   {
                     "notes": [
@@ -39,6 +39,24 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "rda"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 4,
+                    "dots": 1,
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -64,71 +82,23 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "rd"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "rd"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
                     "velocity": 1,
                     "ornaments": "rda"
+                  },
+                  {
+                    "notes": [],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 4,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   }
                 ],
                 "tuplets": [
@@ -140,19 +110,19 @@
                   },
                   {
                     "start": 3,
-                    "end": 6,
+                    "end": 4,
                     "actual": 3,
                     "normal": 2
                   },
                   {
-                    "start": 6,
+                    "start": 4,
+                    "end": 7,
+                    "actual": 3,
+                    "normal": 2
+                  },
+                  {
+                    "start": 7,
                     "end": 9,
-                    "actual": 3,
-                    "normal": 2
-                  },
-                  {
-                    "start": 9,
-                    "end": 12,
                     "actual": 3,
                     "normal": 2
                   }
@@ -164,8 +134,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n8:l n8:r n8:rad n8:l n8:rd n8:l n8:r n8:l n8:r n8:rd n8:l n8:rad |t0-3:3:2,3-6:3:2,6-9:3:2,9-12:3:2",
-  "updatedAt": "2026-09-22T01:35:20.524Z",
-  "sectionId": "section-20",
-  "sectionPageNumber": 1
+  "exerciseShortForm": "n8:lad n8:r n8:rad n4.:l n8:rad n8:l n8:rad r8 n4:l |t0-3:3:2,3-4:3:2,4-7:3:2,7-9:3:2",
+  "updatedAt": "2026-09-26T19:50:08.317Z",
+  "sectionId": "one-quarter-eighth-triplets-sparse",
+  "sectionPageNumber": 4
 }

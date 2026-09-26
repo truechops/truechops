@@ -8,6 +8,8 @@ const vm = require("node:vm");
 const babel = require("@babel/core");
 const { migrateBookStructure } = require("../../src/lib/book-structure");
 const generator = require("../generate-ai-book");
+const { createStudySections, STUDY_TOPICS, STUDY_FAMILIES } = require("../../src/lib/book-curriculum");
+const { getLineStickingSettings, getSpanPrimaryRhythms } = require("../../src/lib/book-structure");
 
 // Load the same ES modules Next uses without starting a server.
 const originalLoader = Module._extensions[".js"];
@@ -143,6 +145,86 @@ test("manifest round trip preserves both pools and subsection IDs", () => {
   assert.equal(loaded.pages.length, 3);
 });
 
+test("all seven families follow the exact eight sparse / seven full topic order", () => {
+  const sections = createStudySections("quarter", { measuresPerLine: 2, lineSpacing: 130, noteSize: 100 });
+  assert.equal(sections.length, 14);
+  STUDY_FAMILIES.forEach((family, index) => {
+    const [sparse, full] = sections.slice(index * 2, index * 2 + 2);
+    assert.equal(sparse.studyFamily, family.id);
+    assert.equal(full.studyFamily, family.id);
+    assert.deepEqual(sparse.pages.map((page) => page.title), STUDY_TOPICS.map((topic) => topic.title));
+    assert.deepEqual(full.pages.map((page) => page.title), STUDY_TOPICS.slice(1).map((topic) => topic.title));
+    for (const page of full.pages) {
+      assert.equal(page.generationSettings.playEveryNote, true);
+      assert.equal(Boolean(page.generationSettings.stickingTail), page.generationSettings.ornaments.includes("stickings"));
+    }
+  });
+});
+
+function repeatingRuns(notes) {
+  const hands = notes.map((note) => (note.ornaments || "").match(/[rl]/)?.[0]);
+  const runs = [];
+  for (let index = 0; index < hands.length; index += 1) {
+    if (!hands[index] || hands[(index + hands.length - 1) % hands.length] === hands[index]) continue;
+    let length = 1;
+    while (length < hands.length && hands[(index + length) % hands.length] === hands[index]) length += 1;
+    runs.push(length);
+  }
+  return runs.length ? runs : [hands.length];
+}
+
+test("the final five STAFF rows use 3-or-4 runs in every full sticking page", () => {
+  const config = generator.createGenerationConfig({}, { structureVersion: 3,
+    sections: createStudySections("one-quarter", { measuresPerLine: 2, lineSpacing: 130, noteSize: 100 }),
+  });
+  for (const section of config.sections.filter((section) => section.density === "full")) {
+    for (const page of section.pages.filter((page) => page.ornaments.includes("stickings"))) {
+      const voices = generate(page, 22);
+      voices.forEach((voice, index) => {
+        assert(voice.notes.every((note) => note.notes.length));
+        const runs = repeatingRuns(voice.notes);
+        assert(Math.max(...runs) <= (index < 12 ? 2 : 4), `${section.title}/${page.title} exercise ${index + 1}`);
+        if (index >= 12) assert(runs.includes(3) || runs.includes(4));
+      });
+    }
+  }
+});
+
+test("tail boundary follows the printed layout when measures per row changes", () => {
+  const settings = { ornaments: ["stickings"], maxSameHandStickingRun: 2,
+    stickingTail: { count: 5, maxSameHandStickingRun: 4, requiredSameHandStickingRuns: [3, 4] } };
+  assert.equal(getLineStickingSettings(settings, 17, 33, 3).maxSameHandStickingRun, 2);
+  assert.equal(getLineStickingSettings(settings, 18, 33, 3).maxSameHandStickingRun, 4);
+  assert.equal(getLineStickingSettings(settings, 33, 33, 3).maxSameHandStickingRun, 2);
+});
+
+test("span changes affect group timing and equivalent spans retain identical rhythms", () => {
+  const primary = pool(["sixteenths"]);
+  assert.deepEqual(getSpanPrimaryRhythms(primary, { count: 1, unit: 4 }), getSpanPrimaryRhythms(primary, { count: 2, unit: 8 }));
+  assert.deepEqual(getSpanPrimaryRhythms(primary, { count: 3, unit: 16 }).tuplets, [{ actual: 4, normal: 3, type: 16 }]);
+  const config = generator.createGenerationConfig({}, { structureVersion: 3,
+    groups: [{ id: "three-sixteenths", rhythmSpan: { count: 3, unit: 16 } }],
+    sections: [{ id: "study", groupId: "three-sixteenths", primaryRhythms: primary,
+      secondaryRhythms: pool(["sixteenths"]), pages: [{ generationSettings: { playEveryNote: true, ornaments: ["accents"] } }] }],
+  });
+  for (const voice of generate(config.sections[0].pages[0], 30)) {
+    assert(voice.tuplets.some((tuplet) => tuplet.actual === 4 && tuplet.normal === 3));
+    assert(voice.notes.every((note) => note.notes.length));
+  }
+});
+
+test("group spans and per-page tail rules survive manifests and group sorting", () => {
+  const book = normalizeBook({ structureVersion: 3,
+    groups: [{ id: "a", title: "Quarter", rhythmSpan: { count: 1, unit: 4 } }, { id: "b", title: "Three sixteenths", rhythmSpan: { count: 3, unit: 16 } }],
+    sections: [{ ...legacyBook().sections[0], id: "b-section", groupId: "b" }, ...createStudySections("a")],
+  });
+  assert.equal(book.sections[0].groupId, "a");
+  const loaded = normalizeBook(generator.createManifest(book));
+  assert.deepEqual(loaded.groups, book.groups);
+  assert.deepEqual(loaded.sections.at(-1).rhythmSpan, { count: 3, unit: 16 });
+  assert.equal(loaded.sections[1].pages[1].generationSettings.stickingTail.count, 5);
+});
+
 test("API saves and reloads pools, preserves reordered scores, and invalidates changed generation settings", async () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "truechops-book-test-"));
   try {
@@ -179,6 +261,14 @@ test("API saves and reloads pools, preserves reordered scores, and invalidates c
     book = await request("GET");
     assert.deepEqual(book.sections[0].secondaryRhythms, pool(["eighths"], [], ["flams"]));
     assert.equal(book.pages[1].lines[0].score, null);
+    book.pages[1].lines[0].score = score;
+    await request("POST", { book });
+    book = await request("GET");
+    book.groups[0].rhythmSpan = { count: 3, unit: 16 };
+    await request("POST", { book });
+    book = await request("GET");
+    assert.equal(book.pages[1].lines[0].score, null);
+    assert.deepEqual(book.sections[0].rhythmSpan, { count: 3, unit: 16 });
   } finally {
     // This directory was created exclusively for the test under the OS temp root.
     assert(path.resolve(directory).startsWith(path.resolve(os.tmpdir()) + path.sep));

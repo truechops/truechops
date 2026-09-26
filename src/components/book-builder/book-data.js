@@ -1,7 +1,7 @@
 import _ from "lodash";
 import { getEmptyMeasure } from "../../helpers/score";
 import { DEFAULT_TEMPO } from "../../consts/score";
-import { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents } from "../../lib/book-structure";
+import { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail } from "../../lib/book-structure";
 
 export { normalizeRhythmPool };
 
@@ -22,6 +22,7 @@ export const TUPLET_TYPE_OPTIONS = [
   { id: "quarter", label: "Quarter", type: 4 },
   { id: "eighth", label: "Eighth", type: 8 },
   { id: "sixteenth", label: "Sixteenth", type: 16 },
+  { id: "thirtysecond", label: "Thirty-second", type: 32 },
 ];
 const LEGACY_TUPLET_OPTIONS = [
   { id: "eighth-triplets", label: "Eighth triplets", actual: 3, normal: 2, type: 8 },
@@ -475,6 +476,8 @@ export function normalizePageGenerationSettings(value = {}, fallback = {}) {
     : normalizeSectionRequiredSameHandStickingRuns(fallback.requiredSameHandStickingRuns);
 
   return {
+    rhythmSpan: normalizeRhythmSpan(source.rhythmSpan),
+    stickingTail: normalizeStickingTail(source.stickingTail),
     ...(source.primaryRhythms ? {
       primaryRhythms: normalizeRhythmPool(source.primaryRhythms, false),
       secondaryRhythms: normalizeRhythmPool(source.secondaryRhythms),
@@ -560,6 +563,7 @@ export function getPageGenerationSettings(page, section = {}) {
   if (!section.primaryRhythms) return settings;
   return {
     ...settings,
+    rhythmSpan: normalizeRhythmSpan(section.rhythmSpan),
     primaryRhythms: normalizeRhythmPool(section.primaryRhythms, false),
     secondaryRhythms: normalizeRhythmPool(section.secondaryRhythms),
     subdivisions: section.primaryRhythms.subdivisions,
@@ -646,6 +650,10 @@ export function createBookSection(sectionNumber = 1, overrides = {}, pdfSettings
 
   return {
     id: overrides.id || template.id || `${slugify(title)}-${sectionNumber}`,
+    groupId: overrides.groupId,
+    rhythmSpan: normalizeRhythmSpan(overrides.rhythmSpan),
+    studyFamily: overrides.studyFamily,
+    density: overrides.density,
     ...(overrides.primaryRhythms ? {
       primaryRhythms: normalizeRhythmPool(overrides.primaryRhythms, false),
       secondaryRhythms: normalizeRhythmPool(overrides.secondaryRhythms),
@@ -703,8 +711,8 @@ export function createDefaultBook() {
   });
 }
 
-export function createBookTableOfContents(sections = []) {
-  return createStructureTableOfContents(sections);
+export function createBookTableOfContents(sections = [], groups = []) {
+  return createStructureTableOfContents(sections, groups);
 }
 
 function cloneJson(value) {
@@ -929,6 +937,7 @@ export function normalizeBook(rawBook) {
 
   return {
     structureVersion: BOOK_STRUCTURE_VERSION,
+    groups: rawBook.groups,
     book: rawBook.book || BOOK_KEY,
     slug: rawBook.slug || BOOK_SLUG,
     title: rawBook.title || BOOK_TITLE,
@@ -941,7 +950,7 @@ export function normalizeBook(rawBook) {
     ),
     pdfSettings,
     sections,
-    tableOfContents: createBookTableOfContents(sections),
+    tableOfContents: createBookTableOfContents(sections, rawBook.groups),
     pages,
   };
 }

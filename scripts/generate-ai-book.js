@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const http = require("http");
 const https = require("https");
-const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents } = require("../src/lib/book-structure");
+const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, getLineStickingSettings, getSpanPrimaryRhythms } = require("../src/lib/book-structure");
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const DEFAULT_CONFIG_PATH = path.join(
@@ -58,6 +58,7 @@ const TUPLET_TYPE_SETTINGS = [
   { id: "quarter", label: "quarter", type: 4 },
   { id: "eighth", label: "eighth", type: 8 },
   { id: "sixteenth", label: "sixteenth", type: 16 },
+  { id: "thirtysecond", label: "thirty-second", type: 32 },
 ];
 const LEGACY_TUPLET_SETTINGS = [
   { id: "eighth-triplets", actual: 3, normal: 2, type: 8 },
@@ -366,7 +367,7 @@ function normalizeTupletConfig(value) {
     !Number.isInteger(type) ||
     actual < 2 ||
     actual > 16 ||
-    normal < 2 ||
+    normal < 1 ||
     normal > 16 ||
     normal > type ||
     !TUPLET_TYPE_SETTINGS.some((setting) => setting.type === type)
@@ -3076,6 +3077,10 @@ function createMixedTupletFallbackGeneratedScore(section, options, random) {
       requiredBlocks.includes(block) || block.kind === "rest" || random() < 0.75
     );
   }
+  if (getSectionPlayEveryNote(section) && !canFillMixedTupletSlots(32,
+    availableBlocks.filter((block) => block.kind !== "rest").map((block) => block.slotCount))) {
+    throw new Error("This span cannot fill 4/4 without rests. Select secondary rhythms to fill the remaining space, or allow rests.");
+  }
   const slotCounts = [...new Set(availableBlocks.map((block) => block.slotCount))];
   const minimumPlayedNotes = getSectionMinPlayedNotes(section);
   const requireRegularSubdivision = options.subdivisions.length > 0 &&
@@ -3289,6 +3294,9 @@ function normalizeGeneratedLine(input, section, samplePayload, index, attempt = 
 }
 
 function createUniqueGeneratedLine(input, section, samplePayload, index, usedExerciseShortForms) {
+  const pdfSettings = normalizePdfSettings(section.pdfSettings);
+  section = getLineStickingSettings(section, index, getLinesPerPage(pdfSettings), pdfSettings.measuresPerLine);
+  if (section.primaryRhythms) section = { ...section, primaryRhythms: getSpanPrimaryRhythms(section.primaryRhythms, section.rhythmSpan) };
   let lastError = null;
 
   for (let attempt = 0; attempt < MAX_UNIQUE_LINE_ATTEMPTS; attempt += 1) {
@@ -3387,6 +3395,7 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         ...(page.generationSettings || {}),
         primaryRhythms: section.primaryRhythms,
         secondaryRhythms: section.secondaryRhythms,
+        rhythmSpan: section.rhythmSpan,
       };
       const sampleJson = getSectionSampleJson(pageSource);
       const subdivisions = getGenerationSubdivisions(pageSource, sampleJson);
@@ -3406,6 +3415,8 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         subsectionId: page.subsectionId,
         primaryRhythms: pageSource.primaryRhythms,
         secondaryRhythms: pageSource.secondaryRhythms,
+        rhythmSpan: normalizeRhythmSpan(section.rhythmSpan),
+        stickingTail: normalizeStickingTail(pageSource.stickingTail),
         title: page.title || `${section.title || `Section ${sectionIndex + 1}`} ${pageIndex + 1}`,
         sectionTitle: section.title || `Section ${sectionIndex + 1}`,
         pageCount: 1,
@@ -3456,6 +3467,7 @@ function createGenerationConfig(config, sourceBook) {
     },
     book: {
       ...(config.book || {}),
+      groups: sourceBook.groups,
       book: sourceBook.book || (config.book && config.book.book) || "true-chops",
       slug: sourceBook.slug || (config.book && config.book.slug) || "snare-drum-book",
       title: sourceBook.title || (config.book && config.book.title) || "Snare Drum Book",
@@ -3475,6 +3487,10 @@ function createGenerationConfig(config, sourceBook) {
 }
 
 function createAiPrompt(config, section, samplePayload, count, offset, linesPerPage) {
+  if (section.primaryRhythms) {
+    section = { ...section, primaryRhythms: getSpanPrimaryRhythms(section.primaryRhythms, section.rhythmSpan) };
+    section.instructions = createStructuredSectionInstructions(section, samplePayload);
+  }
   const globalInstructions = normalizeInstructionList(
     config.generation && config.generation.globalInstructions
   );
@@ -3490,6 +3506,9 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
     "",
     `Section title: ${section.title || "Untitled section"}`,
     `Section instructions: ${section.instructions || ""}`,
+    section.stickingTail
+      ? `The final ${section.stickingTail.count} printed staff rows (${section.stickingTail.count * normalizePdfSettings(section.pdfSettings).measuresPerLine} exercises, starting at exercise ${Math.max(1, linesPerPage - section.stickingTail.count * normalizePdfSettings(section.pdfSettings).measuresPerLine + 1)}) use a maximum same-hand run of ${section.stickingTail.maxSameHandStickingRun} and require one run length from ${section.stickingTail.requiredSameHandStickingRuns.join(" or ")}. Earlier exercises use the regular sticking settings.`
+      : "",
     ...(section.primaryRhythms ? [
       `Every measure MUST contain played notes from EACH primary subdivision (${section.primaryRhythms.subdivisions.join(", ") || "none"}) and at least one complete group of EACH primary tuplet (${section.primaryRhythms.tuplets.map(getTupletLabel).join(", ") || "none"}).`,
       `Required ornaments on primary rhythms: ${(section.ornaments || []).join(", ") || "none"}.`,
@@ -3706,6 +3725,8 @@ async function generateSectionLines(config, section, sectionIndex, options) {
 
 function createStoredPageGenerationSettings(pageConfig) {
   return {
+    rhythmSpan: pageConfig.rhythmSpan,
+    stickingTail: pageConfig.stickingTail,
     primaryRhythms: pageConfig.primaryRhythms,
     secondaryRhythms: pageConfig.secondaryRhythms,
     prompt: pageConfig.prompt || "",
@@ -3784,6 +3805,10 @@ function buildBook(config, generatedSections) {
 
     return {
       id: section.id,
+      groupId: section.groupId,
+      rhythmSpan: section.rhythmSpan,
+      studyFamily: section.studyFamily,
+      density: section.density,
       primaryRhythms: section.primaryRhythms,
       secondaryRhythms: section.secondaryRhythms,
       title: section.title,
@@ -3809,6 +3834,7 @@ function buildBook(config, generatedSections) {
   return {
     book: (config.book && config.book.book) || "true-chops",
     structureVersion: BOOK_STRUCTURE_VERSION,
+    groups: config.book.groups,
     slug: (config.book && config.book.slug) || "snare-drum-book",
     title: (config.book && config.book.title) || "Snare Drum Book",
     edition: Number((config.book && config.book.edition) || 1),
@@ -3848,11 +3874,12 @@ function createManifest(book) {
     generationSettings: page.generationSettings,
     lines: page.lines.map(createLineManifest),
   });
-  const tableOfContents = createStructureTableOfContents(book.sections);
+  const tableOfContents = createStructureTableOfContents(book.sections, book.groups);
 
   return {
     book: book.book,
     structureVersion: book.structureVersion,
+    groups: book.groups,
     slug: book.slug,
     title: book.title,
     edition: book.edition,
@@ -3863,6 +3890,10 @@ function createManifest(book) {
     pdfSettings: book.pdfSettings,
     sections: book.sections.map((section) => ({
       id: section.id,
+      groupId: section.groupId,
+      rhythmSpan: section.rhythmSpan,
+      studyFamily: section.studyFamily,
+      density: section.density,
       primaryRhythms: section.primaryRhythms,
       secondaryRhythms: section.secondaryRhythms,
       title: section.title,
