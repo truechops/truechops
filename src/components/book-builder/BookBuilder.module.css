@@ -212,8 +212,41 @@
 .sectionPageTabs {
   display: grid;
   gap: 5px;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+
+.sectionPageTabs .pageTab {
+  display: grid;
+  gap: 4px;
+  height: auto;
+  min-height: 52px;
+  padding: 8px;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  justify-content: stretch;
+}
+
+.sectionPageTabs .pageTab span {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.sectionPageTabs .activePageTab span {
+  color: inherit;
+}
+
+.rhythmPool {
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.rhythmPool legend { font-weight: 600; }
 
 .lineGrid {
   flex: 0 0 auto;

@@ -432,7 +432,8 @@ function enforceBookMinPlayedNotes(book) {
   );
 
   for (const page of book.pages || []) {
-    const section = sectionsById[page.sectionId];
+    const parentSection = sectionsById[page.sectionId];
+    const section = parentSection ? { ...parentSection, ...page.generationSettings } : null;
 
     if (!section || !getSectionMinPlayedNotes(section)) {
       continue;
@@ -798,11 +799,12 @@ function drawTableOfContentsPage(doc, book, bookTitle) {
       : entry.pageEnd && entry.pageEnd !== entry.pageStart
         ? `${entry.pageStart}\u2013${entry.pageEnd}`
         : String(entry.pageStart);
-    const label = `${index + 1}. ${entry.title}`;
+    const indent = entry.subsectionId ? 14 : 0;
+    const label = entry.subsectionId ? entry.title : `${entry.sectionNumber || index + 1}. ${entry.title}`;
 
-    doc.font("Times-Roman").fontSize(rowFontSize).fillColor("#111111");
-    doc.text(label, margin, y, {
-      width: titleWidth,
+    doc.font(entry.subsectionId ? "Times-Roman" : "Times-Bold").fontSize(rowFontSize).fillColor("#111111");
+    doc.text(label, margin + indent, y, {
+      width: titleWidth - indent,
       lineBreak: false,
       ellipsis: true,
     });
@@ -812,8 +814,8 @@ function drawTableOfContentsPage(doc, book, bookTitle) {
       lineBreak: false,
     });
 
-    const labelWidth = Math.min(doc.widthOfString(label), titleWidth - 8);
-    const leaderStart = margin + labelWidth + 7;
+    const labelWidth = Math.min(doc.widthOfString(label), titleWidth - indent - 8);
+    const leaderStart = margin + indent + labelWidth + 7;
     const leaderEnd = margin + contentWidth - pageNumberWidth - 7;
     const leaderY = y + rowFontSize * 0.78;
 

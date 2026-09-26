@@ -1,6 +1,9 @@
 import _ from "lodash";
 import { getEmptyMeasure } from "../../helpers/score";
 import { DEFAULT_TEMPO } from "../../consts/score";
+import { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents } from "../../lib/book-structure";
+
+export { normalizeRhythmPool };
 
 export const BOOK_KEY = "true-chops";
 export const BOOK_SLUG = "snare-drum-book";
@@ -472,6 +475,10 @@ export function normalizePageGenerationSettings(value = {}, fallback = {}) {
     : normalizeSectionRequiredSameHandStickingRuns(fallback.requiredSameHandStickingRuns);
 
   return {
+    ...(source.primaryRhythms ? {
+      primaryRhythms: normalizeRhythmPool(source.primaryRhythms, false),
+      secondaryRhythms: normalizeRhythmPool(source.secondaryRhythms),
+    } : {}),
     prompt: source.prompt ?? source.instructions ?? "",
     sampleJson: normalizeSectionSampleJson(source.sampleJson),
     subdivisions: normalizeSectionSubdivisions(source.subdivisions, source),
@@ -549,7 +556,15 @@ export function getPageLinesPerPage(page, bookPdfSettings = DEFAULT_PDF_SETTINGS
 }
 
 export function getPageGenerationSettings(page, section = {}) {
-  return normalizePageGenerationSettings(page?.generationSettings, section);
+  const settings = normalizePageGenerationSettings(page?.generationSettings, section);
+  if (!section.primaryRhythms) return settings;
+  return {
+    ...settings,
+    primaryRhythms: normalizeRhythmPool(section.primaryRhythms, false),
+    secondaryRhythms: normalizeRhythmPool(section.secondaryRhythms),
+    subdivisions: section.primaryRhythms.subdivisions,
+    tuplets: section.primaryRhythms.tuplets,
+  };
 }
 
 export function createBlankLine(pageNumber, lineNumber) {
@@ -631,6 +646,10 @@ export function createBookSection(sectionNumber = 1, overrides = {}, pdfSettings
 
   return {
     id: overrides.id || template.id || `${slugify(title)}-${sectionNumber}`,
+    ...(overrides.primaryRhythms ? {
+      primaryRhythms: normalizeRhythmPool(overrides.primaryRhythms, false),
+      secondaryRhythms: normalizeRhythmPool(overrides.secondaryRhythms),
+    } : {}),
     title,
     prompt: overrides.prompt ?? template.prompt ?? "",
     sampleJson: normalizeSectionSampleJson(overrides.sampleJson ?? template.sampleJson),
@@ -685,18 +704,7 @@ export function createDefaultBook() {
 }
 
 export function createBookTableOfContents(sections = []) {
-  return (sections || []).map((section) => {
-    const pageNumbers = (section.pages || [])
-      .map((page) => Number.parseInt(page.pageNumber, 10))
-      .filter((pageNumber) => Number.isInteger(pageNumber) && pageNumber > 0);
-
-    return {
-      sectionId: section.id,
-      title: section.title || "Untitled section",
-      pageStart: pageNumbers.length ? Math.min(...pageNumbers) : null,
-      pageEnd: pageNumbers.length ? Math.max(...pageNumbers) : null,
-    };
-  });
+  return createStructureTableOfContents(sections);
 }
 
 function cloneJson(value) {
@@ -914,11 +922,13 @@ export function normalizeBook(rawBook) {
     }
   }
 
+  rawBook = migrateBookStructure(rawBook);
   const pdfSettings = normalizePdfSettings(rawBook.pdfSettings);
   const sections = normalizeBookSections(rawBook, pdfSettings);
   const pages = sections.flatMap((section) => section.pages);
 
   return {
+    structureVersion: BOOK_STRUCTURE_VERSION,
     book: rawBook.book || BOOK_KEY,
     slug: rawBook.slug || BOOK_SLUG,
     title: rawBook.title || BOOK_TITLE,
@@ -954,6 +964,8 @@ function normalizeBookSections(rawBook, pdfSettings) {
 
   return rawSections.map((rawSection, sectionIndex) => {
     const section = createBookSection(sectionIndex + 1, rawSection, pdfSettings);
+    section.primaryRhythms = normalizeRhythmPool(section.primaryRhythms || section, false);
+    section.secondaryRhythms = normalizeRhythmPool(section.secondaryRhythms);
     let id = section.id || `${slugify(section.title)}-${sectionIndex + 1}`;
     let suffix = 2;
 
@@ -982,7 +994,7 @@ function normalizeBookSections(rawBook, pdfSettings) {
       subdivisions: normalizeSectionSubdivisions(section.subdivisions, section),
       ornaments: normalizeSectionOrnaments(section.ornaments, section),
       tuplets: normalizeSectionTuplets(section.tuplets ?? section.tuplet, section),
-      pageCount: normalizeSectionPageCount(section.pageCount, normalizedPages.length),
+      pageCount: normalizedPages.length,
       minPlayedNotes: normalizeSectionMinPlayedNotes(section.minPlayedNotes),
       maxPlayedNotes: normalizeSectionMaxPlayedNotes(section.maxPlayedNotes),
       playEveryNote: normalizeSectionPlayEveryNote(section.playEveryNote),
@@ -1002,6 +1014,7 @@ function normalizeBookSections(rawBook, pdfSettings) {
 
         return {
           ...page,
+          subsectionId: page.subsectionId || `${id}-topic-${sectionPageIndex + 1}`,
           pageNumber,
           sectionId: id,
           sectionTitle: section.title,

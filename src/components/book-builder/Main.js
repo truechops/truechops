@@ -40,7 +40,6 @@ import {
   normalizeSectionMinPlayedNotes,
   normalizeSectionPageCount,
   normalizeSectionTuplet,
-  normalizeSectionTuplets,
   normalizeBook,
   normalizeGlobalOrnamentDensity,
   renumberPages,
@@ -153,6 +152,85 @@ function createSectionId(title, existingSections = []) {
   }
 
   return id;
+}
+
+function RhythmPoolEditor({ label, value, onChange, primary = false }) {
+  const tuplets = value.tuplets;
+  const updateTuplet = (index, field, nextValue) => onChange({
+    ...value,
+    tuplets: tuplets.map((item, i) => i === index
+      ? normalizeTupletPickerUpdate({ ...item, [field]: Number(nextValue) })
+      : item),
+  });
+
+  return (
+    <fieldset className={styles.rhythmPool}>
+      <legend>{label}</legend>
+      <p className={styles.layoutSummary}>
+        {primary
+          ? "Every exercise must contain each selected primary rhythm. These choices apply to all subsections."
+          : "Optional rhythms chosen at random to fill the space around the primary rhythms. Leave empty to use only primary rhythms. If a rhythm is in both pools, its primary settings apply."}
+      </p>
+      <CheckboxPicker
+        label="Subdivisions"
+        options={SUBDIVISION_OPTIONS}
+        value={value.subdivisions}
+        onToggle={(id) => onChange({
+          ...value,
+          subdivisions: toggleOption(value.subdivisions, id, {
+            allowEmpty: !primary || tuplets.length > 0,
+          }),
+        })}
+      />
+      <div className={styles.tupletEditor}>
+        <div className={styles.tupletEditorHeader}>
+          <span>Tuplets</span>
+          <button
+            className={styles.button}
+            type="button"
+            onClick={() => onChange({ ...value, tuplets: [...tuplets, getNextTupletConfig(tuplets)] })}
+          >
+            <FaPlus /> Add tuplet
+          </button>
+        </div>
+        {tuplets.map((tuplet, index) => (
+          <div className={styles.tupletRow} key={index}>
+            {[
+              { key: "actual", label: "Actual notes", options: TUPLET_COUNT_OPTIONS.map((n) => ({ value: n, label: n })) },
+              { key: "normal", label: "Normal notes", options: getTupletNormalOptions(tuplet.type).map((n) => ({ value: n, label: n })) },
+              { key: "type", label: "Note type", options: TUPLET_TYPE_OPTIONS.map((option) => ({ value: option.type, label: option.label })) },
+            ].map((field) => (
+              <Field key={field.key} label={field.label}>
+                <select
+                  value={tuplet[field.key]}
+                  onChange={(event) => updateTuplet(index, field.key, event.target.value)}
+                >
+                  {field.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+              </Field>
+            ))}
+            <button
+              className={`${styles.button} ${styles.danger}`}
+              type="button"
+              aria-label={`Remove ${label.toLowerCase()} tuplet ${index + 1}`}
+              disabled={primary && !value.subdivisions.length && tuplets.length === 1}
+              onClick={() => onChange({ ...value, tuplets: tuplets.filter((_, i) => i !== index) })}
+            >
+              <FaTrash />
+            </button>
+          </div>
+        ))}
+      </div>
+      {!primary && (
+        <CheckboxPicker
+          label="Optional secondary ornaments"
+          options={ORNAMENT_OPTIONS}
+          value={value.ornaments}
+          onToggle={(id) => onChange({ ...value, ornaments: toggleOption(value.ornaments, id) })}
+        />
+      )}
+    </fieldset>
+  );
 }
 
 function PageLayoutPreview({ page, pdfSettings }) {
@@ -362,6 +440,7 @@ export default function BookBuilderPanel() {
   const [status, setStatus] = useState("Loading");
   const [isSaving, setIsSaving] = useState(false);
   const [deleteSectionDialogOpen, setDeleteSectionDialogOpen] = useState(false);
+  const [deleteSubsectionDialogOpen, setDeleteSubsectionDialogOpen] = useState(false);
   const [pdfDownload, setPdfDownload] = useState({ active: false, label: "", loaded: 0, total: 0 });
 
   const setBook = useCallback((nextBookOrUpdater) => {
@@ -379,10 +458,6 @@ export default function BookBuilderPanel() {
   const selectedPageGenerationSettings = getPageGenerationSettings(
     selectedPage,
     selectedSection
-  );
-  const selectedTuplets = normalizeSectionTuplets(
-    selectedPageGenerationSettings.tuplets,
-    selectedPageGenerationSettings
   );
   const pdfSettings = normalizePdfSettings(book.pdfSettings);
   const selectedPagePdfSettings = getPagePdfSettings(selectedPage, pdfSettings);
@@ -444,6 +519,7 @@ export default function BookBuilderPanel() {
 
     try {
       const normalizedBook = normalizeBook(nextBook);
+      setBook(normalizedBook);
       const response = await fetch("/api/book-builder", {
         method: "POST",
         headers: {
@@ -458,28 +534,11 @@ export default function BookBuilderPanel() {
       }
 
       const savedBook = normalizeBook(payload.book);
-      setBook((currentBook) => {
-        const currentSectionsById = Object.fromEntries(
-          (currentBook.sections || []).map((s) => [s.id, s])
-        );
-        return {
-          ...savedBook,
-          globalAiRules: currentBook.globalAiRules,
-          sections: savedBook.sections.map((section) => ({
-            ...section,
-            tuplets: currentSectionsById[section.id]?.tuplets ?? section.tuplets,
-            minPlayedNotes: currentSectionsById[section.id]?.minPlayedNotes ?? section.minPlayedNotes,
-            maxPlayedNotes: currentSectionsById[section.id]?.maxPlayedNotes ?? section.maxPlayedNotes,
-            playEveryNote: currentSectionsById[section.id]?.playEveryNote ?? section.playEveryNote,
-            maxSameHandStickingRun: currentSectionsById[section.id]?.maxSameHandStickingRun ?? section.maxSameHandStickingRun,
-            requiredSameHandStickingRuns: currentSectionsById[section.id]?.requiredSameHandStickingRuns ?? section.requiredSameHandStickingRuns,
-          })),
-        };
-      });
+      setBook((currentBook) => currentBook === normalizedBook ? savedBook : currentBook);
       setStatus(successMessage);
       return savedBook;
     } catch (error) {
-      setStatus("Save failed");
+      setStatus(`Save failed: ${error.message}`);
       return null;
     } finally {
       setIsSaving(false);
@@ -507,14 +566,15 @@ export default function BookBuilderPanel() {
       ),
       pages: [
         ...section.pages,
-        createBlankPage(
-          section.pages.length + 1,
-          section.pages[section.pages.length - 1]?.pdfSettings || section.pdfSettings || pdfSettings,
-          getPageGenerationSettings(
-            section.pages[section.pages.length - 1],
-            section
-          )
-        ),
+        {
+          ...createBlankPage(
+            section.pages.length + 1,
+            section.pages[section.pages.length - 1]?.pdfSettings || section.pdfSettings || pdfSettings,
+            getPageGenerationSettings(section.pages[section.pages.length - 1], section)
+          ),
+          title: `Subsection ${section.pages.length + 1}`,
+          subsectionId: createSectionId(`${section.id}-topic`, section.pages.map((page) => ({ id: page.subsectionId }))),
+        },
       ],
     }));
     const nextSection = nextBook.sections[selectedSectionIndex];
@@ -527,7 +587,7 @@ export default function BookBuilderPanel() {
         nextSectionPage.sectionPageNumber
       )
     );
-    saveBook(nextBook, `Added page to ${nextSection.title}`);
+    saveBook(nextBook, `Added subsection to ${nextSection.title}`);
   }, [book, pdfSettings, saveBook, selectedSectionIndex]);
 
   const updatePagePdfSetting = useCallback((setting, value) => {
@@ -614,12 +674,36 @@ export default function BookBuilderPanel() {
     );
   }, [selectedSectionIndex, setBook]);
 
+  const updateSectionRhythms = (field, value) => {
+    setBook((currentBook) => updateBookSection(currentBook, selectedSectionIndex, (section) => ({
+      ...section,
+      [field]: value,
+      pages: section.pages.map((page) => ({ ...page, lines: clearGeneratedPageLines(page.lines) })),
+    })));
+    setStatus("Section rhythms updated. Save, then regenerate the subsections.");
+  };
+
+  const changeSubsectionOrder = (direction, remove = false) => {
+    const from = selectedPage.sectionPageNumber - 1;
+    const pages = [...selectedSection.pages];
+    const [page] = pages.splice(from, 1);
+    if (!remove) pages.splice(from + direction, 0, page);
+    const nextBook = updateBookSection(book, selectedSectionIndex, (section) => ({ ...section, pages }));
+    const index = Math.max(0, Math.min(from + direction, pages.length - 1));
+    setBook(nextBook);
+    setSelectedPageIndex(getPageIndexForSectionPage(nextBook, selectedSection.id, index + 1));
+    setDeleteSubsectionDialogOpen(false);
+    saveBook(nextBook, remove ? "Deleted subsection" : "Moved subsection");
+  };
+
   const addSection = useCallback(() => {
     const sectionNumber = book.sections.length + 1;
     const title = `Section ${sectionNumber}`;
     const nextSection = createBookSection(sectionNumber, {
       id: createSectionId(title, book.sections),
       title,
+      primaryRhythms: { subdivisions: ["eighths"], tuplets: [], ornaments: [] },
+      secondaryRhythms: { subdivisions: [], tuplets: [], ornaments: [] },
       prompt: "",
       subdivisions: ["eighths"],
       ornaments: [],
@@ -646,7 +730,7 @@ export default function BookBuilderPanel() {
       )
     );
     saveBook(nextBook, "Added section");
-  }, [book, pdfSettings, saveBook]);
+  }, [book, pdfSettings, saveBook, setBook]);
 
   const moveSelectedSection = useCallback((direction) => {
     const toIndex = selectedSectionIndex + direction;
@@ -670,7 +754,7 @@ export default function BookBuilderPanel() {
       )
     );
     saveBook(nextBook, "Moved section");
-  }, [book, saveBook, selectedSectionIndex]);
+  }, [book, saveBook, selectedSectionIndex, setBook]);
 
   const deleteSelectedSection = useCallback(() => {
     if (book.sections.length <= 1) {
@@ -692,7 +776,7 @@ export default function BookBuilderPanel() {
       )
     );
     saveBook(nextBook, "Deleted section");
-  }, [book, saveBook, selectedSectionIndex]);
+  }, [book, saveBook, selectedSectionIndex, setBook]);
 
   const uploadPageJson = useCallback((event) => {
     const file = event.target.files?.[0];
@@ -893,18 +977,18 @@ export default function BookBuilderPanel() {
             >
               <strong>{section.title}</strong>
               <span>
-                {section.pages.length} configured {section.pages.length === 1 ? "page" : "pages"}
+                {section.pages.length} {section.pages.length === 1 ? "subsection" : "subsections"}
               </span>
             </button>
           ))}
         </div>
 
-        <div className={styles.tabLabel}>{selectedSection.title} pages</div>
+        <div className={styles.tabLabel}>{selectedSection.title} subsections · one page each</div>
         <div className={styles.sectionPageTabs}>
           {selectedSection.pages.map((page) => (
             <button
               className={`${styles.pageTab} ${page.pageNumber === selectedPage.pageNumber ? styles.activePageTab : ""}`}
-              key={`${selectedSection.id}-${page.sectionPageNumber}`}
+              key={page.subsectionId}
               onClick={() => {
                 setSelectedPageIndex(
                   getPageIndexForSectionPage(book, selectedSection.id, page.sectionPageNumber)
@@ -913,11 +997,11 @@ export default function BookBuilderPanel() {
               title={`Book page ${page.pageNumber}`}
               type="button"
             >
-              {page.sectionPageNumber}
+              <strong>{page.title}</strong><span>Page {page.pageNumber}</span>
             </button>
           ))}
-          <button className={styles.pageTab} onClick={addPage} title="Add page" type="button">
-            <FaPlus />
+          <button className={styles.pageTab} onClick={addPage} title="Add subsection" type="button">
+            <FaPlus /> Add subsection
           </button>
         </div>
 
@@ -928,15 +1012,38 @@ export default function BookBuilderPanel() {
               value={selectedSection.title}
             />
           </Field>
+          <RhythmPoolEditor label="Primary rhythms" value={selectedSection.primaryRhythms} primary
+            onChange={(value) => updateSectionRhythms("primaryRhythms", value)} />
+          <RhythmPoolEditor label="Secondary rhythms" value={selectedSection.secondaryRhythms}
+            onChange={(value) => updateSectionRhythms("secondaryRhythms", value)} />
           <div className={styles.editorTitle}>
-            <h3>Page {selectedPage.pageNumber} rhythm generation</h3>
+            <h3>Subsection · page {selectedPage.pageNumber}</h3>
           </div>
-          <Field label="Page title">
+          <div className={styles.sectionActions}>
+            <IconButton icon={<FaArrowUp />} disabled={selectedPage.sectionPageNumber === 1} onClick={() => changeSubsectionOrder(-1)}>Move earlier</IconButton>
+            <IconButton icon={<FaArrowDown />} disabled={selectedPage.sectionPageNumber === selectedSection.pages.length} onClick={() => changeSubsectionOrder(1)}>Move later</IconButton>
+            <IconButton icon={<FaTrash />} disabled={selectedSection.pages.length === 1} onClick={() => setDeleteSubsectionDialogOpen(true)}>Delete subsection</IconButton>
+          </div>
+          <Field label="Subsection title">
             <input
               onChange={(event) => updateSelectedPageDraft({ title: event.target.value })}
               value={selectedPage.title || ""}
             />
           </Field>
+          <CheckboxPicker
+            label="Primary ornaments required in this subsection"
+            onToggle={(optionId) =>
+              updateSelectedPageGenerationDraft({
+                ornaments: toggleOption(
+                  selectedPageGenerationSettings.ornaments,
+                  optionId
+                ),
+              })
+            }
+            options={ORNAMENT_OPTIONS}
+            value={selectedPageGenerationSettings.ornaments}
+          />
+          <p className={styles.layoutSummary}>Each selected primary ornament must appear on the primary rhythms on this page.</p>
           <Field label="Measures per line">
             <input
               inputMode="numeric"
@@ -1046,135 +1153,6 @@ export default function BookBuilderPanel() {
             )}
             value={selectedPageGenerationSettings.requiredSameHandStickingRuns}
           />
-          <div className={styles.tupletEditor}>
-            <div className={styles.tupletEditorHeader}>
-              <span>Tuplet types</span>
-              <button
-                className={styles.button}
-                onClick={() =>
-                  updateSelectedPageGenerationDraft({
-                    tuplets: [...selectedTuplets, getNextTupletConfig(selectedTuplets)],
-                  })
-                }
-                type="button"
-              >
-                <FaPlus /> Add tuplet
-              </button>
-            </div>
-            {selectedTuplets.map((tuplet, tupletIndex) => (
-              <div className={styles.tupletRow} key={`${tuplet.actual}-${tuplet.normal}-${tuplet.type}-${tupletIndex}`}>
-                <Field label="Actual notes">
-                  <select
-                    onChange={(event) =>
-                      updateSelectedPageGenerationDraft({
-                        tuplets: selectedTuplets.map((candidate, index) =>
-                          index === tupletIndex
-                            ? normalizeTupletPickerUpdate({
-                                ...candidate,
-                                actual: Number(event.target.value),
-                              })
-                            : candidate
-                        ),
-                      })
-                    }
-                    value={tuplet.actual}
-                  >
-                    {TUPLET_COUNT_OPTIONS.map((count) => (
-                      <option key={count} value={count}>
-                        {count}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="Normal notes">
-                  <select
-                    onChange={(event) =>
-                      updateSelectedPageGenerationDraft({
-                        tuplets: selectedTuplets.map((candidate, index) =>
-                          index === tupletIndex
-                            ? normalizeTupletPickerUpdate({
-                                ...candidate,
-                                normal: Number(event.target.value),
-                              })
-                            : candidate
-                        ),
-                      })
-                    }
-                    value={tuplet.normal}
-                  >
-                    {getTupletNormalOptions(tuplet.type).map((count) => (
-                      <option key={count} value={count}>
-                        {count}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="Note type">
-                  <select
-                    onChange={(event) =>
-                      updateSelectedPageGenerationDraft({
-                        tuplets: selectedTuplets.map((candidate, index) =>
-                          index === tupletIndex
-                            ? normalizeTupletPickerUpdate({
-                                ...candidate,
-                                type: Number(event.target.value),
-                              })
-                            : candidate
-                        ),
-                      })
-                    }
-                    value={tuplet.type}
-                  >
-                    {TUPLET_TYPE_OPTIONS.map((option) => (
-                      <option key={option.id} value={option.type}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <button
-                  aria-label={`Remove tuplet ${tupletIndex + 1}`}
-                  className={`${styles.button} ${styles.danger}`}
-                  onClick={() =>
-                    updateSelectedPageGenerationDraft({
-                      tuplets: selectedTuplets.filter((_, index) => index !== tupletIndex),
-                    })
-                  }
-                  title="Remove tuplet"
-                  type="button"
-                >
-                  <FaTrash />
-                </button>
-              </div>
-            ))}
-          </div>
-          <CheckboxPicker
-            label="Subdivisions"
-            onToggle={(optionId) =>
-              updateSelectedPageGenerationDraft({
-                subdivisions: toggleOption(
-                  selectedPageGenerationSettings.subdivisions,
-                  optionId,
-                  { allowEmpty: selectedTuplets.length > 0 }
-                ),
-              })
-            }
-            options={SUBDIVISION_OPTIONS}
-            value={selectedPageGenerationSettings.subdivisions}
-          />
-          <CheckboxPicker
-            label="Ornaments"
-            onToggle={(optionId) =>
-              updateSelectedPageGenerationDraft({
-                ornaments: toggleOption(
-                  selectedPageGenerationSettings.ornaments,
-                  optionId
-                ),
-              })
-            }
-            options={ORNAMENT_OPTIONS}
-            value={selectedPageGenerationSettings.ornaments}
-          />
           <Field label="Sample JSON">
             <textarea
               onChange={(event) =>
@@ -1208,6 +1186,12 @@ export default function BookBuilderPanel() {
         <PageLayoutPreview page={selectedPage} pdfSettings={selectedPagePdfSettings} />
       </section>
 
+      <Dialog
+        isOpen={deleteSubsectionDialogOpen}
+        message={`Delete subsection "${selectedPage.title}" and its exercises?`}
+        onCancel={() => setDeleteSubsectionDialogOpen(false)}
+        onOk={() => changeSubsectionOrder(0, true)}
+      />
       <Dialog
         isOpen={deleteSectionDialogOpen}
         message={`Delete "${selectedSection.title}" and all of its pages?`}

@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const http = require("http");
 const https = require("https");
+const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents } = require("../src/lib/book-structure");
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const DEFAULT_CONFIG_PATH = path.join(
@@ -408,6 +409,9 @@ function inferGenerationSubdivisions(section, samplePayload) {
 }
 
 function getGenerationSubdivisions(section, samplePayload = getSamplePayload(section)) {
+  if (section?.primaryRhythms) {
+    return [...new Set([...section.primaryRhythms.subdivisions, ...normalizeRhythmPool(section.secondaryRhythms).subdivisions])];
+  }
   const explicit = normalizeOptionIds(section && section.subdivisions, SUBDIVISION_SETTINGS);
 
   if (
@@ -454,6 +458,9 @@ function inferGenerationTuplets(section, samplePayload) {
 }
 
 function getGenerationTuplets(section, samplePayload = getSamplePayload(section)) {
+  if (section?.primaryRhythms) {
+    return normalizeTupletConfigs([...section.primaryRhythms.tuplets, ...normalizeRhythmPool(section.secondaryRhythms).tuplets]);
+  }
   if (section && Object.prototype.hasOwnProperty.call(section, "tuplets")) {
     return normalizeTupletConfigs(section.tuplets);
   }
@@ -487,6 +494,13 @@ function inferGenerationOrnaments(section, samplePayload) {
 }
 
 function getGenerationOrnaments(section, samplePayload = getSamplePayload(section)) {
+  if (section?.primaryRhythms) {
+    return [...new Set([
+      ...(section.ornaments || []),
+      ...normalizeRhythmPool(section.secondaryRhythms).ornaments,
+      ...(getSectionRequiredSameHandStickingRuns(section).length ? ["stickings"] : []),
+    ])];
+  }
   if (section && Array.isArray(section.ornaments)) {
     const ornaments = normalizeOptionIds(section.ornaments, ORNAMENT_SETTINGS);
 
@@ -856,7 +870,8 @@ function preferLongerValuesInTupletVoice(voice, configuredTuplets = []) {
     const tupletStart = nextNotes.length;
     const configuredTuplet = normalizedConfiguredTuplets.find((candidate) =>
       Number(candidate.actual) === Number(tuplet.actual) &&
-      Number(candidate.normal) === Number(tuplet.normal)
+      Number(candidate.normal) === Number(tuplet.normal) &&
+      Math.abs(candidate.type - getVoiceTupletType(voice, tuplet)) < 0.001
     );
     const preserveConfiguredSubdivision = Number(configuredTuplet?.type) >= 16;
 
@@ -900,7 +915,8 @@ function getTupletPositionByNoteIndex(notes, tuplets, configuredTuplets = []) {
   for (const tuplet of normalizeVoiceTuplets(tuplets, notes)) {
     const configuredTuplet = normalizedConfiguredTuplets.find((candidate) =>
       Number(candidate.actual) === Number(tuplet.actual) &&
-      Number(candidate.normal) === Number(tuplet.normal)
+      Number(candidate.normal) === Number(tuplet.normal) &&
+      Math.abs(candidate.type - getVoiceTupletType({ notes }, tuplet)) < 0.001
     );
     const configuredType = Number(configuredTuplet?.type);
 
@@ -1106,11 +1122,96 @@ function sectionUsesDiddlesOrCheese(section) {
 }
 
 function getRequiredSectionOrnamentChars(section) {
-  const ornaments = getGenerationOrnaments(section);
+  const ornaments = section.primaryRhythms ? section.ornaments || [] : getGenerationOrnaments(section);
 
   return ORNAMENT_SETTINGS
     .filter((setting) => setting.id !== "stickings" && ornaments.includes(setting.id))
     .flatMap((setting) => [...setting.chars]);
+}
+
+function getVoiceTupletType(voice, tuplet) {
+  const units = getNotesQuarterUnits(voice.notes.slice(tuplet.start, tuplet.end));
+  return Number(tuplet.actual) * 4 / units;
+}
+
+function noteMatchesRhythmPool(pool, voice, noteIndex) {
+  const tuplet = getTupletForNote(voice.tuplets, noteIndex);
+  if (tuplet) {
+    return (pool.tuplets || []).some((candidate) =>
+      candidate.actual === Number(tuplet.actual) && candidate.normal === Number(tuplet.normal) &&
+      Math.abs(candidate.type - getVoiceTupletType(voice, tuplet)) < 0.001
+    );
+  }
+  return SUBDIVISION_SETTINGS.some((setting) =>
+    pool.subdivisions.includes(setting.id) && Number(voice.notes[noteIndex].duration) === setting.duration
+  );
+}
+
+function getPrimaryNoteIndexes(section, voice) {
+  return new Set(voice.notes.flatMap((note, index) =>
+    noteMatchesRhythmPool(section.primaryRhythms, voice, index) ? [index] : []
+  ));
+}
+
+function applyRhythmPoolOrnaments(section, voice) {
+  if (!section.primaryRhythms) return voice;
+  const secondary = normalizeRhythmPool(section.secondaryRhythms);
+  return {
+    ...voice,
+    notes: voice.notes.map((note, index) => {
+      const primary = noteMatchesRhythmPool(section.primaryRhythms, voice, index);
+      const selected = primary ? section.ornaments || []
+        : noteMatchesRhythmPool(secondary, voice, index) ? secondary.ornaments : [];
+      const allowed = ORNAMENT_SETTINGS.filter((item) => selected.includes(item.id) ||
+        (primary && item.id === "stickings" && getSectionRequiredSameHandStickingRuns(section).length))
+        .map((item) => item.chars).join("");
+      const ornaments = isRest(note) ? "" : [...String(note.ornaments || "")].filter((char) => allowed.includes(char)).join("");
+      const { ornaments: previous, ...plain } = note;
+      return { ...plain, velocity: ornaments.includes("a") ? 1 : 0.5, ...(ornaments ? { ornaments } : {}) };
+    }),
+  };
+}
+
+function validatePrimaryRequirements(section, score) {
+  if (!section.primaryRhythms) return;
+  const timeSig = score.measures[0].timeSig;
+  if (Number(timeSig.num) !== 4 || Number(timeSig.type) !== 4) {
+    throw new Error("Every exercise must use 4/4 time.");
+  }
+  const voice = score.measures[0].parts[0].voices[0];
+  if (Math.abs(getVoiceQuarterUnits(voice) - 4) > 0.001) throw new Error("Exercise must fill exactly one measure of 4/4.");
+  const primary = section.primaryRhythms;
+  const requiredPools = [
+    ...primary.subdivisions.map((id) => ({ subdivisions: [id], tuplets: [] })),
+    ...primary.tuplets.map((tuplet) => ({ subdivisions: [], tuplets: [tuplet] })),
+  ];
+  for (const pool of requiredPools) {
+    if (!voice.notes.some((note, index) => !isRest(note) && noteMatchesRhythmPool(pool, voice, index))) {
+      throw new Error("Every exercise must contain each selected primary rhythm as played notes.");
+    }
+  }
+  const primaryNotes = voice.notes.filter((note, index) => !isRest(note) && noteMatchesRhythmPool(primary, voice, index));
+  const secondary = normalizeRhythmPool(section.secondaryRhythms);
+  const subdivisions = getGenerationSubdivisions(section);
+  for (const [index, note] of voice.notes.entries()) {
+    if (isRest(note)) continue;
+    const inTuplet = getTupletForNote(voice.tuplets, index);
+    if (inTuplet ? !noteMatchesRhythmPool(primary, voice, index) && !noteMatchesRhythmPool(secondary, voice, index)
+      : !subdivisions.length || Number(note.duration) > getMaxSubdivisionDuration(subdivisions)) {
+      throw new Error("Exercise contains a rhythm outside the selected pools.");
+    }
+  }
+  for (const char of getRequiredSectionOrnamentChars(section)) {
+    if (!primaryNotes.some((note) => String(note.ornaments || "").includes(char))) {
+      throw new Error(`Cannot place required primary ornament "${char}" on a primary rhythm.`);
+    }
+  }
+  const played = countPlayedNotes(voice.notes);
+  if (played < getSectionMinPlayedNotes(section) ||
+      (getEffectiveSectionMaxPlayedNotes(section) && played > getEffectiveSectionMaxPlayedNotes(section))) {
+    throw new Error("Exercise cannot satisfy the configured played-note limits.");
+  }
+  if (getSectionPlayEveryNote(section) && voice.notes.some(isRest)) throw new Error("No-rest subsection contains rests.");
 }
 
 function applySectionOrnamentPolicy(section, score) {
@@ -2228,6 +2329,7 @@ function areAdjacentOrnamentRuleNotes(notes, leftIndex, rightIndex, options = {}
 }
 
 function canAddRequiredOrnament(notes, noteIndex, ornament, options = {}) {
+  if (options.primaryNoteIndexes && !options.primaryNoteIndexes.has(noteIndex)) return false;
   const note = notes[noteIndex];
 
   if (!note || isRest(note)) {
@@ -2453,10 +2555,11 @@ function getOrnamentFrequencyProfile(section, notes, lineIndex, options = {}) {
   return { featuredOrnament, targets, varietyOrnaments };
 }
 
-function resetProfiledOrnaments(notes, requiredOrnaments) {
+function resetProfiledOrnaments(notes, requiredOrnaments, options = {}) {
   const pattern = requiredOrnaments.join("");
 
-  return (notes || []).map((note) => {
+  return (notes || []).map((note, index) => {
+    if (options.primaryNoteIndexes && !options.primaryNoteIndexes.has(index)) return note;
     const hadAccent = String(note.ornaments || "").includes("a");
     const cleaned = removeOrnamentChars(note, pattern);
 
@@ -2468,7 +2571,7 @@ function ensureRequiredOrnamentsOnNotes(section, notes, lineIndex = 0, options =
   const requiredOrnaments = getRequiredSectionOrnamentChars(section);
   const shouldApplyFrequencyProfile = requiredOrnaments.length > 1;
   const nextNotes = shouldApplyFrequencyProfile
-    ? resetProfiledOrnaments(notes, requiredOrnaments)
+    ? resetProfiledOrnaments(notes, requiredOrnaments, options)
     : (notes || []).map((note) => ({ ...note }));
   const { featuredOrnament, targets, varietyOrnaments } = getOrnamentFrequencyProfile(
     section,
@@ -2486,11 +2589,11 @@ function ensureRequiredOrnamentsOnNotes(section, notes, lineIndex = 0, options =
   for (const ornament of placementOrder) {
     const targetCount = targets.get(ornament) || 1;
 
-    while (nextNotes.filter((note) =>
-      !isRest(note) && String(note.ornaments || "").includes(ornament)
+    while (nextNotes.filter((note, index) =>
+      (!options.primaryNoteIndexes || options.primaryNoteIndexes.has(index)) && !isRest(note) && String(note.ornaments || "").includes(ornament)
     ).length < targetCount) {
-      const placedOrnamentCount = nextNotes.filter((note) =>
-        !isRest(note) && String(note.ornaments || "").includes(ornament)
+      const placedOrnamentCount = nextNotes.filter((note, index) =>
+        (!options.primaryNoteIndexes || options.primaryNoteIndexes.has(index)) && !isRest(note) && String(note.ornaments || "").includes(ornament)
       ).length;
       const allowAdjacentDiddle = ornament === "d" &&
         placedOrnamentCount === 1 &&
@@ -2610,8 +2713,8 @@ function ensureRequiredOrnamentsOnNotes(section, notes, lineIndex = 0, options =
           continue;
         }
 
-        const placedCount = nextNotes.filter((note) =>
-          !isRest(note) && String(note.ornaments || "").includes(ornament)
+        const placedCount = nextNotes.filter((note, index) =>
+          (!options.primaryNoteIndexes || options.primaryNoteIndexes.has(index)) && !isRest(note) && String(note.ornaments || "").includes(ornament)
         ).length;
 
         if (!placedCount) {
@@ -2718,6 +2821,7 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
             )
           );
           const durationOrnamentOptions = {
+            ...(section.primaryRhythms ? { primaryNoteIndexes: getPrimaryNoteIndexes(section, finalNotationVoice) } : {}),
             tupletNoteIndexes: finalTupletNoteIndexes,
             tupletPositionByNoteIndex: getTupletPositionByNoteIndex(
               finalNotationVoice.notes,
@@ -2726,7 +2830,7 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
             ),
             requiredSameHandRunLength,
           };
-          const notationNotes = finalNotationVoice.notes;
+          const notationNotes = applyRhythmPoolOrnaments(section, finalNotationVoice).notes;
           const ornamentedNotes = ensureRequiredOrnamentsOnNotes(
             section,
             removeDiddleBeforeConsecutiveCheese(
@@ -2752,11 +2856,11 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
             }
           );
 
-          return {
+          return applyRhythmPoolOrnaments(section, {
             ...voice,
             tuplets: finalNotationVoice.tuplets,
             notes: stickingNotes,
-          };
+          });
         }),
       })),
     })),
@@ -2940,7 +3044,6 @@ function getMaximumMixedEventCount(
 }
 
 function createMixedTupletFallbackGeneratedScore(section, options, random) {
-  const regularSlotCount = 32 / options.maxSubdivisionDuration;
   const tupletBlocks = options.tuplets
     .map((tuplet) => ({
       kind: "tuplet",
@@ -2948,9 +3051,8 @@ function createMixedTupletFallbackGeneratedScore(section, options, random) {
       tuplet,
     }))
     .filter((block) => Number.isInteger(block.slotCount) && block.slotCount > 0 && block.slotCount <= 32);
-  const regularBlocks = options.subdivisions.length
-    ? [{ kind: "regular", slotCount: regularSlotCount }]
-    : [];
+  const regularBlocks = SUBDIVISION_SETTINGS.filter((setting) => options.subdivisions.includes(setting.id))
+    .map((setting) => ({ kind: "regular", slotCount: 32 / setting.duration, duration: setting.duration, id: setting.id }));
   const tupletSlotCounts = [...new Set(tupletBlocks.map((block) => block.slotCount))];
   const tupletsCanFillMeasure = canFillMixedTupletSlots(32, tupletSlotCounts);
   const restBlocks = options.subdivisions.length || tupletsCanFillMeasure
@@ -2959,7 +3061,21 @@ function createMixedTupletFallbackGeneratedScore(section, options, random) {
         kind: "rest",
         slotCount,
       }));
-  const availableBlocks = [...regularBlocks, ...tupletBlocks, ...restBlocks];
+  let availableBlocks = [...regularBlocks, ...tupletBlocks, ...restBlocks];
+  const primary = section.primaryRhythms;
+  const requiredBlocks = primary ? availableBlocks.filter((block) =>
+    block.kind === "regular" ? primary.subdivisions.includes(block.id)
+      : block.kind === "tuplet" && primary.tuplets.some((tuplet) =>
+        tuplet.actual === block.tuplet.actual && tuplet.normal === block.tuplet.normal && tuplet.type === block.tuplet.type)
+  ) : [];
+  const requiredSlots = requiredBlocks.reduce((sum, block) => sum + block.slotCount, 0);
+  if (requiredSlots > 32) throw new Error("The selected primary rhythms cannot all fit in one 4/4 measure. Select fewer primary rhythms.");
+  if (primary) {
+    // Draw a fresh subset of optional families for each exercise, including none.
+    availableBlocks = availableBlocks.filter((block) =>
+      requiredBlocks.includes(block) || block.kind === "rest" || random() < 0.75
+    );
+  }
   const slotCounts = [...new Set(availableBlocks.map((block) => block.slotCount))];
   const minimumPlayedNotes = getSectionMinPlayedNotes(section);
   const requireRegularSubdivision = options.subdivisions.length > 0 &&
@@ -2967,8 +3083,8 @@ function createMixedTupletFallbackGeneratedScore(section, options, random) {
   let layout = null;
 
   for (let attempt = 0; attempt < 200 && !layout; attempt += 1) {
-    const candidate = [];
-    let remainingSlots = 32;
+    const candidate = [...requiredBlocks];
+    let remainingSlots = 32 - requiredSlots;
 
     while (remainingSlots > 0) {
       const eligible = availableBlocks.filter((block) =>
@@ -2987,7 +3103,7 @@ function createMixedTupletFallbackGeneratedScore(section, options, random) {
       remainingSlots -= selected.slotCount;
     }
 
-    const hasTuplet = candidate.some((block) => block.kind === "tuplet");
+    const hasTuplet = !options.tuplets.length || candidate.some((block) => block.kind === "tuplet");
     const hasRegularSubdivision = candidate.some((block) => block.kind === "regular");
     const eventCount = candidate.reduce(
       (count, block) => count + (
@@ -2998,11 +3114,11 @@ function createMixedTupletFallbackGeneratedScore(section, options, random) {
 
     if (
       remainingSlots === 0 &&
-      hasTuplet &&
+      (primary || hasTuplet) &&
       eventCount >= minimumPlayedNotes &&
-      (!requireRegularSubdivision || hasRegularSubdivision)
+      (primary || !requireRegularSubdivision || hasRegularSubdivision)
     ) {
-      layout = candidate;
+      layout = shuffledIndexes(candidate.length, random).map((index) => candidate[index]);
     }
   }
 
@@ -3016,7 +3132,7 @@ function createMixedTupletFallbackGeneratedScore(section, options, random) {
           tuplet: block.tuplet,
         }))
       : block.kind === "regular"
-        ? [{ duration: options.maxSubdivisionDuration, dots: 0, tuplet: null }]
+        ? [{ duration: block.duration, dots: 0, tuplet: null }]
         : [{
             ...getNotationValueBySlots(block.slotCount),
             forceRest: true,
@@ -3109,12 +3225,13 @@ function createFallbackGeneratedScore(section, samplePayload, lineIndex, attempt
     `${section.id || section.title || "section"}:fallback:${lineIndex}${retrySeed}:${section.instructions || ""}`
   );
 
-  if (options.tuplets.length) {
+  if (options.tuplets.length || section.primaryRhythms) {
     const tupletScore = createMixedTupletFallbackGeneratedScore(section, options, random);
 
     if (tupletScore) {
       return tupletScore;
     }
+    if (section.primaryRhythms) throw new Error("The selected rhythms cannot fill this measure with the configured note limits.");
   }
 
   const slotCount = options.maxSubdivisionDuration;
@@ -3160,6 +3277,7 @@ function normalizeGeneratedLine(input, section, samplePayload, index, attempt = 
     ? normalizedScore
     : fallbackLine.score;
   const finalizedScore = finalizeGeneratedScore(section, score, index, `attempt:${attempt}`);
+  validatePrimaryRequirements(section, finalizedScore);
 
   return {
     title: (input && input.title) || fallbackLine.title,
@@ -3261,15 +3379,18 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
     const savedPages = Array.isArray(section.pages) && section.pages.length
       ? section.pages
       : [{}];
-    const sourcePages = collapseLegacyContinuationPages(section, savedPages);
+    const sourcePages = book.structureVersion >= BOOK_STRUCTURE_VERSION
+      ? savedPages : collapseLegacyContinuationPages(section, savedPages);
     const pages = sourcePages.map((page, pageIndex) => {
       const pageSource = {
         ...section,
         ...(page.generationSettings || {}),
+        primaryRhythms: section.primaryRhythms,
+        secondaryRhythms: section.secondaryRhythms,
       };
       const sampleJson = getSectionSampleJson(pageSource);
       const subdivisions = getGenerationSubdivisions(pageSource, sampleJson);
-      const ornaments = getGenerationOrnaments(pageSource, sampleJson);
+      const ornaments = pageSource.primaryRhythms ? pageSource.ornaments || [] : getGenerationOrnaments(pageSource, sampleJson);
       const tuplets = getGenerationTuplets(pageSource, sampleJson);
       const structuredPage = {
         ...pageSource,
@@ -3282,6 +3403,9 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
 
       return {
         id: `${section.id || `section-${sectionIndex + 1}`}-page-${pageIndex + 1}`,
+        subsectionId: page.subsectionId,
+        primaryRhythms: pageSource.primaryRhythms,
+        secondaryRhythms: pageSource.secondaryRhythms,
         title: page.title || `${section.title || `Section ${sectionIndex + 1}`} ${pageIndex + 1}`,
         sectionTitle: section.title || `Section ${sectionIndex + 1}`,
         pageCount: 1,
@@ -3316,6 +3440,7 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
 }
 
 function createGenerationConfig(config, sourceBook) {
+  sourceBook = migrateBookStructure(sourceBook);
   const configGeneration = config.generation || {};
   const bookGlobalRules = normalizeGlobalAiRules(sourceBook.globalAiRules);
   const globalOrnamentDensity = normalizeGlobalOrnamentDensity(
@@ -3365,11 +3490,16 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
     "",
     `Section title: ${section.title || "Untitled section"}`,
     `Section instructions: ${section.instructions || ""}`,
+    ...(section.primaryRhythms ? [
+      `Every measure MUST contain played notes from EACH primary subdivision (${section.primaryRhythms.subdivisions.join(", ") || "none"}) and at least one complete group of EACH primary tuplet (${section.primaryRhythms.tuplets.map(getTupletLabel).join(", ") || "none"}).`,
+      `Required ornaments on primary rhythms: ${(section.ornaments || []).join(", ") || "none"}.`,
+      `Secondary rhythms are OPTIONAL random fillers: ${JSON.stringify(section.secondaryRhythms)}. Their ornaments belong only on secondary rhythms and are never required. Primary choices take precedence when the same rhythm belongs to both pools.`,
+    ] : []),
     subdivisions.length
       ? `Allowed regular subdivisions: ${getOptionLabels(SUBDIVISION_SETTINGS, subdivisions, "none")}.`
       : "Use no regular played-note subdivisions. Ordinary rests may still be used to complete the measure.",
     tuplets.length
-      ? `Allowed tuplet types: ${tuplets.map(getTupletLabel).join(", ")}. Randomly combine complete groups of any allowed type with each other${subdivisions.length ? " and with the selected regular subdivisions" : ""} in the same 4/4 measure. Tuplet entries use inclusive start and exclusive end indexes into voice.notes. Not every line needs every allowed type.`
+      ? `Allowed tuplet types: ${tuplets.map(getTupletLabel).join(", ")}. Randomly combine complete groups of allowed types in the same 4/4 measure, including all required primary types. Tuplet entries use inclusive start and exclusive end indexes into voice.notes.`
       : "Do not use tuplets. Each generated voice should have an empty tuplets array.",
     "Never create a tuplet group whose notes are all rests. Replace the entire group with the simplest duration-equivalent ordinary rest or rests and omit that tuplet entry.",
     getSectionPlayEveryNote(section)
@@ -3576,11 +3706,13 @@ async function generateSectionLines(config, section, sectionIndex, options) {
 
 function createStoredPageGenerationSettings(pageConfig) {
   return {
+    primaryRhythms: pageConfig.primaryRhythms,
+    secondaryRhythms: pageConfig.secondaryRhythms,
     prompt: pageConfig.prompt || "",
     sampleJson: JSON.stringify(pageConfig.sampleJson || {}, null, 2),
-    subdivisions: pageConfig.subdivisions,
+    subdivisions: pageConfig.primaryRhythms?.subdivisions || pageConfig.subdivisions,
     ornaments: pageConfig.ornaments,
-    tuplets: pageConfig.tuplets,
+    tuplets: pageConfig.primaryRhythms?.tuplets || pageConfig.tuplets,
     minPlayedNotes: pageConfig.minPlayedNotes,
     maxPlayedNotes: pageConfig.maxPlayedNotes,
     playEveryNote: pageConfig.playEveryNote,
@@ -3633,6 +3765,7 @@ function buildBook(config, generatedSections) {
 
       return {
         ...page,
+        subsectionId: pageConfig.subsectionId,
         title: pageConfig.title || `${section.title} ${sectionPageIndex + 1}`,
         pageNumber,
         sectionId: section.id,
@@ -3651,6 +3784,8 @@ function buildBook(config, generatedSections) {
 
     return {
       id: section.id,
+      primaryRhythms: section.primaryRhythms,
+      secondaryRhythms: section.secondaryRhythms,
       title: section.title,
       prompt: firstPageConfig.prompt ?? section.prompt ?? "",
       sampleJson: section.sampleJson || JSON.stringify(firstPageConfig.sampleJson || {}, null, 2),
@@ -3673,6 +3808,7 @@ function buildBook(config, generatedSections) {
 
   return {
     book: (config.book && config.book.book) || "true-chops",
+    structureVersion: BOOK_STRUCTURE_VERSION,
     slug: (config.book && config.book.slug) || "snare-drum-book",
     title: (config.book && config.book.title) || "Snare Drum Book",
     edition: Number((config.book && config.book.edition) || 1),
@@ -3702,6 +3838,7 @@ function createManifest(book) {
     updatedAt: line.updatedAt,
   });
   const createPageManifest = (page) => ({
+    subsectionId: page.subsectionId,
     pageNumber: page.pageNumber,
     sectionId: page.sectionId,
     sectionTitle: page.sectionTitle,
@@ -3711,21 +3848,11 @@ function createManifest(book) {
     generationSettings: page.generationSettings,
     lines: page.lines.map(createLineManifest),
   });
-  const tableOfContents = book.sections.map((section) => {
-    const pageNumbers = (section.pages || [])
-      .map((page) => Number.parseInt(page.pageNumber, 10))
-      .filter((pageNumber) => Number.isInteger(pageNumber) && pageNumber > 0);
-
-    return {
-      sectionId: section.id,
-      title: section.title || "Untitled section",
-      pageStart: pageNumbers.length ? Math.min(...pageNumbers) : null,
-      pageEnd: pageNumbers.length ? Math.max(...pageNumbers) : null,
-    };
-  });
+  const tableOfContents = createStructureTableOfContents(book.sections);
 
   return {
     book: book.book,
+    structureVersion: book.structureVersion,
     slug: book.slug,
     title: book.title,
     edition: book.edition,
@@ -3736,6 +3863,8 @@ function createManifest(book) {
     pdfSettings: book.pdfSettings,
     sections: book.sections.map((section) => ({
       id: section.id,
+      primaryRhythms: section.primaryRhythms,
+      secondaryRhythms: section.secondaryRhythms,
       title: section.title,
       prompt: section.prompt,
       sampleJson: section.sampleJson,
@@ -3890,7 +4019,11 @@ async function main() {
   console.log(`Wrote ${book.pages.length} pages to ${path.relative(PROJECT_ROOT, bookRoot)}`);
 }
 
-main().catch((error) => {
-  console.error(error.message);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error.message);
+    process.exit(1);
+  });
+}
+
+module.exports = { createGenerationConfig, createAiPrompt, createUniqueGeneratedLine, createManifest, buildBook, validatePrimaryRequirements };

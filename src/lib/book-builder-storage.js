@@ -45,6 +45,8 @@ function createManifest(book) {
     updatedAt: line.updatedAt,
   });
   const createPageManifest = (page) => ({
+    subsectionId: page.subsectionId,
+    generationSettings: page.generationSettings,
     pageNumber: page.pageNumber,
     sectionId: page.sectionId,
     sectionTitle: page.sectionTitle,
@@ -56,6 +58,9 @@ function createManifest(book) {
 
   return {
     book: book.book,
+    structureVersion: book.structureVersion,
+    globalAiRules: book.globalAiRules,
+    globalOrnamentDensity: book.globalOrnamentDensity,
     slug: book.slug,
     title: book.title,
     edition: book.edition,
@@ -64,12 +69,14 @@ function createManifest(book) {
     pdfSettings: book.pdfSettings,
     sections: book.sections.map((section) => ({
       id: section.id,
+      primaryRhythms: section.primaryRhythms,
+      secondaryRhythms: section.secondaryRhythms,
       title: section.title,
       prompt: section.prompt,
       sampleJson: section.sampleJson,
       subdivisions: section.subdivisions,
       ornaments: section.ornaments,
-      tuplet: section.tuplet,
+      tuplets: section.tuplets,
       pageCount: section.pageCount,
       minPlayedNotes: section.minPlayedNotes,
       maxPlayedNotes: section.maxPlayedNotes,

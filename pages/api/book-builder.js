@@ -38,7 +38,7 @@ const BOOK_ROOT = path.join(process.cwd(), "data", "book-builder", BOOK_SLUG);
 const MANIFEST_PATH = path.join(BOOK_ROOT, "book.json");
 const PDF_CACHE_ROOT = process.env.BOOK_PDF_CACHE_DIR || path.join(process.cwd(), ".next", "cache", "book-builder-pdf");
 const SCORE_SVG_CACHE_VERSION = "score-svg-v25";
-const PDF_FILE_CACHE_VERSION = "pdf-v30";
+const PDF_FILE_CACHE_VERSION = "pdf-v31";
 const SCORE_SVG_MEMORY_CACHE_LIMIT = Number(process.env.BOOK_PDF_SVG_MEMORY_CACHE_LIMIT || 800);
 const MIN_CONTINUATION_SYSTEMS = 3;
 
@@ -86,6 +86,7 @@ function createManifest(book) {
     updatedAt: line.updatedAt,
   });
   const createPageManifest = (page) => ({
+    subsectionId: page.subsectionId,
     pageNumber: page.pageNumber,
     sectionId: page.sectionId,
     sectionTitle: page.sectionTitle,
@@ -98,6 +99,7 @@ function createManifest(book) {
 
   return {
     book: book.book,
+    structureVersion: book.structureVersion,
     slug: book.slug,
     title: book.title,
     edition: book.edition,
@@ -111,6 +113,8 @@ function createManifest(book) {
 
       return {
         id: section.id,
+        primaryRhythms: section.primaryRhythms,
+        secondaryRhythms: section.secondaryRhythms,
         title: section.title,
         prompt: firstPageSettings.prompt,
         sampleJson: firstPageSettings.sampleJson,
@@ -180,6 +184,7 @@ async function loadBook() {
 }
 
 function getStableLineKey(page, line) {
+  if (page.subsectionId) return `${page.subsectionId}:${line.lineNumber || 1}`;
   return [
     line.sectionId || page.sectionId || "",
     line.sectionPageNumber || page.sectionPageNumber || 1,
@@ -188,6 +193,7 @@ function getStableLineKey(page, line) {
 }
 
 function getStablePageKey(page) {
+  if (page.subsectionId) return page.subsectionId;
   return [
     page.sectionId || "",
     page.sectionPageNumber || 1,
@@ -921,18 +927,19 @@ function drawTableOfContentsPage(doc, book) {
       : entry.pageEnd && entry.pageEnd !== entry.pageStart
         ? `${entry.pageStart}\u2013${entry.pageEnd}`
         : String(entry.pageStart);
-    const label = `${index + 1}. ${entry.title}`;
+    const indent = entry.subsectionId ? 14 : 0;
+    const label = entry.subsectionId ? entry.title : `${entry.sectionNumber || index + 1}. ${entry.title}`;
 
-    doc.font("Times-Roman").fontSize(rowFontSize).fillColor("#111111");
-    doc.text(label, margin, y, { width: titleWidth, lineBreak: false, ellipsis: true });
+    doc.font(entry.subsectionId ? "Times-Roman" : "Times-Bold").fontSize(rowFontSize).fillColor("#111111");
+    doc.text(label, margin + indent, y, { width: titleWidth - indent, lineBreak: false, ellipsis: true });
     doc.text(pageLabel, margin + contentWidth - pageNumberWidth, y, {
       width: pageNumberWidth,
       align: "right",
       lineBreak: false,
     });
 
-    const labelWidth = Math.min(doc.widthOfString(label), titleWidth - 8);
-    const leaderStart = margin + labelWidth + 7;
+    const labelWidth = Math.min(doc.widthOfString(label), titleWidth - indent - 8);
+    const leaderStart = margin + indent + labelWidth + 7;
     const leaderEnd = margin + contentWidth - pageNumberWidth - 7;
 
     if (leaderEnd > leaderStart) {
