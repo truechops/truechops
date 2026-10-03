@@ -113,24 +113,26 @@ function normalizeOrnamentSegments(value) {
   return segments.length ? segments : null;
 }
 
-// Limits the secondary pool on a page's first printed rows, e.g. triplets and
-// sixteenths only before the faster tuplets appear.
-function normalizeSecondaryRhythmIntro(value) {
-  if (!value || !(Number(value.count) > 0)) return null;
-  const { subdivisions, tuplets } = normalizeRhythmPool(value);
-  return { count: Math.max(1, Math.min(100, Math.floor(Number(value.count)))), unit: "staffRows", subdivisions, tuplets };
+// The printed row where each secondary rhythm joins the pool, e.g.
+// { sixteenths: 1, "5:4:16": 6 }. Rhythms without a row are not used on the page.
+function normalizeSecondaryRhythmRows(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const rows = Object.fromEntries(Object.entries(value)
+    .map(([key, row]) => [key, Number.parseInt(row, 10)])
+    .filter(([, row]) => Number.isInteger(row) && row >= 1 && row <= 100));
+  return Object.keys(rows).length ? rows : null;
 }
 
 function getLineSecondaryRhythms(settings, lineIndex, measuresPerLine) {
   const secondary = normalizeRhythmPool(settings.secondaryRhythms);
-  const intro = normalizeSecondaryRhythmIntro(settings.secondaryRhythmIntro);
-  if (!intro || lineIndex >= intro.count * measuresPerLine) return secondary;
-  const key = (tuplet) => `${tuplet.actual}:${tuplet.normal}:${tuplet.type}`;
-  const introTuplets = new Set(intro.tuplets.map(key));
+  const rows = normalizeSecondaryRhythmRows(settings.secondaryRhythmRows);
+  if (!rows) return secondary;
+  const row = Math.floor(lineIndex / Math.max(1, measuresPerLine)) + 1;
+  const available = (rhythm) => rows[rhythmOrnamentKey(rhythm)] <= row;
   return {
     ...secondary,
-    subdivisions: secondary.subdivisions.filter((id) => intro.subdivisions.includes(id)),
-    tuplets: secondary.tuplets.filter((tuplet) => introTuplets.has(key(tuplet))),
+    subdivisions: secondary.subdivisions.filter(available),
+    tuplets: secondary.tuplets.filter(available),
   };
 }
 
@@ -278,6 +280,6 @@ module.exports = {
   getSpanPrimaryRhythms,
   normalizeBookGroups, normalizeStickingTail, getLineStickingSettings,
   normalizeOrnamentSegments, getLineOrnamentSegment,
-  normalizeSecondaryRhythmIntro, getLineSecondaryRhythms,
+  normalizeSecondaryRhythmRows, getLineSecondaryRhythms,
   normalizeRhythmPool, rhythmOrnamentKey, migrateBookStructure, createStructureTableOfContents,
 };

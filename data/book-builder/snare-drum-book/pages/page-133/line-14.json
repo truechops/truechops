@@ -26,19 +26,10 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "la"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 4,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
+                    "ornaments": "rca"
                   },
                   {
                     "notes": [
@@ -46,8 +37,8 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "ra"
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -62,19 +53,46 @@
                     "notes": [
                       "C5"
                     ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "rca"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "rf"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
                     "duration": 16,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "la"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
+                    "ornaments": "radc"
                   },
                   {
                     "notes": [
@@ -92,7 +110,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "ra"
+                    "ornaments": "rfa"
                   },
                   {
                     "notes": [
@@ -100,33 +118,6 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "ra"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 32,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 32,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 32,
-                    "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
                   },
@@ -147,6 +138,15 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 32,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -183,26 +183,29 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 32,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 4,
+                    "end": 6,
                     "actual": 3,
                     "normal": 2
                   },
                   {
-                    "start": 4,
-                    "end": 9,
+                    "start": 6,
+                    "end": 11,
                     "actual": 5,
                     "normal": 4
-                  },
-                  {
-                    "start": 9,
-                    "end": 18,
-                    "actual": 9,
-                    "normal": 8
                   }
                 ]
               }
@@ -212,8 +215,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n4:la n4:l n8:ra n8:rac n16:la n16:r n16:l n16:ra n16:ra n32:l n32:r n32:r n32:l n32:r n32:r n32:l n32:l n32:r |t0-4:3:2,4-9:5:4,9-18:9:8",
-  "updatedAt": "2026-10-03T14:36:36.603Z",
+  "exerciseShortForm": "n8:rac n8:l n8:rac n8:l n8:rac n8:l n16:rf n16:radc n16:l n16:raf n16:r n32:l n32:r n32:l n32:r n32:l n32:l n32:r n32:l |t0-6:3:2,6-11:5:4",
+  "updatedAt": "2026-10-03T15:17:44.881Z",
   "sectionId": "two-quarters-eighth-triplets",
   "sectionPageNumber": 1
 }

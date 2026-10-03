@@ -26,13 +26,13 @@ Full sections use the same order starting with Accents. Full pages with sticking
 
 After the one-beat sections come the **Over two quarter notes** group (3, 5, 7, and 9 notes over two beats) and the **Over three eighth notes** group (4:3 and 5:3 eighths, 7:6 and 8:6 sixteenths). Each of these sections has two pages: **Every note** (no rests), then **Sparse**. Each page moves through the ornament topics by exercise: Accents for exercises 1–4, then three exercises each for Accents with stickings, with diddles, with flams, with cheese, with diddles and flams, and Everything (22 exercises at two measures per line).
 
-The secondary pool holds every one-beat rhythm (eighths, sixteenths, thirty-seconds, triplets, and 5-, 6-, 7-, and 9-note groups), so the span group can start on any beat. Groups over three eighths end mid-beat and are paired with one eighth or two sixteenths that complete the beat. Every other beat holds one tuplet or a full beat of one regular value. In the first five printed rows (exercises 1–10), secondary rhythms are limited to triplets and sixteenths; the rest join from row six.
+The secondary pool holds every one-beat rhythm (eighths, sixteenths, thirty-seconds, triplets, and 5-, 6-, 7-, and 9-note groups), so the span group can start on any beat. Groups over three eighths end mid-beat and are paired with one eighth or two sixteenths that complete the beat. Every other beat holds one tuplet or a full beat of one regular value. The secondary pool grows down the page: rows 1–3 draw from sixteenths, triplets, and sextuplets; thirty-seconds join at row 4, quintuplets at row 6, septuplets at row 8, and 9s at row 10. Eighths are not used on these pages.
 
 Configure all of this in the subsection editor:
 
 - **Ornaments by rhythm** (in the section's Secondary rhythms box) sets which optional ornaments each secondary rhythm may carry. Triplets, sixteenths, and quintuplets take all of them; sextuplets take flams; the rest take none.
 - **Ornament topics, in order** lists each topic's title, exercise count, and primary ornaments, with a running total against the page's exercise count. **Use one set for the whole page** returns to a single ornament choice.
-- **Secondary rhythms by row** sets how many rows use only the simpler secondary rhythms, and which ones.
+- **Secondary rhythms by row** sets the printed row where each secondary rhythm joins the pool (or Never). A rhythm stays available on every later row.
 - **Page plan** summarizes which exercises, rows, ornaments, and secondary rhythms each topic covers.
 
 Notation rules for every page:

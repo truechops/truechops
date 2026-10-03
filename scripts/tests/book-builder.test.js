@@ -192,12 +192,16 @@ test("two-beat and three-eighth pages cycle ornament topics and start tuplets on
     const primary = getSpanPrimaryRhythms(page.primaryRhythms, page.rhythmSpan).tuplets[0];
     voices.forEach((voice, index) => {
       const groups = voice.tuplets.filter((tuplet) => tuplet.actual === primary.actual && tuplet.normal === primary.normal);
-      if (index < 10) {
-        // The first five rows only add triplets and sixteenths around the primary group.
-        assert(voice.tuplets.every((tuplet) => groups.includes(tuplet) || (tuplet.actual === 3 && tuplet.normal === 2)),
-          `${section.title} exercise ${index + 1} uses a faster secondary tuplet too early`);
+      // The secondary pool grows by row: 3s and 6s from row 1, 5s from row 6, 7s from row 8, 9s from row 10.
+      const row = Math.floor(index / 2) + 1;
+      const joinRow = { 3: 1, 6: 1, 5: 6, 7: 8, 9: 10 };
+      voice.tuplets.filter((tuplet) => !groups.includes(tuplet)).forEach((tuplet) => {
+        assert(joinRow[tuplet.actual] <= row, `${section.title} exercise ${index + 1} uses ${tuplet.actual}s before row ${joinRow[tuplet.actual]}`);
+      });
+      if (row < 4) {
         assert(voice.notes.every((note, noteIndex) => note.duration !== 32 ||
-          voice.tuplets.some((tuplet) => noteIndex >= tuplet.start && noteIndex < tuplet.end)));
+          voice.tuplets.some((tuplet) => noteIndex >= tuplet.start && noteIndex < tuplet.end)),
+          `${section.title} exercise ${index + 1} uses 32nds before row 4`);
       }
       assert(groups.length, `${section.title} exercise ${index + 1} lacks the primary rhythm`);
       const value = (note) => 32 / note.duration * (note.dots ? 1.5 : 1);

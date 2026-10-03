@@ -28,16 +28,24 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 1,
+                    "ornaments": "a"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
                     "duration": 4,
+                    "dots": 1,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "f"
+                    "velocity": 0.5
                   },
                   {
                     "notes": [],
@@ -55,16 +63,18 @@
                     "ornaments": "d"
                   },
                   {
-                    "notes": [],
-                    "duration": 4,
-                    "dots": 0,
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 1,
                     "velocity": 0.5
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 1,
                     "ornaments": "a"
@@ -74,41 +84,21 @@
                       "C5"
                     ],
                     "duration": 4,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [],
-                    "duration": 4,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "d"
+                    "dots": 1,
+                    "velocity": 1,
+                    "ornaments": "a"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 2,
-                    "actual": 3,
-                    "normal": 2
-                  },
-                  {
-                    "start": 4,
-                    "end": 7,
+                    "end": 3,
                     "actual": 5,
                     "normal": 3
                   },
                   {
                     "start": 7,
-                    "end": 9,
+                    "end": 8,
                     "actual": 3,
                     "normal": 2
                   }
@@ -120,8 +110,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n8 n4:f r16 n16:d r4 n8:a n4 r4 n8:d |t0-2:3:2,4-7:5:3,7-9:3:2",
-  "updatedAt": "2026-10-03T14:36:36.603Z",
+  "exerciseShortForm": "n8:a n4. n8 r16 n16:d n8. n16:a n4.:a |t0-3:5:3,7-8:3:2",
+  "updatedAt": "2026-10-03T15:17:44.881Z",
   "sectionId": "three-eighths-quintuplets",
   "sectionPageNumber": 2
 }

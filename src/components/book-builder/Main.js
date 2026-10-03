@@ -47,7 +47,7 @@ import styles from "./BookBuilder.module.css";
 import {
   OrnamentTopicsEditor,
   PagePlanSummary,
-  SecondaryIntroEditor,
+  SecondaryRowsEditor,
   SecondaryOrnamentGrid,
 } from "./ExercisePlanEditors";
 import {
@@ -1180,16 +1180,16 @@ export default function BookBuilderPanel() {
             ornaments={selectedPageGenerationSettings.ornaments}
             segments={selectedPageGenerationSettings.ornamentSegments}
           />
-          <SecondaryIntroEditor
-            intro={selectedPageGenerationSettings.secondaryRhythmIntro}
+          <SecondaryRowsEditor
             measuresPerLine={selectedPagePdfSettings.measuresPerLine}
-            onChange={(secondaryRhythmIntro) => updateSelectedPageGenerationDraft({ secondaryRhythmIntro })}
+            onChange={(secondaryRhythmRows) => updateSelectedPageGenerationDraft({ secondaryRhythmRows })}
             pool={selectedSection.secondaryRhythms}
             rowCount={systemsPerPage}
+            rows={selectedPageGenerationSettings.secondaryRhythmRows}
           />
           <PagePlanSummary
             exerciseCount={linesPerPage}
-            intro={selectedPageGenerationSettings.secondaryRhythmIntro}
+            rows={selectedPageGenerationSettings.secondaryRhythmRows}
             measuresPerLine={selectedPagePdfSettings.measuresPerLine}
             ornaments={selectedPageGenerationSettings.ornaments}
             playEveryNote={selectedPageGenerationSettings.playEveryNote}

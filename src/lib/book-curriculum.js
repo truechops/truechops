@@ -61,8 +61,6 @@ const TWO_BEAT_ORNAMENT_SEGMENTS = [
   { ...STUDY_TOPICS[1], count: 4 },
   ...STUDY_TOPICS.slice(2).map((topic) => ({ ...topic, count: 3 })),
 ].map(({ title, ornaments, count }) => ({ title, ornaments, count }));
-const familyTuplets = (...ids) => STUDY_FAMILIES
-  .filter((family) => ids.includes(family.id)).flatMap((family) => family.tuplets || []);
 // Secondary ornaments: everything on triplets, sixteenths, and quintuplets; only
 // flams on sextuplets; none on eighths, septuplets, thirty-seconds, or 9s.
 // Stickings follow each exercise's topic on every note.
@@ -82,9 +80,14 @@ const SPAN_DENSITIES = [
   { id: "sparse", title: "Sparse", playEveryNote: false },
 ];
 
-// The first five printed rows use only triplet and sixteenth secondaries.
-const SECONDARY_RHYTHM_INTRO = {
-  count: 5, unit: "staffRows", subdivisions: ["sixteenths"], tuplets: familyTuplets("eighth-triplets"),
+// The secondary pool grows down the page: the printed row where each rhythm
+// joins. Eighths are not used on these pages.
+const SECONDARY_RHYTHM_ROWS = {
+  sixteenths: 1, "3:2:8": 1, "6:4:16": 1,
+  thirtyseconds: 4,
+  "5:4:16": 6,
+  "7:4:16": 8,
+  "9:8:32": 10,
 };
 
 // Over three eighths, only the counts that are new rhythms: 4:3 and 5:3 eighths, 7:6 and 8:6 sixteenths.
@@ -116,7 +119,7 @@ function createSpanSections(groupId, pdfSettings, familyIds, spanLabel) {
           prompt: "", sampleJson: "",
           ornaments: [...new Set(TWO_BEAT_ORNAMENT_SEGMENTS.flatMap((segment) => segment.ornaments))],
           ornamentSegments: TWO_BEAT_ORNAMENT_SEGMENTS,
-          secondaryRhythmIntro: SECONDARY_RHYTHM_INTRO,
+          secondaryRhythmRows: SECONDARY_RHYTHM_ROWS,
           minPlayedNotes: 0,
           maxPlayedNotes: 0,
           playEveryNote: density.playEveryNote,

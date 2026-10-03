@@ -186,64 +186,64 @@ export function OrnamentTopicsEditor({ segments, ornaments, exerciseCount, onCha
   );
 }
 
-// Page level: limit secondary rhythms on the first printed rows.
-export function SecondaryIntroEditor({ intro, pool, rowCount, measuresPerLine, onChange }) {
+// Page level: the printed row where each secondary rhythm joins the pool.
+export function SecondaryRowsEditor({ rows, pool, rowCount, measuresPerLine, onChange }) {
   const rhythms = poolRhythms(pool);
   if (!rhythms.length) return null;
-  if (!intro) {
+  if (!rows) {
     return (
       <div className={styles.fieldGroup}>
         <span>Secondary rhythms by row</span>
         <p className={styles.layoutSummary}>Every exercise may use any secondary rhythm.</p>
         <button
           className={styles.button}
-          onClick={() => onChange({ count: Math.min(5, rowCount), unit: "staffRows", subdivisions: [], tuplets: [] })}
+          onClick={() => onChange(Object.fromEntries(rhythms.map((rhythm) => [rhythmOrnamentKey(rhythm), 1])))}
           type="button"
         >
-          Start with simpler secondary rhythms
+          Add secondary rhythms row by row
         </button>
       </div>
     );
   }
-  const allowed = (rhythm) => typeof rhythm === "string"
-    ? intro.subdivisions.includes(rhythm)
-    : intro.tuplets.some((tuplet) => rhythmOrnamentKey(tuplet) === rhythmOrnamentKey(rhythm));
-  const toggleRhythm = (rhythm) => onChange(typeof rhythm === "string"
-    ? { ...intro, subdivisions: toggle(intro.subdivisions, rhythm) }
-    : {
-        ...intro,
-        tuplets: allowed(rhythm)
-          ? intro.tuplets.filter((tuplet) => rhythmOrnamentKey(tuplet) !== rhythmOrnamentKey(rhythm))
-          : [...intro.tuplets, rhythm],
-      });
+  const setRow = (rhythm, value) => {
+    const next = { ...rows };
+    if (value === "never") delete next[rhythmOrnamentKey(rhythm)];
+    else next[rhythmOrnamentKey(rhythm)] = Number(value);
+    onChange(next);
+  };
+  const exercises = (row) => `${(row - 1) * measuresPerLine + 1}`;
 
   return (
     <div className={styles.fieldGroup}>
       <span>Secondary rhythms by row</span>
-      <label className={styles.topicCount}>
-        <span>First</span>
-        <input
-          aria-label="Rows that use only the simpler secondary rhythms"
-          max={rowCount}
-          min="1"
-          onChange={(event) => onChange({ ...intro, count: Math.max(1, Number.parseInt(event.target.value, 10) || 1) })}
-          type="number"
-          value={intro.count}
-        />
-        <span>rows ({intro.count * measuresPerLine} exercises) use only:</span>
-      </label>
-      <div className={styles.ornamentToggles} role="group" aria-label="Secondary rhythms on the first rows">
-        {rhythms.map((rhythm) => (
-          <label
-            className={`${styles.pickerOption} ${allowed(rhythm) ? styles.activePickerOption : ""}`}
-            key={rhythmOrnamentKey(rhythm)}
-          >
-            <input checked={allowed(rhythm)} onChange={() => toggleRhythm(rhythm)} type="checkbox" />
-            <span>{rhythmLabel(rhythm)}</span>
-          </label>
-        ))}
-      </div>
-      <p className={styles.layoutSummary}>Later rows may use every secondary rhythm.</p>
+      <table className={styles.planTable}>
+        <thead>
+          <tr><th scope="col">Secondary rhythm</th><th scope="col">Joins at</th></tr>
+        </thead>
+        <tbody>
+          {rhythms.map((rhythm) => {
+            const row = rows[rhythmOrnamentKey(rhythm)];
+            return (
+              <tr key={rhythmOrnamentKey(rhythm)}>
+                <th scope="row">{rhythmLabel(rhythm)}</th>
+                <td>
+                  <select
+                    aria-label={`Row where ${rhythmLabel(rhythm)} joins`}
+                    onChange={(event) => setRow(rhythm, event.target.value)}
+                    value={row || "never"}
+                  >
+                    {Array.from({ length: rowCount }, (_, index) => index + 1).map((option) => (
+                      <option key={option} value={option}>Row {option} (exercise {exercises(option)})</option>
+                    ))}
+                    <option value="never">Never</option>
+                  </select>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <p className={styles.layoutSummary}>Each rhythm stays available on every row after it joins.</p>
       <button className={styles.button} onClick={() => onChange(null)} type="button">
         Allow every secondary rhythm on every row
       </button>
@@ -251,29 +251,29 @@ export function SecondaryIntroEditor({ intro, pool, rowCount, measuresPerLine, o
   );
 }
 
-// Read-only overview: which exercises and rows each topic covers.
-export function PagePlanSummary({ segments, ornaments, intro, pool, exerciseCount, measuresPerLine, playEveryNote }) {
-  const introExercises = intro ? intro.count * measuresPerLine : 0;
+// Read-only overview: which exercises, rows, ornaments, and secondary rhythms each topic covers.
+export function PagePlanSummary({ segments, ornaments, rows: rhythmRows, pool, exerciseCount, measuresPerLine, playEveryNote }) {
   const rhythms = poolRhythms(pool);
-  const introNames = rhythms.filter((rhythm) => typeof rhythm === "string"
-    ? intro?.subdivisions.includes(rhythm)
-    : intro?.tuplets.some((tuplet) => rhythmOrnamentKey(tuplet) === rhythmOrnamentKey(rhythm))).map(rhythmLabel);
   const ornamentNames = (list) => ORNAMENT_OPTIONS.filter((option) => list.includes(option.id))
     .map((option) => option.label).join(", ") || "None";
-  const rows = [];
+  const row = (exercise) => Math.ceil(exercise / measuresPerLine);
+  const joinRow = (rhythm) => rhythmRows ? rhythmRows[rhythmOrnamentKey(rhythm)] : 1;
+  const secondaryFor = (firstRow, lastRow) => {
+    if (!rhythms.length) return "None";
+    const atStart = rhythms.filter((rhythm) => joinRow(rhythm) <= firstRow).map(rhythmLabel);
+    const joining = rhythms.filter((rhythm) => joinRow(rhythm) > firstRow && joinRow(rhythm) <= lastRow)
+      .map((rhythm) => `+ ${rhythmLabel(rhythm)} from row ${joinRow(rhythm)}`);
+    return [atStart.join(", ") || "None", ...joining].join("; ");
+  };
+  const plan = [];
   let start = 1;
   for (const [index, segment] of (segments || [{ title: "All exercises", count: exerciseCount, ornaments }]).entries()) {
+    if (start > exerciseCount) break;
     const isLast = index === (segments?.length || 1) - 1;
     const end = Math.min(exerciseCount, isLast ? exerciseCount : start + segment.count - 1);
-    if (start > exerciseCount) break;
-    const secondary = !rhythms.length ? "None"
-      : end <= introExercises ? introNames.join(", ") || "None"
-      : start > introExercises ? "All"
-      : `${introNames.join(", ") || "None"} until exercise ${introExercises}, then all`;
-    rows.push({ start, end, segment, secondary });
+    plan.push({ start, end, segment, secondary: secondaryFor(row(start), row(end)) });
     start = end + 1;
   }
-  const row = (exercise) => Math.ceil(exercise / measuresPerLine);
 
   return (
     <div className={styles.fieldGroup}>
@@ -283,7 +283,7 @@ export function PagePlanSummary({ segments, ornaments, intro, pool, exerciseCoun
           <tr><th scope="col">Exercises</th><th scope="col">Rows</th><th scope="col">Topic</th><th scope="col">Primary ornaments</th><th scope="col">Secondary rhythms</th></tr>
         </thead>
         <tbody>
-          {rows.map(({ start: first, end, segment, secondary }) => (
+          {plan.map(({ start: first, end, segment, secondary }) => (
             <tr key={first}>
               <td>{first === end ? first : `${first}–${end}`}</td>
               <td>{row(first) === row(end) ? row(first) : `${row(first)}–${row(end)}`}</td>
