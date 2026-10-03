@@ -1,7 +1,7 @@
 {
   "pageNumber": 135,
   "lineNumber": 6,
-  "title": "All ornaments 6",
+  "title": "Every note 6",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -28,7 +28,8 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -36,13 +37,35 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
-                    "notes": [],
-                    "duration": 4,
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -60,13 +83,13 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "ra"
+                    "ornaments": "la"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 2,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
@@ -75,7 +98,16 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
@@ -83,15 +115,15 @@
                 ],
                 "tuplets": [
                   {
-                    "start": 2,
-                    "end": 4,
-                    "actual": 3,
-                    "normal": 2
+                    "start": 0,
+                    "end": 5,
+                    "actual": 5,
+                    "normal": 4
                   },
                   {
-                    "start": 4,
-                    "end": 7,
-                    "actual": 7,
+                    "start": 5,
+                    "end": 10,
+                    "actual": 5,
                     "normal": 4
                   }
                 ]
@@ -102,8 +134,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n8 n8 r4 n8:l n8:ra n2:r n4:l |t2-4:3:2,4-7:7:4",
-  "updatedAt": "2026-10-03T04:17:12.871Z",
-  "sectionId": "two-quarters-septuplets",
+  "exerciseShortForm": "n8:r n8:r n8:l n8:l n8:r n8:l n8:la n8:r n8:r n8:l |t0-5:5:4,5-10:5:4",
+  "updatedAt": "2026-10-03T14:36:36.603Z",
+  "sectionId": "two-quarters-quintuplets",
   "sectionPageNumber": 1
 }

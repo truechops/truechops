@@ -157,12 +157,20 @@ function normalizeRhythmPool(value = {}, allowEmpty = true) {
     );
   if (!allowEmpty && !subdivisions.length && !tuplets.length) subdivisions.push("eighths");
   const pool = { subdivisions, tuplets, ornaments: ornamentIds.filter((id) => (value.ornaments || []).includes(id)) };
-  // Optional: the only rhythms in this pool that may carry its ornaments.
-  if (value.ornamentRhythms) {
-    const { subdivisions: ornamentSubdivisions, tuplets: ornamentTuplets } = normalizeRhythmPool(value.ornamentRhythms);
-    pool.ornamentRhythms = { subdivisions: ornamentSubdivisions, tuplets: ornamentTuplets };
+  // Optional per-rhythm ornaments, e.g. { sixteenths: ["accents"], "6:4:16": ["flams"] }.
+  // Stickings are not listed here: they follow the exercise's topic on every note.
+  if (value.rhythmOrnaments && typeof value.rhythmOrnaments === "object") {
+    pool.rhythmOrnaments = Object.fromEntries([...subdivisions, ...tuplets].map((rhythm) => {
+      const key = rhythmOrnamentKey(rhythm);
+      return [key, ornamentIds.filter((id) => id !== "stickings" && (value.rhythmOrnaments[key] || []).includes(id))];
+    }));
+    pool.ornaments = ornamentIds.filter((id) => Object.values(pool.rhythmOrnaments).some((list) => list.includes(id)));
   }
   return pool;
+}
+
+function rhythmOrnamentKey(rhythm) {
+  return typeof rhythm === "string" ? rhythm : `${rhythm.actual}:${rhythm.normal}:${rhythm.type}`;
 }
 
 function rhythmKey(pool) {
@@ -271,5 +279,5 @@ module.exports = {
   normalizeBookGroups, normalizeStickingTail, getLineStickingSettings,
   normalizeOrnamentSegments, getLineOrnamentSegment,
   normalizeSecondaryRhythmIntro, getLineSecondaryRhythms,
-  normalizeRhythmPool, migrateBookStructure, createStructureTableOfContents,
+  normalizeRhythmPool, rhythmOrnamentKey, migrateBookStructure, createStructureTableOfContents,
 };

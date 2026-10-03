@@ -54,7 +54,8 @@ function createStudySections(groupId, pdfSettings, tailUnit = "staffRows") {
   }));
 }
 
-// Over-two-beat studies put every ornament topic on one page to keep the book short.
+// Span studies (over two beats, over three eighths) put every ornament topic on
+// one page, about three exercises each, to keep the book short.
 const TWO_BEAT_FAMILY_IDS = ["eighth-triplets", "quintuplets", "septuplets", "nine-eight-thirtyseconds"];
 const TWO_BEAT_ORNAMENT_SEGMENTS = [
   { ...STUDY_TOPICS[1], count: 4 },
@@ -62,14 +63,24 @@ const TWO_BEAT_ORNAMENT_SEGMENTS = [
 ].map(({ title, ornaments, count }) => ({ title, ornaments, count }));
 const familyTuplets = (...ids) => STUDY_FAMILIES
   .filter((family) => ids.includes(family.id)).flatMap((family) => family.tuplets || []);
-// Secondary ornaments only on triplets, sixteenths, and quintuplets; never on
-// eighths or on sextuplets and faster.
+// Secondary ornaments: everything on triplets, sixteenths, and quintuplets; only
+// flams on sextuplets; none on eighths, septuplets, thirty-seconds, or 9s.
+// Stickings follow each exercise's topic on every note.
+const ALL_SECONDARY_ORNAMENTS = ["accents", "flams", "diddles", "cheese"];
 const ONE_BEAT_SECONDARY_RHYTHMS = {
   subdivisions: ["eighths", "sixteenths", "thirtyseconds"],
   tuplets: STUDY_FAMILIES.flatMap((family) => family.tuplets || []),
-  ornaments: ["stickings", "accents", "flams", "diddles", "cheese"],
-  ornamentRhythms: { subdivisions: ["sixteenths"], tuplets: familyTuplets("eighth-triplets", "quintuplets") },
+  rhythmOrnaments: {
+    sixteenths: ALL_SECONDARY_ORNAMENTS,
+    "3:2:8": ALL_SECONDARY_ORNAMENTS,
+    "5:4:16": ALL_SECONDARY_ORNAMENTS,
+    "6:4:16": ["flams"],
+  },
 };
+const SPAN_DENSITIES = [
+  { id: "full", title: "Every note", playEveryNote: true },
+  { id: "sparse", title: "Sparse", playEveryNote: false },
+];
 
 // The first five printed rows use only triplet and sixteenth secondaries.
 const SECONDARY_RHYTHM_INTRO = {
@@ -97,9 +108,9 @@ function createSpanSections(groupId, pdfSettings, familyIds, spanLabel) {
       primaryRhythms: normalizeRhythmPool(family, false),
       secondaryRhythms: normalizeRhythmPool(ONE_BEAT_SECONDARY_RHYTHMS),
       pdfSettings,
-      pages: [{
-        subsectionId: `${id}-all-ornaments`,
-        title: "All ornaments",
+      pages: SPAN_DENSITIES.map((density) => ({
+        subsectionId: `${id}-${density.id}`,
+        title: density.title,
         pdfSettings,
         generationSettings: {
           prompt: "", sampleJson: "",
@@ -108,13 +119,13 @@ function createSpanSections(groupId, pdfSettings, familyIds, spanLabel) {
           secondaryRhythmIntro: SECONDARY_RHYTHM_INTRO,
           minPlayedNotes: 0,
           maxPlayedNotes: 0,
-          playEveryNote: false,
+          playEveryNote: density.playEveryNote,
           maxSameHandStickingRun: 2,
           requiredSameHandStickingRuns: [],
           stickingTail: null,
         },
         lines: [],
-      }],
+      })),
     };
   });
 }

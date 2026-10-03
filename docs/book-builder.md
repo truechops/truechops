@@ -24,15 +24,24 @@ The saved book contains sparse and full sections for sixteenths, eighth-note tri
 
 Full sections use the same order starting with Accents. Full pages with stickings use the regular maximum of two same-hand notes in their earlier rows. Their final five **printed staff rows** allow a maximum of four and require a three- or four-note same-hand run in each exercise. The tail rule follows the page layout (five rows are ten exercises at two measures per row) and can be edited per subsection.
 
-The **Over three eighth notes** group follows the same layout with 4:3 and 5:3 eighths and 7:6 and 8:6 sixteenths. These groups end mid-beat, so each is paired with one eighth or two sixteenths to complete its beat. Ratios are printed whenever the plain number would be ambiguous.
+After the one-beat sections come the **Over two quarter notes** group (3, 5, 7, and 9 notes over two beats) and the **Over three eighth notes** group (4:3 and 5:3 eighths, 7:6 and 8:6 sixteenths). Each of these sections has two pages: **Every note** (no rests), then **Sparse**. Each page moves through the ornament topics by exercise: Accents for exercises 1–4, then three exercises each for Accents with stickings, with diddles, with flams, with cheese, with diddles and flams, and Everything (22 exercises at two measures per line).
 
-The **Over two quarter notes** group has one page each for 3, 5, 7, and 9 notes over two beats. Each page cycles through the ornament topics by exercise: exercises 1–4 are Accents, then three exercises each for the six topics from Accents with stickings to Everything (22 exercises at two measures per line). The secondary pool holds every one-beat rhythm (eighths, sixteenths, thirty-seconds, triplets, and 5-, 6-, 7-, and 9-note groups), so the two-beat group can start on any beat. In the first five printed rows (exercises 1–10), secondary rhythms are limited to triplets and sixteenths; quintuplets through nine-note groups, eighths, and thirty-seconds join from row six. Secondary ornaments apply only to triplets, sixteenths, and quintuplets. On these pages every beat holds one tuplet or a full beat of one regular value. Quarter-note triplets may split a quarter into two eighths, which can carry diddles and cheese.
+The secondary pool holds every one-beat rhythm (eighths, sixteenths, thirty-seconds, triplets, and 5-, 6-, 7-, and 9-note groups), so the span group can start on any beat. Groups over three eighths end mid-beat and are paired with one eighth or two sixteenths that complete the beat. Every other beat holds one tuplet or a full beat of one regular value. In the first five printed rows (exercises 1–10), secondary rhythms are limited to triplets and sixteenths; the rest join from row six.
+
+Configure all of this in the subsection editor:
+
+- **Ornaments by rhythm** (in the section's Secondary rhythms box) sets which optional ornaments each secondary rhythm may carry. Triplets, sixteenths, and quintuplets take all of them; sextuplets take flams; the rest take none.
+- **Ornament topics, in order** lists each topic's title, exercise count, and primary ornaments, with a running total against the page's exercise count. **Use one set for the whole page** returns to a single ornament choice.
+- **Secondary rhythms by row** sets how many rows use only the simpler secondary rhythms, and which ones.
+- **Page plan** summarizes which exercises, rows, ornaments, and secondary rhythms each topic covers.
 
 Notation rules for every page:
 
-- Diddles and cheese never go on quarter notes or on regular eighths; eighths inside a tuplet are allowed. Thirty-seconds follow the sixteenth-note sequencing rules, so no cheese directly after a diddle.
+- Stickings follow each exercise's topic: when the topic includes stickings, every note has one; otherwise none do.
+- Diddles and cheese never go on quarter notes or on regular eighths; eighths inside a tuplet are allowed. On successive notes there is no diddle directly before or after a cheese, and no flam directly after a diddle or cheese.
 - Consecutive rests merge into the largest rest, including inside sixteenth-note and faster tuplets. Two quarter rests on beats one and two, or three and four, become a half rest.
-- Eighth-note and shorter notes inside a tuplet share one beam across rests.
+- Eighth-note and shorter notes inside a tuplet share one beam, drawn across rests.
+- Tuplet brackets show only the count (3, 5, 6, 7, 9) for standard groups and a ratio (4:3, 5:3, 7:6, 8:6) otherwise.
 
 The original eighth-note and mixed-tuplet studies remain alongside this curriculum. Secondary pools start empty. Printed contents list span groups, rhythm sections, and subsections across as many contents pages as necessary.
 

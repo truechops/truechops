@@ -1,7 +1,7 @@
 {
   "pageNumber": 134,
   "lineNumber": 10,
-  "title": "All ornaments 10",
+  "title": "Sparse 10",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -28,8 +28,8 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lda"
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -38,7 +38,7 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "r"
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -47,22 +47,13 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "ra"
+                    "ornaments": "rac"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lda"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
@@ -75,6 +66,42 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 4,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 4,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "lda"
                   },
                   {
                     "notes": [
@@ -84,47 +111,20 @@
                     "dots": 0,
                     "velocity": 1,
                     "ornaments": "rda"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 5,
-                    "actual": 5,
-                    "normal": 4
+                    "end": 3,
+                    "actual": 3,
+                    "normal": 2
                   },
                   {
-                    "start": 5,
+                    "start": 6,
                     "end": 10,
-                    "actual": 5,
-                    "normal": 4
+                    "actual": 3,
+                    "normal": 2
                   }
                 ]
               }
@@ -134,8 +134,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n8:lad n8:r n8:ra n8:lad n8:r n8:l n8:rad n8:l n8:l n8:r |t0-5:5:4,5-10:5:4",
-  "updatedAt": "2026-10-03T04:17:12.871Z",
-  "sectionId": "two-quarters-quintuplets",
-  "sectionPageNumber": 1
+  "exerciseShortForm": "n8:l n8:l n8:rac n16:r n8:l n16:r n4:r n4:l n8:lad n8:rad |t0-3:3:2,6-10:3:2",
+  "updatedAt": "2026-10-03T14:36:36.603Z",
+  "sectionId": "two-quarters-eighth-triplets",
+  "sectionPageNumber": 2
 }

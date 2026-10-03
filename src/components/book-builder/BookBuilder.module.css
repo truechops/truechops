@@ -700,3 +700,82 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Exercise plan editors */
+.ornamentToggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.topicRow {
+  background: var(--wash);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  padding: 8px;
+}
+
+.topicRow > input,
+.topicCount input {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  padding: 6px 8px;
+}
+
+.topicRow .ornamentToggles {
+  grid-column: 1 / -1;
+}
+
+.topicCount {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+}
+
+.topicCount input {
+  width: 64px;
+}
+
+.topicCount span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.topicActions,
+.topicFooter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.planTable {
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  width: 100%;
+}
+
+.planTable th,
+.planTable td {
+  border-bottom: 1px solid var(--line);
+  padding: 5px 6px;
+  text-align: left;
+}
+
+.planTable thead th {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.planTable td input {
+  margin: 0;
+}
+
+.planWarning {
+  color: #9a3412;
+}

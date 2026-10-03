@@ -13,7 +13,6 @@ import {
 import Dialog from "../ui/Dialog";
 import { drawScore, initialize } from "../../lib/vexflow";
 import {
-  ORNAMENT_OPTIONS,
   PDF_PAGE_FOOTER_HEIGHT,
   PDF_PAGE_HEIGHT,
   PDF_PAGE_MARGIN,
@@ -45,6 +44,12 @@ import {
   renumberPages,
 } from "./book-data";
 import styles from "./BookBuilder.module.css";
+import {
+  OrnamentTopicsEditor,
+  PagePlanSummary,
+  SecondaryIntroEditor,
+  SecondaryOrnamentGrid,
+} from "./ExercisePlanEditors";
 import {
   MAX_SUBSECTION_PAGES,
   groupSubsectionPages,
@@ -229,14 +234,7 @@ function RhythmPoolEditor({ label, value, onChange, primary = false }) {
           </div>
         ))}
       </div>
-      {!primary && (
-        <CheckboxPicker
-          label="Optional secondary ornaments"
-          options={ORNAMENT_OPTIONS}
-          value={value.ornaments}
-          onToggle={(id) => onChange({ ...value, ornaments: toggleOption(value.ornaments, id) })}
-        />
-      )}
+      {!primary && <SecondaryOrnamentGrid pool={value} onChange={onChange} />}
     </fieldset>
   );
 }
@@ -1176,36 +1174,28 @@ export default function BookBuilderPanel() {
               ))}
             </div>
           )}
-          {selectedPageGenerationSettings.ornamentSegments ? (
-            <p className={styles.layoutSummary}>
-              Primary ornaments change by exercise on this page:{" "}
-              {selectedPageGenerationSettings.ornamentSegments.reduce((parts, segment) => {
-                const start = parts.next;
-                const range = segment.count > 1 ? `${start}–${start + segment.count - 1}` : String(start);
-                return {
-                  next: start + segment.count,
-                  labels: [...parts.labels, `${range} ${segment.title || segment.ornaments.join(", ") || "none"}`],
-                };
-              }, { next: 1, labels: [] }).labels.join("; ")}.
-            </p>
-          ) : (
-            <>
-              <CheckboxPicker
-                label="Primary ornaments required in this subsection"
-                onToggle={(optionId) =>
-                  updateSelectedPageGenerationDraft({
-                    ornaments: toggleOption(
-                      selectedPageGenerationSettings.ornaments,
-                      optionId
-                    ),
-                  })
-                }
-                options={ORNAMENT_OPTIONS}
-                value={selectedPageGenerationSettings.ornaments}
-              />
-              <p className={styles.layoutSummary}>Each selected primary ornament must appear on the primary rhythms on this page.</p>
-            </>
-          )}
+          <OrnamentTopicsEditor
+            exerciseCount={linesPerPage}
+            onChange={updateSelectedPageGenerationDraft}
+            ornaments={selectedPageGenerationSettings.ornaments}
+            segments={selectedPageGenerationSettings.ornamentSegments}
+          />
+          <SecondaryIntroEditor
+            intro={selectedPageGenerationSettings.secondaryRhythmIntro}
+            measuresPerLine={selectedPagePdfSettings.measuresPerLine}
+            onChange={(secondaryRhythmIntro) => updateSelectedPageGenerationDraft({ secondaryRhythmIntro })}
+            pool={selectedSection.secondaryRhythms}
+            rowCount={systemsPerPage}
+          />
+          <PagePlanSummary
+            exerciseCount={linesPerPage}
+            intro={selectedPageGenerationSettings.secondaryRhythmIntro}
+            measuresPerLine={selectedPagePdfSettings.measuresPerLine}
+            ornaments={selectedPageGenerationSettings.ornaments}
+            playEveryNote={selectedPageGenerationSettings.playEveryNote}
+            pool={selectedSection.secondaryRhythms}
+            segments={selectedPageGenerationSettings.ornamentSegments}
+          />
           <Field label="Measures per line">
             <input
               inputMode="numeric"

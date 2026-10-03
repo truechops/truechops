@@ -34,6 +34,15 @@
                     ],
                     "duration": 16,
                     "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "lca"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
                   },
@@ -44,16 +53,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "lc"
+                    "ornaments": "rc"
                   },
                   {
                     "notes": [],
@@ -76,8 +76,8 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lca"
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -101,7 +101,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "r"
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -136,7 +136,8 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   }
                 ],
                 "tuplets": []
@@ -147,8 +148,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r16 n16:r n16:l n16:lc r16 n16:r n16:lac n16:rd r8 n16:r n16:raf n16:lac n16:r n8",
-  "updatedAt": "2026-10-03T04:17:12.871Z",
+  "exerciseShortForm": "r16 n16:lac n16:r n16:rc r16 n16:r n16:l n16:rd r8 n16:l n16:raf n16:lac n16:r n8:r",
+  "updatedAt": "2026-10-03T14:36:36.603Z",
   "sectionId": "one-quarter-sixteenths-sparse",
   "sectionPageNumber": 8
 }

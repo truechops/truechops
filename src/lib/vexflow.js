@@ -293,13 +293,13 @@ function getMeasureData(measures, partConfig) {
 
         voiceTuplets.forEach((tuplet) => {
           const tupletJsonNotes = notes.slice(tuplet.start, tuplet.end);
-          // Show the ratio (4:3, 7:6) whenever the plain number would be ambiguous.
-          const normalIsPowerOfTwo = Number.isInteger(Math.log2(tuplet.normal));
+          // Standard groups (6:4, 7:4, 9:8) print just their count; only an
+          // unusual span (4:3, 7:6) prints its ratio.
           const vfTuplet = new VF.Tuplet(vfNotes.slice(tuplet.start, tuplet.end), {
             num_notes: tuplet.actual,
             notes_occupied: tuplet.normal,
             bracketed: true,
-            ratioed: !normalIsPowerOfTwo || Math.abs(tuplet.normal - tuplet.actual) > 1,
+            ratioed: !Number.isInteger(Math.log2(tuplet.normal)),
           });
           vfTuplet.trueChopsHasAccent = tupletJsonNotes.some((note) =>
             hasAboveStaffAccent(note, instrument)
@@ -599,12 +599,11 @@ function createTupletBeams(vfNotes, jsonNotes) {
     while (last >= first && isJsonRest(jsonNotes[last])) last -= 1;
 
     if (last > first) {
-      beams.push(...VF.Beam.generateBeams(vfNotes.slice(first, last + 1), {
-        beam_rests: true,
-        show_stemlets: false,
-        stem_direction: Vex.Flow.StaveNote.STEM_UP,
-        groups: [new Vex.Flow.Fraction(1, 1)],
-      }));
+      // One beam over the played notes of the run; it spans any rests between them.
+      const played = vfNotes.slice(first, last + 1)
+        .filter((_, offset) => !isJsonRest(jsonNotes[first + offset]));
+      played.forEach((note) => note.setStemDirection(Vex.Flow.StaveNote.STEM_UP));
+      beams.push(new VF.Beam(played));
     }
 
     segmentStart = Math.max(segmentEnd, segmentStart + 1);
@@ -801,6 +800,8 @@ function getTickContextsMinWidth(voices) {
 }
 
 function fitTickContextsToWidth(voices, width) {
+  // Callers that omit padding settings pass no usable width; keep VexFlow's layout.
+  if (!Number.isFinite(width)) return;
   const { contexts, needs, lastRightEdge } = getTickContextLayout(voices);
   if (contexts.length < 2) return;
 

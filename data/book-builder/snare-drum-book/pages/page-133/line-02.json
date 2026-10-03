@@ -1,7 +1,7 @@
 {
   "pageNumber": 133,
   "lineNumber": 2,
-  "title": "All ornaments 2",
+  "title": "Every note 2",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -23,8 +23,10 @@
               {
                 "notes": [
                   {
-                    "notes": [],
-                    "duration": 8,
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 4,
                     "dots": 0,
                     "velocity": 0.5
                   },
@@ -41,14 +43,6 @@
                       "C5"
                     ],
                     "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 4,
                     "dots": 0,
                     "velocity": 1,
                     "ornaments": "a"
@@ -59,8 +53,7 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
+                    "velocity": 0.5
                   },
                   {
                     "notes": [
@@ -69,7 +62,7 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "radc"
+                    "ornaments": "a"
                   },
                   {
                     "notes": [
@@ -77,8 +70,7 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
+                    "velocity": 0.5
                   },
                   {
                     "notes": [
@@ -86,8 +78,8 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "ld"
+                    "velocity": 1,
+                    "ornaments": "a"
                   },
                   {
                     "notes": [
@@ -95,17 +87,17 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
+                    "velocity": 1,
+                    "ornaments": "a"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
+                    "duration": 4,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
+                    "velocity": 1,
+                    "ornaments": "a"
                   }
                 ],
                 "tuplets": [
@@ -117,13 +109,7 @@
                   },
                   {
                     "start": 4,
-                    "end": 7,
-                    "actual": 3,
-                    "normal": 2
-                  },
-                  {
-                    "start": 7,
-                    "end": 10,
+                    "end": 9,
                     "actual": 3,
                     "normal": 2
                   }
@@ -135,8 +121,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r8 n4 n8 n4:a n8:l n8:radc n8:l n8:ld n8:r n8:r |t0-4:3:2,4-7:3:2,7-10:3:2",
-  "updatedAt": "2026-10-03T04:17:12.871Z",
+  "exerciseShortForm": "n4 n4 n8:a n8 n8:a n8 n8:a n8:a n4:a |t0-4:3:2,4-9:3:2",
+  "updatedAt": "2026-10-03T14:36:36.603Z",
   "sectionId": "two-quarters-eighth-triplets",
   "sectionPageNumber": 1
 }

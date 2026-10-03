@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const http = require("http");
 const https = require("https");
-const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, getLineStickingSettings, getSpanPrimaryRhythms, normalizeOrnamentSegments, getLineOrnamentSegment, normalizeSecondaryRhythmIntro, getLineSecondaryRhythms } = require("../src/lib/book-structure");
+const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, getLineStickingSettings, getSpanPrimaryRhythms, normalizeOrnamentSegments, getLineOrnamentSegment, normalizeSecondaryRhythmIntro, getLineSecondaryRhythms, rhythmOrnamentKey } = require("../src/lib/book-structure");
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const DEFAULT_CONFIG_PATH = path.join(
@@ -496,9 +496,10 @@ function inferGenerationOrnaments(section, samplePayload) {
 
 function getGenerationOrnaments(section, samplePayload = getSamplePayload(section)) {
   if (section?.primaryRhythms) {
+    // Stickings come only from the exercise's own topic and then cover every note.
     return [...new Set([
       ...(section.ornaments || []),
-      ...normalizeRhythmPool(section.secondaryRhythms).ornaments,
+      ...normalizeRhythmPool(section.secondaryRhythms).ornaments.filter((id) => id !== "stickings"),
       ...(getSectionRequiredSameHandStickingRuns(section).length ? ["stickings"] : []),
     ])];
   }
@@ -1201,6 +1202,18 @@ function getPrimaryNoteIndexes(section, voice) {
   ));
 }
 
+// Ornaments a secondary note may carry: its rhythm's row in rhythmOrnaments, or
+// the whole pool's ornaments when no per-rhythm table is set.
+function getSecondaryNoteOrnaments(secondary, voice, index) {
+  if (!noteMatchesRhythmPool(secondary, voice, index)) return [];
+  if (!secondary.rhythmOrnaments) return secondary.ornaments;
+  const rhythm = [...secondary.subdivisions, ...secondary.tuplets].find((candidate) =>
+    noteMatchesRhythmPool(typeof candidate === "string"
+      ? { subdivisions: [candidate], tuplets: [] }
+      : { subdivisions: [], tuplets: [candidate] }, voice, index));
+  return rhythm ? secondary.rhythmOrnaments[rhythmOrnamentKey(rhythm)] || [] : [];
+}
+
 function applyRhythmPoolOrnaments(section, voice) {
   if (!section.primaryRhythms) return voice;
   const secondary = normalizeRhythmPool(section.secondaryRhythms);
@@ -1208,12 +1221,10 @@ function applyRhythmPoolOrnaments(section, voice) {
     ...voice,
     notes: voice.notes.map((note, index) => {
       const primary = noteMatchesRhythmPool(section.primaryRhythms, voice, index);
-      const secondaryOrnamented = noteMatchesRhythmPool(secondary, voice, index) &&
-        (!secondary.ornamentRhythms || noteMatchesRhythmPool(secondary.ornamentRhythms, voice, index));
-      const selected = primary ? section.ornaments || []
-        : secondaryOrnamented ? secondary.ornaments : [];
-      const allowed = ORNAMENT_SETTINGS.filter((item) => selected.includes(item.id) ||
-        (primary && item.id === "stickings" && getSectionRequiredSameHandStickingRuns(section).length))
+      const selected = primary ? section.ornaments || [] : getSecondaryNoteOrnaments(secondary, voice, index);
+      const allowed = ORNAMENT_SETTINGS.filter((item) => item.id === "stickings"
+        ? sectionUsesStickings(section)
+        : selected.includes(item.id))
         .map((item) => item.chars).join("");
       const ornaments = isRest(note) ? "" : [...String(note.ornaments || "")].filter((char) => allowed.includes(char)).join("");
       const { ornaments: previous, ...plain } = note;
@@ -1796,20 +1807,26 @@ function enforceDurationOrnamentRules(notes, options = {}) {
   });
 }
 
-function removeDiddleBeforeConsecutiveCheese(notes, options = {}) {
+// Successive played notes (no rest between, any note values, across the repeat).
+function areSuccessivePlayedNotes(notes, leftIndex, rightIndex) {
+  return Boolean(notes[leftIndex] && notes[rightIndex] &&
+    !isRest(notes[leftIndex]) && !isRest(notes[rightIndex]));
+}
+
+// No diddle directly before or after a cheese on successive notes.
+function removeDiddleBeforeConsecutiveCheese(notes) {
   const cleaned = (notes || []).map((note) => ({ ...note }));
 
   for (let index = 0; cleaned.length > 1 && index < cleaned.length; index += 1) {
-    const note = cleaned[index];
     const nextIndex = (index + 1) % cleaned.length;
-    const next = cleaned[nextIndex];
+    if (!areSuccessivePlayedNotes(cleaned, index, nextIndex)) continue;
+    const ornaments = String(cleaned[index].ornaments || "");
+    const nextOrnaments = String(cleaned[nextIndex].ornaments || "");
 
-    if (
-      areConsecutiveOrnamentRuleNotes(cleaned, index, nextIndex, options) &&
-      /d/.test(String(note.ornaments || "")) &&
-      /c/.test(String(next.ornaments || ""))
-    ) {
-      cleaned[nextIndex] = removeOrnamentChars(next, "c");
+    if (/d/.test(ornaments) && /c/.test(nextOrnaments)) {
+      cleaned[nextIndex] = removeOrnamentChars(cleaned[nextIndex], "c");
+    } else if (/c/.test(ornaments) && /d/.test(nextOrnaments)) {
+      cleaned[nextIndex] = removeOrnamentChars(cleaned[nextIndex], "d");
     }
   }
 
@@ -2353,7 +2370,7 @@ function cleanSequentialOrnaments(notes, options = {}) {
     }
   }
 
-  return cleaned;
+  return removeDiddleBeforeConsecutiveCheese(cleaned);
 }
 
 function stripStickingsFromNotes(notes) {
@@ -2420,46 +2437,19 @@ function canAddRequiredOrnament(notes, noteIndex, ornament, options = {}) {
     }
   }
 
-  if (ornament === "c") {
+  if (ornament === "c" || ornament === "d") {
     const previousIndex = (noteIndex - 1 + notes.length) % notes.length;
     const nextIndex = (noteIndex + 1) % notes.length;
-    const previous = notes[previousIndex];
-    const next = notes[nextIndex];
+    const previous = String(notes[previousIndex]?.ornaments || "");
+    const next = String(notes[nextIndex]?.ornaments || "");
+    const previousSuccessive = areSuccessivePlayedNotes(notes, previousIndex, noteIndex);
+    const nextSuccessive = areSuccessivePlayedNotes(notes, noteIndex, nextIndex);
 
-    if (
-      previous &&
-      areConsecutiveOrnamentRuleNotes(notes, previousIndex, noteIndex, options) &&
-      /[dc]/.test(String(previous.ornaments || ""))
-    ) {
+    // Diddles and cheese never touch each other on successive notes, and no flam follows either.
+    if (previousSuccessive && (ornament === "d" ? /c/ : /[dc]/).test(previous)) {
       return false;
     }
-
-    if (
-      next &&
-      !isRest(next) &&
-      (
-        /f/.test(String(next.ornaments || "")) ||
-        areConsecutiveOrnamentRuleNotes(notes, noteIndex, nextIndex, options) &&
-          /c/.test(String(next.ornaments || ""))
-      )
-    ) {
-      return false;
-    }
-  }
-
-  if (ornament === "d") {
-    const nextIndex = (noteIndex + 1) % notes.length;
-    const next = notes[nextIndex];
-
-    if (
-      next &&
-      !isRest(next) &&
-      (
-        /f/.test(String(next.ornaments || "")) ||
-        areConsecutiveOrnamentRuleNotes(notes, noteIndex, nextIndex, options) &&
-          /c/.test(String(next.ornaments || ""))
-      )
-    ) {
+    if (nextSuccessive && (/f/.test(next) || (ornament === "d" ? /c/ : /[dc]/).test(next))) {
       return false;
     }
   }
