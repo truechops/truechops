@@ -1,7 +1,7 @@
 {
   "pageNumber": 132,
   "lineNumber": 2,
-  "title": "Crazy tuplets 1 2",
+  "title": "Crazy tuplets 2",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -26,7 +26,7 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
@@ -65,7 +65,25 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "ld"
+                    "ornaments": "rd"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -84,6 +102,24 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "lda"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -138,6 +174,15 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -147,71 +192,26 @@
                     "dots": 0,
                     "velocity": 1,
                     "ornaments": "rda"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lda"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 0,
-                    "end": 7,
+                    "start": 1,
+                    "end": 4,
+                    "actual": 3,
+                    "normal": 2
+                  },
+                  {
+                    "start": 4,
+                    "end": 11,
                     "actual": 7,
                     "normal": 3
                   },
                   {
-                    "start": 7,
-                    "end": 14,
+                    "start": 12,
+                    "end": 19,
                     "actual": 7,
                     "normal": 4
-                  },
-                  {
-                    "start": 14,
-                    "end": 17,
-                    "actual": 3,
-                    "normal": 2
                   }
                 ]
               }
@@ -221,9 +221,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n8:l n8:r n8:r n8:l n8:ld n8:r n8:l n16:r n16:l n16:lad n16:r n16:l n16:l n16:rad n8:r n8:l n8:l n16:r n16:lad |t0-7:7:3,7-14:7:4,14-17:3:2",
-  "updatedAt": "2026-09-22T01:35:20.524Z",
+  "exerciseShortForm": "n16:l n8:r n8:r n8:l n8:rd n8:l n8:r n8:r n8:l n8:lad n8:r n16:r n16:l n16:lad n16:r n16:l n16:l n16:r n16:rad |t1-4:3:2,4-11:7:3,12-19:7:4",
+  "updatedAt": "2026-10-03T02:05:36.661Z",
   "sectionId": "section-22",
-  "sectionPageNumber": 1,
-  "hasScore": true
+  "sectionPageNumber": 1
 }
