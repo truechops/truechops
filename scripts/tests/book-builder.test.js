@@ -8,7 +8,7 @@ const vm = require("node:vm");
 const babel = require("@babel/core");
 const { migrateBookStructure } = require("../../src/lib/book-structure");
 const generator = require("../generate-ai-book");
-const { createStudySections, createSpanStudy, SPAN_STUDIES, STUDY_TOPICS, STUDY_FAMILIES } = require("../../src/lib/book-curriculum");
+const { createStudySections, createSpanStudy, createCombinedStudies, SPAN_STUDIES, STUDY_TOPICS, STUDY_FAMILIES } = require("../../src/lib/book-curriculum");
 const { getLineStickingSettings, getSpanPrimaryRhythms } = require("../../src/lib/book-structure");
 
 // Load the same ES modules Next uses without starting a server.
@@ -249,6 +249,21 @@ test("the exercise generator builds fresh measures from a configuration or a boo
     assert(voice.notes.every((note) => note.notes.length));
   }
   assert.equal(normalizeExerciseConfig({ name: "", subdivision: "nope" }).subdivision, "sixteenths");
+});
+
+test("combined-subdivision pages draw at random from a pool that grows each section", () => {
+  const { groups, sections } = createCombinedStudies({ measuresPerLine: 2, lineSpacing: 130, noteSize: 100 });
+  assert.equal(sections.length, 15);
+  const config = generator.createGenerationConfig({}, { structureVersion: 3, groups, sections });
+  const poolSize = (section) => section.primaryRhythms.subdivisions.length + section.primaryRhythms.tuplets.length;
+  sections.slice(1).forEach((section, index) => assert(poolSize(section) >= poolSize(sections[index])));
+  const last = config.sections.at(-1).pages[0];
+  const used = new Set();
+  generate(last, 22).forEach((voice) => {
+    voice.tuplets.forEach((tuplet) => used.add(`${tuplet.actual}:${tuplet.normal}`));
+  });
+  // No rhythm is required, yet the last page draws widely from its pool.
+  assert(used.size >= 8, `only ${used.size} tuplet kinds on the last page`);
 });
 
 test("all seven families follow the exact eight sparse / seven full topic order", () => {

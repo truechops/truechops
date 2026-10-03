@@ -1252,7 +1252,7 @@ function validatePrimaryRequirements(section, score) {
     ...primary.subdivisions.map((id) => ({ subdivisions: [id], tuplets: [] })),
     ...primary.tuplets.map((tuplet) => ({ subdivisions: [], tuplets: [tuplet] })),
   ];
-  for (const pool of requiredPools) {
+  for (const pool of section.requirePrimaryRhythms === false ? [] : requiredPools) {
     if (!voice.notes.some((note, index) => !isRest(note) && noteMatchesRhythmPool(pool, voice, index))) {
       throw new Error("Every exercise must contain each selected primary rhythm as played notes.");
     }
@@ -3249,7 +3249,8 @@ function createMixedTupletFallbackGeneratedScore(section, options, random, lineI
       }));
   let availableBlocks = [...regularBlocks, ...tupletBlocks, ...restBlocks];
   const primary = section.primaryRhythms;
-  const requiredBlocks = primary ? availableBlocks.filter((block) =>
+  // requirePrimaryRhythms: false draws everything at random from the pool.
+  const requiredBlocks = primary && section.requirePrimaryRhythms !== false ? availableBlocks.filter((block) =>
     block.kind === "regular" ? primary.subdivisions.includes(block.id)
       : block.kind === "tuplet" && primary.tuplets.some((tuplet) =>
         tuplet.actual === block.tuplet.actual && tuplet.normal === block.tuplet.normal && tuplet.type === block.tuplet.type)
@@ -3361,7 +3362,9 @@ function createMixedTupletFallbackGeneratedScore(section, options, random, lineI
         playedSlots[tupletEventIndexes[index]] = true;
       });
   }
-  balancePrimaryGroupRests(layout, blockEvents, playedSlots, requiredBlocks, section, random, lineIndex, attempt);
+  balancePrimaryGroupRests(layout, blockEvents, playedSlots,
+    section.requirePrimaryRhythms === false ? layout.filter((block) => block.kind === "tuplet") : requiredBlocks,
+    section, random, lineIndex, attempt);
   const notes = [];
   const tuplets = [];
   let eventIndex = 0;
@@ -3655,6 +3658,7 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         secondaryRhythmRows: normalizeSecondaryRhythmRows(pageSource.secondaryRhythmRows),
         chainPrimaryGroups: Boolean(pageSource.chainPrimaryGroups),
         fullPrimaryGroupShare: pageSource.fullPrimaryGroupShare ?? null,
+        requirePrimaryRhythms: pageSource.requirePrimaryRhythms !== false,
         // The sticking tail closes a multi-page subsection, so only its last page uses it.
         finalSubsectionPage: !page.subsectionId || sourcePages[pageIndex + 1]?.subsectionId !== page.subsectionId,
         subsectionLineOffset: getSubsectionLineOffset(sourcePages, pageIndex, sectionPdfSettings),
@@ -3986,6 +3990,7 @@ function createStoredPageGenerationSettings(pageConfig) {
     ...(pageConfig.secondaryRhythmRows ? { secondaryRhythmRows: pageConfig.secondaryRhythmRows } : {}),
     ...(pageConfig.chainPrimaryGroups ? { chainPrimaryGroups: true } : {}),
     ...(pageConfig.fullPrimaryGroupShare != null ? { fullPrimaryGroupShare: pageConfig.fullPrimaryGroupShare } : {}),
+    ...(pageConfig.requirePrimaryRhythms === false ? { requirePrimaryRhythms: false } : {}),
     primaryRhythms: pageConfig.primaryRhythms,
     secondaryRhythms: pageConfig.secondaryRhythms,
     prompt: pageConfig.prompt || "",

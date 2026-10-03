@@ -184,7 +184,104 @@ function createSpanSections(groupId, pdfSettings, familyIds, spanLabel, {
   });
 }
 
+// Combined-subdivision studies close the book. Each page draws every exercise at
+// random from a pool of rhythms, and each section adds one rhythm to the pool.
+// No rhythm is required; within a page the ornaments grow from none to everything.
+const COMBINED_ORNAMENT_SEGMENTS = [
+  { ...STUDY_TOPICS[0], count: 2 },
+  { ...STUDY_TOPICS[1], count: 2 },
+  ...STUDY_TOPICS.slice(2).map((topic) => ({ ...topic, count: 3 })),
+].map(({ title, ornaments, count }) => ({ title, ornaments, count }));
+
+// Rhythms in printed form (the pool is generated over one quarter note, so
+// longer groupings keep their own note values).
+const POOL_RHYTHMS = {
+  eighths: { name: "eighths", pool: { subdivisions: ["eighths"] } },
+  triplets: { name: "triplets", pool: { tuplets: [{ actual: 3, normal: 2, type: 8 }] } },
+  sixteenths: { name: "sixteenths", pool: { subdivisions: ["sixteenths"] } },
+  sextuplets: { name: "sextuplets", pool: { tuplets: [{ actual: 6, normal: 4, type: 16 }] } },
+  thirtyseconds: { name: "32nds", pool: { subdivisions: ["thirtyseconds"] } },
+  quintuplets: { name: "quintuplets", pool: { tuplets: [{ actual: 5, normal: 4, type: 16 }] } },
+  septuplets: { name: "septuplets", pool: { tuplets: [{ actual: 7, normal: 4, type: 16 }] } },
+  nontuplets: { name: "nontuplets", pool: { tuplets: [{ actual: 9, normal: 8, type: 32 }] } },
+  quarterTriplets: { name: "quarter-note triplets", pool: { tuplets: [{ actual: 3, normal: 2, type: 4 }] } },
+  fiveOverTwo: { name: "5 over two beats", pool: { tuplets: [{ actual: 5, normal: 4, type: 8 }] } },
+  sevenOverTwo: { name: "7 over two beats", pool: { tuplets: [{ actual: 7, normal: 4, type: 8 }] } },
+  nineOverTwo: { name: "9 over two beats", pool: { tuplets: [{ actual: 9, normal: 8, type: 16 }] } },
+  fourOverThree: { name: "4 over three eighths", pool: { tuplets: [{ actual: 4, normal: 3, type: 8 }] } },
+  fiveOverThree: { name: "5 over three eighths", pool: { tuplets: [{ actual: 5, normal: 3, type: 8 }] } },
+  sevenOverThree: { name: "7 over three eighths", pool: { tuplets: [{ actual: 7, normal: 6, type: 16 }] } },
+  eightOverThree: { name: "8 over three eighths", pool: { tuplets: [{ actual: 8, normal: 6, type: 16 }] } },
+};
+const ONE_BEAT_KEYS = ["triplets", "sixteenths", "sextuplets", "thirtyseconds", "quintuplets", "septuplets", "nontuplets"];
+const TWO_QUARTER_KEYS = ["quarterTriplets", "fiveOverTwo", "sevenOverTwo", "nineOverTwo"];
+const THREE_EIGHTH_KEYS = ["fourOverThree", "fiveOverThree", "sevenOverThree", "eightOverThree"];
+// Each group's pools, one per section; every pool adds one rhythm to the last.
+const COMBINED_GROUPS = [
+  {
+    id: "combined-one-beat", title: "Combined subdivisions",
+    pools: [["eighths", "triplets"], ...ONE_BEAT_KEYS.slice(1).map((_, index) => ONE_BEAT_KEYS.slice(0, index + 2))],
+  },
+  {
+    id: "combined-two-quarters", title: "Combined subdivisions with two-quarter groupings",
+    pools: TWO_QUARTER_KEYS.map((_, index) => [...ONE_BEAT_KEYS, ...TWO_QUARTER_KEYS.slice(0, index + 1)]),
+  },
+  {
+    id: "combined-three-eighths", title: "Combined subdivisions with three-eighth groupings",
+    pools: THREE_EIGHTH_KEYS.map((_, index) => [...ONE_BEAT_KEYS, ...TWO_QUARTER_KEYS, ...THREE_EIGHTH_KEYS.slice(0, index + 1)]),
+  },
+].map((group) => ({ ...group, rhythmSpan: { count: 1, unit: 4 } }));
+
+const capitalize = (text) => `${text[0].toUpperCase()}${text.slice(1)}`;
+
+function mergePools(pools) {
+  return {
+    subdivisions: [...new Set(pools.flatMap((pool) => pool.subdivisions || []))],
+    tuplets: pools.flatMap((pool) => pool.tuplets || []),
+  };
+}
+
+function createCombinedStudies(pdfSettings) {
+  const sections = COMBINED_GROUPS.flatMap((group) => group.pools.map((keys, index) => {
+    const id = `${group.id}-${index + 1}`;
+    const names = keys.map((key) => POOL_RHYTHMS[key].name);
+    // The first pools are named in full; later ones by the rhythm they add.
+    const title = group.id === "combined-one-beat" && index < 2
+      ? capitalize(`${names[0]} and ${names[1]}`)
+      : `+ ${capitalize(names.at(-1))}`;
+    const pool = mergePools(keys.map((key) => POOL_RHYTHMS[key].pool));
+    return {
+      id, groupId: group.id, title, density: "mixed",
+      rhythmSpan: group.rhythmSpan,
+      primaryRhythms: normalizeRhythmPool(pool, false),
+      secondaryRhythms: normalizeRhythmPool({ ...pool, rhythmOrnaments: ONE_BEAT_SECONDARY_RHYTHMS.rhythmOrnaments }),
+      pdfSettings,
+      pages: [{
+        subsectionId: `${id}-mixed`,
+        title: "Nothing to everything",
+        pdfSettings,
+        generationSettings: {
+          prompt: "", sampleJson: "",
+          ornaments: [...new Set(COMBINED_ORNAMENT_SEGMENTS.flatMap((segment) => segment.ornaments))],
+          ornamentSegments: COMBINED_ORNAMENT_SEGMENTS,
+          requirePrimaryRhythms: false,
+          fullPrimaryGroupShare: 0.5,
+          minPlayedNotes: 0,
+          maxPlayedNotes: 0,
+          playEveryNote: false,
+          maxSameHandStickingRun: 2,
+          requiredSameHandStickingRuns: [],
+          stickingTail: null,
+        },
+        lines: [],
+      }],
+    };
+  }));
+  return { groups: COMBINED_GROUPS.map(({ id, title, rhythmSpan }) => ({ id, title, rhythmSpan })), sections };
+}
+
 module.exports = {
-  STUDY_TOPICS, STUDY_FAMILIES, TWO_BEAT_ORNAMENT_SEGMENTS,
+  STUDY_TOPICS, STUDY_FAMILIES, TWO_BEAT_ORNAMENT_SEGMENTS, COMBINED_GROUPS,
   SPAN_STUDIES, createStudySections, createSpanStudy, createTwoBeatSections, createThreeEighthsSections,
+  createCombinedStudies,
 };

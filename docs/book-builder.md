@@ -67,6 +67,10 @@ Notation rules for every page:
 
 The original eighth-note and mixed-tuplet studies remain alongside this curriculum. Secondary pools start empty. Printed contents list span groups, rhythm sections, and subsections across as many contents pages as necessary.
 
+## Combined subdivisions
+
+The book ends with pages that draw every exercise at random from a pool of rhythms, adding one rhythm to the pool per page (`createCombinedStudies` in `src/lib/book-curriculum.js`): eighths and triplets; triplets and sixteenths; then sextuplets, 32nds, quintuplets, septuplets, and nontuplets; then the two-quarter groupings (quarter-note triplets, 5, 7, and 9 over two beats); then the three-eighth groupings (4, 5, 7, and 8 over three eighths). No rhythm is required (**Every exercise includes each primary rhythm** is off), so the last page is the most varied. Within each page the ornaments grow from none to everything: Nothing (2 exercises), Accents (2), then three each for stickings, diddles, flams, cheese, diddles and flams, and Everything.
+
 ## Exercise generator on the website
 
 The same generator makes new exercises on the website from an **exercise configuration**: subdivision, the span it is spread over, secondary rhythms, density (every note or sparse, with an optional share of fully played groups), ornaments, and tempo (`src/lib/exercise-config.js`).

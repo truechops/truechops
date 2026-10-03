@@ -1285,6 +1285,16 @@ export default function BookBuilderPanel() {
             />
             <span>Primary groups may repeat back to back</span>
           </label>
+          <label className={styles.toggleField}>
+            <input
+              checked={selectedPageGenerationSettings.requirePrimaryRhythms !== false}
+              onChange={(event) =>
+                updateSelectedPageGenerationDraft({ requirePrimaryRhythms: event.target.checked ? undefined : false })
+              }
+              type="checkbox"
+            />
+            <span>Every exercise includes each primary rhythm (off: draw from the pool at random)</span>
+          </label>
           {!selectedPageGenerationSettings.playEveryNote && (
             <Field label="Fully played primary groups (%)">
               <input
