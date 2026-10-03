@@ -7,6 +7,7 @@ import PDFDocument from "pdfkit";
 import SVGtoPDF from "svg-to-pdfkit";
 import QRCode from "qrcode";
 import { JSDOM } from "jsdom";
+import { createLimiter } from "../../src/lib/limit-concurrency";
 import {
   BOOK_SLUG,
   BOOK_TITLE,
@@ -142,6 +143,9 @@ function createManifest(book) {
   };
 }
 
+// Reading thousands of exercise files at once exhausts file handles.
+const readLineFile = createLimiter(32);
+
 async function loadBook() {
   const manifest = (await readJson(MANIFEST_PATH)) || createDefaultBook();
   const hydratePage = async (page, pageIndex) => ({
@@ -151,7 +155,7 @@ async function loadBook() {
       (page.lines || []).map(async (line, lineIndex) => {
         const pageNumber = page.pageNumber || pageIndex + 1;
         const lineNumber = line.lineNumber || lineIndex + 1;
-        const lineFile = await readJson(linePath(pageNumber, lineNumber));
+        const lineFile = await readLineFile(() => readJson(linePath(pageNumber, lineNumber)));
         return {
           ...line,
           ...(lineFile || {}),

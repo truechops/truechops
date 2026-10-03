@@ -24,7 +24,8 @@ export default async function handler(req, res) {
       return;
     }
 
-    const book = await loadBook();
+    // Tokens come from page numbers, so no exercise files are needed.
+    const book = await loadBook({ pageNumbers: [] });
     const resolved = findBookQrPage(book, token);
 
     if (!resolved) {

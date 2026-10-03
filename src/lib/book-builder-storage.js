@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import process from "process";
+import { createLimiter } from "./limit-concurrency";
 import {
   BOOK_SLUG,
   createBookTableOfContents,
@@ -97,7 +98,13 @@ function createManifest(book) {
   };
 }
 
-export async function loadBook() {
+const readLineFile = createLimiter(32);
+
+// pageNumbers limits which pages' exercise files are read (e.g. [] for just the
+// manifest, [46] for one QR page); omitted, every page is read.
+export async function loadBook({ pageNumbers } = {}) {
+  const readPages = Array.isArray(pageNumbers) ? new Set(pageNumbers.map(Number)) : null;
+  const shouldReadPage = (pageNumber) => !readPages || readPages.has(Number(pageNumber));
   const manifest = (await readJson(MANIFEST_PATH)) || createDefaultBook();
   const hydratePage = async (page, pageIndex) => ({
     ...page,
@@ -106,7 +113,9 @@ export async function loadBook() {
       (page.lines || []).map(async (line, lineIndex) => {
         const pageNumber = page.pageNumber || pageIndex + 1;
         const lineNumber = line.lineNumber || lineIndex + 1;
-        const lineFile = await readJson(linePath(pageNumber, lineNumber));
+        const lineFile = shouldReadPage(pageNumber)
+          ? await readLineFile(() => readJson(linePath(pageNumber, lineNumber)))
+          : null;
         return {
           ...line,
           ...(lineFile || {}),

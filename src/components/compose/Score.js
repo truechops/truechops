@@ -44,7 +44,7 @@ export default function Score(props) {
 
   useEffect(() => {
     if(browserName.indexOf('Safari') >= 0 && dontUseSafariShown == "init") {
-      dispatch(appActions.setDontUseSafariShown("true"));
+      //dispatch(appActions.setDontUseSafariShown("true"));
     }
   }, [dispatch, dontUseSafariShown]);
 

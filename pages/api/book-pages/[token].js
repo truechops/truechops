@@ -23,13 +23,15 @@ export default async function handler(req, res) {
       return;
     }
 
-    const book = await loadBook();
-    const resolved = findBookQrPage(book, token);
+    // Find the page from the manifest, then read only that page's exercises.
+    const pageRef = findBookQrPage(await loadBook({ pageNumbers: [] }), token)?.pageRef;
 
-    if (!resolved) {
+    if (!pageRef) {
       res.status(404).json({ error: "Page not found." });
       return;
     }
+
+    const resolved = findBookQrPage(await loadBook({ pageNumbers: [pageRef.page] }), token);
 
     res.status(200).json({
       pageRef: resolved.pageRef,
