@@ -1,7 +1,7 @@
 import _ from "lodash";
 import { getEmptyMeasure } from "../../helpers/score";
 import { DEFAULT_TEMPO } from "../../consts/score";
-import { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail } from "../../lib/book-structure";
+import { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, groupSubsectionPages, normalizeSubsectionPageCount } from "../../lib/book-structure";
 
 export { normalizeRhythmPool };
 
@@ -992,7 +992,10 @@ function normalizeBookSections(rawBook, pdfSettings) {
     const sectionPages = Array.isArray(section.pages) && section.pages.length
       ? section.pages
       : [createBlankPage(1, sectionPdfSettings)];
-    const normalizedPages = renumberPages(sectionPages, sectionPdfSettings);
+    const normalizedPages = renumberPages(
+      expandSubsectionPages(sectionPages, id, section.title),
+      sectionPdfSettings
+    );
 
     return {
       ...section,
@@ -1023,12 +1026,10 @@ function normalizeBookSections(rawBook, pdfSettings) {
 
         return {
           ...page,
-          subsectionId: page.subsectionId || `${id}-topic-${sectionPageIndex + 1}`,
           pageNumber,
           sectionId: id,
           sectionTitle: section.title,
           sectionPageNumber: sectionPageIndex + 1,
-          title: page.title || `${section.title} ${sectionPageIndex + 1}`,
           generationSettings: getPageGenerationSettings(page, section),
           lines: page.lines.map((line, lineIndex) => ({
             ...line,
@@ -1043,6 +1044,30 @@ function normalizeBookSections(rawBook, pdfSettings) {
         };
       }),
     };
+  });
+}
+
+// Resizes each subsection to its page count and shares its first page's settings.
+function expandSubsectionPages(pages, sectionId, sectionTitle) {
+  return groupSubsectionPages(pages).flatMap((subsectionPages, subsectionIndex) => {
+    const [first] = subsectionPages;
+    const subsectionPageCount = normalizeSubsectionPageCount(
+      first.subsectionPageCount ?? subsectionPages.length
+    );
+    const shared = {
+      subsectionId: first.subsectionId || `${sectionId}-topic-${subsectionIndex + 1}`,
+      subsectionNumber: subsectionIndex + 1,
+      subsectionPageCount,
+      title: first.title || `${sectionTitle} ${subsectionIndex + 1}`,
+      pdfSettings: first.pdfSettings,
+      generationSettings: first.generationSettings,
+    };
+
+    return Array.from({ length: subsectionPageCount }, (_, index) => ({
+      ...(subsectionPages[index] || { lines: [] }),
+      ...shared,
+      subsectionPageNumber: index + 1,
+    }));
   });
 }
 

@@ -1,6 +1,22 @@
-// Shared by the browser, API, and local book generator. A subsection is one page.
+// Shared by the browser, API, and local book generator. A subsection is a run of
+// consecutive pages sharing one subsectionId; its first page holds the settings.
 const BOOK_STRUCTURE_VERSION = 3;
 const DEFAULT_RHYTHM_SPAN = { count: 1, unit: 4 };
+const MAX_SUBSECTION_PAGES = 20;
+
+function normalizeSubsectionPageCount(value) {
+  return Math.max(1, Math.min(MAX_SUBSECTION_PAGES, Number.parseInt(value, 10) || 1));
+}
+
+function groupSubsectionPages(pages = []) {
+  const groups = [];
+  for (const page of pages) {
+    const last = groups[groups.length - 1];
+    if (last && page.subsectionId && last[0].subsectionId === page.subsectionId) last.push(page);
+    else groups.push([page]);
+  }
+  return groups;
+}
 
 function normalizeRhythmSpan(value = {}) {
   const unit = [1, 2, 4, 8, 16, 32].includes(Number(value?.unit)) ? Number(value.unit) : 4;
@@ -170,12 +186,12 @@ function createStructureTableOfContents(sections = [], groups = []) {
       title: section.title || "Untitled section",
       pageStart: numbers.length ? Math.min(...numbers) : null,
       pageEnd: numbers.length ? Math.max(...numbers) : null,
-    }, ...pages.map((page) => ({
+    }, ...groupSubsectionPages(pages).map((subsectionPages) => ({
       sectionId: section.id,
-      subsectionId: page.subsectionId,
-      title: page.title || "Untitled subsection",
-      pageStart: page.pageNumber,
-      pageEnd: page.pageNumber,
+      subsectionId: subsectionPages[0].subsectionId,
+      title: subsectionPages[0].title || "Untitled subsection",
+      pageStart: subsectionPages[0].pageNumber,
+      pageEnd: subsectionPages[subsectionPages.length - 1].pageNumber,
     }))];
   });
   if (!groups.length) return entries;
@@ -192,6 +208,7 @@ function createStructureTableOfContents(sections = [], groups = []) {
 
 module.exports = {
   BOOK_STRUCTURE_VERSION, DEFAULT_RHYTHM_SPAN, normalizeRhythmSpan, rhythmSpanLabel,
+  MAX_SUBSECTION_PAGES, normalizeSubsectionPageCount, groupSubsectionPages,
   getSpanPrimaryRhythms,
   normalizeBookGroups, normalizeStickingTail, getLineStickingSettings,
   normalizeRhythmPool, migrateBookStructure, createStructureTableOfContents,

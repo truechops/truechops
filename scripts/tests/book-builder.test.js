@@ -145,6 +145,30 @@ test("manifest round trip preserves both pools and subsection IDs", () => {
   assert.equal(loaded.pages.length, 3);
 });
 
+test("subsections span their page count and share settings across pages", () => {
+  const book = normalizeBook(legacyBook());
+  book.sections[0].pages[0].subsectionPageCount = 3;
+  const expanded = normalizeBook(book);
+  assert.deepEqual(expanded.pages.map((page) => page.pageNumber), [1, 2, 3, 4, 5]);
+  const spanned = expanded.sections[0].pages.slice(0, 3);
+  assert.deepEqual(spanned.map((page) => page.subsectionPageNumber), [1, 2, 3]);
+  assert.equal(new Set(spanned.map((page) => page.subsectionId)).size, 1);
+  assert.ok(spanned.every((page) => page.title === spanned[0].title && page.lines.length === spanned[0].lines.length));
+  assert.equal(expanded.sections[0].pages[3].subsectionNumber, 2);
+  const entry = expanded.tableOfContents.find((item) => item.subsectionId === spanned[0].subsectionId);
+  assert.deepEqual([entry.pageStart, entry.pageEnd], [1, 3]);
+
+  const loaded = normalizeBook(JSON.parse(JSON.stringify(generator.createManifest(expanded))));
+  assert.deepEqual(loaded.pages.map((page) => page.subsectionPageCount), [3, 3, 3, 1, 1]);
+  assert.deepEqual(normalizeBook(loaded), loaded);
+
+  loaded.sections[0].pages[0].subsectionPageCount = 1;
+  assert.equal(normalizeBook(loaded).pages.length, 3);
+
+  const configs = generator.createGenerationConfig({}, expanded).sections[0].pages;
+  assert.deepEqual(configs.map((config) => config.finalSubsectionPage), [false, false, true, true]);
+});
+
 test("all seven families follow the exact eight sparse / seven full topic order", () => {
   const sections = createStudySections("quarter", { measuresPerLine: 2, lineSpacing: 130, noteSize: 100 });
   assert.equal(sections.length, 14);

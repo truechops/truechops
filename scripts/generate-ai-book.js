@@ -3295,7 +3295,9 @@ function normalizeGeneratedLine(input, section, samplePayload, index, attempt = 
 
 function createUniqueGeneratedLine(input, section, samplePayload, index, usedExerciseShortForms) {
   const pdfSettings = normalizePdfSettings(section.pdfSettings);
-  section = getLineStickingSettings(section, index, getLinesPerPage(pdfSettings), pdfSettings.measuresPerLine);
+  if (section.finalSubsectionPage !== false) {
+    section = getLineStickingSettings(section, index, getLinesPerPage(pdfSettings), pdfSettings.measuresPerLine);
+  }
   if (section.primaryRhythms) section = { ...section, primaryRhythms: getSpanPrimaryRhythms(section.primaryRhythms, section.rhythmSpan) };
   let lastError = null;
 
@@ -3417,6 +3419,8 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         secondaryRhythms: pageSource.secondaryRhythms,
         rhythmSpan: normalizeRhythmSpan(section.rhythmSpan),
         stickingTail: normalizeStickingTail(pageSource.stickingTail),
+        // The sticking tail closes a multi-page subsection, so only its last page uses it.
+        finalSubsectionPage: !page.subsectionId || sourcePages[pageIndex + 1]?.subsectionId !== page.subsectionId,
         title: page.title || `${section.title || `Section ${sectionIndex + 1}`} ${pageIndex + 1}`,
         sectionTitle: section.title || `Section ${sectionIndex + 1}`,
         pageCount: 1,
@@ -3506,7 +3510,7 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
     "",
     `Section title: ${section.title || "Untitled section"}`,
     `Section instructions: ${section.instructions || ""}`,
-    section.stickingTail
+    section.stickingTail && section.finalSubsectionPage !== false
       ? `The final ${section.stickingTail.count} printed staff rows (${section.stickingTail.count * normalizePdfSettings(section.pdfSettings).measuresPerLine} exercises, starting at exercise ${Math.max(1, linesPerPage - section.stickingTail.count * normalizePdfSettings(section.pdfSettings).measuresPerLine + 1)}) use a maximum same-hand run of ${section.stickingTail.maxSameHandStickingRun} and require one run length from ${section.stickingTail.requiredSameHandStickingRuns.join(" or ")}. Earlier exercises use the regular sticking settings.`
       : "",
     ...(section.primaryRhythms ? [

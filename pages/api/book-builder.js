@@ -190,7 +190,7 @@ async function loadBook() {
 }
 
 function getStableLineKey(page, line) {
-  if (page.subsectionId) return `${page.subsectionId}:${line.lineNumber || 1}`;
+  if (page.subsectionId) return `${getStablePageKey(page)}:${line.lineNumber || 1}`;
   return [
     line.sectionId || page.sectionId || "",
     line.sectionPageNumber || page.sectionPageNumber || 1,
@@ -199,7 +199,12 @@ function getStableLineKey(page, line) {
 }
 
 function getStablePageKey(page) {
-  if (page.subsectionId) return page.subsectionId;
+  // Later pages of a subsection get their own key; the first keeps the original one.
+  if (page.subsectionId) {
+    return page.subsectionPageNumber > 1
+      ? `${page.subsectionId}:page-${page.subsectionPageNumber}`
+      : page.subsectionId;
+  }
   return [
     page.sectionId || "",
     page.sectionPageNumber || 1,

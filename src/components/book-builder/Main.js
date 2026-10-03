@@ -45,7 +45,14 @@ import {
   renumberPages,
 } from "./book-data";
 import styles from "./BookBuilder.module.css";
-import { normalizeRhythmSpan, normalizeStickingTail, rhythmSpanLabel } from "../../lib/book-structure";
+import {
+  MAX_SUBSECTION_PAGES,
+  groupSubsectionPages,
+  normalizeRhythmSpan,
+  normalizeStickingTail,
+  normalizeSubsectionPageCount,
+  rhythmSpanLabel,
+} from "../../lib/book-structure";
 
 const TUPLET_COUNT_OPTIONS = Array.from({ length: 15 }, (_, index) => index + 2);
 const DEFAULT_SECTION_TUPLET = { actual: 3, normal: 2, type: 8 };
@@ -397,6 +404,23 @@ function getPageIndexForSectionPage(book, sectionId, sectionPageNumber) {
   );
 }
 
+function getPageIndexForSubsection(book, subsectionId, subsectionPageNumber = 1) {
+  return Math.max(
+    0,
+    book.pages.findIndex(
+      (page) =>
+        page.subsectionId === subsectionId &&
+        page.subsectionPageNumber === subsectionPageNumber
+    )
+  );
+}
+
+function pageRangeLabel(pages) {
+  const first = pages[0].pageNumber;
+  const last = pages[pages.length - 1].pageNumber;
+  return first === last ? `Page ${first}` : `Pages ${first}\u2013${last}`;
+}
+
 function getSectionIndexForPage(book, page) {
   const sectionIndex = book.sections.findIndex((section) => section.id === page?.sectionId);
   return Math.max(0, sectionIndex);
@@ -459,6 +483,10 @@ export default function BookBuilderPanel() {
   const selectedGroup = book.groups.find((group) => group.id === selectedSection.groupId) || book.groups[0];
   const groupSections = book.sections.filter((section) => section.groupId === selectedGroup.id);
   const selectedPage = book.pages[selectedPageIndex] || book.pages[0];
+  const selectedSubsectionPages = selectedSection.pages.filter(
+    (page) => page.subsectionId === selectedPage.subsectionId
+  );
+  const subsectionCount = groupSubsectionPages(selectedSection.pages).length;
   const selectedPageGenerationSettings = getPageGenerationSettings(
     selectedPage,
     selectedSection
@@ -562,6 +590,12 @@ export default function BookBuilderPanel() {
   }, [setBook]);
 
   const addPage = useCallback(() => {
+    const subsections = groupSubsectionPages(selectedSection.pages);
+    const template = subsections[subsections.length - 1]?.[0];
+    const subsectionId = createSectionId(
+      `${selectedSection.id}-topic`,
+      subsections.map(([page]) => ({ id: page.subsectionId }))
+    );
     const nextBook = updateBookSection(book, selectedSectionIndex, (section) => ({
       ...section,
       pageCount: Math.max(
@@ -573,36 +607,47 @@ export default function BookBuilderPanel() {
         {
           ...createBlankPage(
             section.pages.length + 1,
-            section.pages[section.pages.length - 1]?.pdfSettings || section.pdfSettings || pdfSettings,
-            getPageGenerationSettings(section.pages[section.pages.length - 1], section)
+            template?.pdfSettings || section.pdfSettings || pdfSettings,
+            getPageGenerationSettings(template, section)
           ),
-          title: `Subsection ${section.pages.length + 1}`,
-          subsectionId: createSectionId(`${section.id}-topic`, section.pages.map((page) => ({ id: page.subsectionId }))),
+          title: `Subsection ${subsections.length + 1}`,
+          subsectionId,
+          subsectionPageCount: 1,
         },
       ],
     }));
-    const nextSection = nextBook.sections[selectedSectionIndex];
-    const nextSectionPage = nextSection.pages[nextSection.pages.length - 1];
 
-    setSelectedPageIndex(
-      getPageIndexForSectionPage(
-        nextBook,
-        nextSection.id,
-        nextSectionPage.sectionPageNumber
-      )
-    );
-    saveBook(nextBook, `Added subsection to ${nextSection.title}`);
-  }, [book, pdfSettings, saveBook, selectedSectionIndex]);
+    setSelectedPageIndex(getPageIndexForSubsection(nextBook, subsectionId));
+    saveBook(nextBook, `Added subsection to ${selectedSection.title}`);
+  }, [book, pdfSettings, saveBook, selectedSection, selectedSectionIndex]);
+
+  const updateSubsectionPageCount = useCallback((value) => {
+    const subsectionPageCount = normalizeSubsectionPageCount(value);
+    const { subsectionId } = selectedPage;
+    const nextBook = updateBookSection(book, selectedSectionIndex, (section) => ({
+      ...section,
+      pages: section.pages.map((page) =>
+        page.subsectionId === subsectionId ? { ...page, subsectionPageCount } : page
+      ),
+    }));
+
+    setBook(nextBook);
+    setSelectedPageIndex(getPageIndexForSubsection(
+      nextBook,
+      subsectionId,
+      Math.min(selectedPage.subsectionPageNumber || 1, subsectionPageCount)
+    ));
+    setStatus(`Subsection now spans ${subsectionPageCount} ${subsectionPageCount === 1 ? "page" : "pages"}. Save settings to keep it.`);
+  }, [book, selectedPage, selectedSectionIndex, setBook]);
 
   const updatePagePdfSetting = useCallback((setting, value) => {
     const nextPagePdfSettings = normalizePdfSettings({
       ...selectedPagePdfSettings,
       [setting]: value,
     });
-    const selectedSectionPageNumber = selectedPage.sectionPageNumber;
-    const sectionId = selectedPage.sectionId;
+    const { subsectionId, subsectionPageNumber } = selectedPage;
     const pagesWithUpdatedSettings = selectedSection.pages.map((page) =>
-      page.sectionPageNumber === selectedSectionPageNumber
+      page.subsectionId === subsectionId
         ? { ...page, pdfSettings: nextPagePdfSettings }
         : page
     );
@@ -610,31 +655,27 @@ export default function BookBuilderPanel() {
       ...section,
       pages: renumberPages(pagesWithUpdatedSettings, section.pdfSettings || pdfSettings),
     }));
-    const nextSection = nextBook.sections.find((section) => section.id === sectionId);
-    const targetSectionPageNumber = Math.min(
-      selectedSectionPageNumber,
-      nextSection?.pages.length || 1
-    );
 
     setBook(nextBook);
     setSelectedPageIndex(
-      getPageIndexForSectionPage(nextBook, sectionId, targetSectionPageNumber)
+      getPageIndexForSubsection(nextBook, subsectionId, subsectionPageNumber)
     );
     setStatus(`Page layout updated in the live preview. Save settings to keep it.`);
   }, [book, pdfSettings, selectedPage, selectedPagePdfSettings, selectedSection, selectedSectionIndex, setBook]);
 
+  // Subsection settings live on every one of its pages.
   const updateSelectedPageDraft = useCallback((updates) => {
     setBook((currentBook) =>
-      mapBookPages(currentBook, (page, pageIndex) =>
-        pageIndex === selectedPageIndex ? { ...page, ...updates } : page
+      mapBookPages(currentBook, (page) =>
+        page.subsectionId === selectedPage.subsectionId ? { ...page, ...updates } : page
       )
     );
-  }, [selectedPageIndex, setBook]);
+  }, [selectedPage.subsectionId, setBook]);
 
   const updateSelectedPageGenerationDraft = useCallback((updates) => {
     setBook((currentBook) =>
-      mapBookPages(currentBook, (page, pageIndex) =>
-        pageIndex === selectedPageIndex
+      mapBookPages(currentBook, (page) =>
+        page.subsectionId === selectedPage.subsectionId
           ? {
               ...page,
               generationSettings: normalizePageGenerationSettings(
@@ -649,8 +690,8 @@ export default function BookBuilderPanel() {
           : page
       )
     );
-    setStatus("Page rhythm settings updated. Existing rhythms cleared; save, then regenerate them.");
-  }, [selectedPageIndex, selectedSection, setBook]);
+    setStatus("Subsection rhythm settings updated. Existing rhythms cleared; save, then regenerate them.");
+  }, [selectedPage.subsectionId, selectedSection, setBook]);
 
   const selectSection = useCallback((sectionIndex) => {
     const section = book.sections[sectionIndex];
@@ -707,8 +748,8 @@ export default function BookBuilderPanel() {
       ...section,
       id: `${id}-section-${index + 1}`,
       groupId: id,
-      pages: section.pages.map((page, pageIndex) => ({
-        ...page, subsectionId: `${id}-section-${index + 1}-topic-${pageIndex + 1}`,
+      pages: section.pages.map((page) => ({
+        ...page, subsectionId: `${id}-section-${index + 1}-topic-${page.subsectionNumber}`,
         lines: clearGeneratedPageLines(page.lines),
       })),
     })) : [createBookSection(book.sections.length + 1, {
@@ -734,14 +775,14 @@ export default function BookBuilderPanel() {
   };
 
   const changeSubsectionOrder = (direction, remove = false) => {
-    const from = selectedPage.sectionPageNumber - 1;
-    const pages = [...selectedSection.pages];
-    const [page] = pages.splice(from, 1);
-    if (!remove) pages.splice(from + direction, 0, page);
-    const nextBook = updateBookSection(book, selectedSectionIndex, (section) => ({ ...section, pages }));
-    const index = Math.max(0, Math.min(from + direction, pages.length - 1));
+    const subsections = groupSubsectionPages(selectedSection.pages);
+    const from = selectedPage.subsectionNumber - 1;
+    const [subsection] = subsections.splice(from, 1);
+    if (!remove) subsections.splice(from + direction, 0, subsection);
+    const nextBook = updateBookSection(book, selectedSectionIndex, (section) => ({ ...section, pages: subsections.flat() }));
+    const index = Math.max(0, Math.min(from + direction, subsections.length - 1));
     setBook(nextBook);
-    setSelectedPageIndex(getPageIndexForSectionPage(nextBook, selectedSection.id, index + 1));
+    setSelectedPageIndex(getPageIndexForSubsection(nextBook, subsections[index][0].subsectionId));
     setDeleteSubsectionDialogOpen(false);
     saveBook(nextBook, remove ? "Deleted subsection" : "Moved subsection");
   };
@@ -1059,27 +1100,25 @@ export default function BookBuilderPanel() {
             >
               <strong>{section.title}</strong>
               <span>
-                {section.pages.length} {section.pages.length === 1 ? "subsection" : "subsections"}
+                {groupSubsectionPages(section.pages).length} {groupSubsectionPages(section.pages).length === 1 ? "subsection" : "subsections"}
               </span>
             </button>
           ))}
         </div>
 
-        <div className={styles.tabLabel}>{selectedSection.title} subsections · one page each</div>
+        <div className={styles.tabLabel}>{selectedSection.title} subsections</div>
         <div className={styles.sectionPageTabs}>
-          {selectedSection.pages.map((page) => (
+          {groupSubsectionPages(selectedSection.pages).map((pages) => (
             <button
-              className={`${styles.pageTab} ${page.pageNumber === selectedPage.pageNumber ? styles.activePageTab : ""}`}
-              key={page.subsectionId}
+              className={`${styles.pageTab} ${pages[0].subsectionId === selectedPage.subsectionId ? styles.activePageTab : ""}`}
+              key={pages[0].subsectionId}
               onClick={() => {
-                setSelectedPageIndex(
-                  getPageIndexForSectionPage(book, selectedSection.id, page.sectionPageNumber)
-                );
+                setSelectedPageIndex(getPageIndexForSubsection(book, pages[0].subsectionId));
               }}
-              title={`Book page ${page.pageNumber}`}
+              title={`Book ${pageRangeLabel(pages).toLowerCase()}`}
               type="button"
             >
-              <strong>{page.title}</strong><span>Page {page.pageNumber}</span>
+              <strong>{pages[0].title}</strong><span>{pageRangeLabel(pages)}</span>
             </button>
           ))}
           <button className={styles.pageTab} onClick={addPage} title="Add subsection" type="button">
@@ -1099,12 +1138,12 @@ export default function BookBuilderPanel() {
           <RhythmPoolEditor label="Secondary rhythms" value={selectedSection.secondaryRhythms}
             onChange={(value) => updateSectionRhythms("secondaryRhythms", value)} />
           <div className={styles.editorTitle}>
-            <h3>Subsection · page {selectedPage.pageNumber}</h3>
+            <h3>Subsection · {pageRangeLabel(selectedSubsectionPages).toLowerCase()}</h3>
           </div>
           <div className={styles.sectionActions}>
-            <IconButton icon={<FaArrowUp />} disabled={selectedPage.sectionPageNumber === 1} onClick={() => changeSubsectionOrder(-1)}>Move earlier</IconButton>
-            <IconButton icon={<FaArrowDown />} disabled={selectedPage.sectionPageNumber === selectedSection.pages.length} onClick={() => changeSubsectionOrder(1)}>Move later</IconButton>
-            <IconButton icon={<FaTrash />} disabled={selectedSection.pages.length === 1} onClick={() => setDeleteSubsectionDialogOpen(true)}>Delete subsection</IconButton>
+            <IconButton icon={<FaArrowUp />} disabled={selectedPage.subsectionNumber === 1} onClick={() => changeSubsectionOrder(-1)}>Move earlier</IconButton>
+            <IconButton icon={<FaArrowDown />} disabled={selectedPage.subsectionNumber === subsectionCount} onClick={() => changeSubsectionOrder(1)}>Move later</IconButton>
+            <IconButton icon={<FaTrash />} disabled={subsectionCount === 1} onClick={() => setDeleteSubsectionDialogOpen(true)}>Delete subsection</IconButton>
           </div>
           <Field label="Subsection title">
             <input
@@ -1112,6 +1151,31 @@ export default function BookBuilderPanel() {
               value={selectedPage.title || ""}
             />
           </Field>
+          <Field label="Pages in this subsection">
+            <input
+              inputMode="numeric"
+              min="1"
+              max={MAX_SUBSECTION_PAGES}
+              onChange={(event) => updateSubsectionPageCount(event.target.value)}
+              type="number"
+              value={selectedPage.subsectionPageCount || 1}
+            />
+          </Field>
+          {selectedSubsectionPages.length > 1 && (
+            <div className={styles.sectionActions}>
+              {selectedSubsectionPages.map((page) => (
+                <button
+                  className={`${styles.pageTab} ${page.pageNumber === selectedPage.pageNumber ? styles.activePageTab : ""}`}
+                  key={page.pageNumber}
+                  onClick={() => setSelectedPageIndex(getPageIndexForSubsection(book, page.subsectionId, page.subsectionPageNumber))}
+                  title="Preview this page"
+                  type="button"
+                >
+                  <span>Page {page.pageNumber}</span>
+                </button>
+              ))}
+            </div>
+          )}
           <CheckboxPicker
             label="Primary ornaments required in this subsection"
             onToggle={(optionId) =>
@@ -1165,7 +1229,8 @@ export default function BookBuilderPanel() {
             />
           </Field>
           <p className={styles.layoutSummary}>
-            This page generates {linesPerPage} rhythms automatically: {systemsPerPage} staff lines × {selectedPagePdfSettings.measuresPerLine} measures.
+            Each page generates {linesPerPage} rhythms automatically: {systemsPerPage} staff lines × {selectedPagePdfSettings.measuresPerLine} measures.
+            {selectedSubsectionPages.length > 1 && ` ${linesPerPage * selectedSubsectionPages.length} rhythms across ${selectedSubsectionPages.length} pages.`}
           </p>
           <Field label="Minimum played notes">
             <input
@@ -1254,7 +1319,7 @@ export default function BookBuilderPanel() {
               onToggle={(id) => updateSelectedPageGenerationDraft({ stickingTail: normalizeStickingTail({ ...selectedPageGenerationSettings.stickingTail,
                 requiredSameHandStickingRuns: toggleOption(selectedPageGenerationSettings.stickingTail.requiredSameHandStickingRuns, id),
               }) })} />
-            <p className={styles.layoutSummary}>Applies to the last {Math.min(systemsPerPage, selectedPageGenerationSettings.stickingTail.count)} printed rows ({Math.min(linesPerPage, selectedPageGenerationSettings.stickingTail.count * selectedPagePdfSettings.measuresPerLine)} exercises), when stickings are selected.</p>
+            <p className={styles.layoutSummary}>Applies to the last {Math.min(systemsPerPage, selectedPageGenerationSettings.stickingTail.count)} printed rows ({Math.min(linesPerPage, selectedPageGenerationSettings.stickingTail.count * selectedPagePdfSettings.measuresPerLine)} exercises){selectedSubsectionPages.length > 1 && " of the subsection's last page"}, when stickings are selected.</p>
           </>}
           <Field label="Sample JSON">
             <textarea
