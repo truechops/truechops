@@ -135,7 +135,13 @@ function normalizeRhythmPool(value = {}, allowEmpty = true) {
       all.findIndex((other) => JSON.stringify(other) === JSON.stringify(tuplet)) === index
     );
   if (!allowEmpty && !subdivisions.length && !tuplets.length) subdivisions.push("eighths");
-  return { subdivisions, tuplets, ornaments: ornamentIds.filter((id) => (value.ornaments || []).includes(id)) };
+  const pool = { subdivisions, tuplets, ornaments: ornamentIds.filter((id) => (value.ornaments || []).includes(id)) };
+  // Optional: the only rhythms in this pool that may carry its ornaments.
+  if (value.ornamentRhythms) {
+    const { subdivisions: ornamentSubdivisions, tuplets: ornamentTuplets } = normalizeRhythmPool(value.ornamentRhythms);
+    pool.ornamentRhythms = { subdivisions: ornamentSubdivisions, tuplets: ornamentTuplets };
+  }
+  return pool;
 }
 
 function rhythmKey(pool) {

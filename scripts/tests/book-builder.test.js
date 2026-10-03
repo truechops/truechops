@@ -8,7 +8,7 @@ const vm = require("node:vm");
 const babel = require("@babel/core");
 const { migrateBookStructure } = require("../../src/lib/book-structure");
 const generator = require("../generate-ai-book");
-const { createStudySections, createTwoBeatSections, STUDY_TOPICS, STUDY_FAMILIES } = require("../../src/lib/book-curriculum");
+const { createStudySections, createTwoBeatSections, createThreeEighthsSections, STUDY_TOPICS, STUDY_FAMILIES } = require("../../src/lib/book-curriculum");
 const { getLineStickingSettings, getSpanPrimaryRhythms } = require("../../src/lib/book-structure");
 
 // Load the same ES modules Next uses without starting a server.
@@ -179,12 +179,13 @@ test("rhythms over two beats use standard tuplet notation", () => {
   assert.deepEqual(getSpanPrimaryRhythms(pool(["sixteenths"]), span), pool(["eighths"]));
 });
 
-test("two-beat pages cycle ornament topics per exercise and start tuplets on beats", () => {
+test("two-beat and three-eighth pages cycle ornament topics and start tuplets on beats", () => {
+  const pdf = { measuresPerLine: 2, lineSpacing: 130, noteSize: 100 };
   const config = generator.createGenerationConfig({}, { structureVersion: 3,
-    groups: [{ id: "two", rhythmSpan: { count: 2, unit: 4 } }],
-    sections: createTwoBeatSections("two", { measuresPerLine: 2, lineSpacing: 130, noteSize: 100 }),
+    groups: [{ id: "two", rhythmSpan: { count: 2, unit: 4 } }, { id: "three", rhythmSpan: { count: 3, unit: 8 } }],
+    sections: [...createTwoBeatSections("two", pdf), ...createThreeEighthsSections("three", pdf)],
   });
-  assert.equal(config.sections.length, 4);
+  assert.equal(config.sections.length, 8);
   for (const section of config.sections) {
     const page = section.pages[0];
     const voices = generate(page, 22);
@@ -202,6 +203,8 @@ test("two-beat pages cycle ornament topics per exercise and start tuplets on bea
           assert.equal(Math.round(slots * 1000) % 8000, 0, `${section.title} exercise ${index + 1} starts a tuplet off the beat`);
         }
         slots += tuplet ? value(note) * tuplet.normal / tuplet.actual : value(note);
+        // Diddles and cheese never sit on quarters or on eighths outside a tuplet.
+        if (/[dc]/.test(note.ornaments || "")) assert(note.duration > 8 || (note.duration === 8 && tuplet));
       });
     });
     const required = (index) => page.ornamentSegments.flatMap((segment) => Array(segment.count).fill(segment.ornaments))[index];

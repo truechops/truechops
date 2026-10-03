@@ -293,10 +293,13 @@ function getMeasureData(measures, partConfig) {
 
         voiceTuplets.forEach((tuplet) => {
           const tupletJsonNotes = notes.slice(tuplet.start, tuplet.end);
+          // Show the ratio (4:3, 7:6) whenever the plain number would be ambiguous.
+          const normalIsPowerOfTwo = Number.isInteger(Math.log2(tuplet.normal));
           const vfTuplet = new VF.Tuplet(vfNotes.slice(tuplet.start, tuplet.end), {
             num_notes: tuplet.actual,
             notes_occupied: tuplet.normal,
             bracketed: true,
+            ratioed: !normalIsPowerOfTwo || Math.abs(tuplet.normal - tuplet.actual) > 1,
           });
           vfTuplet.trueChopsHasAccent = tupletJsonNotes.some((note) =>
             hasAboveStaffAccent(note, instrument)
@@ -574,30 +577,30 @@ function isJsonRest(jsonNote) {
   return !Array.isArray(jsonNote?.notes) || jsonNote.notes.length === 0;
 }
 
-function shouldBeamTupletSegment(jsonNotes) {
-  return jsonNotes.length > 1 &&
-    !jsonNotes.some(isJsonRest) &&
-    !jsonNotes.some(hasQuarterOrLongerDuration);
-}
-
+// Every eighth or shorter note in a tuplet shares one beam, across rests;
+// only quarter notes and longer values break it.
 function createTupletBeams(vfNotes, jsonNotes) {
   const beams = [];
   let segmentStart = 0;
 
   while (segmentStart < jsonNotes.length) {
-    while (segmentStart < jsonNotes.length && isJsonRest(jsonNotes[segmentStart])) {
+    while (segmentStart < jsonNotes.length && hasQuarterOrLongerDuration(jsonNotes[segmentStart])) {
       segmentStart += 1;
     }
 
     let segmentEnd = segmentStart;
-    while (segmentEnd < jsonNotes.length && !isJsonRest(jsonNotes[segmentEnd])) {
+    while (segmentEnd < jsonNotes.length && !hasQuarterOrLongerDuration(jsonNotes[segmentEnd])) {
       segmentEnd += 1;
     }
 
-    const segmentJsonNotes = jsonNotes.slice(segmentStart, segmentEnd);
-    if (shouldBeamTupletSegment(segmentJsonNotes)) {
-      beams.push(...VF.Beam.generateBeams(vfNotes.slice(segmentStart, segmentEnd), {
-        beam_rests: false,
+    let first = segmentStart;
+    let last = segmentEnd - 1;
+    while (first <= last && isJsonRest(jsonNotes[first])) first += 1;
+    while (last >= first && isJsonRest(jsonNotes[last])) last -= 1;
+
+    if (last > first) {
+      beams.push(...VF.Beam.generateBeams(vfNotes.slice(first, last + 1), {
+        beam_rests: true,
         show_stemlets: false,
         stem_direction: Vex.Flow.StaveNote.STEM_UP,
         groups: [new Vex.Flow.Fraction(1, 1)],

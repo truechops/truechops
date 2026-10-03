@@ -662,6 +662,7 @@ const NOTATION_VALUE_BY_SLOT_COUNT = new Map([
   [24, { duration: 2, dots: 1 }],
   [32, { duration: 1, dots: 0 }],
 ]);
+const SLOTS_PER_BEAT = 8;
 const NOTATION_SLOT_COUNTS_DESCENDING = Array.from(NOTATION_VALUE_BY_SLOT_COUNT.keys())
   .sort((left, right) => right - left);
 
@@ -709,14 +710,15 @@ function getPreferLongerValueOptions() {
   };
 }
 
-function splitIntoSlotGroups(notes, groupSlots) {
+function splitIntoSlotGroups(notes, groupSlots, startSlot = 0) {
   if (!groupSlots) {
     return [notes || []];
   }
 
   const groups = [];
   let group = [];
-  let groupUsedSlots = 0;
+  // Groups follow the measure's beats even when the notes start mid-beat.
+  let groupUsedSlots = startSlot % groupSlots;
 
   for (const note of notes || []) {
     const noteSlots = getNoteSlotCount(note);
@@ -802,12 +804,53 @@ function preferLongerValuesInGroup(notes) {
   return simplified;
 }
 
+function mergeRestRuns(notes) {
+  const merged = [];
+  let index = 0;
+  while (index < notes.length) {
+    if (!isRest(notes[index])) {
+      merged.push(notes[index]);
+      index += 1;
+      continue;
+    }
+    const firstRest = notes[index];
+    let restSlots = 0;
+    while (index < notes.length && isRest(notes[index])) {
+      restSlots += getNoteSlotCount(notes[index]);
+      index += 1;
+    }
+    pushCompressedRests(merged, restSlots, firstRest);
+  }
+  return merged;
+}
+
+// Two quarter rests that start on beat one or three read as one half rest.
+function mergeBeatRests(notes, startSlot = 0) {
+  const merged = [];
+  let slot = startSlot;
+  for (let index = 0; index < notes.length; index += 1) {
+    const note = notes[index];
+    const next = notes[index + 1];
+    const quarterRest = (candidate) => candidate && isRest(candidate) && getNoteSlotCount(candidate) === SLOTS_PER_BEAT;
+    if (quarterRest(note) && quarterRest(next) && slot % (SLOTS_PER_BEAT * 2) === 0) {
+      merged.push(createRestFromSlots(SLOTS_PER_BEAT * 2, note));
+      slot += SLOTS_PER_BEAT * 2;
+      index += 1;
+      continue;
+    }
+    merged.push(note);
+    slot += getNoteSlotCount(note);
+  }
+  return merged;
+}
+
 function preferLongerValues(notes, options = {}) {
   const {
     groupSlots = 0,
+    startSlot = 0,
   } = options;
 
-  return splitIntoSlotGroups(notes, groupSlots).flatMap((group) => {
+  const simplified = splitIntoSlotGroups(notes, groupSlots, startSlot).flatMap((group) => {
     if (!groupHasPlayedNotes(group)) {
       const restSlots = group.reduce((total, note) => total + getNoteSlotCount(note), 0);
       const firstRest = group.find((note) => isRest(note)) || group[0];
@@ -818,6 +861,7 @@ function preferLongerValues(notes, options = {}) {
 
     return preferLongerValuesInGroup(group);
   });
+  return groupSlots ? mergeBeatRests(simplified, startSlot) : simplified;
 }
 
 function preferLongerValuesInTupletVoice(voice, configuredTuplets = []) {
@@ -836,6 +880,8 @@ function preferLongerValuesInTupletVoice(voice, configuredTuplets = []) {
   const nextNotes = [];
   const nextTuplets = [];
   let cursor = 0;
+  let slot = 0;
+  const sliceSlots = (slice) => slice.reduce((total, note) => total + getNoteSlotCount(note), 0);
 
   for (const tuplet of tuplets) {
     if (tuplet.start < cursor) {
@@ -843,15 +889,15 @@ function preferLongerValuesInTupletVoice(voice, configuredTuplets = []) {
     }
 
     if (tuplet.start > cursor) {
+      const slice = notes.slice(cursor, tuplet.start);
       nextNotes.push(
-        ...preferLongerValues(
-          notes.slice(cursor, tuplet.start),
-          getPreferLongerValueOptions()
-        )
+        ...preferLongerValues(slice, { ...getPreferLongerValueOptions(), startSlot: slot })
       );
+      slot += sliceSlots(slice);
     }
 
     const tupletNotes = notes.slice(tuplet.start, tuplet.end);
+    slot += Math.round(sliceSlots(tupletNotes) * Number(tuplet.normal) / Number(tuplet.actual));
     if (!groupHasPlayedNotes(tupletNotes)) {
       const rawRestSlots = tupletNotes.reduce(
         (total, note) => total + getNoteSlotCount(note),
@@ -877,11 +923,12 @@ function preferLongerValuesInTupletVoice(voice, configuredTuplets = []) {
     const preserveConfiguredSubdivision = Number(configuredTuplet?.type) >= 16;
 
     // Eighth-note tuplets may use longer equivalent values for readability,
-    // but sixteenth-note and faster tuplets must retain their configured note
-    // type so an unselected regular subdivision never appears in the group.
+    // but sixteenth-note and faster tuplets keep their configured note type on
+    // played notes so an unselected regular subdivision never appears in the
+    // group. Their consecutive rests still merge into the largest rest.
     nextNotes.push(
       ...(preserveConfiguredSubdivision
-        ? tupletNotes.map((note) => ({ ...note }))
+        ? mergeRestRuns(tupletNotes.map((note) => ({ ...note })))
         : preferLongerValues(tupletNotes))
     );
     const tupletEnd = nextNotes.length;
@@ -899,7 +946,7 @@ function preferLongerValuesInTupletVoice(voice, configuredTuplets = []) {
 
   if (cursor < notes.length) {
     nextNotes.push(
-      ...preferLongerValues(notes.slice(cursor), getPreferLongerValueOptions())
+      ...preferLongerValues(notes.slice(cursor), { ...getPreferLongerValueOptions(), startSlot: slot })
     );
   }
 
@@ -1161,8 +1208,10 @@ function applyRhythmPoolOrnaments(section, voice) {
     ...voice,
     notes: voice.notes.map((note, index) => {
       const primary = noteMatchesRhythmPool(section.primaryRhythms, voice, index);
+      const secondaryOrnamented = noteMatchesRhythmPool(secondary, voice, index) &&
+        (!secondary.ornamentRhythms || noteMatchesRhythmPool(secondary.ornamentRhythms, voice, index));
       const selected = primary ? section.ornaments || []
-        : noteMatchesRhythmPool(secondary, voice, index) ? secondary.ornaments : [];
+        : secondaryOrnamented ? secondary.ornaments : [];
       const allowed = ORNAMENT_SETTINGS.filter((item) => selected.includes(item.id) ||
         (primary && item.id === "stickings" && getSectionRequiredSameHandStickingRuns(section).length))
         .map((item) => item.chars).join("");
@@ -1250,10 +1299,7 @@ function applySectionOrnamentPolicy(section, score) {
               const ornaments = cleanDurationRestrictedOrnaments(
                 note,
                 String(note.ornaments).replace(allowedPattern, ""),
-                {
-                  allowDiddlesOnEighths: tupletNoteIndexes.has(noteIndex),
-                  onTupletQuarter: tupletNoteIndexes.has(noteIndex) && sectionHasQuarterTuplets(section),
-                }
+                { allowDiddlesOnEighths: tupletNoteIndexes.has(noteIndex) }
               );
 
               if (!ornaments) {
@@ -1657,13 +1703,14 @@ function withSticking(note, sticking) {
   return withPrependedSticking(note, sticking);
 }
 
+// Thirty-second notes follow the same sequencing rules as sixteenths.
 function areConsecutiveSixteenthNotes(left, right) {
   return left &&
     right &&
     !isRest(left) &&
     !isRest(right) &&
-    Number(left.duration) === 16 &&
-    Number(right.duration) === 16 &&
+    Number(left.duration) >= 16 &&
+    Number(right.duration) >= 16 &&
     Number(left.dots || 0) === 0 &&
     Number(right.dots || 0) === 0;
 }
@@ -1704,24 +1751,18 @@ function removeOrnamentChars(note, chars) {
   };
 }
 
-// Diddles and cheese need eighths or faster. Sections with quarter-note tuplets
-// (triplets over two beats) also allow them on quarters inside tuplets.
-function sectionHasQuarterTuplets(section) {
-  return getGenerationTuplets(section).some((tuplet) => Number(tuplet.type) === 4);
-}
-
-function durationAllowsDiddles(value, allowDiddlesOnEighths, onTupletQuarter) {
+// Diddles and cheese need sixteenths or faster, or eighths inside a tuplet.
+function durationAllowsDiddles(value, allowDiddlesOnEighths) {
   const duration = Number(value);
-  if (onTupletQuarter && duration === 4) return true;
   return duration > 8 || (duration === 8 && allowDiddlesOnEighths);
 }
 
 function cleanDurationRestrictedOrnaments(
   note,
   ornaments = note?.ornaments || "",
-  { allowDiddlesOnEighths = false, onTupletQuarter = false } = {}
+  { allowDiddlesOnEighths = false } = {}
 ) {
-  const durationDisallowsDiddles = !durationAllowsDiddles(note?.duration, allowDiddlesOnEighths, onTupletQuarter);
+  const durationDisallowsDiddles = !durationAllowsDiddles(note?.duration, allowDiddlesOnEighths);
   const cleanedOrnaments = durationDisallowsDiddles
     ? String(ornaments).replace(/[dc]/g, "")
     : String(ornaments);
@@ -1739,7 +1780,6 @@ function enforceDurationOrnamentRules(notes, options = {}) {
       ...options,
       allowDiddlesOnEighths: options.allowDiddlesOnEighths ||
         options.tupletNoteIndexes?.has(noteIndex),
-      onTupletQuarter: options.allowDiddlesOnTupletQuarters && options.tupletNoteIndexes?.has(noteIndex),
     });
 
     if (!ornaments) {
@@ -2357,8 +2397,7 @@ function canAddRequiredOrnament(notes, noteIndex, ornament, options = {}) {
     options.tupletNoteIndexes?.has(noteIndex);
 
   if (ornament === "d" || ornament === "c") {
-    if (!durationAllowsDiddles(note.duration, allowDiddlesOnEighths,
-      options.allowDiddlesOnTupletQuarters && options.tupletNoteIndexes?.has(noteIndex)) ||
+    if (!durationAllowsDiddles(note.duration, allowDiddlesOnEighths) ||
       /f/.test(current)) {
       return false;
     }
@@ -2804,7 +2843,6 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
             Number.parseInt(lineIndex, 10) || 0
           );
           const preliminaryDurationOrnamentOptions = {
-            allowDiddlesOnTupletQuarters: sectionHasQuarterTuplets(section),
             tupletNoteIndexes: preliminaryTupletNoteIndexes,
             tupletPositionByNoteIndex: getTupletPositionByNoteIndex(
               notationVoice.notes,
@@ -2839,7 +2877,6 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
             )
           );
           const durationOrnamentOptions = {
-            allowDiddlesOnTupletQuarters: sectionHasQuarterTuplets(section),
             ...(section.primaryRhythms ? { primaryNoteIndexes: getPrimaryNoteIndexes(section, finalNotationVoice) } : {}),
             tupletNoteIndexes: finalTupletNoteIndexes,
             tupletPositionByNoteIndex: getTupletPositionByNoteIndex(
@@ -3062,40 +3099,63 @@ function getMaximumMixedEventCount(
   return maximum;
 }
 
-const SLOTS_PER_BEAT = 8;
 
-function blocksStartOnBeats(blocks) {
-  let offset = 0;
-  return blocks.every((block) => {
-    const size = block.slotCount % SLOTS_PER_BEAT === 0 ? SLOTS_PER_BEAT : block.slotCount;
-    const aligned = offset % size === 0;
-    offset += block.slotCount;
-    return aligned;
-  });
+// Sections with a secondary pool are built beat by beat: each beat holds one
+// tuplet or one regular value throughout (a full beat of sixteenths, never a
+// partial one). Groups that end mid-beat, such as tuplets over three eighths,
+// are paired with a filler that completes the beat, such as one eighth or two
+// sixteenths; thirty-seconds fill only when nothing longer fits.
+function createBeatStructuredLayout(requiredBlocks, availableBlocks, random) {
+  const regular = availableBlocks.filter((block) => block.kind === "regular" && SLOTS_PER_BEAT % block.slotCount === 0);
+  const tupletUnit = (block) => {
+    const fillerSlots = (SLOTS_PER_BEAT - block.slotCount % SLOTS_PER_BEAT) % SLOTS_PER_BEAT;
+    if (!fillerSlots) return [block];
+    const fitting = regular.filter((candidate) => fillerSlots % candidate.slotCount === 0);
+    const values = fitting.some((candidate) => candidate.slotCount > 1)
+      ? fitting.filter((candidate) => candidate.slotCount > 1) : fitting;
+    if (!values.length) return null;
+    const value = values[randomInteger(random, 0, values.length - 1)];
+    const filler = Array(fillerSlots / value.slotCount).fill(value);
+    return random() < 0.5 ? [...filler, block] : [block, ...filler];
+  };
+  const units = [];
+  for (const block of requiredBlocks) {
+    const unit = block.kind === "tuplet" ? tupletUnit(block) : Array(SLOTS_PER_BEAT / block.slotCount).fill(block);
+    if (!unit) return null;
+    units.push(unit);
+  }
+  const slotsOf = (unit) => unit.reduce((sum, block) => sum + block.slotCount, 0);
+  let remaining = 32 - units.reduce((sum, unit) => sum + slotsOf(unit), 0);
+  const optional = [
+    ...regular.map((block) => ({ weight: 0.42, make: () => Array(SLOTS_PER_BEAT / block.slotCount).fill(block) })),
+    ...availableBlocks.filter((block) => block.kind === "tuplet")
+      .map((block) => ({ weight: 0.68, make: () => tupletUnit(block) })),
+  ];
+  while (remaining > 0) {
+    const candidates = optional.map((option) => option.make())
+      .filter((unit) => unit && slotsOf(unit) <= remaining);
+    if (!candidates.length) return null;
+    const preferred = candidates.filter((unit) => random() < (unit.some((block) => block.kind === "tuplet") ? 0.68 : 0.42));
+    const pool = preferred.length ? preferred : candidates;
+    const unit = pool[randomInteger(random, 0, pool.length - 1)];
+    units.push(unit);
+    remaining -= slotsOf(unit);
+  }
+  return remaining === 0 ? shuffledIndexes(units.length, random).flatMap((index) => units[index]) : null;
 }
 
-// Tuplets that span whole beats start on a beat, and shorter notes fill whole beats.
-function arrangeBlocksOnBeats(blocks, random) {
-  if (blocksStartOnBeats(blocks)) return blocks;
-  const beatBlocks = blocks.filter((block) => block.slotCount % SLOTS_PER_BEAT === 0);
-  const shortBlocks = blocks.filter((block) => block.slotCount % SLOTS_PER_BEAT !== 0);
-  if (shortBlocks.some((block) => SLOTS_PER_BEAT % block.slotCount !== 0)) return blocks;
+function getBlockEvents(block, random) {
+  if (block.kind === "regular") return [{ duration: block.duration, dots: 0, tuplet: null }];
+  if (block.kind === "rest") return [{ ...getNotationValueBySlots(block.slotCount), forceRest: true, tuplet: null }];
+  // Quarter-note tuplets may split a quarter into two eighths, which can carry diddles.
+  return Array.from({ length: block.tuplet.actual }, () =>
+    Number(block.tuplet.type) === 4 && block.splitQuarters && random() < 0.5
+      ? [8, 8] : [Number(block.tuplet.type)]
+  ).flat().map((duration) => ({ duration, dots: 0, tuplet: block.tuplet }));
+}
 
-  const beats = [];
-  [...shortBlocks].sort((left, right) => right.slotCount - left.slotCount).forEach((block) => {
-    let beat = beats.find((candidate) => candidate.slots + block.slotCount <= SLOTS_PER_BEAT);
-    if (!beat) beats.push(beat = { slots: 0, blocks: [] });
-    beat.slots += block.slotCount;
-    beat.blocks.push(block);
-  });
-  const units = [
-    ...beatBlocks.map((block) => [block]),
-    ...beats.map((beat) => {
-      const shuffled = shuffledIndexes(beat.blocks.length, random).map((index) => beat.blocks[index]);
-      return blocksStartOnBeats(shuffled) ? shuffled : beat.blocks;
-    }),
-  ];
-  return shuffledIndexes(units.length, random).flatMap((index) => units[index]);
+function rhythmPoolHasRhythms(pool) {
+  return pool.subdivisions.length > 0 || pool.tuplets.length > 0;
 }
 
 function createMixedTupletFallbackGeneratedScore(section, options, random) {
@@ -3137,11 +3197,19 @@ function createMixedTupletFallbackGeneratedScore(section, options, random) {
   }
   const slotCounts = [...new Set(availableBlocks.map((block) => block.slotCount))];
   const minimumPlayedNotes = getSectionMinPlayedNotes(section);
+  const beatStructured = Boolean(primary && rhythmPoolHasRhythms(normalizeRhythmPool(section.secondaryRhythms)));
   const requireRegularSubdivision = options.subdivisions.length > 0 &&
     getMaximumMixedEventCount(32, availableBlocks, true) >= minimumPlayedNotes;
   let layout = null;
 
-  for (let attempt = 0; attempt < 200 && !layout; attempt += 1) {
+  for (let attempt = 0; beatStructured && attempt < 200 && !layout; attempt += 1) {
+    const candidate = createBeatStructuredLayout(requiredBlocks, availableBlocks, random);
+    const eventCount = (candidate || []).reduce((count, block) =>
+      count + (block.kind === "tuplet" ? block.tuplet.actual : block.kind === "regular" ? 1 : 0), 0);
+    if (candidate && eventCount >= minimumPlayedNotes) layout = candidate;
+  }
+
+  for (let attempt = 0; !beatStructured && attempt < 200 && !layout; attempt += 1) {
     const candidate = [...requiredBlocks];
     let remainingSlots = 32 - requiredSlots;
 
@@ -3177,30 +3245,17 @@ function createMixedTupletFallbackGeneratedScore(section, options, random) {
       eventCount >= minimumPlayedNotes &&
       (primary || !requireRegularSubdivision || hasRegularSubdivision)
     ) {
-      layout = arrangeBlocksOnBeats(
-        shuffledIndexes(candidate.length, random).map((index) => candidate[index]),
-        random
-      );
+      layout = shuffledIndexes(candidate.length, random).map((index) => candidate[index]);
     }
   }
 
   if (!layout) return null;
 
-  const events = layout.flatMap((block) =>
-    block.kind === "tuplet"
-      ? Array.from({ length: block.tuplet.actual }, () => ({
-          duration: block.tuplet.type,
-          dots: 0,
-          tuplet: block.tuplet,
-        }))
-      : block.kind === "regular"
-        ? [{ duration: block.duration, dots: 0, tuplet: null }]
-        : [{
-            ...getNotationValueBySlots(block.slotCount),
-            forceRest: true,
-            tuplet: null,
-          }]
-  );
+  const blockEvents = layout.map((block) => getBlockEvents(
+    beatStructured && block.kind === "tuplet" ? { ...block, splitQuarters: true } : block,
+    random
+  ));
+  const events = blockEvents.flat();
   const playableEventIndexes = events
     .map((event, index) => event.forceRest ? -1 : index)
     .filter((index) => index >= 0);
@@ -3237,9 +3292,9 @@ function createMixedTupletFallbackGeneratedScore(section, options, random) {
   const tuplets = [];
   let eventIndex = 0;
 
-  for (const block of layout) {
+  for (const [blockIndex, block] of layout.entries()) {
     const start = notes.length;
-    const blockEventCount = block.kind === "tuplet" ? block.tuplet.actual : 1;
+    const blockEventCount = blockEvents[blockIndex].length;
 
     for (let offset = 0; offset < blockEventCount; offset += 1) {
       const isPlayed = playedSlots[eventIndex];

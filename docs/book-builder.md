@@ -24,7 +24,15 @@ The saved book contains sparse and full sections for sixteenths, eighth-note tri
 
 Full sections use the same order starting with Accents. Full pages with stickings use the regular maximum of two same-hand notes in their earlier rows. Their final five **printed staff rows** allow a maximum of four and require a three- or four-note same-hand run in each exercise. The tail rule follows the page layout (five rows are ten exercises at two measures per row) and can be edited per subsection.
 
-The **Over two quarter notes** group has one page each for 3, 5, 7, and 9 notes over two beats. Each page cycles through the ornament topics by exercise: exercises 1–4 are Accents, then three exercises each for the six topics from Accents with stickings to Everything (22 exercises at two measures per line). The secondary pool holds every one-beat rhythm (eighths, sixteenths, thirty-seconds, triplets, and 5-, 6-, 7-, and 9-note groups) with all ornaments, so the two-beat group can start on any beat. Diddles and cheese may sit on quarter-note triplets on these pages.
+The **Over three eighth notes** group follows the same layout with 4:3 and 5:3 eighths and 7:6 and 8:6 sixteenths. These groups end mid-beat, so each is paired with one eighth or two sixteenths to complete its beat. Ratios are printed whenever the plain number would be ambiguous.
+
+The **Over two quarter notes** group has one page each for 3, 5, 7, and 9 notes over two beats. Each page cycles through the ornament topics by exercise: exercises 1–4 are Accents, then three exercises each for the six topics from Accents with stickings to Everything (22 exercises at two measures per line). The secondary pool holds every one-beat rhythm (eighths, sixteenths, thirty-seconds, triplets, and 5-, 6-, 7-, and 9-note groups), so the two-beat group can start on any beat. Secondary ornaments apply only to triplets, sixteenths, and quintuplets. On these pages every beat holds one tuplet or a full beat of one regular value. Quarter-note triplets may split a quarter into two eighths, which can carry diddles and cheese.
+
+Notation rules for every page:
+
+- Diddles and cheese never go on quarter notes or on regular eighths; eighths inside a tuplet are allowed. Thirty-seconds follow the sixteenth-note sequencing rules, so no cheese directly after a diddle.
+- Consecutive rests merge into the largest rest, including inside sixteenth-note and faster tuplets. Two quarter rests on beats one and two, or three and four, become a half rest.
+- Eighth-note and shorter notes inside a tuplet share one beam across rests.
 
 The original eighth-note and mixed-tuplet studies remain alongside this curriculum. Secondary pools start empty. Printed contents list span groups, rhythm sections, and subsections across as many contents pages as necessary.
 

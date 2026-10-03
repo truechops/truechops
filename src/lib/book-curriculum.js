@@ -60,18 +60,34 @@ const TWO_BEAT_ORNAMENT_SEGMENTS = [
   { ...STUDY_TOPICS[1], count: 4 },
   ...STUDY_TOPICS.slice(2).map((topic) => ({ ...topic, count: 3 })),
 ].map(({ title, ornaments, count }) => ({ title, ornaments, count }));
+const familyTuplets = (...ids) => STUDY_FAMILIES
+  .filter((family) => ids.includes(family.id)).flatMap((family) => family.tuplets || []);
+// Secondary ornaments only on triplets, sixteenths, and quintuplets; never on
+// eighths or on sextuplets and faster.
 const ONE_BEAT_SECONDARY_RHYTHMS = {
   subdivisions: ["eighths", "sixteenths", "thirtyseconds"],
   tuplets: STUDY_FAMILIES.flatMap((family) => family.tuplets || []),
   ornaments: ["stickings", "accents", "flams", "diddles", "cheese"],
+  ornamentRhythms: { subdivisions: ["sixteenths"], tuplets: familyTuplets("eighth-triplets", "quintuplets") },
 };
 
+// Over three eighths, only the counts that are new rhythms: 4:3 and 5:3 eighths, 7:6 and 8:6 sixteenths.
+const THREE_EIGHTHS_FAMILY_IDS = ["sixteenths", "quintuplets", "septuplets", "thirtyseconds"];
+
 function createTwoBeatSections(groupId, pdfSettings) {
-  return TWO_BEAT_FAMILY_IDS.map((familyId) => {
+  return createSpanSections(groupId, pdfSettings, TWO_BEAT_FAMILY_IDS, "two beats");
+}
+
+function createThreeEighthsSections(groupId, pdfSettings) {
+  return createSpanSections(groupId, pdfSettings, THREE_EIGHTHS_FAMILY_IDS, "three eighths");
+}
+
+function createSpanSections(groupId, pdfSettings, familyIds, spanLabel) {
+  return familyIds.map((familyId) => {
     const family = STUDY_FAMILIES.find((candidate) => candidate.id === familyId);
     const id = `${groupId}-${family.id}`;
     return {
-      id, groupId, title: `${family.notesPerQuarter} over two beats`,
+      id, groupId, title: `${family.notesPerQuarter} over ${spanLabel}`,
       studyFamily: family.id, density: "mixed",
       primaryRhythms: normalizeRhythmPool(family, false),
       secondaryRhythms: normalizeRhythmPool(ONE_BEAT_SECONDARY_RHYTHMS),
@@ -98,5 +114,6 @@ function createTwoBeatSections(groupId, pdfSettings) {
 }
 
 module.exports = {
-  STUDY_TOPICS, STUDY_FAMILIES, TWO_BEAT_ORNAMENT_SEGMENTS, createStudySections, createTwoBeatSections,
+  STUDY_TOPICS, STUDY_FAMILIES, TWO_BEAT_ORNAMENT_SEGMENTS,
+  createStudySections, createTwoBeatSections, createThreeEighthsSections,
 };
