@@ -26,6 +26,7 @@ const ACCENTED_TUPLET_NOTEWARD_OFFSET = 5;
 const UNACCENTED_TUPLET_NOTEWARD_OFFSET = -5;
 const FIRST_NOTE_FORMAT_X = 8;
 const MEASURE_RIGHT_EDGE_GUARD = 6;
+const TICK_CONTEXT_MIN_GAP = 2;
 const LONGEST_UNBEAMED_TUPLET_DURATION = 4;
 const MEASURE_NUMBER_FONT_SIZE = 15;
 const MEASURE_NUMBER_GAP = 6;
@@ -477,6 +478,10 @@ function renderStaves(
         )
       );
       alignFirstNotePosition(voices);
+      fitTickContextsToWidth(
+        voices,
+        availableNoteWidth - FIRST_NOTE_FORMAT_X - MEASURE_RIGHT_EDGE_GUARD
+      );
 
       xDiff = systemWidth;
 
@@ -740,6 +745,37 @@ function alignFirstNotePosition(voices) {
   const xShift = FIRST_NOTE_FORMAT_X - firstContext.getX();
   orderedContexts.forEach((tickContext) => {
     tickContext.setX(tickContext.getX() + xShift);
+  });
+}
+
+// VexFlow spaces dense measures by their widest note, so many grace notes push the
+// measure past its stave. Give each note only the room it needs and share the rest
+// in the formatter's rhythmic proportions.
+function fitTickContextsToWidth(voices, width) {
+  const contexts = [...new Set(voices.flatMap((voice) =>
+    voice.getTickables().map((tickable) => tickable.getTickContext()).filter(Boolean)
+  ))].sort((left, right) => left.getX() - right.getX());
+  if (contexts.length < 2) return;
+
+  const metrics = contexts.map((context) => context.getMetrics());
+  const start = contexts[0].getX();
+  const last = contexts.length - 1;
+  const rightEdge = (index) => metrics[index].notePx + metrics[index].totalRightPx;
+  if (contexts[last].getX() + rightEdge(last) - start <= width) return;
+
+  const gaps = contexts.slice(1).map((context, index) => context.getX() - contexts[index].getX());
+  const needs = gaps.map((_, index) =>
+    rightEdge(index) + metrics[index + 1].totalLeftPx + TICK_CONTEXT_MIN_GAP
+  );
+  const totalGap = gaps.reduce((sum, gap) => sum + gap, 0);
+  const slack = Math.max(
+    0,
+    width - rightEdge(last) - needs.reduce((sum, need) => sum + need, 0)
+  );
+  let x = start;
+  gaps.forEach((gap, index) => {
+    x += needs[index] + (totalGap > 0 ? slack * gap / totalGap : 0);
+    contexts[index + 1].setX(x);
   });
 }
 
