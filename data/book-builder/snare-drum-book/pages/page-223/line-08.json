@@ -1,7 +1,7 @@
 {
   "pageNumber": 223,
   "lineNumber": 8,
-  "title": "Every note 8",
+  "title": "Sparse 8",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -29,7 +29,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "rda"
+                    "ornaments": "la"
                   },
                   {
                     "notes": [
@@ -37,17 +37,8 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lda"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "rda"
+                    "velocity": 0.5,
+                    "ornaments": "rd"
                   },
                   {
                     "notes": [
@@ -91,8 +82,17 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
+                    "velocity": 1,
+                    "ornaments": "rda"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "lda"
                   },
                   {
                     "notes": [
@@ -102,65 +102,14 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 0,
-                    "end": 5,
-                    "actual": 5,
-                    "normal": 9
-                  },
-                  {
-                    "start": 8,
-                    "end": 14,
-                    "actual": 6,
-                    "normal": 4
+                    "start": 1,
+                    "end": 9,
+                    "actual": 8,
+                    "normal": 15
                   }
                 ]
               }
@@ -170,8 +119,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n16:rad n16:lad n16:rad n16:l n16:ld n16:r n16:l n16:l n16:r n16:r n16:l n16:r n16:l n16:l |t0-5:5:9,8-14:6:4",
-  "updatedAt": "2026-10-03T16:16:51.901Z",
-  "sectionId": "nine-sixteenths-quintuplets",
+  "exerciseShortForm": "n16:la n16:rd n16:l n16:ld n16:r n16:l n16:rad n16:lad n16:r |t1-9:8:15",
+  "updatedAt": "2026-10-03T16:41:17.658Z",
+  "sectionId": "fifteen-sixteenths-thirtyseconds",
   "sectionPageNumber": 1
 }

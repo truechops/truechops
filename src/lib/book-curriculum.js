@@ -79,6 +79,12 @@ const SPAN_DENSITIES = [
   { id: "full", title: "Every note", playEveryNote: true },
   { id: "sparse", title: "Sparse", playEveryNote: false },
 ];
+// Spans longer than two quarter notes (four eighths) get one sparse page in which
+// about half the primary groups are fully played and the rest include rests.
+const CONDENSED_SPAN_DENSITIES = [
+  { id: "sparse", title: "Sparse", playEveryNote: false, fullPrimaryGroupShare: 0.5 },
+];
+const isLongerThanTwoQuarters = (span) => span.count * 4 / span.unit > 2;
 
 // The secondary pool grows down the page: the printed row where each rhythm
 // joins. Eighths are not used on these pages.
@@ -126,7 +132,10 @@ const SPAN_STUDIES = [
 function createSpanStudy(study, pdfSettings) {
   return {
     group: { id: study.groupId, title: study.title, rhythmSpan: study.rhythmSpan },
-    sections: createSpanSections(study.groupId, pdfSettings, study.familyIds, study.label, study)
+    sections: createSpanSections(study.groupId, pdfSettings, study.familyIds, study.label, {
+      ...study,
+      densities: isLongerThanTwoQuarters(study.rhythmSpan) ? CONDENSED_SPAN_DENSITIES : SPAN_DENSITIES,
+    })
       .map((section) => ({ ...section, rhythmSpan: study.rhythmSpan })),
   };
 }
@@ -139,7 +148,9 @@ function createThreeEighthsSections(groupId, pdfSettings) {
   return createSpanSections(groupId, pdfSettings, THREE_EIGHTHS_FAMILY_IDS, "three eighths");
 }
 
-function createSpanSections(groupId, pdfSettings, familyIds, spanLabel, { chainPrimaryGroups = false } = {}) {
+function createSpanSections(groupId, pdfSettings, familyIds, spanLabel, {
+  chainPrimaryGroups = false, densities = SPAN_DENSITIES,
+} = {}) {
   return familyIds.map((familyId) => {
     const family = STUDY_FAMILIES.find((candidate) => candidate.id === familyId);
     const id = `${groupId}-${family.id}`;
@@ -149,7 +160,7 @@ function createSpanSections(groupId, pdfSettings, familyIds, spanLabel, { chainP
       primaryRhythms: normalizeRhythmPool(family, false),
       secondaryRhythms: normalizeRhythmPool(ONE_BEAT_SECONDARY_RHYTHMS),
       pdfSettings,
-      pages: SPAN_DENSITIES.map((density) => ({
+      pages: densities.map((density) => ({
         subsectionId: `${id}-${density.id}`,
         title: density.title,
         pdfSettings,
@@ -159,6 +170,7 @@ function createSpanSections(groupId, pdfSettings, familyIds, spanLabel, { chainP
           ornamentSegments: TWO_BEAT_ORNAMENT_SEGMENTS,
           secondaryRhythmRows: SECONDARY_RHYTHM_ROWS,
           ...(chainPrimaryGroups ? { chainPrimaryGroups: true } : {}),
+          ...(density.fullPrimaryGroupShare != null ? { fullPrimaryGroupShare: density.fullPrimaryGroupShare } : {}),
           minPlayedNotes: 0,
           maxPlayedNotes: 0,
           playEveryNote: density.playEveryNote,

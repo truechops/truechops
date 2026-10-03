@@ -32,10 +32,10 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 2,
+                    "duration": 4,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -62,7 +62,16 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "lfa"
+                    "ornaments": "la"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "la"
                   },
                   {
                     "notes": [
@@ -70,20 +79,14 @@
                     ],
                     "duration": 4,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "la"
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 4,
-                    "actual": 5,
-                    "normal": 3
-                  },
-                  {
-                    "start": 4,
-                    "end": 6,
+                    "end": 7,
                     "actual": 3,
                     "normal": 2
                   }
@@ -95,8 +98,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r4 n2:l n4:la n4:r n8:laf n4:la |t0-4:5:3,4-6:3:2",
-  "updatedAt": "2026-10-03T16:16:51.901Z",
-  "sectionId": "three-quarters-quintuplets",
-  "sectionPageNumber": 2
+  "exerciseShortForm": "r4 n4:r n4:la n4:r n8:la n8:la n4:r |t0-7:3:2",
+  "updatedAt": "2026-10-03T16:41:17.658Z",
+  "sectionId": "four-quarters-eighth-triplets",
+  "sectionPageNumber": 1
 }

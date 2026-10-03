@@ -1,7 +1,7 @@
 {
   "pageNumber": 213,
   "lineNumber": 10,
-  "title": "Every note 10",
+  "title": "Sparse 10",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -29,16 +29,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "ra"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
+                    "ornaments": "rda"
                   },
                   {
                     "notes": [
@@ -48,60 +39,6 @@
                     "dots": 0,
                     "velocity": 1,
                     "ornaments": "lda"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lda"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -116,7 +53,7 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 32,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
@@ -128,21 +65,33 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 32,
+                    "dots": 0,
+                    "velocity": 0.5,
                     "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "la"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 1,
-                    "end": 6,
-                    "actual": 5,
-                    "normal": 7
-                  },
-                  {
-                    "start": 7,
-                    "end": 12,
-                    "actual": 5,
-                    "normal": 7
+                    "start": 0,
+                    "end": 3,
+                    "actual": 3,
+                    "normal": 13
                   }
                 ]
               }
@@ -152,8 +101,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n16:ra n16:r n16:lad n16:r n16:r n16:lad n16:r n16:l n16:l n16:rad n16:l n16:l |t1-6:5:7,7-12:5:7",
-  "updatedAt": "2026-10-03T16:16:51.901Z",
-  "sectionId": "seven-sixteenths-quintuplets",
+  "exerciseShortForm": "n16:rad n16:lad n16:rad n32:l n16:r n32:l n16:la |t0-3:3:13",
+  "updatedAt": "2026-10-03T16:41:17.658Z",
+  "sectionId": "thirteen-sixteenths-eighth-triplets",
   "sectionPageNumber": 1
 }

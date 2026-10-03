@@ -1285,6 +1285,23 @@ export default function BookBuilderPanel() {
             />
             <span>Primary groups may repeat back to back</span>
           </label>
+          {!selectedPageGenerationSettings.playEveryNote && (
+            <Field label="Fully played primary groups (%)">
+              <input
+                inputMode="numeric"
+                max="100"
+                min="0"
+                onChange={(event) => updateSelectedPageGenerationDraft({
+                  fullPrimaryGroupShare: event.target.value === "" ? null : Number(event.target.value) / 100,
+                })}
+                placeholder="Random"
+                type="number"
+                value={selectedPageGenerationSettings.fullPrimaryGroupShare == null
+                  ? ""
+                  : Math.round(selectedPageGenerationSettings.fullPrimaryGroupShare * 100)}
+              />
+            </Field>
+          )}
           <Field label="Max same-hand stickings">
             <input
               inputMode="numeric"

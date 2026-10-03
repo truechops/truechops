@@ -1,7 +1,7 @@
 {
   "pageNumber": 223,
   "lineNumber": 3,
-  "title": "Every note 3",
+  "title": "Sparse 3",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -29,12 +29,19 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "c"
+                    "ornaments": "f"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "a"
+                  },
+                  {
+                    "notes": [],
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5
@@ -73,63 +80,18 @@
                     "velocity": 0.5
                   },
                   {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "a"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
+                    "notes": [],
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "fa"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "fa"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 4,
-                    "end": 9,
-                    "actual": 5,
-                    "normal": 9
+                    "start": 1,
+                    "end": 8,
+                    "actual": 8,
+                    "normal": 15
                   }
                 ]
               }
@@ -139,8 +101,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n16:c n16 n16:a n16 n16 n16 n16:a n16 n16 n16 n16:af n16:af |t4-9:5:9",
-  "updatedAt": "2026-10-03T16:16:51.901Z",
-  "sectionId": "nine-sixteenths-quintuplets",
+  "exerciseShortForm": "n16:f n16:a r16 n16:a n16 n16 n16 r8 |t1-8:8:15",
+  "updatedAt": "2026-10-03T16:41:17.658Z",
+  "sectionId": "fifteen-sixteenths-thirtyseconds",
   "sectionPageNumber": 1
 }

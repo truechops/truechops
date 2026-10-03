@@ -1,7 +1,7 @@
 {
   "pageNumber": 153,
   "lineNumber": 18,
-  "title": "Every note 18",
+  "title": "Sparse 18",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -26,28 +26,10 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
+                    "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lda"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "ra"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "rfa"
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -83,16 +65,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "la"
+                    "ornaments": "rf"
                   },
                   {
                     "notes": [
@@ -101,13 +74,64 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "rd"
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "rda"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "la"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "lfa"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "rfa"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 3,
+                    "end": 6,
+                    "actual": 6,
+                    "normal": 4
+                  },
+                  {
+                    "start": 6,
+                    "end": 9,
                     "actual": 3,
                     "normal": 5
                   }
@@ -119,8 +143,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n8:lad n8:ra n8:raf n16:lf n16:l n16:r n16:r n16:la n16:rd |t0-3:3:5",
-  "updatedAt": "2026-10-03T16:16:51.901Z",
+  "exerciseShortForm": "n16:r n16:lf n16:l n16:r n16:rf n16:l n8:rad n8:la n8:laf n16:raf n16:l |t0-6:6:4,6-9:3:5",
+  "updatedAt": "2026-10-03T16:41:17.658Z",
   "sectionId": "five-eighths-eighth-triplets",
   "sectionPageNumber": 1
 }

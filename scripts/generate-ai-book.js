@@ -78,6 +78,7 @@ const DEFAULT_MAX_SAME_HAND_STICKING_RUN = 4;
 const MAX_UNIQUE_LINE_ATTEMPTS = 250;
 const LATE_RETRY_ATTEMPT = 100;
 const PRIMARY_CHAIN_PROBABILITY = 0.15;
+const BALANCE_RETRY_ATTEMPT = 50;
 
 const args = process.argv.slice(2);
 
@@ -3190,11 +3191,45 @@ function getBlockEvents(block, random) {
     .flat().map((duration) => ({ duration, dots: 0, tuplet: block.tuplet }));
 }
 
+// With fullPrimaryGroupShare, each primary group is either fully played or keeps
+// at least one visible rest. Choices run evenly through the page (a running
+// share, offset by exercise), so every page lands near the requested balance.
+// Eighth-note and slower tuplets put the rest first, since a rest after a note
+// there reads as a longer note.
+function balancePrimaryGroupRests(layout, blockEvents, playedSlots, primaryBlocks, section, random, lineIndex = 0, attempt = 0) {
+  if (section.fullPrimaryGroupShare == null || getSectionPlayEveryNote(section)) return;
+  const share = Math.max(0, Math.min(1, Number(section.fullPrimaryGroupShare) || 0));
+  let start = 0;
+  let group = 0;
+  layout.forEach((block, blockIndex) => {
+    const count = blockEvents[blockIndex].length;
+    if (primaryBlocks.includes(block) && count > 1) {
+      const indexes = Array.from({ length: count }, (_, offset) => start + offset);
+      const position = lineIndex + group;
+      group += 1;
+      // Late retries choose at random so an exercise that can't work one way can resolve.
+      const fullyPlayed = attempt >= BALANCE_RETRY_ATTEMPT
+        ? random() < share
+        : Math.floor((position + 1) * share) > Math.floor(position * share);
+      if (fullyPlayed) {
+        indexes.forEach((index) => { playedSlots[index] = true; });
+      } else {
+        const restIndex = Number(block.tuplet.type) >= 16 ? indexes[randomInteger(random, 0, count - 1)] : indexes[0];
+        playedSlots[restIndex] = false;
+        if (indexes.every((index) => !playedSlots[index])) {
+          playedSlots[indexes.find((index) => index !== restIndex)] = true;
+        }
+      }
+    }
+    start += count;
+  });
+}
+
 function rhythmPoolHasRhythms(pool) {
   return pool.subdivisions.length > 0 || pool.tuplets.length > 0;
 }
 
-function createMixedTupletFallbackGeneratedScore(section, options, random) {
+function createMixedTupletFallbackGeneratedScore(section, options, random, lineIndex = 0, attempt = 0) {
   const tupletBlocks = options.tuplets
     .map((tuplet) => ({
       kind: "tuplet",
@@ -3326,6 +3361,7 @@ function createMixedTupletFallbackGeneratedScore(section, options, random) {
         playedSlots[tupletEventIndexes[index]] = true;
       });
   }
+  balancePrimaryGroupRests(layout, blockEvents, playedSlots, requiredBlocks, section, random, lineIndex, attempt);
   const notes = [];
   const tuplets = [];
   let eventIndex = 0;
@@ -3381,7 +3417,7 @@ function createFallbackGeneratedScore(section, samplePayload, lineIndex, attempt
   );
 
   if (options.tuplets.length || section.primaryRhythms) {
-    const tupletScore = createMixedTupletFallbackGeneratedScore(section, options, random);
+    const tupletScore = createMixedTupletFallbackGeneratedScore(section, options, random, lineIndex, attempt);
 
     if (tupletScore) {
       return tupletScore;
@@ -3618,6 +3654,7 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         ornamentSegments: normalizeOrnamentSegments(pageSource.ornamentSegments),
         secondaryRhythmRows: normalizeSecondaryRhythmRows(pageSource.secondaryRhythmRows),
         chainPrimaryGroups: Boolean(pageSource.chainPrimaryGroups),
+        fullPrimaryGroupShare: pageSource.fullPrimaryGroupShare ?? null,
         // The sticking tail closes a multi-page subsection, so only its last page uses it.
         finalSubsectionPage: !page.subsectionId || sourcePages[pageIndex + 1]?.subsectionId !== page.subsectionId,
         subsectionLineOffset: getSubsectionLineOffset(sourcePages, pageIndex, sectionPdfSettings),
@@ -3948,6 +3985,7 @@ function createStoredPageGenerationSettings(pageConfig) {
     ...(pageConfig.ornamentSegments ? { ornamentSegments: pageConfig.ornamentSegments } : {}),
     ...(pageConfig.secondaryRhythmRows ? { secondaryRhythmRows: pageConfig.secondaryRhythmRows } : {}),
     ...(pageConfig.chainPrimaryGroups ? { chainPrimaryGroups: true } : {}),
+    ...(pageConfig.fullPrimaryGroupShare != null ? { fullPrimaryGroupShare: pageConfig.fullPrimaryGroupShare } : {}),
     primaryRhythms: pageConfig.primaryRhythms,
     secondaryRhythms: pageConfig.secondaryRhythms,
     prompt: pageConfig.prompt || "",

@@ -1,7 +1,7 @@
 {
   "pageNumber": 167,
   "lineNumber": 2,
-  "title": "Every note 2",
+  "title": "Sparse 2",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -36,7 +36,8 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 1,
+                    "ornaments": "a"
                   },
                   {
                     "notes": [
@@ -52,7 +53,8 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 1,
+                    "ornaments": "a"
                   },
                   {
                     "notes": [
@@ -91,22 +93,6 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
                     "duration": 8,
                     "dots": 0,
                     "velocity": 1,
@@ -116,7 +102,16 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "a"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 0.5
                   }
@@ -125,14 +120,8 @@
                   {
                     "start": 0,
                     "end": 9,
-                    "actual": 5,
-                    "normal": 3
-                  },
-                  {
-                    "start": 9,
-                    "end": 12,
-                    "actual": 3,
-                    "normal": 2
+                    "actual": 9,
+                    "normal": 7
                   }
                 ]
               }
@@ -142,8 +131,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n8 n8 n8 n8 n8 n8 n8 n8:a n4 n8 n8:a n8 |t0-9:5:3,9-12:3:2",
-  "updatedAt": "2026-10-03T16:16:51.901Z",
-  "sectionId": "three-quarters-quintuplets",
+  "exerciseShortForm": "n8 n8:a n8 n8:a n8 n8 n8 n8:a n8:a n16:a n16 |t0-9:9:7",
+  "updatedAt": "2026-10-03T16:41:17.658Z",
+  "sectionId": "seven-eighths-nine-eight-thirtyseconds",
   "sectionPageNumber": 1
 }

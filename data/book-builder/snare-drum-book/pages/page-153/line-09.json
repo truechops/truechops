@@ -1,7 +1,7 @@
 {
   "pageNumber": 153,
   "lineNumber": 9,
-  "title": "Every note 9",
+  "title": "Sparse 9",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -26,16 +26,7 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "la"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
@@ -44,7 +35,16 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
@@ -56,16 +56,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
+                    "ornaments": "rc"
                   },
                   {
                     "notes": [
@@ -75,6 +66,12 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
+                  },
+                  {
+                    "notes": [],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5
                   },
                   {
                     "notes": [
@@ -93,21 +90,18 @@
                     "dots": 0,
                     "velocity": 1,
                     "ornaments": "lda"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "rda"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 6,
-                    "end": 9,
+                    "start": 0,
+                    "end": 3,
+                    "actual": 3,
+                    "normal": 2
+                  },
+                  {
+                    "start": 5,
+                    "end": 8,
                     "actual": 3,
                     "normal": 5
                   }
@@ -119,8 +113,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n16:la n16:r n16:l n16:r n16:r n16:l n8:rad n8:lad n8:rad |t6-9:3:5",
-  "updatedAt": "2026-10-03T16:16:51.901Z",
+  "exerciseShortForm": "n8:r n8:r n8:l n16:rc n16:l r8 n8:rad n8:lad |t0-3:3:2,5-8:3:5",
+  "updatedAt": "2026-10-03T16:41:17.658Z",
   "sectionId": "five-eighths-eighth-triplets",
   "sectionPageNumber": 1
 }

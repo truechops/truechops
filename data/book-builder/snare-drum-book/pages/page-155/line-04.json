@@ -1,7 +1,7 @@
 {
   "pageNumber": 155,
   "lineNumber": 4,
-  "title": "Every note 4",
+  "title": "Sparse 4",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -26,19 +26,17 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 8,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "a"
+                    "velocity": 0.5
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 8,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "ad"
+                    "velocity": 0.5
                   },
                   {
                     "notes": [
@@ -62,8 +60,7 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "a"
+                    "velocity": 0.5
                   },
                   {
                     "notes": [
@@ -75,9 +72,13 @@
                     "ornaments": "a"
                   },
                   {
-                    "notes": [
-                      "C5"
-                    ],
+                    "notes": [],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [],
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5
@@ -102,14 +103,14 @@
                 ],
                 "tuplets": [
                   {
-                    "start": 2,
+                    "start": 0,
                     "end": 6,
-                    "actual": 4,
+                    "actual": 6,
                     "normal": 5
                   },
                   {
-                    "start": 6,
-                    "end": 9,
+                    "start": 7,
+                    "end": 10,
                     "actual": 3,
                     "normal": 2
                   }
@@ -121,8 +122,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n16:a n16:ad n8 n8 n8:a n8:a n8 n8:d n8 |t2-6:4:5,6-9:3:2",
-  "updatedAt": "2026-10-03T16:16:51.901Z",
-  "sectionId": "five-eighths-sixteenths",
+  "exerciseShortForm": "n8 n8 n8 n8 n8 n8:a r8 r8 n8:d n8 |t0-6:6:5,7-10:3:2",
+  "updatedAt": "2026-10-03T16:41:17.658Z",
+  "sectionId": "five-eighths-sextuplets",
   "sectionPageNumber": 1
 }
