@@ -28,6 +28,37 @@ export function addMeasure(state, action) {
   }
 }
 
+// Appends generated snare measures to the score. Other instruments in the score
+// get empty parts, and an untouched one-measure score is replaced rather than
+// extended.
+export function appendGeneratedMeasures(state, action) {
+  const generated = action.payload?.measures || [];
+  if (!generated.length) return;
+
+  const score = state.score;
+  score.parts = score.parts || {};
+  score.parts.snare = { ...(score.parts.snare || {}), enabled: true };
+  // Same part order as the score's existing measures.
+  const instruments = [...new Set([...(score.measures[0]?.parts || []).map((part) => part.instrument), "snare"])];
+  const isEmpty = score.measures.length === 1 && score.measures[0].parts.every((part) =>
+    part.voices.every((voice) => voice.notes.every((note) => !note.notes || !note.notes.length)));
+  const measures = generated.map((measure) => {
+    const empty = getEmptyMeasure(measure.timeSig, instruments);
+    const snare = measure.parts.find((part) => part.instrument === "snare") || measure.parts[0];
+    return {
+      timeSig: measure.timeSig,
+      parts: empty.parts.map((part) => (part.instrument === "snare" ? _.cloneDeep(snare) : part)),
+    };
+  });
+
+  if (isEmpty) {
+    score.measures = measures;
+  } else {
+    score.measures.push(...measures);
+  }
+  state.selectedNoteIndex = null;
+}
+
 export function deleteMeasure(state) {
   if (!_.has(state, "selectedNoteIndex") || !state.selectedNoteIndex) {
     return;

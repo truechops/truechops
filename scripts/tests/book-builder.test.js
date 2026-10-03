@@ -226,6 +226,31 @@ test("span pages cycle ornament topics, grow the secondary pool, and start tuple
   }
 });
 
+test("the exercise generator builds fresh measures from a configuration or a book page", () => {
+  const { generateExerciseMeasures } = require("../../src/lib/exercise-generator");
+  const { DEFAULT_EXERCISE_CONFIG, exerciseConfigFromBookPage, normalizeExerciseConfig } = require("../../src/lib/exercise-config");
+  const first = generateExerciseMeasures(DEFAULT_EXERCISE_CONFIG, 16);
+  assert.equal(first.measures.length, 16);
+  assert.equal(generateExerciseMeasures(DEFAULT_EXERCISE_CONFIG, 99).measures.length, 16);
+  const second = generateExerciseMeasures(DEFAULT_EXERCISE_CONFIG, 16);
+  assert.notDeepEqual(first.measures, second.measures);
+
+  const book = normalizeBook({ structureVersion: 3,
+    groups: [{ id: "two", rhythmSpan: { count: 2, unit: 4 } }],
+    sections: createSpanStudy(SPAN_STUDIES[0], { measuresPerLine: 2, lineSpacing: 130, noteSize: 100 }).sections.slice(0, 1),
+  });
+  const config = exerciseConfigFromBookPage(book.pages[0], { page: 1 });
+  assert.deepEqual(config.rhythmSpan, { count: 2, unit: 4 });
+  assert.equal(config.playEveryNote, true);
+  assert.deepEqual(config.ornaments, ["stickings", "accents", "flams", "diddles", "cheese"]);
+  for (const measure of generateExerciseMeasures(config, 4).measures) {
+    const voice = measure.parts[0].voices[0];
+    assert(voice.tuplets.some((tuplet) => tuplet.actual === 3 && tuplet.normal === 2));
+    assert(voice.notes.every((note) => note.notes.length));
+  }
+  assert.equal(normalizeExerciseConfig({ name: "", subdivision: "nope" }).subdivision, "sixteenths");
+});
+
 test("all seven families follow the exact eight sparse / seven full topic order", () => {
   const sections = createStudySections("quarter", { measuresPerLine: 2, lineSpacing: 130, noteSize: 100 });
   assert.equal(sections.length, 14);

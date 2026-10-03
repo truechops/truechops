@@ -10,6 +10,7 @@ import Button from "../ui/Button";
 import { useState, useCallback } from "react";
 import TupletPickerPopover from "./popovers/TupletPickerPopover";
 import MutateButtons from './buttons/mutate/MutateButtons';
+import ExerciseGenerator from "../exercise-generator/ExerciseGenerator";
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -220,6 +221,15 @@ export function Buttons(props) {
         <TabPanel style={{margin: 'auto', padding: 0}} classes={{root: classes.mutateButtonsRoot}} value={selectedTab} index={3}>
           <MutateButtons />
         </TabPanel>
+        <TabPanel value={selectedTab} index={4}>
+          <ButtonsRow>
+            <ExerciseGenerator
+              compact
+              mode="append"
+              onMeasures={({ measures }) => dispatch(scoreActions.appendGeneratedMeasures({ measures }))}
+            />
+          </ButtonsRow>
+        </TabPanel>
       </div>
       <Tabs
         value={selectedTab}
@@ -248,6 +258,11 @@ export function Buttons(props) {
           key={"compose-button-tabs-mods"}
           label="Mutate"
           {...a11yProps(3)}
+        />
+        <Tab
+          key={"compose-button-tabs-generate"}
+          label="Generate"
+          {...a11yProps(4)}
         />
       </Tabs>
     </>

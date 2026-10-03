@@ -11,6 +11,7 @@ import {
 } from "../services/score-service";
 import { mutate } from "../services/mutate/mutate-service";
 import { addMeasure as addMeasureService, 
+         appendGeneratedMeasures as appendGeneratedMeasuresService,
          deleteMeasure as deleteMeasureService,
         updateTimeSig as updateTimeSigService } from '../services/measure-service';
 import { getEmptyMeasure } from "../helpers/score";
@@ -247,6 +248,9 @@ const scoreSlice = createSlice({
     },
     deleteMeasure(state) {
       deleteMeasureService(state);
+    },
+    appendGeneratedMeasures(state, action) {
+      appendGeneratedMeasuresService(state, action);
     },
     clearScore(state) {
       state.score = EMPTY_SCORE

@@ -67,6 +67,14 @@ Notation rules for every page:
 
 The original eighth-note and mixed-tuplet studies remain alongside this curriculum. Secondary pools start empty. Printed contents list span groups, rhythm sections, and subsections across as many contents pages as necessary.
 
+## Exercise generator on the website
+
+The same generator makes new exercises on the website from an **exercise configuration**: subdivision, the span it is spread over, secondary rhythms, density (every note or sparse, with an optional share of fully played groups), ornaments, and tempo (`src/lib/exercise-config.js`).
+
+- **Composer:** the **Generate** tab picks a configuration (edit it with **Edit settings**) and **Add measure** appends one generated measure to the score.
+- **Book QR pages:** besides **Choose rhythms**, the **Generate exercises** tab lists the page's own configuration and your saved ones. Edit one, save it, and build a score of 1–16 measures.
+- Saved configurations belong to the signed-in user (`exerciseConfigs` in MongoDB, `/api/exercise-configs`); signed-out visitors keep them in the browser. `/api/exercise-generator` returns the measures.
+
 Regenerate exercises with `npm run book:generate:ai -- --no-local-ai`. To regenerate exercises and export the PDF, use `npm run pdf:book`. To export existing exercises without regeneration, use `npm run pdf:book:render`.
 
 Run the migration, generation, and API regression checks with `npm run test:book`.

@@ -1,10 +1,12 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { useDispatch } from "react-redux";
 import { appActions } from "../../store/app";
 import { scoreActions } from "../../store/score";
 import { drawScore, initialize } from "../../lib/vexflow";
 import { BOOK_TITLE, createContinuousPageScore } from "./book-data";
+import ExerciseGenerator from "../exercise-generator/ExerciseGenerator";
+import { exerciseConfigFromBookPage, getBookPageOrnamentTopics } from "../../lib/exercise-config";
 
 const styles = {
   page: {
@@ -169,6 +171,29 @@ const styles = {
   error: {
     color: "#8a1f1f",
   },
+  tabs: {
+    borderBottom: "1px solid #ddd",
+    display: "flex",
+    gap: "4px",
+    marginBottom: "22px",
+  },
+  tab: {
+    background: "none",
+    border: "none",
+    borderBottomColor: "transparent",
+    borderBottomStyle: "solid",
+    borderBottomWidth: "3px",
+    color: "#555",
+    cursor: "pointer",
+    fontFamily: "Arial, sans-serif",
+    fontSize: "16px",
+    fontWeight: 700,
+    padding: "10px 14px",
+  },
+  activeTab: {
+    borderBottomColor: "#1e5ea8",
+    color: "#111",
+  },
 };
 
 const VEXFLOW_RENDER_PADDING = 50;
@@ -268,6 +293,7 @@ export default function PagePractice() {
   const [selectedLineNumbers, setSelectedLineNumbers] = useState([]);
   const [loadingPage, setLoadingPage] = useState(false);
   const [error, setError] = useState(null);
+  const [tab, setTab] = useState("rhythms");
   const dispatch = useDispatch();
   const router = useRouter();
   const selectedToken = typeof router.query.token === "string"
@@ -354,8 +380,24 @@ export default function PagePractice() {
     router.push("/");
   }
 
+  function practiceGeneratedExercises({ measures, tempo }, config) {
+    dispatch(
+      scoreActions.updateScore({
+        score: { parts: { snare: { enabled: true } }, measures },
+        name: config.name,
+        tempo,
+        mutations: [],
+      })
+    );
+    router.push("/");
+  }
+
   const selectedPage = pagePayload?.page || null;
   const selectedPageRef = pagePayload?.pageRef || null;
+  const pageConfig = useMemo(
+    () => (selectedPage ? exerciseConfigFromBookPage(selectedPage, selectedPageRef) : null),
+    [selectedPage, selectedPageRef]
+  );
 
   return (
     <div style={styles.page}>
@@ -375,6 +417,34 @@ export default function PagePractice() {
       )}
 
       {!loadingPage && !error && selectedPage && (
+        <div role="tablist" style={styles.tabs}>
+          {[
+            ["rhythms", "Choose rhythms"],
+            ["generate", "Generate exercises"],
+          ].map(([id, label]) => (
+            <button
+              aria-selected={tab === id}
+              key={id}
+              onClick={() => setTab(id)}
+              role="tab"
+              style={{ ...styles.tab, ...(tab === id ? styles.activeTab : {}) }}
+              type="button"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {!loadingPage && !error && selectedPage && tab === "generate" && (
+        <ExerciseGenerator
+          onMeasures={practiceGeneratedExercises}
+          pageConfig={pageConfig}
+          topics={getBookPageOrnamentTopics(selectedPage)}
+        />
+      )}
+
+      {!loadingPage && !error && selectedPage && tab === "rhythms" && (
         <>
           <p style={styles.prompt}>
             {getPageLabel(selectedPageRef)} — tap rhythms in the order you want to practice them:
