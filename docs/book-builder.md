@@ -2,7 +2,7 @@
 
 In `/book-builder`, span groups contain rhythm sections, and each section contains subsections. A subsection is one page by default; set **Pages in this subsection** to spread it over more pages. Each section selects primary rhythms and an optional pool of secondary rhythms. Each subsection has its own title, primary ornaments, played-note limits, sticking rules, and print layout.
 
-The span group sets a count and note value, such as 1 quarter, 2 eighths, or 3 sixteenths. Primary groups retain their note count and stretch/compress across that span: four notes over three sixteenths produce a 4:3 group. Secondary rhythms fill the remaining space in the 4/4 exercise. A full/no-rest page needs suitable secondary rhythms if its primary span cannot fill 4/4 evenly. Use **Add group** or **Duplicate group** to organize studies over different spans.
+The span group sets a count and note value, such as 1 quarter, 2 eighths, or 3 sixteenths. Primary groups retain their note count and stretch/compress across that span, written in standard tuplet notation: four notes over three sixteenths produce a 4:3 group, three notes over two quarters a quarter-note triplet, and nine over two quarters 9:8 sixteenths. A count that matches the span exactly is written as plain notes. Tuplets that span whole beats always start on a beat. Secondary rhythms fill the remaining space in the 4/4 exercise. A full/no-rest page needs suitable secondary rhythms if its primary span cannot fill 4/4 evenly. Use **Add group** or **Duplicate group** to organize studies over different spans.
 
 - Every exercise contains each selected primary subdivision and tuplet type, with every selected primary ornament represented on the primary rhythms.
 - Secondary rhythms are drawn randomly to fill the remaining space. Their ornaments are optional and apply only to secondary rhythms.
@@ -23,6 +23,8 @@ The saved book contains sparse and full sections for sixteenths, eighth-note tri
 8. Everything
 
 Full sections use the same order starting with Accents. Full pages with stickings use the regular maximum of two same-hand notes in their earlier rows. Their final five **printed staff rows** allow a maximum of four and require a three- or four-note same-hand run in each exercise. The tail rule follows the page layout (five rows are ten exercises at two measures per row) and can be edited per subsection.
+
+The **Over two quarter notes** group has one page each for 3, 5, 7, and 9 notes over two beats. Each page cycles through the ornament topics by exercise: exercises 1–4 are Accents, then three exercises each for the six topics from Accents with stickings to Everything (22 exercises at two measures per line). The secondary pool holds every one-beat rhythm (eighths, sixteenths, thirty-seconds, triplets, and 5-, 6-, 7-, and 9-note groups) with all ornaments, so the two-beat group can start on any beat. Diddles and cheese may sit on quarter-note triplets on these pages.
 
 The original eighth-note and mixed-tuplet studies remain alongside this curriculum. Secondary pools start empty. Printed contents list span groups, rhythm sections, and subsections across as many contents pages as necessary.
 

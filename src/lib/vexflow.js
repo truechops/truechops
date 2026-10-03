@@ -27,6 +27,8 @@ const UNACCENTED_TUPLET_NOTEWARD_OFFSET = -5;
 const FIRST_NOTE_FORMAT_X = 8;
 const MEASURE_RIGHT_EDGE_GUARD = 6;
 const TICK_CONTEXT_MIN_GAP = 2;
+const STAVE_NOTE_START_ESTIMATE = 10;
+const TIME_SIGNATURE_WIDTH_ESTIMATE = 30;
 const LONGEST_UNBEAMED_TUPLET_DURATION = 4;
 const MEASURE_NUMBER_FONT_SIZE = 15;
 const MEASURE_NUMBER_GAP = 6;
@@ -158,6 +160,7 @@ export function drawScore(
       )
     ) {
       const remainingWidth = Math.max(svgWidth - width, 0);
+      if (fixedMeasureWidth) balanceRowWidths(barRenderData);
       renderStaves(
         barRenderData,
         remainingWidth,
@@ -188,6 +191,10 @@ export function drawScore(
     barRenderData.push({
       parts: measureParts,
       width: barWidth,
+      // The narrowest stave that still holds every note and grace note.
+      minWidth: getTickContextsMinWidth(voices.flat()) + FIRST_NOTE_FORMAT_X + MEASURE_RIGHT_EDGE_GUARD + FORMAT_PADDING +
+        STAVE_NOTE_START_ESTIMATE + (measureNoteStartPadding || 0) + (measureNoteEndPadding || 0) +
+        (firstMeasure ? TIME_SIGNATURE_WIDTH_ESTIMATE : 0),
       firstMeasure,
       measureIndex,
       timeSig: score.measures[measureIndex].timeSig,
@@ -200,6 +207,7 @@ export function drawScore(
 
   if (barRenderData.length) {
     const remainingWidth = justifyLastRow ? Math.max(svgWidth - width, 0) : 0;
+    if (fixedMeasureWidth) balanceRowWidths(barRenderData);
 
     renderStaves(
       barRenderData,
@@ -748,29 +756,60 @@ function alignFirstNotePosition(voices) {
   });
 }
 
+// With a fixed number of measures per line, a crowded measure borrows width from
+// roomier measures in its row; the row's total width is unchanged.
+function balanceRowWidths(bars) {
+  if (bars.every((bar) => bar.minWidth <= bar.width)) return;
+  const total = bars.reduce((sum, bar) => sum + bar.width, 0);
+  if (bars.reduce((sum, bar) => sum + bar.minWidth, 0) > total) return;
+
+  const atMinimum = new Set();
+  for (;;) {
+    const others = bars.filter((bar) => !atMinimum.has(bar));
+    const share = (total - [...atMinimum].reduce((sum, bar) => sum + bar.minWidth, 0)) / others.length;
+    const crowded = others.filter((bar) => bar.minWidth > share);
+    if (!crowded.length) {
+      bars.forEach((bar) => { bar.width = atMinimum.has(bar) ? bar.minWidth : share; });
+      return;
+    }
+    crowded.forEach((bar) => atMinimum.add(bar));
+  }
+}
+
 // VexFlow spaces dense measures by their widest note, so many grace notes push the
 // measure past its stave. Give each note only the room it needs and share the rest
 // in the formatter's rhythmic proportions.
-function fitTickContextsToWidth(voices, width) {
+function getTickContextLayout(voices) {
   const contexts = [...new Set(voices.flatMap((voice) =>
     voice.getTickables().map((tickable) => tickable.getTickContext()).filter(Boolean)
   ))].sort((left, right) => left.getX() - right.getX());
-  if (contexts.length < 2) return;
-
   const metrics = contexts.map((context) => context.getMetrics());
-  const start = contexts[0].getX();
-  const last = contexts.length - 1;
   const rightEdge = (index) => metrics[index].notePx + metrics[index].totalRightPx;
-  if (contexts[last].getX() + rightEdge(last) - start <= width) return;
-
-  const gaps = contexts.slice(1).map((context, index) => context.getX() - contexts[index].getX());
-  const needs = gaps.map((_, index) =>
+  // Room each note needs after the previous one: its notehead, modifiers, and grace notes.
+  const needs = contexts.slice(1).map((_, index) =>
     rightEdge(index) + metrics[index + 1].totalLeftPx + TICK_CONTEXT_MIN_GAP
   );
+  return { contexts, needs, lastRightEdge: contexts.length ? rightEdge(contexts.length - 1) : 0 };
+}
+
+function getTickContextsMinWidth(voices) {
+  const { needs, lastRightEdge } = getTickContextLayout(voices);
+  return needs.reduce((sum, need) => sum + need, lastRightEdge);
+}
+
+function fitTickContextsToWidth(voices, width) {
+  const { contexts, needs, lastRightEdge } = getTickContextLayout(voices);
+  if (contexts.length < 2) return;
+
+  const start = contexts[0].getX();
+  const last = contexts.length - 1;
+  if (contexts[last].getX() + lastRightEdge - start <= width) return;
+
+  const gaps = contexts.slice(1).map((context, index) => context.getX() - contexts[index].getX());
   const totalGap = gaps.reduce((sum, gap) => sum + gap, 0);
   const slack = Math.max(
     0,
-    width - rightEdge(last) - needs.reduce((sum, need) => sum + need, 0)
+    width - lastRightEdge - needs.reduce((sum, need) => sum + need, 0)
   );
   let x = start;
   gaps.forEach((gap, index) => {

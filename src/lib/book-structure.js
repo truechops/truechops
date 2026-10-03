@@ -38,14 +38,26 @@ function getSpanPrimaryRhythms(primaryRhythms, span) {
     ...pool.tuplets,
   ];
   const tuplets = groups.map((group) => {
-    const type = [group.type, 32, 16, 8, 4].find((candidate) => {
+    // Standard notation: the note value whose count fits the span is at most the
+    // tuplet size and more than half of it (3:2 quarters, 5:4 eighths, 9:8 sixteenths).
+    const type = [4, 8, 16, 32].find((candidate) => {
+      const normal = quarterUnits * candidate / 4;
+      return Number.isInteger(normal) && normal <= group.actual && group.actual < normal * 2;
+    }) || [32, 16, 8, 4].find((candidate) => {
       const normal = quarterUnits * candidate / 4;
       return Number.isInteger(normal) && normal >= 1 && normal <= 16;
     });
     if (!type) throw new Error("This span cannot be represented with the supported note values.");
     return { actual: group.actual, normal: quarterUnits * type / 4, type };
   });
-  return normalizeRhythmPool({ subdivisions: [], tuplets, ornaments: pool.ornaments });
+  // A count that matches the span exactly is just plain notes (4 over two quarters = eighths).
+  const plainIds = { 8: "eighths", 16: "sixteenths", 32: "thirtyseconds" };
+  const plain = tuplets.filter((tuplet) => tuplet.actual === tuplet.normal && plainIds[tuplet.type]);
+  return normalizeRhythmPool({
+    subdivisions: plain.map((tuplet) => plainIds[tuplet.type]),
+    tuplets: tuplets.filter((tuplet) => !plain.includes(tuplet)),
+    ornaments: pool.ornaments,
+  });
 }
 
 function rhythmSpanLabel(span) {
@@ -89,6 +101,25 @@ function getLineStickingSettings(settings, lineIndex, linesPerPage, measuresPerL
     requiredSameHandStickingRuns: tail.requiredSameHandStickingRuns,
   };
 }
+// Lets one page cycle through ornament topics: [{ count: 4, ornaments: ["accents"] }, ...].
+function normalizeOrnamentSegments(value) {
+  if (!Array.isArray(value)) return null;
+  const segments = value
+    .map((segment) => ({
+      count: Math.max(1, Math.min(100, Number.parseInt(segment?.count, 10) || 1)),
+      ...(segment?.title ? { title: String(segment.title) } : {}),
+      ornaments: ornamentIds.filter((id) => (segment?.ornaments || []).includes(id)),
+    }));
+  return segments.length ? segments : null;
+}
+
+function getLineOrnamentSegment(settings, lineIndex) {
+  const segments = normalizeOrnamentSegments(settings?.ornamentSegments);
+  if (!segments) return null;
+  let end = 0;
+  return segments.find((segment) => (end += segment.count) > lineIndex) || segments[segments.length - 1];
+}
+
 const subdivisionIds = ["eighths", "sixteenths", "thirtyseconds"];
 const ornamentIds = ["stickings", "accents", "flams", "diddles", "cheese"];
 
@@ -211,5 +242,6 @@ module.exports = {
   MAX_SUBSECTION_PAGES, normalizeSubsectionPageCount, groupSubsectionPages,
   getSpanPrimaryRhythms,
   normalizeBookGroups, normalizeStickingTail, getLineStickingSettings,
+  normalizeOrnamentSegments, getLineOrnamentSegment,
   normalizeRhythmPool, migrateBookStructure, createStructureTableOfContents,
 };

@@ -1176,20 +1176,36 @@ export default function BookBuilderPanel() {
               ))}
             </div>
           )}
-          <CheckboxPicker
-            label="Primary ornaments required in this subsection"
-            onToggle={(optionId) =>
-              updateSelectedPageGenerationDraft({
-                ornaments: toggleOption(
-                  selectedPageGenerationSettings.ornaments,
-                  optionId
-                ),
-              })
-            }
-            options={ORNAMENT_OPTIONS}
-            value={selectedPageGenerationSettings.ornaments}
-          />
-          <p className={styles.layoutSummary}>Each selected primary ornament must appear on the primary rhythms on this page.</p>
+          {selectedPageGenerationSettings.ornamentSegments ? (
+            <p className={styles.layoutSummary}>
+              Primary ornaments change by exercise on this page:{" "}
+              {selectedPageGenerationSettings.ornamentSegments.reduce((parts, segment) => {
+                const start = parts.next;
+                const range = segment.count > 1 ? `${start}–${start + segment.count - 1}` : String(start);
+                return {
+                  next: start + segment.count,
+                  labels: [...parts.labels, `${range} ${segment.title || segment.ornaments.join(", ") || "none"}`],
+                };
+              }, { next: 1, labels: [] }).labels.join("; ")}.
+            </p>
+          ) : (
+            <>
+              <CheckboxPicker
+                label="Primary ornaments required in this subsection"
+                onToggle={(optionId) =>
+                  updateSelectedPageGenerationDraft({
+                    ornaments: toggleOption(
+                      selectedPageGenerationSettings.ornaments,
+                      optionId
+                    ),
+                  })
+                }
+                options={ORNAMENT_OPTIONS}
+                value={selectedPageGenerationSettings.ornaments}
+              />
+              <p className={styles.layoutSummary}>Each selected primary ornament must appear on the primary rhythms on this page.</p>
+            </>
+          )}
           <Field label="Measures per line">
             <input
               inputMode="numeric"

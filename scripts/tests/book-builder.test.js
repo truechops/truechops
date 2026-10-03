@@ -8,7 +8,7 @@ const vm = require("node:vm");
 const babel = require("@babel/core");
 const { migrateBookStructure } = require("../../src/lib/book-structure");
 const generator = require("../generate-ai-book");
-const { createStudySections, STUDY_TOPICS, STUDY_FAMILIES } = require("../../src/lib/book-curriculum");
+const { createStudySections, createTwoBeatSections, STUDY_TOPICS, STUDY_FAMILIES } = require("../../src/lib/book-curriculum");
 const { getLineStickingSettings, getSpanPrimaryRhythms } = require("../../src/lib/book-structure");
 
 // Load the same ES modules Next uses without starting a server.
@@ -167,6 +167,48 @@ test("subsections span their page count and share settings across pages", () => 
 
   const configs = generator.createGenerationConfig({}, expanded).sections[0].pages;
   assert.deepEqual(configs.map((config) => config.finalSubsectionPage), [false, false, true, true]);
+});
+
+test("rhythms over two beats use standard tuplet notation", () => {
+  const span = { count: 2, unit: 4 };
+  const over = (id) => getSpanPrimaryRhythms(pool([], STUDY_FAMILIES.find((family) => family.id === id).tuplets), span);
+  assert.deepEqual(over("eighth-triplets").tuplets, [{ actual: 3, normal: 2, type: 4 }]);
+  assert.deepEqual(over("quintuplets").tuplets, [{ actual: 5, normal: 4, type: 8 }]);
+  assert.deepEqual(over("septuplets").tuplets, [{ actual: 7, normal: 4, type: 8 }]);
+  assert.deepEqual(over("nine-eight-thirtyseconds").tuplets, [{ actual: 9, normal: 8, type: 16 }]);
+  assert.deepEqual(getSpanPrimaryRhythms(pool(["sixteenths"]), span), pool(["eighths"]));
+});
+
+test("two-beat pages cycle ornament topics per exercise and start tuplets on beats", () => {
+  const config = generator.createGenerationConfig({}, { structureVersion: 3,
+    groups: [{ id: "two", rhythmSpan: { count: 2, unit: 4 } }],
+    sections: createTwoBeatSections("two", { measuresPerLine: 2, lineSpacing: 130, noteSize: 100 }),
+  });
+  assert.equal(config.sections.length, 4);
+  for (const section of config.sections) {
+    const page = section.pages[0];
+    const voices = generate(page, 22);
+    const primary = getSpanPrimaryRhythms(page.primaryRhythms, page.rhythmSpan).tuplets[0];
+    voices.forEach((voice, index) => {
+      const groups = voice.tuplets.filter((tuplet) => tuplet.actual === primary.actual && tuplet.normal === primary.normal);
+      assert(groups.length, `${section.title} exercise ${index + 1} lacks the primary rhythm`);
+      const value = (note) => 32 / note.duration * (note.dots ? 1.5 : 1);
+      const tupletSlots = (tuplet) => voice.notes.slice(tuplet.start, tuplet.end)
+        .reduce((sum, note) => sum + value(note), 0) * tuplet.normal / tuplet.actual;
+      let slots = 0;
+      voice.notes.forEach((note, noteIndex) => {
+        const tuplet = voice.tuplets.find((candidate) => noteIndex >= candidate.start && noteIndex < candidate.end);
+        if (tuplet?.start === noteIndex && Math.round(tupletSlots(tuplet)) % 8 === 0) {
+          assert.equal(Math.round(slots * 1000) % 8000, 0, `${section.title} exercise ${index + 1} starts a tuplet off the beat`);
+        }
+        slots += tuplet ? value(note) * tuplet.normal / tuplet.actual : value(note);
+      });
+    });
+    const required = (index) => page.ornamentSegments.flatMap((segment) => Array(segment.count).fill(segment.ornaments))[index];
+    assert.deepEqual(required(3), ["accents"]);
+    assert.deepEqual(required(4), ["stickings", "accents"]);
+    assert.deepEqual(required(21), ["stickings", "accents", "flams", "diddles", "cheese"]);
+  }
 });
 
 test("all seven families follow the exact eight sparse / seven full topic order", () => {

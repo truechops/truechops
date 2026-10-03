@@ -54,4 +54,49 @@ function createStudySections(groupId, pdfSettings, tailUnit = "staffRows") {
   }));
 }
 
-module.exports = { STUDY_TOPICS, STUDY_FAMILIES, createStudySections };
+// Over-two-beat studies put every ornament topic on one page to keep the book short.
+const TWO_BEAT_FAMILY_IDS = ["eighth-triplets", "quintuplets", "septuplets", "nine-eight-thirtyseconds"];
+const TWO_BEAT_ORNAMENT_SEGMENTS = [
+  { ...STUDY_TOPICS[1], count: 4 },
+  ...STUDY_TOPICS.slice(2).map((topic) => ({ ...topic, count: 3 })),
+].map(({ title, ornaments, count }) => ({ title, ornaments, count }));
+const ONE_BEAT_SECONDARY_RHYTHMS = {
+  subdivisions: ["eighths", "sixteenths", "thirtyseconds"],
+  tuplets: STUDY_FAMILIES.flatMap((family) => family.tuplets || []),
+  ornaments: ["stickings", "accents", "flams", "diddles", "cheese"],
+};
+
+function createTwoBeatSections(groupId, pdfSettings) {
+  return TWO_BEAT_FAMILY_IDS.map((familyId) => {
+    const family = STUDY_FAMILIES.find((candidate) => candidate.id === familyId);
+    const id = `${groupId}-${family.id}`;
+    return {
+      id, groupId, title: `${family.notesPerQuarter} over two beats`,
+      studyFamily: family.id, density: "mixed",
+      primaryRhythms: normalizeRhythmPool(family, false),
+      secondaryRhythms: normalizeRhythmPool(ONE_BEAT_SECONDARY_RHYTHMS),
+      pdfSettings,
+      pages: [{
+        subsectionId: `${id}-all-ornaments`,
+        title: "All ornaments",
+        pdfSettings,
+        generationSettings: {
+          prompt: "", sampleJson: "",
+          ornaments: [...new Set(TWO_BEAT_ORNAMENT_SEGMENTS.flatMap((segment) => segment.ornaments))],
+          ornamentSegments: TWO_BEAT_ORNAMENT_SEGMENTS,
+          minPlayedNotes: 0,
+          maxPlayedNotes: 0,
+          playEveryNote: false,
+          maxSameHandStickingRun: 2,
+          requiredSameHandStickingRuns: [],
+          stickingTail: null,
+        },
+        lines: [],
+      }],
+    };
+  });
+}
+
+module.exports = {
+  STUDY_TOPICS, STUDY_FAMILIES, TWO_BEAT_ORNAMENT_SEGMENTS, createStudySections, createTwoBeatSections,
+};

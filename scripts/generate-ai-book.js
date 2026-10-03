@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const http = require("http");
 const https = require("https");
-const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, getLineStickingSettings, getSpanPrimaryRhythms } = require("../src/lib/book-structure");
+const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, getLineStickingSettings, getSpanPrimaryRhythms, normalizeOrnamentSegments, getLineOrnamentSegment } = require("../src/lib/book-structure");
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const DEFAULT_CONFIG_PATH = path.join(
@@ -1250,7 +1250,10 @@ function applySectionOrnamentPolicy(section, score) {
               const ornaments = cleanDurationRestrictedOrnaments(
                 note,
                 String(note.ornaments).replace(allowedPattern, ""),
-                { allowDiddlesOnEighths: tupletNoteIndexes.has(noteIndex) }
+                {
+                  allowDiddlesOnEighths: tupletNoteIndexes.has(noteIndex),
+                  onTupletQuarter: tupletNoteIndexes.has(noteIndex) && sectionHasQuarterTuplets(section),
+                }
               );
 
               if (!ornaments) {
@@ -1701,13 +1704,24 @@ function removeOrnamentChars(note, chars) {
   };
 }
 
+// Diddles and cheese need eighths or faster. Sections with quarter-note tuplets
+// (triplets over two beats) also allow them on quarters inside tuplets.
+function sectionHasQuarterTuplets(section) {
+  return getGenerationTuplets(section).some((tuplet) => Number(tuplet.type) === 4);
+}
+
+function durationAllowsDiddles(value, allowDiddlesOnEighths, onTupletQuarter) {
+  const duration = Number(value);
+  if (onTupletQuarter && duration === 4) return true;
+  return duration > 8 || (duration === 8 && allowDiddlesOnEighths);
+}
+
 function cleanDurationRestrictedOrnaments(
   note,
   ornaments = note?.ornaments || "",
-  { allowDiddlesOnEighths = false } = {}
+  { allowDiddlesOnEighths = false, onTupletQuarter = false } = {}
 ) {
-  const duration = Number(note?.duration);
-  const durationDisallowsDiddles = duration < 8 || (duration === 8 && !allowDiddlesOnEighths);
+  const durationDisallowsDiddles = !durationAllowsDiddles(note?.duration, allowDiddlesOnEighths, onTupletQuarter);
   const cleanedOrnaments = durationDisallowsDiddles
     ? String(ornaments).replace(/[dc]/g, "")
     : String(ornaments);
@@ -1725,6 +1739,7 @@ function enforceDurationOrnamentRules(notes, options = {}) {
       ...options,
       allowDiddlesOnEighths: options.allowDiddlesOnEighths ||
         options.tupletNoteIndexes?.has(noteIndex),
+      onTupletQuarter: options.allowDiddlesOnTupletQuarters && options.tupletNoteIndexes?.has(noteIndex),
     });
 
     if (!ornaments) {
@@ -2342,8 +2357,9 @@ function canAddRequiredOrnament(notes, noteIndex, ornament, options = {}) {
     options.tupletNoteIndexes?.has(noteIndex);
 
   if (ornament === "d" || ornament === "c") {
-    const duration = Number(note.duration);
-    if (duration < 8 || (duration === 8 && !allowDiddlesOnEighths) || /f/.test(current)) {
+    if (!durationAllowsDiddles(note.duration, allowDiddlesOnEighths,
+      options.allowDiddlesOnTupletQuarters && options.tupletNoteIndexes?.has(noteIndex)) ||
+      /f/.test(current)) {
       return false;
     }
   }
@@ -2788,6 +2804,7 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
             Number.parseInt(lineIndex, 10) || 0
           );
           const preliminaryDurationOrnamentOptions = {
+            allowDiddlesOnTupletQuarters: sectionHasQuarterTuplets(section),
             tupletNoteIndexes: preliminaryTupletNoteIndexes,
             tupletPositionByNoteIndex: getTupletPositionByNoteIndex(
               notationVoice.notes,
@@ -2822,6 +2839,7 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
             )
           );
           const durationOrnamentOptions = {
+            allowDiddlesOnTupletQuarters: sectionHasQuarterTuplets(section),
             ...(section.primaryRhythms ? { primaryNoteIndexes: getPrimaryNoteIndexes(section, finalNotationVoice) } : {}),
             tupletNoteIndexes: finalTupletNoteIndexes,
             tupletPositionByNoteIndex: getTupletPositionByNoteIndex(
@@ -3044,6 +3062,42 @@ function getMaximumMixedEventCount(
   return maximum;
 }
 
+const SLOTS_PER_BEAT = 8;
+
+function blocksStartOnBeats(blocks) {
+  let offset = 0;
+  return blocks.every((block) => {
+    const size = block.slotCount % SLOTS_PER_BEAT === 0 ? SLOTS_PER_BEAT : block.slotCount;
+    const aligned = offset % size === 0;
+    offset += block.slotCount;
+    return aligned;
+  });
+}
+
+// Tuplets that span whole beats start on a beat, and shorter notes fill whole beats.
+function arrangeBlocksOnBeats(blocks, random) {
+  if (blocksStartOnBeats(blocks)) return blocks;
+  const beatBlocks = blocks.filter((block) => block.slotCount % SLOTS_PER_BEAT === 0);
+  const shortBlocks = blocks.filter((block) => block.slotCount % SLOTS_PER_BEAT !== 0);
+  if (shortBlocks.some((block) => SLOTS_PER_BEAT % block.slotCount !== 0)) return blocks;
+
+  const beats = [];
+  [...shortBlocks].sort((left, right) => right.slotCount - left.slotCount).forEach((block) => {
+    let beat = beats.find((candidate) => candidate.slots + block.slotCount <= SLOTS_PER_BEAT);
+    if (!beat) beats.push(beat = { slots: 0, blocks: [] });
+    beat.slots += block.slotCount;
+    beat.blocks.push(block);
+  });
+  const units = [
+    ...beatBlocks.map((block) => [block]),
+    ...beats.map((beat) => {
+      const shuffled = shuffledIndexes(beat.blocks.length, random).map((index) => beat.blocks[index]);
+      return blocksStartOnBeats(shuffled) ? shuffled : beat.blocks;
+    }),
+  ];
+  return shuffledIndexes(units.length, random).flatMap((index) => units[index]);
+}
+
 function createMixedTupletFallbackGeneratedScore(section, options, random) {
   const tupletBlocks = options.tuplets
     .map((tuplet) => ({
@@ -3123,7 +3177,10 @@ function createMixedTupletFallbackGeneratedScore(section, options, random) {
       eventCount >= minimumPlayedNotes &&
       (primary || !requireRegularSubdivision || hasRegularSubdivision)
     ) {
-      layout = shuffledIndexes(candidate.length, random).map((index) => candidate[index]);
+      layout = arrangeBlocksOnBeats(
+        shuffledIndexes(candidate.length, random).map((index) => candidate[index]),
+        random
+      );
     }
   }
 
@@ -3299,6 +3356,8 @@ function createUniqueGeneratedLine(input, section, samplePayload, index, usedExe
     section = getLineStickingSettings(section, index, getLinesPerPage(pdfSettings), pdfSettings.measuresPerLine);
   }
   if (section.primaryRhythms) section = { ...section, primaryRhythms: getSpanPrimaryRhythms(section.primaryRhythms, section.rhythmSpan) };
+  const ornamentSegment = getLineOrnamentSegment(section, index);
+  if (ornamentSegment) section = { ...section, ornaments: ornamentSegment.ornaments };
   let lastError = null;
 
   for (let attempt = 0; attempt < MAX_UNIQUE_LINE_ATTEMPTS; attempt += 1) {
@@ -3419,6 +3478,7 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         secondaryRhythms: pageSource.secondaryRhythms,
         rhythmSpan: normalizeRhythmSpan(section.rhythmSpan),
         stickingTail: normalizeStickingTail(pageSource.stickingTail),
+        ornamentSegments: normalizeOrnamentSegments(pageSource.ornamentSegments),
         // The sticking tail closes a multi-page subsection, so only its last page uses it.
         finalSubsectionPage: !page.subsectionId || sourcePages[pageIndex + 1]?.subsectionId !== page.subsectionId,
         title: page.title || `${section.title || `Section ${sectionIndex + 1}`} ${pageIndex + 1}`,
@@ -3490,6 +3550,15 @@ function createGenerationConfig(config, sourceBook) {
   };
 }
 
+function describeOrnamentSegments(segments) {
+  let start = 1;
+  return segments.map((segment) => {
+    const range = segment.count > 1 ? `${start}-${start + segment.count - 1}` : String(start);
+    start += segment.count;
+    return `exercises ${range}: ${segment.ornaments.join(", ") || "none"}`;
+  }).join("; ");
+}
+
 function createAiPrompt(config, section, samplePayload, count, offset, linesPerPage) {
   if (section.primaryRhythms) {
     section = { ...section, primaryRhythms: getSpanPrimaryRhythms(section.primaryRhythms, section.rhythmSpan) };
@@ -3515,7 +3584,9 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
       : "",
     ...(section.primaryRhythms ? [
       `Every measure MUST contain played notes from EACH primary subdivision (${section.primaryRhythms.subdivisions.join(", ") || "none"}) and at least one complete group of EACH primary tuplet (${section.primaryRhythms.tuplets.map(getTupletLabel).join(", ") || "none"}).`,
-      `Required ornaments on primary rhythms: ${(section.ornaments || []).join(", ") || "none"}.`,
+      section.ornamentSegments
+        ? `Required ornaments on primary rhythms change by exercise number on this page: ${describeOrnamentSegments(section.ornamentSegments)}.`
+        : `Required ornaments on primary rhythms: ${(section.ornaments || []).join(", ") || "none"}.`,
       `Secondary rhythms are OPTIONAL random fillers: ${JSON.stringify(section.secondaryRhythms)}. Their ornaments belong only on secondary rhythms and are never required. Primary choices take precedence when the same rhythm belongs to both pools.`,
     ] : []),
     subdivisions.length
@@ -3731,6 +3802,7 @@ function createStoredPageGenerationSettings(pageConfig) {
   return {
     rhythmSpan: pageConfig.rhythmSpan,
     stickingTail: pageConfig.stickingTail,
+    ...(pageConfig.ornamentSegments ? { ornamentSegments: pageConfig.ornamentSegments } : {}),
     primaryRhythms: pageConfig.primaryRhythms,
     secondaryRhythms: pageConfig.secondaryRhythms,
     prompt: pageConfig.prompt || "",
