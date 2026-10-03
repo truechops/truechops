@@ -40,9 +40,14 @@ function getSpanPrimaryRhythms(primaryRhythms, span) {
   const tuplets = groups.map((group) => {
     // Standard notation: the note value whose count fits the span is at most the
     // tuplet size and more than half of it (3:2 quarters, 5:4 eighths, 9:8 sixteenths).
-    const type = [4, 8, 16, 32].find((candidate) => {
+    // Fewer notes than the span holds use the shortest value that fits a whole
+    // number of times (3:5 eighths over five eighths).
+    const type = [2, 4, 8, 16, 32].find((candidate) => {
       const normal = quarterUnits * candidate / 4;
       return Number.isInteger(normal) && normal <= group.actual && group.actual < normal * 2;
+    }) || [2, 4, 8, 16, 32].find((candidate) => {
+      const normal = quarterUnits * candidate / 4;
+      return Number.isInteger(normal) && normal > group.actual && normal <= 16;
     }) || [32, 16, 8, 4].find((candidate) => {
       const normal = quarterUnits * candidate / 4;
       return Number.isInteger(normal) && normal >= 1 && normal <= 16;
@@ -154,7 +159,7 @@ function normalizeRhythmPool(value = {}, allowEmpty = true) {
     .filter((tuplet, index, all) =>
       Number.isInteger(tuplet.actual) && tuplet.actual >= 2 && tuplet.actual <= 16 &&
       Number.isInteger(tuplet.normal) && tuplet.normal >= 1 && tuplet.normal <= 16 &&
-      [4, 8, 16, 32].includes(tuplet.type) && tuplet.normal <= tuplet.type &&
+      [2, 4, 8, 16, 32].includes(tuplet.type) && tuplet.normal <= tuplet.type &&
       all.findIndex((other) => JSON.stringify(other) === JSON.stringify(tuplet)) === index
     );
   if (!allowEmpty && !subdivisions.length && !tuplets.length) subdivisions.push("eighths");

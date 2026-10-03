@@ -1175,7 +1175,7 @@ export default function BookBuilderPanel() {
             </div>
           )}
           <OrnamentTopicsEditor
-            exerciseCount={linesPerPage}
+            exerciseCount={linesPerPage * selectedSubsectionPages.length}
             onChange={updateSelectedPageGenerationDraft}
             ornaments={selectedPageGenerationSettings.ornaments}
             segments={selectedPageGenerationSettings.ornamentSegments}
@@ -1184,11 +1184,11 @@ export default function BookBuilderPanel() {
             measuresPerLine={selectedPagePdfSettings.measuresPerLine}
             onChange={(secondaryRhythmRows) => updateSelectedPageGenerationDraft({ secondaryRhythmRows })}
             pool={selectedSection.secondaryRhythms}
-            rowCount={systemsPerPage}
+            rowCount={systemsPerPage * selectedSubsectionPages.length}
             rows={selectedPageGenerationSettings.secondaryRhythmRows}
           />
           <PagePlanSummary
-            exerciseCount={linesPerPage}
+            exerciseCount={linesPerPage * selectedSubsectionPages.length}
             rows={selectedPageGenerationSettings.secondaryRhythmRows}
             measuresPerLine={selectedPagePdfSettings.measuresPerLine}
             ornaments={selectedPageGenerationSettings.ornaments}
@@ -1274,6 +1274,16 @@ export default function BookBuilderPanel() {
               type="checkbox"
             />
             <span>No rests — play every note</span>
+          </label>
+          <label className={styles.toggleField}>
+            <input
+              checked={Boolean(selectedPageGenerationSettings.chainPrimaryGroups)}
+              onChange={(event) =>
+                updateSelectedPageGenerationDraft({ chainPrimaryGroups: event.target.checked })
+              }
+              type="checkbox"
+            />
+            <span>Primary groups may repeat back to back</span>
           </label>
           <Field label="Max same-hand stickings">
             <input

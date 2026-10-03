@@ -84,14 +84,52 @@ const SPAN_DENSITIES = [
 // joins. Eighths are not used on these pages.
 const SECONDARY_RHYTHM_ROWS = {
   sixteenths: 1, "3:2:8": 1, "6:4:16": 1,
-  thirtyseconds: 4,
-  "5:4:16": 6,
+  thirtyseconds: 3,
+  "5:4:16": 4,
   "7:4:16": 8,
   "9:8:32": 10,
 };
 
 // Over three eighths, only the counts that are new rhythms: 4:3 and 5:3 eighths, 7:6 and 8:6 sixteenths.
 const THREE_EIGHTHS_FAMILY_IDS = ["sixteenths", "quintuplets", "septuplets", "thirtyseconds"];
+
+const familyIdsByCount = (counts) => counts.map((count) =>
+  STUDY_FAMILIES.find((family) => family.notesPerQuarter === count).id);
+
+// Span groups after the one-beat sections. Each lists the counts (3-9) that are
+// new rhythms over its span; counts whose notes-per-beat already appear earlier
+// in the book are skipped (5 over five eighths is plain eighths, 8 over three
+// quarters is two 4-over-three-eighths groups, 6 over four quarters is two
+// quarter-note triplets).
+const SPAN_STUDIES = [
+  { groupId: "two-quarters", title: "Over two quarter notes", rhythmSpan: { count: 2, unit: 4 }, label: "two beats", familyIds: TWO_BEAT_FAMILY_IDS },
+  { groupId: "three-eighths", title: "Over three eighth notes", rhythmSpan: { count: 3, unit: 8 }, label: "three eighths", familyIds: THREE_EIGHTHS_FAMILY_IDS },
+  { groupId: "five-eighths", title: "Over five eighth notes", rhythmSpan: { count: 5, unit: 8 }, label: "five eighths", familyIds: familyIdsByCount([3, 4, 6, 7, 8, 9]) },
+  { groupId: "three-quarters", title: "Over three quarter notes", rhythmSpan: { count: 3, unit: 4 }, label: "three quarters", familyIds: familyIdsByCount([4, 5, 7]) },
+  { groupId: "seven-eighths", title: "Over seven eighth notes", rhythmSpan: { count: 7, unit: 8 }, label: "seven eighths", familyIds: familyIdsByCount([3, 4, 5, 6, 8, 9]) },
+  { groupId: "four-quarters", title: "Over four quarter notes", rhythmSpan: { count: 4, unit: 4 }, label: "four quarters", familyIds: familyIdsByCount([3, 5, 7, 9]) },
+  // Sixteenth-note spans may string several primary groups together.
+  ...[
+    [3, "three", [5, 7, 8, 9]],
+    [5, "five", [6, 7, 8, 9]],
+    [7, "seven", [5, 6, 8, 9]],
+    [9, "nine", [4, 5, 7, 8]],
+    [11, "eleven", [3, 4, 5, 6, 7, 8, 9]],
+    [13, "thirteen", [3, 4, 5, 6, 7, 8, 9]],
+    [15, "fifteen", [3, 4, 7, 8]],
+  ].map(([count, word, counts]) => ({
+    groupId: `${word}-sixteenths`, title: `Over ${word} sixteenth notes`, rhythmSpan: { count, unit: 16 },
+    label: `${word} sixteenths`, familyIds: familyIdsByCount(counts), chainPrimaryGroups: true,
+  })),
+];
+
+function createSpanStudy(study, pdfSettings) {
+  return {
+    group: { id: study.groupId, title: study.title, rhythmSpan: study.rhythmSpan },
+    sections: createSpanSections(study.groupId, pdfSettings, study.familyIds, study.label, study)
+      .map((section) => ({ ...section, rhythmSpan: study.rhythmSpan })),
+  };
+}
 
 function createTwoBeatSections(groupId, pdfSettings) {
   return createSpanSections(groupId, pdfSettings, TWO_BEAT_FAMILY_IDS, "two beats");
@@ -101,7 +139,7 @@ function createThreeEighthsSections(groupId, pdfSettings) {
   return createSpanSections(groupId, pdfSettings, THREE_EIGHTHS_FAMILY_IDS, "three eighths");
 }
 
-function createSpanSections(groupId, pdfSettings, familyIds, spanLabel) {
+function createSpanSections(groupId, pdfSettings, familyIds, spanLabel, { chainPrimaryGroups = false } = {}) {
   return familyIds.map((familyId) => {
     const family = STUDY_FAMILIES.find((candidate) => candidate.id === familyId);
     const id = `${groupId}-${family.id}`;
@@ -120,6 +158,7 @@ function createSpanSections(groupId, pdfSettings, familyIds, spanLabel) {
           ornaments: [...new Set(TWO_BEAT_ORNAMENT_SEGMENTS.flatMap((segment) => segment.ornaments))],
           ornamentSegments: TWO_BEAT_ORNAMENT_SEGMENTS,
           secondaryRhythmRows: SECONDARY_RHYTHM_ROWS,
+          ...(chainPrimaryGroups ? { chainPrimaryGroups: true } : {}),
           minPlayedNotes: 0,
           maxPlayedNotes: 0,
           playEveryNote: density.playEveryNote,
@@ -135,5 +174,5 @@ function createSpanSections(groupId, pdfSettings, familyIds, spanLabel) {
 
 module.exports = {
   STUDY_TOPICS, STUDY_FAMILIES, TWO_BEAT_ORNAMENT_SEGMENTS,
-  createStudySections, createTwoBeatSections, createThreeEighthsSections,
+  SPAN_STUDIES, createStudySections, createSpanStudy, createTwoBeatSections, createThreeEighthsSections,
 };

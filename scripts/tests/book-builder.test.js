@@ -8,7 +8,7 @@ const vm = require("node:vm");
 const babel = require("@babel/core");
 const { migrateBookStructure } = require("../../src/lib/book-structure");
 const generator = require("../generate-ai-book");
-const { createStudySections, createTwoBeatSections, createThreeEighthsSections, STUDY_TOPICS, STUDY_FAMILIES } = require("../../src/lib/book-curriculum");
+const { createStudySections, createSpanStudy, SPAN_STUDIES, STUDY_TOPICS, STUDY_FAMILIES } = require("../../src/lib/book-curriculum");
 const { getLineStickingSettings, getSpanPrimaryRhythms } = require("../../src/lib/book-structure");
 
 // Load the same ES modules Next uses without starting a server.
@@ -179,29 +179,30 @@ test("rhythms over two beats use standard tuplet notation", () => {
   assert.deepEqual(getSpanPrimaryRhythms(pool(["sixteenths"]), span), pool(["eighths"]));
 });
 
-test("two-beat and three-eighth pages cycle ornament topics and start tuplets on beats", () => {
+test("span pages cycle ornament topics, grow the secondary pool, and start tuplets on beats", () => {
   const pdf = { measuresPerLine: 2, lineSpacing: 130, noteSize: 100 };
+  const studies = SPAN_STUDIES.map((study) => createSpanStudy(study, pdf));
   const config = generator.createGenerationConfig({}, { structureVersion: 3,
-    groups: [{ id: "two", rhythmSpan: { count: 2, unit: 4 } }, { id: "three", rhythmSpan: { count: 3, unit: 8 } }],
-    sections: [...createTwoBeatSections("two", pdf), ...createThreeEighthsSections("three", pdf)],
+    groups: studies.map((study) => study.group),
+    sections: studies.flatMap((study) => study.sections),
   });
-  assert.equal(config.sections.length, 8);
+  assert.equal(config.sections.length, SPAN_STUDIES.reduce((sum, study) => sum + study.familyIds.length, 0));
   for (const section of config.sections) {
     const page = section.pages[0];
     const voices = generate(page, 22);
     const primary = getSpanPrimaryRhythms(page.primaryRhythms, page.rhythmSpan).tuplets[0];
     voices.forEach((voice, index) => {
       const groups = voice.tuplets.filter((tuplet) => tuplet.actual === primary.actual && tuplet.normal === primary.normal);
-      // The secondary pool grows by row: 3s and 6s from row 1, 5s from row 6, 7s from row 8, 9s from row 10.
+      // The secondary pool grows by row: 3s and 6s from row 1, 5s from row 4, 7s from row 8, 9s from row 10.
       const row = Math.floor(index / 2) + 1;
-      const joinRow = { 3: 1, 6: 1, 5: 6, 7: 8, 9: 10 };
+      const joinRow = { 3: 1, 6: 1, 5: 4, 7: 8, 9: 10 };
       voice.tuplets.filter((tuplet) => !groups.includes(tuplet)).forEach((tuplet) => {
         assert(joinRow[tuplet.actual] <= row, `${section.title} exercise ${index + 1} uses ${tuplet.actual}s before row ${joinRow[tuplet.actual]}`);
       });
-      if (row < 4) {
+      if (row < 3) {
         assert(voice.notes.every((note, noteIndex) => note.duration !== 32 ||
           voice.tuplets.some((tuplet) => noteIndex >= tuplet.start && noteIndex < tuplet.end)),
-          `${section.title} exercise ${index + 1} uses 32nds before row 4`);
+          `${section.title} exercise ${index + 1} uses 32nds before row 3`);
       }
       assert(groups.length, `${section.title} exercise ${index + 1} lacks the primary rhythm`);
       const value = (note) => 32 / note.duration * (note.dots ? 1.5 : 1);

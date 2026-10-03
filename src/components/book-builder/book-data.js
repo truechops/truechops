@@ -478,6 +478,7 @@ export function normalizePageGenerationSettings(value = {}, fallback = {}) {
   return {
     rhythmSpan: normalizeRhythmSpan(source.rhythmSpan),
     stickingTail: normalizeStickingTail(source.stickingTail),
+    ...(source.chainPrimaryGroups ? { chainPrimaryGroups: true } : {}),
     ...(normalizeSecondaryRhythmRows(source.secondaryRhythmRows)
       ? { secondaryRhythmRows: normalizeSecondaryRhythmRows(source.secondaryRhythmRows) }
       : {}),

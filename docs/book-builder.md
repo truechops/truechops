@@ -24,9 +24,31 @@ The saved book contains sparse and full sections for sixteenths, eighth-note tri
 
 Full sections use the same order starting with Accents. Full pages with stickings use the regular maximum of two same-hand notes in their earlier rows. Their final five **printed staff rows** allow a maximum of four and require a three- or four-note same-hand run in each exercise. The tail rule follows the page layout (five rows are ten exercises at two measures per row) and can be edited per subsection.
 
-After the one-beat sections come the **Over two quarter notes** group (3, 5, 7, and 9 notes over two beats) and the **Over three eighth notes** group (4:3 and 5:3 eighths, 7:6 and 8:6 sixteenths). Each of these sections has two pages: **Every note** (no rests), then **Sparse**. Each page moves through the ornament topics by exercise: Accents for exercises 1–4, then three exercises each for Accents with stickings, with diddles, with flams, with cheese, with diddles and flams, and Everything (22 exercises at two measures per line).
+After the one-beat sections come six span groups. Each has a section for every count from 3 to 9 that is a new rhythm over its span; counts whose notes per beat already appear earlier are skipped (5 over five eighths is plain eighths, 8 over three quarters is two 4-over-three-eighths groups, 6 over four quarters is two quarter-note triplets):
 
-The secondary pool holds every one-beat rhythm (eighths, sixteenths, thirty-seconds, triplets, and 5-, 6-, 7-, and 9-note groups), so the span group can start on any beat. Groups over three eighths end mid-beat and are paired with one eighth or two sixteenths that complete the beat. Every other beat holds one tuplet or a full beat of one regular value. The secondary pool grows down the page: rows 1–3 draw from sixteenths, triplets, and sextuplets; thirty-seconds join at row 4, quintuplets at row 6, septuplets at row 8, and 9s at row 10. Eighths are not used on these pages.
+| Group | Counts and notation |
+| --- | --- |
+| Over two quarter notes | 3 (quarter-note triplet), 5:4, 7:4 eighths, 9:8 sixteenths |
+| Over three eighth notes | 4:3, 5:3 eighths, 7:6, 8:6 sixteenths |
+| Over five eighth notes | 3:5, 4:5, 6:5, 7:5, 8:5, 9:5 eighths |
+| Over three quarter notes | 4:3, 5:3 quarters, 7:6 eighths |
+| Over seven eighth notes | 3:7, 4:7, 5:7, 6:7, 8:7, 9:7 eighths |
+| Over four quarter notes | 3 (half-note triplet), 5:4, 7:4 quarters, 9:8 eighths |
+| Over three sixteenth notes | 5:3 sixteenths, 7:6, 8:6, 9:6 thirty-seconds |
+| Over five sixteenth notes | 6:5, 7:5, 8:5, 9:5 sixteenths |
+| Over seven sixteenth notes | 5:7, 6:7, 8:7, 9:7 sixteenths |
+| Over nine sixteenth notes | 4:9, 5:9, 7:9, 8:9 sixteenths |
+| Over eleven sixteenth notes | 3:11 through 9:11 sixteenths |
+| Over thirteen sixteenth notes | 3:13 through 9:13 sixteenths |
+| Over fifteen sixteenth notes | 3:15, 4:15, 7:15, 8:15 sixteenths |
+
+On the sixteenth-note spans, **Primary groups may repeat back to back** is on: each extra group in a row has a 15% chance, so most placements are a single group, and separate placements never run together by accident.
+
+On pages with secondary rhythms, the generator skips any exercise too wide for its share of the printed row (an estimate from its notes, rests, grace notes, dots, and tuplets, with a safety margin). Pages whose rhythm is fixed and too dense for two per row (the 7, 8, and 9 over three sixteenths sections; Septuplets full with flams, cheese, or everything; 32nd notes sparse with flams) print one exercise per row over two pages instead, keeping the same exercise-by-exercise plan. Topic plans, secondary rows, and sticking tails count across both pages of a subsection.
+
+The groups are defined in `SPAN_STUDIES` in `src/lib/book-curriculum.js`. Each of these sections has two pages: **Every note** (no rests), then **Sparse**. Each page moves through the ornament topics by exercise: Accents for exercises 1–4, then three exercises each for Accents with stickings, with diddles, with flams, with cheese, with diddles and flams, and Everything (22 exercises at two measures per line).
+
+The secondary pool holds every one-beat rhythm (eighths, sixteenths, thirty-seconds, triplets, and 5-, 6-, 7-, and 9-note groups), so the span group can start on any beat. Groups that end mid-beat (over an odd number of eighths or sixteenths) are paired with standalone eighths or sixteenths that complete the beat (thirty-seconds only when nothing longer fits). Over seven eighths that filler is the only room left, and over four quarters the group fills the measure, so those pages have little or no secondary rhythm. Half- and quarter-note tuplets may split a note into shorter values down to tuplet eighths, which can carry diddles and cheese. Every other beat holds one tuplet or a full beat of one regular value. The secondary pool grows down the page: rows 1–2 draw from sixteenths, triplets, and sextuplets; thirty-seconds join at row 3, quintuplets at row 4, septuplets at row 8, and 9s at row 10. Eighths are not used on these pages.
 
 Configure all of this in the subsection editor:
 

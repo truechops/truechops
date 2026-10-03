@@ -55,6 +55,7 @@ const SUBDIVISION_SETTINGS = [
   { id: "thirtyseconds", label: "thirty-second notes", duration: 32 },
 ];
 const TUPLET_TYPE_SETTINGS = [
+  { id: "half", label: "half", type: 2 },
   { id: "quarter", label: "quarter", type: 4 },
   { id: "eighth", label: "eighth", type: 8 },
   { id: "sixteenth", label: "sixteenth", type: 16 },
@@ -75,6 +76,8 @@ const ORNAMENT_SETTINGS = [
 ];
 const DEFAULT_MAX_SAME_HAND_STICKING_RUN = 4;
 const MAX_UNIQUE_LINE_ATTEMPTS = 250;
+const LATE_RETRY_ATTEMPT = 100;
+const PRIMARY_CHAIN_PROBABILITY = 0.15;
 
 const args = process.argv.slice(2);
 
@@ -140,12 +143,14 @@ function normalizePdfSettings(pdfSettings = {}) {
   };
 }
 
+function getScoreRenderWidth(pdfSettings) {
+  const noteScale = normalizePdfSettings(pdfSettings).noteSize / DEFAULT_PDF_SETTINGS.noteSize;
+  return ((SCORE_RENDER_BASE_WIDTH + SCORE_RENDER_ROOT_PADDING) / noteScale) - SCORE_RENDER_ROOT_PADDING;
+}
+
 function getLinesPerPage(pdfSettings) {
   const normalized = normalizePdfSettings(pdfSettings);
-  const noteScale = normalized.noteSize / DEFAULT_PDF_SETTINGS.noteSize;
-  const scoreRenderWidth = (
-    (SCORE_RENDER_BASE_WIDTH + SCORE_RENDER_ROOT_PADDING) / noteScale
-  ) - SCORE_RENDER_ROOT_PADDING;
+  const scoreRenderWidth = getScoreRenderWidth(normalized);
   const renderedSvgWidth = scoreRenderWidth + SCORE_RENDER_ROOT_PADDING;
   const contentWidth = PDF_PAGE_WIDTH - PDF_PAGE_MARGIN * 2;
   const contentHeight = PDF_PAGE_HEIGHT - PDF_PAGE_MARGIN * 2 - PDF_PAGE_FOOTER_HEIGHT;
@@ -2614,6 +2619,8 @@ function resetProfiledOrnaments(notes, requiredOrnaments, options = {}) {
 }
 
 function ensureRequiredOrnamentsOnNotes(section, notes, lineIndex = 0, options = {}) {
+  // Late retries vary placement too, so small pages don't repeat one failing choice.
+  const placementLine = options.placementSalt ? `${lineIndex}:${options.placementSalt}` : lineIndex;
   const requiredOrnaments = getRequiredSectionOrnamentChars(section);
   const shouldApplyFrequencyProfile = requiredOrnaments.length > 1;
   const nextNotes = shouldApplyFrequencyProfile
@@ -2709,14 +2716,14 @@ function ensureRequiredOrnamentsOnNotes(section, notes, lineIndex = 0, options =
             : rightDiddleDistance >= 3 ? 0 : rightDiddleDistance === 2 ? 1 : 2;
           const leftRandomValue = getOrnamentPlacementRandomValue(
             section,
-            lineIndex,
+            placementLine,
             ornament,
             placedOrnamentCount,
             left.index
           );
           const rightRandomValue = getOrnamentPlacementRandomValue(
             section,
-            lineIndex,
+            placementLine,
             ornament,
             placedOrnamentCount,
             right.index
@@ -2866,7 +2873,9 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
               )
             )
           );
+          const retryAttempt = Number(String(generationSalt).split(":")[1]) || 0;
           const durationOrnamentOptions = {
+            ...(retryAttempt >= LATE_RETRY_ATTEMPT ? { placementSalt: generationSalt } : {}),
             ...(section.primaryRhythms ? { primaryNoteIndexes: getPrimaryNoteIndexes(section, finalNotationVoice) } : {}),
             tupletNoteIndexes: finalTupletNoteIndexes,
             tupletPositionByNoteIndex: getTupletPositionByNoteIndex(
@@ -3095,31 +3104,46 @@ function getMaximumMixedEventCount(
 // partial one). Groups that end mid-beat, such as tuplets over three eighths,
 // are paired with a filler that completes the beat, such as one eighth or two
 // sixteenths; thirty-seconds fill only when nothing longer fits.
-function createBeatStructuredLayout(requiredBlocks, availableBlocks, random) {
+// With chainPrimaryGroups, a primary group may occasionally repeat back to back
+// before the filler that completes its beat.
+function createBeatStructuredLayout(requiredBlocks, availableBlocks, random, { chainPrimaryGroups = false } = {}) {
   const regular = availableBlocks.filter((block) => block.kind === "regular" && SLOTS_PER_BEAT % block.slotCount === 0);
-  const tupletUnit = (block) => {
-    const fillerSlots = (SLOTS_PER_BEAT - block.slotCount % SLOTS_PER_BEAT) % SLOTS_PER_BEAT;
-    if (!fillerSlots) return [block];
+  const slotsOf = (unit) => unit.reduce((sum, block) => sum + block.slotCount, 0);
+  const groupUnit = (block, count) => {
+    const groups = Array(count).fill(block);
+    const fillerSlots = (SLOTS_PER_BEAT - (block.slotCount * count) % SLOTS_PER_BEAT) % SLOTS_PER_BEAT;
+    if (!fillerSlots) return groups;
     const fitting = regular.filter((candidate) => fillerSlots % candidate.slotCount === 0);
     const values = fitting.some((candidate) => candidate.slotCount > 1)
       ? fitting.filter((candidate) => candidate.slotCount > 1) : fitting;
     if (!values.length) return null;
     const value = values[randomInteger(random, 0, values.length - 1)];
     const filler = Array(fillerSlots / value.slotCount).fill(value);
-    return random() < 0.5 ? [...filler, block] : [block, ...filler];
+    return random() < 0.5 ? [...filler, ...groups] : [...groups, ...filler];
+  };
+  const tupletUnit = (block, maxSlots = 32) => {
+    if (!chainPrimaryGroups || !requiredBlocks.includes(block)) return groupUnit(block, 1);
+    // Usually one group; each extra group in a row is an occasional surprise.
+    let count = 1;
+    while (random() < PRIMARY_CHAIN_PROBABILITY && (count + 1) * block.slotCount <= maxSlots) count += 1;
+    for (; count >= 1; count -= 1) {
+      const unit = groupUnit(block, count);
+      if (unit && slotsOf(unit) <= maxSlots) return unit;
+    }
+    return null;
   };
   const units = [];
   for (const block of requiredBlocks) {
-    const unit = block.kind === "tuplet" ? tupletUnit(block) : Array(SLOTS_PER_BEAT / block.slotCount).fill(block);
+    const used = units.reduce((sum, unit) => sum + slotsOf(unit), 0);
+    const unit = block.kind === "tuplet" ? tupletUnit(block, 32 - used) : Array(SLOTS_PER_BEAT / block.slotCount).fill(block);
     if (!unit) return null;
     units.push(unit);
   }
-  const slotsOf = (unit) => unit.reduce((sum, block) => sum + block.slotCount, 0);
   let remaining = 32 - units.reduce((sum, unit) => sum + slotsOf(unit), 0);
   const optional = [
     ...regular.map((block) => ({ weight: 0.42, make: () => Array(SLOTS_PER_BEAT / block.slotCount).fill(block) })),
     ...availableBlocks.filter((block) => block.kind === "tuplet")
-      .map((block) => ({ weight: 0.68, make: () => tupletUnit(block) })),
+      .map((block) => ({ weight: 0.68, make: () => tupletUnit(block, remaining) })),
   ];
   while (remaining > 0) {
     const candidates = optional.map((option) => option.make())
@@ -3131,17 +3155,39 @@ function createBeatStructuredLayout(requiredBlocks, availableBlocks, random) {
     units.push(unit);
     remaining -= slotsOf(unit);
   }
-  return remaining === 0 ? shuffledIndexes(units.length, random).flatMap((index) => units[index]) : null;
+  if (remaining !== 0) return null;
+  const ordered = shuffledIndexes(units.length, random).map((index) => units[index]);
+  if (chainPrimaryGroups) separatePrimaryUnits(ordered, requiredBlocks);
+  return ordered.flat();
+}
+
+// Separate placements of the primary group shouldn't run together by accident:
+// move a filler between them so groups touch only when a chain chose it.
+function separatePrimaryUnits(units, primaryBlocks) {
+  const isPrimary = (block) => primaryBlocks.includes(block);
+  const rotate = (unit, fillerFirst) => {
+    const groups = unit.filter(isPrimary);
+    const filler = unit.filter((block) => !isPrimary(block));
+    return fillerFirst ? [...filler, ...groups] : [...groups, ...filler];
+  };
+  for (let index = 1; index < units.length; index += 1) {
+    const left = units[index - 1];
+    const right = units[index];
+    if (!isPrimary(left[left.length - 1]) || !isPrimary(right[0])) continue;
+    if (right.some((block) => !isPrimary(block))) units[index] = rotate(right, true);
+    else if (left.some((block) => !isPrimary(block))) units[index - 1] = rotate(left, false);
+  }
 }
 
 function getBlockEvents(block, random) {
   if (block.kind === "regular") return [{ duration: block.duration, dots: 0, tuplet: null }];
   if (block.kind === "rest") return [{ ...getNotationValueBySlots(block.slotCount), forceRest: true, tuplet: null }];
-  // Quarter-note tuplets may split a quarter into two eighths, which can carry diddles.
-  return Array.from({ length: block.tuplet.actual }, () =>
-    Number(block.tuplet.type) === 4 && block.splitQuarters && random() < 0.5
-      ? [8, 8] : [Number(block.tuplet.type)]
-  ).flat().map((duration) => ({ duration, dots: 0, tuplet: block.tuplet }));
+  // Half- and quarter-note tuplets may split a note into two of the next shorter
+  // value (down to eighths), which can carry diddles.
+  const split = (duration) => duration < 8 && block.splitQuarters && random() < 0.5
+    ? [...split(duration * 2), ...split(duration * 2)] : [duration];
+  return Array.from({ length: block.tuplet.actual }, () => split(Number(block.tuplet.type)))
+    .flat().map((duration) => ({ duration, dots: 0, tuplet: block.tuplet }));
 }
 
 function rhythmPoolHasRhythms(pool) {
@@ -3193,7 +3239,9 @@ function createMixedTupletFallbackGeneratedScore(section, options, random) {
   let layout = null;
 
   for (let attempt = 0; beatStructured && attempt < 200 && !layout; attempt += 1) {
-    const candidate = createBeatStructuredLayout(requiredBlocks, availableBlocks, random);
+    const candidate = createBeatStructuredLayout(requiredBlocks, availableBlocks, random, {
+      chainPrimaryGroups: Boolean(section.chainPrimaryGroups),
+    });
     const eventCount = (candidate || []).reduce((count, block) =>
       count + (block.kind === "tuplet" ? block.tuplet.actual : block.kind === "regular" ? 1 : 0), 0);
     if (candidate && eventCount >= minimumPlayedNotes) layout = candidate;
@@ -3395,18 +3443,46 @@ function normalizeGeneratedLine(input, section, samplePayload, index, attempt = 
   };
 }
 
+// Approximate printed width of one exercise, in score units, calibrated against
+// the renderer: each played note, rest, grace note (flam or cheese), dot, and
+// tuplet bracket takes roughly this much room.
+const EXERCISE_WIDTH_UNITS = { played: 15.3, rest: 10.9, grace: 21.4, dot: 12.1, tuplet: 4.7 };
+// The estimate can run this much under the rendered width.
+const EXERCISE_WIDTH_SAFETY = 52;
+// Stave padding, time-signature room, and the right-edge guard around the notes.
+const MEASURE_PADDING_UNITS = 44;
+
+function estimateExerciseWidth(score) {
+  const notes = score?.measures?.[0]?.parts?.[0]?.voices?.[0]?.notes || [];
+  const tuplets = score?.measures?.[0]?.parts?.[0]?.voices?.[0]?.tuplets || [];
+  return notes.reduce((width, note) => width +
+    (isRest(note) ? EXERCISE_WIDTH_UNITS.rest : EXERCISE_WIDTH_UNITS.played) +
+    (!isRest(note) && /[fc]/.test(String(note.ornaments || "")) ? EXERCISE_WIDTH_UNITS.grace : 0) +
+    (note.dots ? EXERCISE_WIDTH_UNITS.dot : 0), tuplets.length * EXERCISE_WIDTH_UNITS.tuplet);
+}
+
+function getMeasureWidthLimit(pdfSettings) {
+  const settings = normalizePdfSettings(pdfSettings);
+  return getScoreRenderWidth(settings) / settings.measuresPerLine - MEASURE_PADDING_UNITS - EXERCISE_WIDTH_SAFETY;
+}
+
 function createUniqueGeneratedLine(input, section, samplePayload, index, usedExerciseShortForms) {
   const pdfSettings = normalizePdfSettings(section.pdfSettings);
   if (section.finalSubsectionPage !== false) {
     section = getLineStickingSettings(section, index, getLinesPerPage(pdfSettings), pdfSettings.measuresPerLine);
   }
   if (section.primaryRhythms) section = { ...section, primaryRhythms: getSpanPrimaryRhythms(section.primaryRhythms, section.rhythmSpan) };
-  const ornamentSegment = getLineOrnamentSegment(section, index);
+  // Topic plans and secondary rows count across every page of a subsection.
+  const subsectionIndex = index + (section.subsectionLineOffset || 0);
+  const ornamentSegment = getLineOrnamentSegment(section, subsectionIndex);
   if (ornamentSegment) section = { ...section, ornaments: ornamentSegment.ornaments };
   if (section.secondaryRhythmRows) {
-    section = { ...section, secondaryRhythms: getLineSecondaryRhythms(section, index, pdfSettings.measuresPerLine) };
+    section = { ...section, secondaryRhythms: getLineSecondaryRhythms(section, subsectionIndex, pdfSettings.measuresPerLine) };
   }
   let lastError = null;
+  // Pages with secondary rhythms have the variety to stay inside their measure.
+  const widthLimit = section.primaryRhythms && rhythmPoolHasRhythms(normalizeRhythmPool(section.secondaryRhythms))
+    ? getMeasureWidthLimit(pdfSettings) : 0;
 
   for (let attempt = 0; attempt < MAX_UNIQUE_LINE_ATTEMPTS; attempt += 1) {
     const candidateInput = attempt === 0 ? input : null;
@@ -3414,6 +3490,9 @@ function createUniqueGeneratedLine(input, section, samplePayload, index, usedExe
 
     try {
       line = normalizeGeneratedLine(candidateInput, section, samplePayload, index, attempt);
+      if (widthLimit && estimateExerciseWidth(line.score) > widthLimit) {
+        throw new Error("Exercise is too wide for its share of the printed row.");
+      }
     } catch (error) {
       lastError = error;
       continue;
@@ -3482,6 +3561,16 @@ function collapseLegacyContinuationPages(section, pages) {
   return [pages[pages.length - 1]];
 }
 
+// Exercises on the subsection's earlier pages, so its later pages continue its plan.
+function getSubsectionLineOffset(pages, pageIndex, sectionPdfSettings) {
+  let offset = 0;
+  for (let index = pageIndex - 1; index >= 0 && pages[pageIndex].subsectionId &&
+    pages[index].subsectionId === pages[pageIndex].subsectionId; index -= 1) {
+    offset += getLinesPerPage(normalizePdfSettings({ ...sectionPdfSettings, ...(pages[index].pdfSettings || {}) }));
+  }
+  return offset;
+}
+
 function createGenerationSectionsFromBook(book, globalRules = "") {
   const bookPdfSettings = normalizePdfSettings(book.pdfSettings);
   const globalOrnamentDensity = normalizeGlobalOrnamentDensity(
@@ -3528,8 +3617,10 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         stickingTail: normalizeStickingTail(pageSource.stickingTail),
         ornamentSegments: normalizeOrnamentSegments(pageSource.ornamentSegments),
         secondaryRhythmRows: normalizeSecondaryRhythmRows(pageSource.secondaryRhythmRows),
+        chainPrimaryGroups: Boolean(pageSource.chainPrimaryGroups),
         // The sticking tail closes a multi-page subsection, so only its last page uses it.
         finalSubsectionPage: !page.subsectionId || sourcePages[pageIndex + 1]?.subsectionId !== page.subsectionId,
+        subsectionLineOffset: getSubsectionLineOffset(sourcePages, pageIndex, sectionPdfSettings),
         title: page.title || `${section.title || `Section ${sectionIndex + 1}`} ${pageIndex + 1}`,
         sectionTitle: section.title || `Section ${sectionIndex + 1}`,
         pageCount: 1,
@@ -3856,6 +3947,7 @@ function createStoredPageGenerationSettings(pageConfig) {
     stickingTail: pageConfig.stickingTail,
     ...(pageConfig.ornamentSegments ? { ornamentSegments: pageConfig.ornamentSegments } : {}),
     ...(pageConfig.secondaryRhythmRows ? { secondaryRhythmRows: pageConfig.secondaryRhythmRows } : {}),
+    ...(pageConfig.chainPrimaryGroups ? { chainPrimaryGroups: true } : {}),
     primaryRhythms: pageConfig.primaryRhythms,
     secondaryRhythms: pageConfig.secondaryRhythms,
     prompt: pageConfig.prompt || "",
