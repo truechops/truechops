@@ -113,6 +113,27 @@ function normalizeOrnamentSegments(value) {
   return segments.length ? segments : null;
 }
 
+// Limits the secondary pool on a page's first printed rows, e.g. triplets and
+// sixteenths only before the faster tuplets appear.
+function normalizeSecondaryRhythmIntro(value) {
+  if (!value || !(Number(value.count) > 0)) return null;
+  const { subdivisions, tuplets } = normalizeRhythmPool(value);
+  return { count: Math.max(1, Math.min(100, Math.floor(Number(value.count)))), unit: "staffRows", subdivisions, tuplets };
+}
+
+function getLineSecondaryRhythms(settings, lineIndex, measuresPerLine) {
+  const secondary = normalizeRhythmPool(settings.secondaryRhythms);
+  const intro = normalizeSecondaryRhythmIntro(settings.secondaryRhythmIntro);
+  if (!intro || lineIndex >= intro.count * measuresPerLine) return secondary;
+  const key = (tuplet) => `${tuplet.actual}:${tuplet.normal}:${tuplet.type}`;
+  const introTuplets = new Set(intro.tuplets.map(key));
+  return {
+    ...secondary,
+    subdivisions: secondary.subdivisions.filter((id) => intro.subdivisions.includes(id)),
+    tuplets: secondary.tuplets.filter((tuplet) => introTuplets.has(key(tuplet))),
+  };
+}
+
 function getLineOrnamentSegment(settings, lineIndex) {
   const segments = normalizeOrnamentSegments(settings?.ornamentSegments);
   if (!segments) return null;
@@ -249,5 +270,6 @@ module.exports = {
   getSpanPrimaryRhythms,
   normalizeBookGroups, normalizeStickingTail, getLineStickingSettings,
   normalizeOrnamentSegments, getLineOrnamentSegment,
+  normalizeSecondaryRhythmIntro, getLineSecondaryRhythms,
   normalizeRhythmPool, migrateBookStructure, createStructureTableOfContents,
 };

@@ -1,7 +1,7 @@
 import _ from "lodash";
 import { getEmptyMeasure } from "../../helpers/score";
 import { DEFAULT_TEMPO } from "../../consts/score";
-import { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, groupSubsectionPages, normalizeSubsectionPageCount, normalizeOrnamentSegments } from "../../lib/book-structure";
+import { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, groupSubsectionPages, normalizeSubsectionPageCount, normalizeOrnamentSegments, normalizeSecondaryRhythmIntro } from "../../lib/book-structure";
 
 export { normalizeRhythmPool };
 
@@ -478,6 +478,9 @@ export function normalizePageGenerationSettings(value = {}, fallback = {}) {
   return {
     rhythmSpan: normalizeRhythmSpan(source.rhythmSpan),
     stickingTail: normalizeStickingTail(source.stickingTail),
+    ...(normalizeSecondaryRhythmIntro(source.secondaryRhythmIntro)
+      ? { secondaryRhythmIntro: normalizeSecondaryRhythmIntro(source.secondaryRhythmIntro) }
+      : {}),
     ...(source.primaryRhythms ? {
       primaryRhythms: normalizeRhythmPool(source.primaryRhythms, false),
       secondaryRhythms: normalizeRhythmPool(source.secondaryRhythms),

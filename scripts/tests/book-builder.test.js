@@ -192,6 +192,13 @@ test("two-beat and three-eighth pages cycle ornament topics and start tuplets on
     const primary = getSpanPrimaryRhythms(page.primaryRhythms, page.rhythmSpan).tuplets[0];
     voices.forEach((voice, index) => {
       const groups = voice.tuplets.filter((tuplet) => tuplet.actual === primary.actual && tuplet.normal === primary.normal);
+      if (index < 10) {
+        // The first five rows only add triplets and sixteenths around the primary group.
+        assert(voice.tuplets.every((tuplet) => groups.includes(tuplet) || (tuplet.actual === 3 && tuplet.normal === 2)),
+          `${section.title} exercise ${index + 1} uses a faster secondary tuplet too early`);
+        assert(voice.notes.every((note, noteIndex) => note.duration !== 32 ||
+          voice.tuplets.some((tuplet) => noteIndex >= tuplet.start && noteIndex < tuplet.end)));
+      }
       assert(groups.length, `${section.title} exercise ${index + 1} lacks the primary rhythm`);
       const value = (note) => 32 / note.duration * (note.dots ? 1.5 : 1);
       const tupletSlots = (tuplet) => voice.notes.slice(tuplet.start, tuplet.end)

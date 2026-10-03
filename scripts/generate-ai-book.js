@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const http = require("http");
 const https = require("https");
-const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, getLineStickingSettings, getSpanPrimaryRhythms, normalizeOrnamentSegments, getLineOrnamentSegment } = require("../src/lib/book-structure");
+const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, getLineStickingSettings, getSpanPrimaryRhythms, normalizeOrnamentSegments, getLineOrnamentSegment, normalizeSecondaryRhythmIntro, getLineSecondaryRhythms } = require("../src/lib/book-structure");
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const DEFAULT_CONFIG_PATH = path.join(
@@ -3413,6 +3413,9 @@ function createUniqueGeneratedLine(input, section, samplePayload, index, usedExe
   if (section.primaryRhythms) section = { ...section, primaryRhythms: getSpanPrimaryRhythms(section.primaryRhythms, section.rhythmSpan) };
   const ornamentSegment = getLineOrnamentSegment(section, index);
   if (ornamentSegment) section = { ...section, ornaments: ornamentSegment.ornaments };
+  if (section.secondaryRhythmIntro) {
+    section = { ...section, secondaryRhythms: getLineSecondaryRhythms(section, index, pdfSettings.measuresPerLine) };
+  }
   let lastError = null;
 
   for (let attempt = 0; attempt < MAX_UNIQUE_LINE_ATTEMPTS; attempt += 1) {
@@ -3534,6 +3537,7 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         rhythmSpan: normalizeRhythmSpan(section.rhythmSpan),
         stickingTail: normalizeStickingTail(pageSource.stickingTail),
         ornamentSegments: normalizeOrnamentSegments(pageSource.ornamentSegments),
+        secondaryRhythmIntro: normalizeSecondaryRhythmIntro(pageSource.secondaryRhythmIntro),
         // The sticking tail closes a multi-page subsection, so only its last page uses it.
         finalSubsectionPage: !page.subsectionId || sourcePages[pageIndex + 1]?.subsectionId !== page.subsectionId,
         title: page.title || `${section.title || `Section ${sectionIndex + 1}`} ${pageIndex + 1}`,
@@ -3643,6 +3647,9 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
         ? `Required ornaments on primary rhythms change by exercise number on this page: ${describeOrnamentSegments(section.ornamentSegments)}.`
         : `Required ornaments on primary rhythms: ${(section.ornaments || []).join(", ") || "none"}.`,
       `Secondary rhythms are OPTIONAL random fillers: ${JSON.stringify(section.secondaryRhythms)}. Their ornaments belong only on secondary rhythms and are never required. Primary choices take precedence when the same rhythm belongs to both pools.`,
+      section.secondaryRhythmIntro
+        ? `In the first ${section.secondaryRhythmIntro.count} printed staff rows (exercises 1-${section.secondaryRhythmIntro.count * normalizePdfSettings(section.pdfSettings).measuresPerLine}), secondary rhythms are limited to ${JSON.stringify({ subdivisions: section.secondaryRhythmIntro.subdivisions, tuplets: section.secondaryRhythmIntro.tuplets })}.`
+        : "",
     ] : []),
     subdivisions.length
       ? `Allowed regular subdivisions: ${getOptionLabels(SUBDIVISION_SETTINGS, subdivisions, "none")}.`
@@ -3858,6 +3865,7 @@ function createStoredPageGenerationSettings(pageConfig) {
     rhythmSpan: pageConfig.rhythmSpan,
     stickingTail: pageConfig.stickingTail,
     ...(pageConfig.ornamentSegments ? { ornamentSegments: pageConfig.ornamentSegments } : {}),
+    ...(pageConfig.secondaryRhythmIntro ? { secondaryRhythmIntro: pageConfig.secondaryRhythmIntro } : {}),
     primaryRhythms: pageConfig.primaryRhythms,
     secondaryRhythms: pageConfig.secondaryRhythms,
     prompt: pageConfig.prompt || "",

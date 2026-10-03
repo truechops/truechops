@@ -71,6 +71,11 @@ const ONE_BEAT_SECONDARY_RHYTHMS = {
   ornamentRhythms: { subdivisions: ["sixteenths"], tuplets: familyTuplets("eighth-triplets", "quintuplets") },
 };
 
+// The first five printed rows use only triplet and sixteenth secondaries.
+const SECONDARY_RHYTHM_INTRO = {
+  count: 5, unit: "staffRows", subdivisions: ["sixteenths"], tuplets: familyTuplets("eighth-triplets"),
+};
+
 // Over three eighths, only the counts that are new rhythms: 4:3 and 5:3 eighths, 7:6 and 8:6 sixteenths.
 const THREE_EIGHTHS_FAMILY_IDS = ["sixteenths", "quintuplets", "septuplets", "thirtyseconds"];
 
@@ -100,6 +105,7 @@ function createSpanSections(groupId, pdfSettings, familyIds, spanLabel) {
           prompt: "", sampleJson: "",
           ornaments: [...new Set(TWO_BEAT_ORNAMENT_SEGMENTS.flatMap((segment) => segment.ornaments))],
           ornamentSegments: TWO_BEAT_ORNAMENT_SEGMENTS,
+          secondaryRhythmIntro: SECONDARY_RHYTHM_INTRO,
           minPlayedNotes: 0,
           maxPlayedNotes: 0,
           playEveryNote: false,
