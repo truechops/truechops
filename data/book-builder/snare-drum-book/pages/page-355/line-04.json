@@ -29,7 +29,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "lda"
+                    "ornaments": "rda"
                   },
                   {
                     "notes": [
@@ -38,7 +38,16 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "ra"
+                    "ornaments": "la"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "lda"
                   },
                   {
                     "notes": [
@@ -53,19 +62,19 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 32,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lda"
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 32,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "ra"
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   }
                 ],
                 "tuplets": [
@@ -83,8 +92,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n16:lad n16:ra n16:rad n16:lad n16:ra |t0-4:4:15",
-  "updatedAt": "2026-10-04T19:35:26.300Z",
+  "exerciseShortForm": "n16:rad n16:la n16:lad n16:rad n32:l n32:r |t0-4:4:15",
+  "updatedAt": "2026-10-04T20:05:15.276Z",
   "sectionId": "combinations-fifteen-sixteenths-4",
   "sectionPageNumber": 2
 }

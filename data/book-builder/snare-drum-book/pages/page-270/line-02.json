@@ -23,7 +23,18 @@
               {
                 "notes": [
                   {
-                    "notes": [],
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "c"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5
@@ -32,7 +43,7 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "f"
@@ -44,7 +55,7 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "f"
+                    "ornaments": "c"
                   },
                   {
                     "notes": [
@@ -52,8 +63,7 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "c"
+                    "velocity": 0.5
                   },
                   {
                     "notes": [
@@ -86,8 +96,7 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "c"
+                    "velocity": 0.5
                   },
                   {
                     "notes": [
@@ -101,15 +110,15 @@
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 2,
-                    "actual": 3,
-                    "normal": 2
-                  },
-                  {
-                    "start": 2,
-                    "end": 9,
+                    "end": 7,
                     "actual": 7,
                     "normal": 6
+                  },
+                  {
+                    "start": 7,
+                    "end": 10,
+                    "actual": 3,
+                    "normal": 2
                   }
                 ]
               }
@@ -119,8 +128,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r8 n4:f n8:f n8:c n8 n8:c n8 n8:c n8 |t0-2:3:2,2-9:7:6",
-  "updatedAt": "2026-10-04T19:35:26.300Z",
+  "exerciseShortForm": "n8:c n8 n8:f n8:c n8 n8 n8:c n8 n8 n8 |t0-7:7:6,7-10:3:2",
+  "updatedAt": "2026-10-04T20:05:15.276Z",
   "sectionId": "combinations-three-quarters-7",
   "sectionPageNumber": 1
 }

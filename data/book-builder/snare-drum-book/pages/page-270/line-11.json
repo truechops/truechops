@@ -23,19 +23,31 @@
               {
                 "notes": [
                   {
-                    "notes": [],
+                    "notes": [
+                      "C5"
+                    ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 1,
+                    "ornaments": "rac"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
                     "duration": 8,
-                    "dots": 1,
+                    "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "r"
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "rdc"
                   },
                   {
                     "notes": [],
@@ -48,15 +60,6 @@
                       "C5"
                     ],
                     "duration": 8,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lcda"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 4,
                     "dots": 0,
                     "velocity": 1,
                     "ornaments": "la"
@@ -65,16 +68,25 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
-                    "dots": 1,
+                    "duration": 8,
+                    "dots": 0,
                     "velocity": 1,
-                    "ornaments": "ra"
+                    "ornaments": "rcda"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 2,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "la"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 2,
-                    "end": 6,
+                    "start": 3,
+                    "end": 7,
                     "actual": 7,
                     "normal": 6
                   }
@@ -86,8 +98,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r16 n8.:r r8 n8:ladc n4:la n4.:ra |t2-6:7:6",
-  "updatedAt": "2026-10-04T19:35:26.300Z",
+  "exerciseShortForm": "n16:rac n8:l n16:rdc r8 n8:la n8:radc n2:la |t3-7:7:6",
+  "updatedAt": "2026-10-04T20:05:15.276Z",
   "sectionId": "combinations-three-quarters-7",
   "sectionPageNumber": 1
 }

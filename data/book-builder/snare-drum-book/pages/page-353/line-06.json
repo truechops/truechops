@@ -38,7 +38,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "lfa"
+                    "ornaments": "rfa"
                   },
                   {
                     "notes": [
@@ -53,10 +53,19 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 32,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 32,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   }
                 ],
                 "tuplets": [
@@ -74,8 +83,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n16:ra n16:laf n16:lac n16:r |t0-3:3:15",
-  "updatedAt": "2026-10-04T19:35:26.300Z",
+  "exerciseShortForm": "n16:ra n16:raf n16:lac n32:r n32:l |t0-3:3:15",
+  "updatedAt": "2026-10-04T20:05:15.276Z",
   "sectionId": "combinations-fifteen-sixteenths-3",
   "sectionPageNumber": 2
 }

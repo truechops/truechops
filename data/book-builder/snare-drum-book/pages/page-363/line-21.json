@@ -1,7 +1,7 @@
 {
   "pageNumber": 363,
   "lineNumber": 21,
-  "title": "Nothing to everything 21",
+  "title": "Random subdivisions 21",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -23,15 +23,6 @@
               {
                 "notes": [
                   {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 4,
-                    "dots": 1,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
                     "notes": [],
                     "duration": 8,
                     "dots": 0,
@@ -43,15 +34,48 @@
                     ],
                     "duration": 4,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
+                    "velocity": 1,
+                    "ornaments": "rfa"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 4,
+                    "dots": 1,
+                    "velocity": 1,
+                    "ornaments": "lfa"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
                     "duration": 8,
-                    "dots": 1,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "lda"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "ra"
+                  },
+                  {
+                    "notes": [],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
                   },
@@ -62,11 +86,17 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "rcd"
+                    "ornaments": "l"
                   },
                   {
                     "notes": [],
                     "duration": 8,
+                    "dots": 1,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [],
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 0.5
                   },
@@ -74,33 +104,33 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 32,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "ld"
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 32,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "rd"
+                    "ornaments": "l"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 1,
-                    "actual": 3,
-                    "normal": 2
+                    "end": 4,
+                    "actual": 7,
+                    "normal": 4
                   },
                   {
-                    "start": 1,
-                    "end": 3,
-                    "actual": 3,
-                    "normal": 2
+                    "start": 4,
+                    "end": 9,
+                    "actual": 8,
+                    "normal": 6
                   }
                 ]
               }
@@ -110,8 +140,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n4.:l r8 n4:l n8.:r n16:rdc r8 n16:ld n16:rd |t0-1:3:2,1-3:3:2",
-  "updatedAt": "2026-10-04T19:35:26.300Z",
-  "sectionId": "combined-one-beat-2",
-  "sectionPageNumber": 2
+  "exerciseShortForm": "r8 n4:raf n4.:laf n8:lad n16:ra r8 n16:r n16:l r8. r16 n32:r n32:l |t0-4:7:4,4-9:8:6",
+  "updatedAt": "2026-10-04T20:05:15.276Z",
+  "sectionId": "random-subdivisions-two-quarters",
+  "sectionPageNumber": 1
 }

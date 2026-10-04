@@ -1,7 +1,7 @@
 {
   "pageNumber": 366,
   "lineNumber": 2,
-  "title": "Nothing to everything 2",
+  "title": "Random subdivisions 2",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -28,8 +28,17 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
+                    "velocity": 1,
+                    "ornaments": "rfa"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "lfa"
                   },
                   {
                     "notes": [
@@ -47,13 +56,13 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "r"
+                    "ornaments": "rf"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 32,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
@@ -71,73 +80,10 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 32,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "lf"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -158,57 +104,42 @@
                     "ornaments": "lf"
                   },
                   {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
+                    "notes": [],
+                    "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "lf"
+                    "velocity": 0.5
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
+                    "duration": 4,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "lfa"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 3,
-                    "actual": 3,
-                    "normal": 2
-                  },
-                  {
-                    "start": 3,
-                    "end": 9,
-                    "actual": 6,
-                    "normal": 4
+                    "end": 4,
+                    "actual": 4,
+                    "normal": 3
                   },
                   {
                     "start": 9,
                     "end": 12,
-                    "actual": 3,
-                    "normal": 2
-                  },
-                  {
-                    "start": 12,
-                    "end": 18,
-                    "actual": 6,
-                    "normal": 4
+                    "actual": 4,
+                    "normal": 3
                   }
                 ]
               }
@@ -218,8 +149,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n8:r n8:l n8:r n16:r n16:l n16:r n16:l n16:lf n16:r n8:r n8:l n8:r n16:l n16:r n16:lf n16:lf n16:r n16:l |t0-3:3:2,3-9:6:4,9-12:3:2,12-18:6:4",
-  "updatedAt": "2026-10-04T19:35:26.300Z",
-  "sectionId": "combined-one-beat-4",
+  "exerciseShortForm": "n8:raf n8:laf n8:l n8:rf n32:r n16:l n32:r n16:r n16:lf r8 n4:l n8:laf |t0-4:4:3,9-12:4:3",
+  "updatedAt": "2026-10-04T20:05:15.276Z",
+  "sectionId": "random-subdivisions-three-eighths",
   "sectionPageNumber": 1
 }

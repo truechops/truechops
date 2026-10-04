@@ -32,7 +32,16 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "rfa"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 1,
                     "ornaments": "rfa"
@@ -53,25 +62,16 @@
                     "duration": 32,
                     "dots": 0,
                     "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
                     "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 32,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 32,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -86,7 +86,7 @@
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 3,
+                    "end": 4,
                     "actual": 4,
                     "normal": 7
                   }
@@ -98,8 +98,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r8 n4:raf n8:laf n32:r n32:l n32:l n32:r |t0-3:4:7",
-  "updatedAt": "2026-10-04T19:35:26.300Z",
+  "exerciseShortForm": "r8 n8:raf n8:raf n8:laf n32:l n16:r n32:r |t0-4:4:7",
+  "updatedAt": "2026-10-04T20:05:15.276Z",
   "sectionId": "combinations-seven-eighths-4",
   "sectionPageNumber": 2
 }

@@ -1287,15 +1287,28 @@ export default function BookBuilderPanel() {
             />
             <span>Primary groups may repeat back to back</span>
           </label>
+          <Field label="Primary rhythms in each exercise">
+            <select
+              onChange={(event) => updateSelectedPageGenerationDraft({
+                requirePrimaryRhythms: event.target.value === "each" ? undefined : event.target.value === "any" ? "any" : false,
+              })}
+              value={selectedPageGenerationSettings.requirePrimaryRhythms === false ? "none"
+                : selectedPageGenerationSettings.requirePrimaryRhythms === "any" ? "any" : "each"}
+            >
+              <option value="each">Each primary rhythm at least once</option>
+              <option value="any">At least one of the primary rhythms</option>
+              <option value="none">None required (draw from the pool at random)</option>
+            </select>
+          </Field>
           <label className={styles.toggleField}>
             <input
-              checked={selectedPageGenerationSettings.requirePrimaryRhythms !== false}
+              checked={Boolean(selectedPageGenerationSettings.requireNewestSecondary)}
               onChange={(event) =>
-                updateSelectedPageGenerationDraft({ requirePrimaryRhythms: event.target.checked ? undefined : false })
+                updateSelectedPageGenerationDraft({ requireNewestSecondary: event.target.checked || undefined })
               }
               type="checkbox"
             />
-            <span>Every exercise includes each primary rhythm (off: draw from the pool at random)</span>
+            <span>Each exercise includes the newest secondary rhythm (with Secondary rhythms by row)</span>
           </label>
           {!selectedPageGenerationSettings.playEveryNote && selectedPageGenerationSettings.playedShareRamp && (
             <div className={styles.fieldGroup}>

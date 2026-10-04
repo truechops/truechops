@@ -24,7 +24,7 @@
                 "notes": [
                   {
                     "notes": [],
-                    "duration": 2,
+                    "duration": 4,
                     "dots": 0,
                     "velocity": 0.5
                   },
@@ -32,7 +32,7 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 2,
+                    "duration": 4,
                     "dots": 0,
                     "velocity": 1,
                     "ornaments": "ra"
@@ -50,16 +50,34 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
-                    "dots": 1,
+                    "duration": 8,
+                    "dots": 0,
                     "velocity": 1,
-                    "ornaments": "ra"
+                    "ornaments": "rda"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 4,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "la"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 2,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 4,
+                    "end": 6,
                     "actual": 3,
                     "normal": 2
                   }
@@ -71,8 +89,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r2 n2:ra n8:lad n4.:ra |t0-4:3:2",
-  "updatedAt": "2026-10-04T19:35:26.300Z",
+  "exerciseShortForm": "r4 n4:ra n8:lad n8:rad n4:la n2:l |t0-6:3:2",
+  "updatedAt": "2026-10-04T20:05:15.276Z",
   "sectionId": "combinations-four-quarters-3",
   "sectionPageNumber": 2
 }

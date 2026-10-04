@@ -23,22 +23,16 @@
               {
                 "notes": [
                   {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
+                    "notes": [],
+                    "duration": 4,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
+                    "velocity": 0.5
                   },
                   {
-                    "notes": [
-                      "C5"
-                    ],
+                    "notes": [],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "la"
+                    "velocity": 0.5
                   },
                   {
                     "notes": [
@@ -48,27 +42,6 @@
                     "dots": 0,
                     "velocity": 1,
                     "ornaments": "rfa"
-                  },
-                  {
-                    "notes": [],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lda"
-                  },
-                  {
-                    "notes": [],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5
                   },
                   {
                     "notes": [
@@ -89,6 +62,30 @@
                     "ornaments": "lda"
                   },
                   {
+                    "notes": [],
+                    "duration": 4,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 32,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 32,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
                     "notes": [
                       "C5"
                     ],
@@ -123,39 +120,12 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 32,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 32,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "ra"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 2,
-                    "end": 8,
+                    "start": 1,
+                    "end": 6,
                     "actual": 8,
                     "normal": 9
                   }
@@ -167,8 +137,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n8:l n16:la n16:raf r8 n16:lad r8 n16:rad n16:lad n32:r n32:l n32:l n32:r n32:l n32:r n16:ra |t2-8:8:9",
-  "updatedAt": "2026-10-04T19:35:26.300Z",
+  "exerciseShortForm": "r4 r16 n16:raf n16:rad n16:lad r4 n32:r n32:l n32:r n32:l n32:l n32:r |t1-6:8:9",
+  "updatedAt": "2026-10-04T20:05:15.276Z",
   "sectionId": "nine-sixteenths-thirtyseconds",
   "sectionPageNumber": 1
 }

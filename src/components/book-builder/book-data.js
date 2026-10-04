@@ -482,7 +482,10 @@ export function normalizePageGenerationSettings(value = {}, fallback = {}) {
     ...(normalizeRandomOrnaments(source.randomOrnaments)
       ? { randomOrnaments: normalizeRandomOrnaments(source.randomOrnaments) }
       : {}),
-    ...(source.requirePrimaryRhythms === false ? { requirePrimaryRhythms: false } : {}),
+    ...(source.requirePrimaryRhythms === false || source.requirePrimaryRhythms === "any"
+      ? { requirePrimaryRhythms: source.requirePrimaryRhythms }
+      : {}),
+    ...(source.requireNewestSecondary ? { requireNewestSecondary: true } : {}),
     ...(source.playedShareRamp?.start && source.playedShareRamp?.end ? { playedShareRamp: source.playedShareRamp } : {}),
     ...(Number(source.maxPlayedShare) > 0 && source.maxPlayedShare !== null
       ? { maxPlayedShare: Math.min(1, Number(source.maxPlayedShare)) }

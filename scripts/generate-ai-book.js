@@ -79,6 +79,7 @@ const MAX_UNIQUE_LINE_ATTEMPTS = 250;
 const LATE_RETRY_ATTEMPT = 100;
 const PRIMARY_CHAIN_PROBABILITY = 0.15;
 const BALANCE_RETRY_ATTEMPT = 50;
+const ORNAMENT_REDRAW_ATTEMPT = 150;
 
 const args = process.argv.slice(2);
 
@@ -1305,7 +1306,11 @@ function validatePrimaryRequirements(section, score) {
     ...primary.subdivisions.map((id) => ({ subdivisions: [id], tuplets: [] })),
     ...primary.tuplets.map((tuplet) => ({ subdivisions: [], tuplets: [tuplet] })),
   ];
-  for (const pool of section.requirePrimaryRhythms === false ? [] : requiredPools) {
+  if (section.requirePrimaryRhythms === "any" &&
+    !voice.notes.some((note, index) => !isRest(note) && noteMatchesRhythmPool(primary, voice, index))) {
+    throw new Error("Every exercise must contain at least one primary rhythm as played notes.");
+  }
+  for (const pool of section.requirePrimaryRhythms === false || section.requirePrimaryRhythms === "any" ? [] : requiredPools) {
     if (!voice.notes.some((note, index) => !isRest(note) && noteMatchesRhythmPool(pool, voice, index))) {
       throw new Error("Every exercise must contain each selected primary rhythm as played notes.");
     }
@@ -2643,9 +2648,12 @@ function getOrnamentFrequencyProfile(section, notes, lineIndex, options = {}) {
     const eligibleCount = (notes || []).filter((note, noteIndex) =>
       canAddRequiredOrnament(notes, noteIndex, ornament, options)
     ).length;
-    const musicalMaximum = ornament === "c"
+    // Leave at least one note for each other required ornament (a featured
+    // diddle must not fill a three-note group the flam also needs).
+    const roomForOthers = Math.max(1, eligibleCount - (varietyOrnaments.length - 1));
+    const musicalMaximum = Math.min(roomForOthers, ornament === "c"
       ? Math.ceil(eligibleCount / 2)
-      : eligibleCount;
+      : eligibleCount);
     const baseTarget = ornament === featuredOrnament
       ? 3 + (densityStep % 2)
       : 1;
@@ -3170,7 +3178,15 @@ function getMaximumMixedEventCount(
 // sixteenths; thirty-seconds fill only when nothing longer fits.
 // With chainPrimaryGroups, a primary group may occasionally repeat back to back
 // before the filler that completes its beat.
-function createBeatStructuredLayout(requiredBlocks, availableBlocks, random, { chainPrimaryGroups = false } = {}) {
+function blockRhythmKey(block) {
+  return block.kind === "regular" ? block.id : block.kind === "tuplet" ? rhythmOrnamentKey(block.tuplet) : null;
+}
+
+// requiredSecondaryBlocks are placed after the primary groups whenever they fit,
+// with their first notes struck (forcePlay).
+function createBeatStructuredLayout(requiredBlocks, availableBlocks, random, {
+  chainPrimaryGroups = false, requiredSecondaryBlocks = [],
+} = {}) {
   const regular = availableBlocks.filter((block) => block.kind === "regular" && SLOTS_PER_BEAT % block.slotCount === 0);
   const slotsOf = (unit) => unit.reduce((sum, block) => sum + block.slotCount, 0);
   const groupUnit = (block, count) => {
@@ -3197,11 +3213,24 @@ function createBeatStructuredLayout(requiredBlocks, availableBlocks, random, { c
     return null;
   };
   const units = [];
+  // Keep room for required secondary rhythms (each needs whole beats) so a
+  // chain of primary groups can't crowd them out.
+  const reserved = requiredSecondaryBlocks.reduce((sum, block) =>
+    sum + Math.ceil(block.slotCount / SLOTS_PER_BEAT) * SLOTS_PER_BEAT, 0);
   for (const block of requiredBlocks) {
     const used = units.reduce((sum, unit) => sum + slotsOf(unit), 0);
-    const unit = block.kind === "tuplet" ? tupletUnit(block, 32 - used) : Array(SLOTS_PER_BEAT / block.slotCount).fill(block);
+    const unit = block.kind === "tuplet"
+      ? tupletUnit(block, Math.max(32 - used - reserved, block.slotCount + 7)) || tupletUnit(block, 32 - used)
+      : Array(SLOTS_PER_BEAT / block.slotCount).fill(block);
     if (!unit) return null;
     units.push(unit);
+  }
+  for (const block of requiredSecondaryBlocks) {
+    const forced = { ...block, forcePlay: true };
+    const unit = block.kind === "tuplet"
+      ? groupUnit(forced, 1)
+      : Array(SLOTS_PER_BEAT / block.slotCount).fill(block).map((value, index) => (index < 2 ? forced : value));
+    if (unit && slotsOf(unit) <= 32 - units.reduce((sum, existing) => sum + slotsOf(existing), 0)) units.push(unit);
   }
   let remaining = 32 - units.reduce((sum, unit) => sum + slotsOf(unit), 0);
   const optional = [
@@ -3270,10 +3299,11 @@ function balancePrimaryGroupRests(layout, blockEvents, playedSlots, primaryBlock
       const indexes = Array.from({ length: count }, (_, offset) => start + offset);
       const position = lineIndex + group;
       group += 1;
-      // Late retries choose at random so an exercise that can't work one way can resolve.
-      const fullyPlayed = attempt >= BALANCE_RETRY_ATTEMPT
+      // Late retries choose at random so an exercise that can't work one way can
+      // resolve; the latest play the group in full to leave room for ornaments.
+      const fullyPlayed = attempt >= ORNAMENT_REDRAW_ATTEMPT || (attempt >= BALANCE_RETRY_ATTEMPT
         ? random() < share
-        : Math.floor((position + 1) * share) > Math.floor(position * share);
+        : Math.floor((position + 1) * share) > Math.floor(position * share));
       if (fullyPlayed) {
         indexes.forEach((index) => { playedSlots[index] = true; });
       } else {
@@ -3312,18 +3342,25 @@ function createMixedTupletFallbackGeneratedScore(section, options, random, lineI
       }));
   let availableBlocks = [...regularBlocks, ...tupletBlocks, ...restBlocks];
   const primary = section.primaryRhythms;
-  // requirePrimaryRhythms: false draws everything at random from the pool.
-  const requiredBlocks = primary && section.requirePrimaryRhythms !== false ? availableBlocks.filter((block) =>
+  // requirePrimaryRhythms: true needs every primary rhythm, "any" at least one
+  // of them (chosen at random), and false draws everything from the pool.
+  const primaryBlocks = primary ? availableBlocks.filter((block) =>
     block.kind === "regular" ? primary.subdivisions.includes(block.id)
       : block.kind === "tuplet" && primary.tuplets.some((tuplet) =>
         tuplet.actual === block.tuplet.actual && tuplet.normal === block.tuplet.normal && tuplet.type === block.tuplet.type)
   ) : [];
+  const requiredBlocks = !primary || section.requirePrimaryRhythms === false ? []
+    : section.requirePrimaryRhythms === "any" && primaryBlocks.length
+      ? [primaryBlocks[randomInteger(random, 0, primaryBlocks.length - 1)]]
+      : primaryBlocks;
+  const requiredSecondaryBlocks = (section.requiredSecondaryKeys || []).flatMap((key) =>
+    availableBlocks.filter((block) => !primaryBlocks.includes(block) && blockRhythmKey(block) === key));
   const requiredSlots = requiredBlocks.reduce((sum, block) => sum + block.slotCount, 0);
   if (requiredSlots > 32) throw new Error("The selected primary rhythms cannot all fit in one 4/4 measure. Select fewer primary rhythms.");
   if (primary) {
     // Draw a fresh subset of optional families for each exercise, including none.
     availableBlocks = availableBlocks.filter((block) =>
-      requiredBlocks.includes(block) || block.kind === "rest" || random() < 0.75
+      requiredBlocks.includes(block) || requiredSecondaryBlocks.includes(block) || block.kind === "rest" || random() < 0.75
     );
   }
   if (getSectionPlayEveryNote(section) && !canFillMixedTupletSlots(32,
@@ -3340,6 +3377,7 @@ function createMixedTupletFallbackGeneratedScore(section, options, random, lineI
   for (let attempt = 0; beatStructured && attempt < 200 && !layout; attempt += 1) {
     const candidate = createBeatStructuredLayout(requiredBlocks, availableBlocks, random, {
       chainPrimaryGroups: Boolean(section.chainPrimaryGroups),
+      requiredSecondaryBlocks,
     });
     const eventCount = (candidate || []).reduce((count, block) =>
       count + (block.kind === "tuplet" ? block.tuplet.actual : block.kind === "regular" ? 1 : 0), 0);
@@ -3433,8 +3471,19 @@ function createMixedTupletFallbackGeneratedScore(section, options, random, lineI
       });
   }
   balancePrimaryGroupRests(layout, blockEvents, playedSlots,
-    section.requirePrimaryRhythms === false ? layout.filter((block) => block.kind === "tuplet") : requiredBlocks,
+    section.requirePrimaryRhythms === false ? layout.filter((block) => block.kind === "tuplet")
+      : section.requirePrimaryRhythms === "any" ? layout.filter((block) => primaryBlocks.includes(block))
+        : requiredBlocks,
     section, random, lineIndex, attempt);
+  // Required secondary rhythms get struck notes so they read as that rhythm.
+  let forcedStart = 0;
+  layout.forEach((block, blockIndex) => {
+    const count = blockEvents[blockIndex].length;
+    if (block.forcePlay) {
+      for (let offset = 0; offset < Math.min(count, 2); offset += 1) playedSlots[forcedStart + offset] = true;
+    }
+    forcedStart += count;
+  });
   const notes = [];
   const tuplets = [];
   let eventIndex = 0;
@@ -3594,10 +3643,18 @@ function createUniqueGeneratedLine(input, section, samplePayload, index, usedExe
   const subsectionIndex = index + (section.subsectionLineOffset || 0);
   const ornamentSegment = getLineOrnamentSegment(section, subsectionIndex);
   if (ornamentSegment) section = { ...section, ornaments: ornamentSegment.ornaments };
-  const randomOrnaments = getLineRandomOrnaments(section, subsectionIndex, section.subsectionId || section.id);
+  const ornamentSeed = section.subsectionId || section.id;
+  const randomOrnaments = getLineRandomOrnaments(section, subsectionIndex, ornamentSeed);
   if (randomOrnaments) section = { ...section, ornaments: randomOrnaments };
   if (section.secondaryRhythmRows) {
     section = { ...section, secondaryRhythms: getLineSecondaryRhythms(section, subsectionIndex, pdfSettings.measuresPerLine) };
+    if (section.requireNewestSecondary) {
+      // The most recently added secondary rhythm(s) must appear in the exercise.
+      const row = Math.floor(subsectionIndex / Math.max(1, pdfSettings.measuresPerLine)) + 1;
+      const joined = Object.entries(normalizeSecondaryRhythmRows(section.secondaryRhythmRows) || {}).filter(([, joinRow]) => joinRow <= row);
+      const newest = Math.max(...joined.map(([, joinRow]) => joinRow));
+      section = { ...section, requiredSecondaryKeys: joined.filter(([, joinRow]) => joinRow === newest).map(([key]) => key) };
+    }
   }
   if (section.playedShareRamp) {
     section = { ...section, playedShareRange: getPlayedShareRange(section.playedShareRamp, subsectionIndex, section.subsectionLineCount) };
@@ -3609,6 +3666,18 @@ function createUniqueGeneratedLine(input, section, samplePayload, index, usedExe
 
   for (let attempt = 0; attempt < MAX_UNIQUE_LINE_ATTEMPTS; attempt += 1) {
     const candidateInput = attempt === 0 ? input : null;
+    // A random ornament set that no layout can satisfy (e.g. flams, diddles, and
+    // cheese on a three-note group) gets a different set, still unlike the previous exercise's.
+    if (randomOrnaments && attempt === ORNAMENT_REDRAW_ATTEMPT) {
+      const previous = subsectionIndex > 0 ? getLineRandomOrnaments(section, subsectionIndex - 1, ornamentSeed).join() : "";
+      for (let salt = 1; salt < 20; salt += 1) {
+        const redrawn = getLineRandomOrnaments(section, 0, `${ornamentSeed}:${subsectionIndex}:redraw:${salt}`);
+        if (redrawn.join() !== previous && redrawn.join() !== randomOrnaments.join()) {
+          section = { ...section, ornaments: redrawn };
+          break;
+        }
+      }
+    }
     let line;
 
     try {
@@ -3751,7 +3820,9 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         secondaryRhythmRows: normalizeSecondaryRhythmRows(pageSource.secondaryRhythmRows),
         chainPrimaryGroups: Boolean(pageSource.chainPrimaryGroups),
         fullPrimaryGroupShare: pageSource.fullPrimaryGroupShare ?? null,
-        requirePrimaryRhythms: pageSource.requirePrimaryRhythms !== false,
+        requirePrimaryRhythms: pageSource.requirePrimaryRhythms === false || pageSource.requirePrimaryRhythms === "any"
+          ? pageSource.requirePrimaryRhythms : true,
+        requireNewestSecondary: Boolean(pageSource.requireNewestSecondary),
         primaryRhythmOrnaments: pageSource.primaryRhythmOrnaments || null,
         maxPlayedShare: pageSource.maxPlayedShare ?? null,
         // The sticking tail closes a multi-page subsection, so only its last page uses it.
@@ -4088,7 +4159,8 @@ function createStoredPageGenerationSettings(pageConfig) {
     ...(pageConfig.secondaryRhythmRows ? { secondaryRhythmRows: pageConfig.secondaryRhythmRows } : {}),
     ...(pageConfig.chainPrimaryGroups ? { chainPrimaryGroups: true } : {}),
     ...(pageConfig.fullPrimaryGroupShare != null ? { fullPrimaryGroupShare: pageConfig.fullPrimaryGroupShare } : {}),
-    ...(pageConfig.requirePrimaryRhythms === false ? { requirePrimaryRhythms: false } : {}),
+    ...(pageConfig.requirePrimaryRhythms !== true ? { requirePrimaryRhythms: pageConfig.requirePrimaryRhythms } : {}),
+    ...(pageConfig.requireNewestSecondary ? { requireNewestSecondary: true } : {}),
     ...(pageConfig.primaryRhythmOrnaments ? { primaryRhythmOrnaments: pageConfig.primaryRhythmOrnaments } : {}),
     ...(pageConfig.maxPlayedShare != null ? { maxPlayedShare: pageConfig.maxPlayedShare } : {}),
     ...(pageConfig.playedShareRamp ? { playedShareRamp: pageConfig.playedShareRamp } : {}),

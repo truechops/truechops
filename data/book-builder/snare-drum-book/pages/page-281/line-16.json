@@ -23,10 +23,13 @@
               {
                 "notes": [
                   {
-                    "notes": [],
+                    "notes": [
+                      "C5"
+                    ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 1,
+                    "ornaments": "la"
                   },
                   {
                     "notes": [
@@ -45,15 +48,6 @@
                     "dots": 0,
                     "velocity": 1,
                     "ornaments": "la"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -80,7 +74,7 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "r"
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -99,12 +93,21 @@
                     "dots": 0,
                     "velocity": 1,
                     "ornaments": "la"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 1,
-                    "end": 9,
+                    "start": 0,
+                    "end": 8,
                     "actual": 8,
                     "normal": 7
                   }
@@ -116,8 +119,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r8 n8:r n8:la n8:r n8:ra n8:l n8:r n8:r n8:la |t1-9:8:7",
-  "updatedAt": "2026-10-04T19:35:26.300Z",
+  "exerciseShortForm": "n8:la n8:r n8:la n8:ra n8:l n8:l n8:r n8:la n8:r |t0-8:8:7",
+  "updatedAt": "2026-10-04T20:05:15.276Z",
   "sectionId": "combinations-seven-eighths-8",
   "sectionPageNumber": 2
 }

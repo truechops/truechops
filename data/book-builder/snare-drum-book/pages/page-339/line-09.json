@@ -28,6 +28,13 @@
                     ],
                     "duration": 16,
                     "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "c"
+                  },
+                  {
+                    "notes": [],
+                    "duration": 16,
+                    "dots": 0,
                     "velocity": 0.5
                   },
                   {
@@ -35,7 +42,30 @@
                       "C5"
                     ],
                     "duration": 16,
-                    "dots": 1,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "f"
+                  },
+                  {
+                    "notes": [],
+                    "duration": 32,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 32,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 32,
+                    "dots": 0,
                     "velocity": 0.5
                   },
                   {
@@ -52,29 +82,13 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "f"
-                  },
-                  {
-                    "notes": [],
-                    "duration": 16,
-                    "dots": 0,
                     "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "c"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 3,
-                    "end": 6,
+                    "start": 0,
+                    "end": 3,
                     "actual": 3,
                     "normal": 13
                   }
@@ -86,8 +100,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n16 n16. n32 n16:f r16 n16:c |t3-6:3:13",
-  "updatedAt": "2026-10-04T19:35:26.300Z",
+  "exerciseShortForm": "n16:c r16 n16:f r32 n32 n32 n32 n16 |t0-3:3:13",
+  "updatedAt": "2026-10-04T20:05:15.276Z",
   "sectionId": "combinations-thirteen-sixteenths-3",
   "sectionPageNumber": 2
 }

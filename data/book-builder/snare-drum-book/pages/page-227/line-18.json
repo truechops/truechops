@@ -26,14 +26,6 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
                     "duration": 32,
                     "dots": 0,
                     "velocity": 0.5
@@ -77,10 +69,35 @@
                     "duration": 32,
                     "dots": 0,
                     "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 32,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 32,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "c"
                   },
                   {
                     "notes": [],
-                    "duration": 16,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5
                   },
@@ -93,10 +110,13 @@
                     "velocity": 0.5
                   },
                   {
-                    "notes": [],
+                    "notes": [
+                      "C5"
+                    ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 1,
+                    "ornaments": "a"
                   },
                   {
                     "notes": [
@@ -104,27 +124,8 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 1,
+                    "ornaments": "a"
                   },
                   {
                     "notes": [
@@ -157,31 +158,7 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 32,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 32,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 32,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 32,
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 0.5
                   },
@@ -197,23 +174,25 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 32,
+                    "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 1,
+                    "ornaments": "fa"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 32,
+                    "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "c"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 32,
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 0.5
                   }
@@ -221,21 +200,21 @@
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 7,
+                    "end": 8,
                     "actual": 9,
                     "normal": 8
                   },
                   {
-                    "start": 7,
-                    "end": 13,
-                    "actual": 6,
+                    "start": 8,
+                    "end": 12,
+                    "actual": 5,
                     "normal": 4
                   },
                   {
-                    "start": 17,
-                    "end": 25,
-                    "actual": 9,
-                    "normal": 8
+                    "start": 16,
+                    "end": 21,
+                    "actual": 5,
+                    "normal": 4
                   }
                 ]
               }
@@ -245,8 +224,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n16 n32 n32 n16 n32 n32 n32 r16 n16 r16 n16 r16 n16 r16 n16:af n16:adc n16:a n32 n32 n32 n32 n16 n32 n32 n32 |t0-7:9:8,7-13:6:4,17-25:9:8",
-  "updatedAt": "2026-10-04T19:35:26.300Z",
+  "exerciseShortForm": "n32 n32 n16 n32 n32 n32 n32 n32 n16:c r8 n16 n16:a n16:a n16:af n16:adc n16:a n16 n16 n16:af n16:c n16 |t0-8:9:8,8-12:5:4,16-21:5:4",
+  "updatedAt": "2026-10-04T20:05:15.276Z",
   "sectionId": "combinations-one-quarter-sixteenths",
   "sectionPageNumber": 2
 }

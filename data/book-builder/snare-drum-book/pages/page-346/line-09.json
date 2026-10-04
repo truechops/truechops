@@ -25,7 +25,7 @@
                   {
                     "notes": [],
                     "duration": 8,
-                    "dots": 0,
+                    "dots": 1,
                     "velocity": 0.5
                   },
                   {
@@ -35,7 +35,16 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "lc"
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "ldc"
                   },
                   {
                     "notes": [],
@@ -50,22 +59,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "rdc"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -80,7 +74,7 @@
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 5,
+                    "end": 4,
                     "actual": 7,
                     "normal": 13
                   }
@@ -92,8 +86,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r8 n16:lc r8 n16:rdc n16:l r16 n8:l |t0-5:7:13",
-  "updatedAt": "2026-10-04T19:35:26.300Z",
+  "exerciseShortForm": "r8. n16:l n16:ldc r8 n16:r n8:l |t0-4:7:13",
+  "updatedAt": "2026-10-04T20:05:15.276Z",
   "sectionId": "combinations-thirteen-sixteenths-7",
   "sectionPageNumber": 1
 }

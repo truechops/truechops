@@ -23,10 +23,13 @@
               {
                 "notes": [
                   {
-                    "notes": [],
+                    "notes": [
+                      "C5"
+                    ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 1,
+                    "ornaments": "lad"
                   },
                   {
                     "notes": [
@@ -47,10 +50,13 @@
                     "ornaments": "ld"
                   },
                   {
-                    "notes": [],
+                    "notes": [
+                      "C5"
+                    ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -77,8 +83,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r16 n16:rad n16:ld r16 n16:raf |t1-5:4:15",
-  "updatedAt": "2026-10-04T19:35:26.300Z",
+  "exerciseShortForm": "n16:lad n16:rad n16:ld n16:r n16:raf |t1-5:4:15",
+  "updatedAt": "2026-10-04T20:05:15.276Z",
   "sectionId": "combinations-fifteen-sixteenths-4",
   "sectionPageNumber": 2
 }

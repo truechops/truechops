@@ -23,16 +23,19 @@
               {
                 "notes": [
                   {
-                    "notes": [],
-                    "duration": 16,
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 1,
+                    "ornaments": "a"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5
                   },
@@ -57,7 +60,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "a"
+                    "ornaments": "ac"
                   },
                   {
                     "notes": [
@@ -138,6 +141,12 @@
                 ],
                 "tuplets": [
                   {
+                    "start": 0,
+                    "end": 3,
+                    "actual": 3,
+                    "normal": 2
+                  },
+                  {
                     "start": 5,
                     "end": 14,
                     "actual": 9,
@@ -151,8 +160,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r16 n16 n8 r16 n16:a n8 n8:d n8 n8 n8:c n8 n8:ad n8 n8:ad |t5-14:9:5",
-  "updatedAt": "2026-10-04T19:35:26.300Z",
+  "exerciseShortForm": "n8:a n8 n8 r16 n16:ac n8 n8:d n8 n8 n8:c n8 n8:ad n8 n8:ad |t0-3:3:2,5-14:9:5",
+  "updatedAt": "2026-10-04T20:05:15.276Z",
   "sectionId": "combinations-five-eighths-9",
   "sectionPageNumber": 1
 }

@@ -8,7 +8,7 @@ const vm = require("node:vm");
 const babel = require("@babel/core");
 const { migrateBookStructure } = require("../../src/lib/book-structure");
 const generator = require("../generate-ai-book");
-const { createStudySections, createSpanStudy, createCombinedStudies, createTupletCombinationStudies, SPAN_STUDIES, STUDY_TOPICS, STUDY_FAMILIES } = require("../../src/lib/book-curriculum");
+const { createStudySections, createSpanStudy, createTupletCombinationStudies, createFinalStudies, SPAN_STUDIES, STUDY_TOPICS, STUDY_FAMILIES } = require("../../src/lib/book-curriculum");
 const { getLineStickingSettings, getSpanPrimaryRhythms } = require("../../src/lib/book-structure");
 
 // Load the same ES modules Next uses without starting a server.
@@ -251,31 +251,6 @@ test("the exercise generator builds fresh measures from a configuration or a boo
   assert.equal(normalizeExerciseConfig({ name: "", subdivision: "nope" }).subdivision, "sixteenths");
 });
 
-test("combined-subdivision pages draw at random from a pool that grows each section", () => {
-  const { groups, sections } = createCombinedStudies({ measuresPerLine: 2, lineSpacing: 130, noteSize: 100 });
-  // Seven one-beat pools, then one section per span category; two pages each.
-  assert.equal(sections.length, 7 + SPAN_STUDIES.length);
-  assert(sections.every((section) => section.pages.length === 2));
-  assert.equal(sections.at(-1).primaryRhythms.tuplets.length + sections.at(-1).primaryRhythms.subdivisions.length,
-    7 + SPAN_STUDIES.reduce((sum, study) => sum + study.familyIds.length, 0));
-  const config = generator.createGenerationConfig({}, { structureVersion: 3, groups, sections });
-  const poolSize = (section) => section.primaryRhythms.subdivisions.length + section.primaryRhythms.tuplets.length;
-  sections.slice(1).forEach((section, index) => assert(poolSize(section) >= poolSize(sections[index])));
-  const last = config.sections.at(-1).pages[0];
-  const used = new Set();
-  generate(last, 22).forEach((voice) => {
-    voice.tuplets.forEach((tuplet) => used.add(`${tuplet.actual}:${tuplet.normal}`));
-  });
-  // No rhythm is required, yet the last page draws widely from its pool.
-  assert(used.size >= 8, `only ${used.size} tuplet kinds on the last page`);
-  // Groups of 7-9 in a quarter note or less take only stickings; sextuplets only flams.
-  generate(config.sections[6].pages[0], 22).forEach((voice) => voice.tuplets.forEach((tuplet) => {
-    const notes = voice.notes.slice(tuplet.start, tuplet.end);
-    const allowed = tuplet.actual === 6 ? /^[frl]*$/ : tuplet.actual >= 7 ? /^[rl]*$/ : /./;
-    notes.forEach((note) => assert(!note.ornaments || allowed.test(note.ornaments), `${tuplet.actual}:${tuplet.normal} has ${note.ornaments}`));
-  }));
-});
-
 test("tuplet combinations keep the section's tuplet in every exercise and grow the secondary pool", () => {
   const { groups, sections } = createTupletCombinationStudies({ measuresPerLine: 2, lineSpacing: 130, noteSize: 100 });
   assert.equal(sections.length, 7 + SPAN_STUDIES.reduce((sum, study) => sum + study.familyIds.length, 0));
@@ -292,6 +267,35 @@ test("tuplet combinations keep the section's tuplet in every exercise and grow t
   // Sextuplets join the pool at row 4; nontuplets only near the end.
   assert(tupletKinds.slice(0, 6).every((kinds) => !kinds.includes(6) && !kinds.includes(9)));
   assert(tupletKinds.slice(36).some((kinds) => kinds.includes(9)));
+});
+
+test("tuplet combinations require the newest secondary rhythm in each exercise", () => {
+  const { groups, sections } = createTupletCombinationStudies({ measuresPerLine: 2, lineSpacing: 130, noteSize: 100 });
+  const config = generator.createGenerationConfig({}, { structureVersion: 3, groups, sections: sections.slice(0, 1) });
+  const page = config.sections[0].pages[0];
+  const seen = new Set();
+  // Triplets page: sextuplets join at row 4 and stay newest until 32nds join at row 8.
+  for (let index = 6; index < 14; index += 1) {
+    const voice = generator.createUniqueGeneratedLine(null, page, page.sampleJson, index, seen).score.measures[0].parts[0].voices[0];
+    assert(voice.tuplets.some((tuplet) => tuplet.actual === 6), `exercise ${index + 1} lacks sextuplets`);
+  }
+});
+
+test("the final section keeps at least one grouping of its category in every exercise", () => {
+  const { groups, sections } = createFinalStudies({ measuresPerLine: 2, lineSpacing: 130, noteSize: 100 });
+  assert.equal(sections.length, 14);
+  assert(sections.every((section) => section.pages.length === 3));
+  const twoQuarters = sections.find((section) => section.title === "Over two quarter notes");
+  const config = generator.createGenerationConfig({}, { structureVersion: 3, groups, sections: [twoQuarters] });
+  const seen = new Set();
+  config.sections[0].pages.forEach((page) => {
+    for (let index = 0; index < 22; index += 1) {
+      const voice = generator.createUniqueGeneratedLine(null, page, page.sampleJson, index, seen).score.measures[0].parts[0].voices[0];
+      assert(voice.tuplets.some((tuplet) => [3, 5, 7, 9].includes(tuplet.actual) &&
+        voice.notes.slice(tuplet.start, tuplet.end).reduce((sum, note) => sum + 4 / note.duration * (note.dots ? 1.5 : 1), 0) *
+          tuplet.normal / tuplet.actual > 1.99), `exercise lacks a two-quarter grouping`);
+    }
+  });
 });
 
 test("all seven families follow the exact eight sparse / seven full topic order", () => {

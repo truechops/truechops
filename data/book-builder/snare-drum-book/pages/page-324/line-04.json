@@ -23,6 +23,24 @@
               {
                 "notes": [
                   {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 4,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
                     "notes": [],
                     "duration": 16,
                     "dots": 0,
@@ -35,7 +53,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -53,30 +71,21 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "rc"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 4,
-                    "dots": 1,
-                    "velocity": 0.5,
-                    "ornaments": "l"
+                    "ornaments": "lc"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 1,
-                    "end": 4,
-                    "actual": 3,
-                    "normal": 11
-                  },
-                  {
-                    "start": 4,
-                    "end": 5,
+                    "start": 0,
+                    "end": 2,
                     "actual": 3,
                     "normal": 2
+                  },
+                  {
+                    "start": 3,
+                    "end": 6,
+                    "actual": 3,
+                    "normal": 11
                   }
                 ]
               }
@@ -86,8 +95,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r16 n16:l n16:l n16:rc n4.:l |t1-4:3:11,4-5:3:2",
-  "updatedAt": "2026-10-04T19:35:26.300Z",
+  "exerciseShortForm": "n8:r n4:l r16 n16:r n16:l n16:lc |t0-2:3:2,3-6:3:11",
+  "updatedAt": "2026-10-04T20:05:15.276Z",
   "sectionId": "combinations-eleven-sixteenths-3",
   "sectionPageNumber": 1
 }

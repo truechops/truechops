@@ -26,10 +26,9 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
+                    "duration": 4,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "ca"
+                    "velocity": 0.5
                   },
                   {
                     "notes": [
@@ -60,7 +59,7 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5
                   },
@@ -68,7 +67,7 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
+                    "duration": 4,
                     "dots": 0,
                     "velocity": 1,
                     "ornaments": "fa"
@@ -87,30 +86,14 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "c"
+                    "velocity": 1,
+                    "ornaments": "ca"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 1,
                     "ornaments": "a"
@@ -119,24 +102,39 @@
                     "notes": [
                       "C5"
                     ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "ad"
+                  },
+                  {
+                    "notes": [],
                     "duration": 8,
                     "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "f"
+                    "ornaments": "c"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 9,
+                    "end": 8,
                     "actual": 5,
                     "normal": 3
                   },
                   {
-                    "start": 9,
+                    "start": 8,
                     "end": 12,
-                    "actual": 3,
-                    "normal": 2
+                    "actual": 5,
+                    "normal": 4
                   }
                 ]
               }
@@ -146,8 +144,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n8:ac n8 n8:dc n8 n4 n8:af n8 n8:c n8 n8 n8:a n8:f |t0-9:5:3,9-12:3:2",
-  "updatedAt": "2026-10-04T19:35:26.300Z",
+  "exerciseShortForm": "n4 n8 n8:dc n8 n8 n4:af n8 n8:ac n16:a n16:ad r8 n16:c |t0-8:5:3,8-12:5:4",
+  "updatedAt": "2026-10-04T20:05:15.276Z",
   "sectionId": "combinations-three-quarters-5",
   "sectionPageNumber": 2
 }

@@ -184,13 +184,9 @@ function createSpanSections(groupId, pdfSettings, familyIds, spanLabel, {
   });
 }
 
-// Combined-subdivision studies close the book. Each section draws every exercise
-// at random from a pool of rhythms over two pages: one section per one-beat
-// pool (each adds a rhythm), then one per span category (each adds all of that
-// category's groupings, e.g. every grouping over two quarter notes).
-// No rhythm is required, and each exercise picks its own ornaments at random.
-const COMBINED_PAGES_PER_SECTION = 2;
-const COMBINED_RANDOM_ORNAMENTS = { from: ["stickings", "accents", "flams", "diddles", "cheese"], min: 2, max: 4 };
+// Ornaments for the combination and random-subdivision pages: each exercise
+// picks 2-4 at random, never repeating the previous exercise's set.
+const RANDOM_ORNAMENTS = { from: ["stickings", "accents", "flams", "diddles", "cheese"], min: 2, max: 4 };
 
 // One-beat rhythms in printed form. The pool is generated over one quarter note,
 // so longer groupings are listed as they print and keep their own note values.
@@ -235,22 +231,6 @@ function getPoolOrnamentLimits(pool) {
   return limits;
 }
 
-// Each group's pools, one per section. One-beat rhythms join one at a time;
-// then each span category (all its groupings at once) joins in book order.
-const COMBINED_GROUPS = (() => {
-  const oneBeat = [["eighths", "triplets"], ...ONE_BEAT_KEYS.slice(1).map((_, index) => ONE_BEAT_KEYS.slice(0, index + 2))]
-    .map((keys) => ({ rhythms: keys.map((key) => POOL_RHYTHMS[key]) }));
-  let pool = ONE_BEAT_KEYS.map((key) => POOL_RHYTHMS[key]);
-  const spans = SPAN_POOL_STEPS.map(({ study, rhythms }) => ({
-    rhythms: (pool = [...pool, ...rhythms]),
-    title: `+ Groupings ${study.title.toLowerCase()}`,
-  }));
-  return [
-    { id: "combined-one-beat", title: "Combined subdivisions", pools: oneBeat },
-    { id: "combined-groupings", title: "Combined subdivisions + longer groupings", pools: spans },
-  ].map((group) => ({ ...group, rhythmSpan: { count: 1, unit: 4 } }));
-})();
-
 const capitalize = (text) => `${text[0].toUpperCase()}${text.slice(1)}`;
 
 function mergePools(pools) {
@@ -258,49 +238,6 @@ function mergePools(pools) {
     subdivisions: [...new Set(pools.flatMap((pool) => pool.subdivisions || []))],
     tuplets: pools.flatMap((pool) => pool.tuplets || []),
   };
-}
-
-function createCombinedStudies(pdfSettings) {
-  const sections = COMBINED_GROUPS.flatMap((group) => group.pools.map(({ rhythms, title: poolTitle }, index) => {
-    const id = `${group.id}-${index + 1}`;
-    const names = rhythms.map((rhythm) => rhythm.name);
-    // The first pools are named in full; later ones by the rhythm they add.
-    const title = poolTitle || (index < 2
-      ? capitalize(`${names[0]} and ${names[1]}`)
-      : `+ ${capitalize(names.at(-1))}`);
-    const pool = normalizeRhythmPool(mergePools(rhythms.map((rhythm) => rhythm.pool)), false);
-    return {
-      id, groupId: group.id, title, density: "mixed",
-      rhythmSpan: group.rhythmSpan,
-      primaryRhythms: pool,
-      secondaryRhythms: normalizeRhythmPool({ ...pool, rhythmOrnaments: ONE_BEAT_SECONDARY_RHYTHMS.rhythmOrnaments }),
-      pdfSettings,
-      pages: Array.from({ length: COMBINED_PAGES_PER_SECTION }, () => ({
-        subsectionId: `${id}-mixed`,
-        subsectionPageCount: COMBINED_PAGES_PER_SECTION,
-        title: "Nothing to everything",
-        pdfSettings,
-        generationSettings: {
-          prompt: "", sampleJson: "",
-          // Building is done here: each exercise picks its own 2-4 ornaments.
-          ornaments: COMBINED_RANDOM_ORNAMENTS.from,
-          randomOrnaments: COMBINED_RANDOM_ORNAMENTS,
-          requirePrimaryRhythms: false,
-          primaryRhythmOrnaments: getPoolOrnamentLimits(pool),
-          // Every note at first, thinning to 40-50% of notes by the last exercise.
-          playedShareRamp: { start: [1, 1], end: [0.4, 0.5] },
-          minPlayedNotes: 0,
-          maxPlayedNotes: 0,
-          playEveryNote: false,
-          maxSameHandStickingRun: 2,
-          requiredSameHandStickingRuns: [],
-          stickingTail: null,
-        },
-        lines: [],
-      })),
-    };
-  }));
-  return { groups: COMBINED_GROUPS.map(({ id, title, rhythmSpan }) => ({ id, title, rhythmSpan })), sections };
 }
 
 // Tuplet combinations: for each tuplet in the book, two pages where every
@@ -351,9 +288,11 @@ function createCombinationSection({ groupId, id, title, rhythmSpan, familyId, st
       pdfSettings,
       generationSettings: {
         prompt: "", sampleJson: "",
-        ornaments: COMBINED_RANDOM_ORNAMENTS.from,
-        randomOrnaments: COMBINED_RANDOM_ORNAMENTS,
+        ornaments: RANDOM_ORNAMENTS.from,
+        randomOrnaments: RANDOM_ORNAMENTS,
         secondaryRhythmRows,
+        // Each exercise includes the most recently added subdivision.
+        requireNewestSecondary: true,
         ...(Object.keys(limits).length ? { primaryRhythmOrnaments: limits } : {}),
         ...(chainPrimaryGroups ? { chainPrimaryGroups: true } : {}),
         fullPrimaryGroupShare: 0.5,
@@ -395,8 +334,87 @@ function createTupletCombinationStudies(pdfSettings) {
   return { groups, sections };
 }
 
+// The book's last section: for each span category, three pages where every
+// exercise has at least one grouping from that category (sometimes more, in
+// different spots) and the rest is drawn from a pool that adds the other
+// categories one at a time down the pages.
+const FINAL_CATEGORY_ORDER = [
+  "one-quarter", "two-quarters", "three-eighths", "three-quarters", "five-eighths", "four-quarters", "seven-eighths",
+  "three-sixteenths", "five-sixteenths", "seven-sixteenths", "nine-sixteenths", "eleven-sixteenths",
+  "thirteen-sixteenths", "fifteen-sixteenths",
+];
+const FINAL_PAGES = 3;
+const FINAL_ROWS = 11 * FINAL_PAGES;
+const SECONDARY_ORNAMENTS = ["accents", "flams", "diddles", "cheese"];
+
+function getFinalCategories() {
+  const categories = [
+    { id: "one-quarter", title: "Over one quarter note", pools: ONE_BEAT_KEYS.map((key) => POOL_RHYTHMS[key].pool) },
+    ...SPAN_POOL_STEPS.map(({ study, rhythms }) => ({ id: study.groupId, title: study.title, pools: rhythms.map((rhythm) => rhythm.pool) })),
+  ];
+  return FINAL_CATEGORY_ORDER.map((id) => categories.find((category) => category.id === id));
+}
+
+// Secondary ornaments: the one-beat rules, and every ornament on longer
+// groupings unless they are fast groups (7-9 notes, or 6, in a quarter or less).
+function getSecondaryRhythmOrnaments(pool) {
+  const limits = getPoolOrnamentLimits(pool);
+  const keys = [...pool.subdivisions, ...pool.tuplets].map(rhythmOrnamentKey);
+  return Object.fromEntries(keys.map((key) => [key,
+    ONE_BEAT_SECONDARY_RHYTHMS.rhythmOrnaments[key] || limits[key] || (key in limits ? [] : SECONDARY_ORNAMENTS)]));
+}
+
+function createFinalStudies(pdfSettings) {
+  const group = { id: "random-subdivisions", title: "Random subdivisions and ornaments", rhythmSpan: { count: 1, unit: 4 } };
+  const categories = getFinalCategories();
+  const sections = categories.map((category) => {
+    const id = `${group.id}-${category.id}`;
+    const others = categories.filter((other) => other.id !== category.id);
+    const primaryRhythms = normalizeRhythmPool(mergePools(category.pools), false);
+    const secondaryPool = normalizeRhythmPool(mergePools(others.flatMap((other) => other.pools)));
+    const secondaryRhythmRows = {};
+    others.forEach((other, index) => {
+      for (const pool of other.pools) {
+        for (const rhythm of [...(pool.subdivisions || []), ...(pool.tuplets || [])]) {
+          secondaryRhythmRows[rhythmOrnamentKey(rhythm)] = Math.floor(index * FINAL_ROWS / others.length) + 1;
+        }
+      }
+    });
+    const limits = getPoolOrnamentLimits(primaryRhythms);
+    return {
+      id, groupId: group.id, title: category.title, density: "mixed", rhythmSpan: group.rhythmSpan,
+      primaryRhythms,
+      secondaryRhythms: normalizeRhythmPool({ ...secondaryPool, rhythmOrnaments: getSecondaryRhythmOrnaments(secondaryPool) }),
+      pdfSettings,
+      pages: Array.from({ length: FINAL_PAGES }, () => ({
+        subsectionId: `${id}-random`,
+        subsectionPageCount: FINAL_PAGES,
+        title: "Random subdivisions",
+        pdfSettings,
+        generationSettings: {
+          prompt: "", sampleJson: "",
+          ornaments: RANDOM_ORNAMENTS.from,
+          randomOrnaments: RANDOM_ORNAMENTS,
+          requirePrimaryRhythms: "any",
+          secondaryRhythmRows,
+          ...(Object.keys(limits).length ? { primaryRhythmOrnaments: limits } : {}),
+          fullPrimaryGroupShare: 0.5,
+          minPlayedNotes: 0,
+          maxPlayedNotes: 0,
+          playEveryNote: false,
+          maxSameHandStickingRun: 2,
+          requiredSameHandStickingRuns: [],
+          stickingTail: null,
+        },
+        lines: [],
+      })),
+    };
+  });
+  return { groups: [group], sections };
+}
+
 module.exports = {
-  STUDY_TOPICS, STUDY_FAMILIES, TWO_BEAT_ORNAMENT_SEGMENTS, COMBINED_GROUPS,
+  STUDY_TOPICS, STUDY_FAMILIES, TWO_BEAT_ORNAMENT_SEGMENTS,
   SPAN_STUDIES, createStudySections, createSpanStudy, createTwoBeatSections, createThreeEighthsSections,
-  createCombinedStudies, createTupletCombinationStudies,
+  createTupletCombinationStudies, createFinalStudies,
 };

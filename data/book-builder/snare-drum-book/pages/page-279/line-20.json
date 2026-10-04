@@ -26,9 +26,10 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 32,
+                    "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "c"
                   },
                   {
                     "notes": [
@@ -50,9 +51,10 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 32,
+                    "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "c"
                   },
                   {
                     "notes": [
@@ -95,21 +97,12 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "f"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "c"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 4,
-                    "end": 10,
+                    "start": 3,
+                    "end": 9,
                     "actual": 6,
                     "normal": 7
                   }
@@ -121,8 +114,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n32 n32 n32 n32 n8 n8:c n8 n8 n8:f n8:c |t4-10:6:7",
-  "updatedAt": "2026-10-04T19:35:26.300Z",
+  "exerciseShortForm": "n16:c n32 n32 n8:c n8 n8:c n8 n8 n8:f |t3-9:6:7",
+  "updatedAt": "2026-10-04T20:05:15.276Z",
   "sectionId": "combinations-seven-eighths-6",
   "sectionPageNumber": 2
 }
