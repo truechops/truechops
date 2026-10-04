@@ -23,10 +23,13 @@
               {
                 "notes": [
                   {
-                    "notes": [],
+                    "notes": [
+                      "C5"
+                    ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 1,
+                    "ornaments": "rda"
                   },
                   {
                     "notes": [
@@ -43,8 +46,17 @@
                     ],
                     "duration": 16,
                     "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
                     "velocity": 1,
-                    "ornaments": "ra"
+                    "ornaments": "rda"
                   },
                   {
                     "notes": [
@@ -61,26 +73,17 @@
                     ],
                     "duration": 16,
                     "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "rda"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
                   }
                 ],
                 "tuplets": [
@@ -98,8 +101,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r16 n8:r n16:ra n16:l n16:l n16:r n16:r |t2-7:5:13",
-  "updatedAt": "2026-10-04T00:55:04.383Z",
+  "exerciseShortForm": "n16:rad n8:r n16:l n16:rad n16:l n16:rad n16:l |t2-7:5:13",
+  "updatedAt": "2026-10-04T01:37:39.243Z",
   "sectionId": "combined-groupings-12",
   "sectionPageNumber": 1
 }

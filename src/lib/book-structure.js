@@ -141,6 +141,47 @@ function getLineSecondaryRhythms(settings, lineIndex, measuresPerLine) {
   };
 }
 
+// randomOrnaments picks each exercise's ornaments at random, e.g.
+// { from: [...ornament ids], min: 2, max: 4 }, and never repeats the previous
+// exercise's set. Seeded by `seed`, so regenerating gives the same plan.
+function normalizeRandomOrnaments(value) {
+  if (!value || !Array.isArray(value.from)) return null;
+  const from = ornamentIds.filter((id) => value.from.includes(id));
+  if (!from.length) return null;
+  const min = Math.max(1, Math.min(from.length, Number.parseInt(value.min, 10) || 1));
+  const max = Math.max(min, Math.min(from.length, Number.parseInt(value.max, 10) || from.length));
+  return { from, min, max };
+}
+
+function seededRandom(seed) {
+  let state = 2166136261;
+  for (const char of String(seed)) state = Math.imul(state ^ char.charCodeAt(0), 16777619) >>> 0;
+  return () => {
+    state = (state + 0x6D2B79F5) >>> 0;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function getLineRandomOrnaments(settings, lineIndex, seed) {
+  const config = normalizeRandomOrnaments(settings?.randomOrnaments);
+  if (!config) return null;
+  let previous = "";
+  let chosen = [];
+  for (let index = 0; index <= lineIndex; index += 1) {
+    const random = seededRandom(`${seed}:${index}`);
+    do {
+      const count = config.min + Math.floor(random() * (config.max - config.min + 1));
+      const shuffled = [...config.from].sort(() => random() - 0.5);
+      chosen = ornamentIds.filter((id) => shuffled.slice(0, count).includes(id));
+    } while (chosen.join() === previous && config.from.length > 1);
+    previous = chosen.join();
+  }
+  return chosen;
+}
+
 function getLineOrnamentSegment(settings, lineIndex) {
   const segments = normalizeOrnamentSegments(settings?.ornamentSegments);
   if (!segments) return null;
@@ -284,7 +325,7 @@ module.exports = {
   MAX_SUBSECTION_PAGES, normalizeSubsectionPageCount, groupSubsectionPages,
   getSpanPrimaryRhythms,
   normalizeBookGroups, normalizeStickingTail, getLineStickingSettings,
-  normalizeOrnamentSegments, getLineOrnamentSegment,
+  normalizeOrnamentSegments, getLineOrnamentSegment, normalizeRandomOrnaments, getLineRandomOrnaments,
   normalizeSecondaryRhythmRows, getLineSecondaryRhythms,
   normalizeRhythmPool, rhythmOrnamentKey, migrateBookStructure, createStructureTableOfContents,
 };

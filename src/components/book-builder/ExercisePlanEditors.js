@@ -97,7 +97,38 @@ export function SecondaryOrnamentGrid({ pool, onChange }) {
 }
 
 // Page level: ornament topics that change by exercise.
-export function OrnamentTopicsEditor({ segments, ornaments, exerciseCount, onChange }) {
+const DEFAULT_RANDOM_ORNAMENTS = { from: ORNAMENT_OPTIONS.map((option) => option.id), min: 2, max: 4 };
+
+// Page level: ornaments chosen at random for each exercise.
+function RandomOrnamentsEditor({ value, onChange }) {
+  const update = (changes) => {
+    const next = { ...value, ...changes };
+    onChange({ randomOrnaments: next, ornaments: next.from });
+  };
+  return (
+    <div className={styles.fieldGroup}>
+      <span>Ornaments, chosen at random for each exercise</span>
+      <OrnamentToggles label="Ornaments to choose from" onToggle={(id) => update({ from: toggle(value.from, id) })} value={value.from} />
+      <label className={styles.topicCount}>
+        <span>Each exercise uses</span>
+        <input aria-label="Fewest ornaments per exercise" min="1" max={value.from.length}
+          onChange={(event) => update({ min: Number(event.target.value) || 1 })} type="number" value={value.min} />
+        <span>to</span>
+        <input aria-label="Most ornaments per exercise" min={value.min} max={value.from.length}
+          onChange={(event) => update({ max: Number(event.target.value) || value.min })} type="number" value={value.max} />
+        <span>of them; consecutive exercises never use the same set.</span>
+      </label>
+      <div className={styles.topicFooter}>
+        <button className={styles.button} onClick={() => onChange({ randomOrnaments: null })} type="button">
+          Use one set for the whole page
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function OrnamentTopicsEditor({ segments, ornaments, randomOrnaments, exerciseCount, onChange }) {
+  if (randomOrnaments) return <RandomOrnamentsEditor onChange={onChange} value={randomOrnaments} />;
   if (!segments) {
     return (
       <div className={styles.fieldGroup}>
@@ -108,13 +139,22 @@ export function OrnamentTopicsEditor({ segments, ornaments, exerciseCount, onCha
           value={ornaments}
         />
         <p className={styles.layoutSummary}>Every exercise on this page uses these ornaments on its primary rhythms.</p>
-        <button
-          className={styles.button}
-          onClick={() => onChange({ ornamentSegments: [{ title: "Topic 1", count: exerciseCount, ornaments }] })}
-          type="button"
-        >
-          Change ornaments through the page
-        </button>
+        <div className={styles.topicFooter}>
+          <button
+            className={styles.button}
+            onClick={() => onChange({ ornamentSegments: [{ title: "Topic 1", count: exerciseCount, ornaments }] })}
+            type="button"
+          >
+            Change ornaments through the page
+          </button>
+          <button
+            className={styles.button}
+            onClick={() => onChange({ randomOrnaments: DEFAULT_RANDOM_ORNAMENTS, ornaments: DEFAULT_RANDOM_ORNAMENTS.from })}
+            type="button"
+          >
+            Choose ornaments at random per exercise
+          </button>
+        </div>
       </div>
     );
   }
@@ -252,7 +292,7 @@ export function SecondaryRowsEditor({ rows, pool, rowCount, measuresPerLine, onC
 }
 
 // Read-only overview: which exercises, rows, ornaments, and secondary rhythms each topic covers.
-export function PagePlanSummary({ segments, ornaments, rows: rhythmRows, pool, exerciseCount, measuresPerLine, playEveryNote }) {
+export function PagePlanSummary({ segments, ornaments, randomOrnaments, rows: rhythmRows, pool, exerciseCount, measuresPerLine, playEveryNote }) {
   const rhythms = poolRhythms(pool);
   const ornamentNames = (list) => ORNAMENT_OPTIONS.filter((option) => list.includes(option.id))
     .map((option) => option.label).join(", ") || "None";
@@ -267,7 +307,10 @@ export function PagePlanSummary({ segments, ornaments, rows: rhythmRows, pool, e
   };
   const plan = [];
   let start = 1;
-  for (const [index, segment] of (segments || [{ title: "All exercises", count: exerciseCount, ornaments }]).entries()) {
+  const fallback = randomOrnaments
+    ? { title: `Random ${randomOrnaments.min}–${randomOrnaments.max} per exercise`, count: exerciseCount, ornaments: randomOrnaments.from }
+    : { title: "All exercises", count: exerciseCount, ornaments };
+  for (const [index, segment] of (randomOrnaments ? [fallback] : segments || [fallback]).entries()) {
     if (start > exerciseCount) break;
     const isLast = index === (segments?.length || 1) - 1;
     const end = Math.min(exerciseCount, isLast ? exerciseCount : start + segment.count - 1);

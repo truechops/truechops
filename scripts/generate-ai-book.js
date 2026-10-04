@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const http = require("http");
 const https = require("https");
-const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, getLineStickingSettings, getSpanPrimaryRhythms, normalizeOrnamentSegments, getLineOrnamentSegment, normalizeSecondaryRhythmRows, getLineSecondaryRhythms, rhythmOrnamentKey } = require("../src/lib/book-structure");
+const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, getLineStickingSettings, getSpanPrimaryRhythms, normalizeOrnamentSegments, getLineOrnamentSegment, normalizeSecondaryRhythmRows, getLineSecondaryRhythms, rhythmOrnamentKey, normalizeRandomOrnaments, getLineRandomOrnaments } = require("../src/lib/book-structure");
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const DEFAULT_CONFIG_PATH = path.join(
@@ -3052,6 +3052,13 @@ function createRandomPlayedSlots(slotCount, minimumPlayedNotes, maximumPlayedNot
   return Array.from({ length: slotCount }, (_, index) => playedIndexes.has(index));
 }
 
+function createPlayedSlotsInShareRange(slotCount, [minShare, maxShare], random) {
+  const lower = Math.max(1, Math.ceil(slotCount * minShare - 1e-9));
+  const upper = Math.max(lower, Math.min(slotCount, Math.round(slotCount * maxShare)));
+  const playedIndexes = new Set(shuffledIndexes(slotCount, random).slice(0, randomInteger(random, lower, upper)));
+  return Array.from({ length: slotCount }, (_, index) => playedIndexes.has(index));
+}
+
 function createNotesFromPlayedSlots(slots, unitPerSlot, options, random) {
   const notes = [];
   let slotIndex = 0;
@@ -3379,12 +3386,19 @@ function createMixedTupletFallbackGeneratedScore(section, options, random, lineI
   const playableEventIndexes = events
     .map((event, index) => event.forceRest ? -1 : index)
     .filter((index) => index >= 0);
-  const playableSlots = createRandomPlayedSlots(
-    playableEventIndexes.length,
-    getSectionMinPlayedNotes(section),
-    getEffectiveSectionMaxPlayedNotes(section),
-    random
-  );
+  // maxPlayedShare caps the share of notes played before full groups are filled in.
+  const shareLimit = Number(section.maxPlayedShare) > 0
+    ? Math.max(1, Math.round(playableEventIndexes.length * Math.min(1, Number(section.maxPlayedShare))))
+    : 0;
+  const countLimit = getEffectiveSectionMaxPlayedNotes(section);
+  const playableSlots = section.playedShareRange
+    ? createPlayedSlotsInShareRange(playableEventIndexes.length, section.playedShareRange, random)
+    : createRandomPlayedSlots(
+      playableEventIndexes.length,
+      getSectionMinPlayedNotes(section),
+      shareLimit && countLimit ? Math.min(shareLimit, countLimit) : shareLimit || countLimit,
+      random
+    );
   const playedSlots = Array.from({ length: events.length }, () => false);
   playableEventIndexes.forEach((eventIndex, playableIndex) => {
     playedSlots[eventIndex] = playableSlots[playableIndex];
@@ -3551,6 +3565,15 @@ function getMeasureWidthLimit(pdfSettings) {
   return getScoreRenderWidth(settings) / settings.measuresPerLine - MEASURE_PADDING_UNITS - EXERCISE_WIDTH_SAFETY;
 }
 
+// playedShareRamp moves the share of notes played from `start` to `end` (each
+// [min, max]) across the subsection's exercises, e.g. every note at first and
+// 40-50% by the last exercise.
+function getPlayedShareRange(ramp, index, count) {
+  const progress = count > 1 ? Math.min(1, index / (count - 1)) : 0;
+  const lerp = (from, to) => from + (to - from) * progress;
+  return [lerp(ramp.start[0], ramp.end[0]), lerp(ramp.start[1], ramp.end[1])];
+}
+
 function createUniqueGeneratedLine(input, section, samplePayload, index, usedExerciseShortForms) {
   const pdfSettings = normalizePdfSettings(section.pdfSettings);
   if (section.finalSubsectionPage !== false) {
@@ -3561,8 +3584,13 @@ function createUniqueGeneratedLine(input, section, samplePayload, index, usedExe
   const subsectionIndex = index + (section.subsectionLineOffset || 0);
   const ornamentSegment = getLineOrnamentSegment(section, subsectionIndex);
   if (ornamentSegment) section = { ...section, ornaments: ornamentSegment.ornaments };
+  const randomOrnaments = getLineRandomOrnaments(section, subsectionIndex, section.subsectionId || section.id);
+  if (randomOrnaments) section = { ...section, ornaments: randomOrnaments };
   if (section.secondaryRhythmRows) {
     section = { ...section, secondaryRhythms: getLineSecondaryRhythms(section, subsectionIndex, pdfSettings.measuresPerLine) };
+  }
+  if (section.playedShareRamp) {
+    section = { ...section, playedShareRange: getPlayedShareRange(section.playedShareRamp, subsectionIndex, section.subsectionLineCount) };
   }
   let lastError = null;
   // Pages with secondary rhythms have the variety to stay inside their measure.
@@ -3656,6 +3684,14 @@ function getSubsectionLineOffset(pages, pageIndex, sectionPdfSettings) {
   return offset;
 }
 
+// Exercises across every page of the subsection this page belongs to.
+function getSubsectionLineCount(pages, pageIndex, sectionPdfSettings) {
+  const subsectionId = pages[pageIndex].subsectionId;
+  return pages
+    .filter((page, index) => index === pageIndex || (subsectionId && page.subsectionId === subsectionId))
+    .reduce((sum, page) => sum + getLinesPerPage(normalizePdfSettings({ ...sectionPdfSettings, ...(page.pdfSettings || {}) })), 0);
+}
+
 function createGenerationSectionsFromBook(book, globalRules = "") {
   const bookPdfSettings = normalizePdfSettings(book.pdfSettings);
   const globalOrnamentDensity = normalizeGlobalOrnamentDensity(
@@ -3701,14 +3737,18 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         rhythmSpan: normalizeRhythmSpan(section.rhythmSpan),
         stickingTail: normalizeStickingTail(pageSource.stickingTail),
         ornamentSegments: normalizeOrnamentSegments(pageSource.ornamentSegments),
+        randomOrnaments: normalizeRandomOrnaments(pageSource.randomOrnaments),
         secondaryRhythmRows: normalizeSecondaryRhythmRows(pageSource.secondaryRhythmRows),
         chainPrimaryGroups: Boolean(pageSource.chainPrimaryGroups),
         fullPrimaryGroupShare: pageSource.fullPrimaryGroupShare ?? null,
         requirePrimaryRhythms: pageSource.requirePrimaryRhythms !== false,
         primaryRhythmOrnaments: pageSource.primaryRhythmOrnaments || null,
+        maxPlayedShare: pageSource.maxPlayedShare ?? null,
         // The sticking tail closes a multi-page subsection, so only its last page uses it.
         finalSubsectionPage: !page.subsectionId || sourcePages[pageIndex + 1]?.subsectionId !== page.subsectionId,
         subsectionLineOffset: getSubsectionLineOffset(sourcePages, pageIndex, sectionPdfSettings),
+        subsectionLineCount: getSubsectionLineCount(sourcePages, pageIndex, sectionPdfSettings),
+        playedShareRamp: pageSource.playedShareRamp || null,
         title: page.title || `${section.title || `Section ${sectionIndex + 1}`} ${pageIndex + 1}`,
         sectionTitle: section.title || `Section ${sectionIndex + 1}`,
         pageCount: 1,
@@ -4034,11 +4074,14 @@ function createStoredPageGenerationSettings(pageConfig) {
     rhythmSpan: pageConfig.rhythmSpan,
     stickingTail: pageConfig.stickingTail,
     ...(pageConfig.ornamentSegments ? { ornamentSegments: pageConfig.ornamentSegments } : {}),
+    ...(pageConfig.randomOrnaments ? { randomOrnaments: pageConfig.randomOrnaments } : {}),
     ...(pageConfig.secondaryRhythmRows ? { secondaryRhythmRows: pageConfig.secondaryRhythmRows } : {}),
     ...(pageConfig.chainPrimaryGroups ? { chainPrimaryGroups: true } : {}),
     ...(pageConfig.fullPrimaryGroupShare != null ? { fullPrimaryGroupShare: pageConfig.fullPrimaryGroupShare } : {}),
     ...(pageConfig.requirePrimaryRhythms === false ? { requirePrimaryRhythms: false } : {}),
     ...(pageConfig.primaryRhythmOrnaments ? { primaryRhythmOrnaments: pageConfig.primaryRhythmOrnaments } : {}),
+    ...(pageConfig.maxPlayedShare != null ? { maxPlayedShare: pageConfig.maxPlayedShare } : {}),
+    ...(pageConfig.playedShareRamp ? { playedShareRamp: pageConfig.playedShareRamp } : {}),
     primaryRhythms: pageConfig.primaryRhythms,
     secondaryRhythms: pageConfig.secondaryRhythms,
     prompt: pageConfig.prompt || "",

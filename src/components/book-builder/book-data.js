@@ -1,7 +1,7 @@
 import _ from "lodash";
 import { getEmptyMeasure } from "../../helpers/score";
 import { DEFAULT_TEMPO } from "../../consts/score";
-import { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, groupSubsectionPages, normalizeSubsectionPageCount, normalizeOrnamentSegments, normalizeSecondaryRhythmRows } from "../../lib/book-structure";
+import { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, groupSubsectionPages, normalizeSubsectionPageCount, normalizeOrnamentSegments, normalizeSecondaryRhythmRows, normalizeRandomOrnaments } from "../../lib/book-structure";
 
 export { normalizeRhythmPool };
 
@@ -479,7 +479,14 @@ export function normalizePageGenerationSettings(value = {}, fallback = {}) {
     rhythmSpan: normalizeRhythmSpan(source.rhythmSpan),
     stickingTail: normalizeStickingTail(source.stickingTail),
     ...(source.chainPrimaryGroups ? { chainPrimaryGroups: true } : {}),
+    ...(normalizeRandomOrnaments(source.randomOrnaments)
+      ? { randomOrnaments: normalizeRandomOrnaments(source.randomOrnaments) }
+      : {}),
     ...(source.requirePrimaryRhythms === false ? { requirePrimaryRhythms: false } : {}),
+    ...(source.playedShareRamp?.start && source.playedShareRamp?.end ? { playedShareRamp: source.playedShareRamp } : {}),
+    ...(Number(source.maxPlayedShare) > 0 && source.maxPlayedShare !== null
+      ? { maxPlayedShare: Math.min(1, Number(source.maxPlayedShare)) }
+      : {}),
     ...(source.primaryRhythmOrnaments && typeof source.primaryRhythmOrnaments === "object"
       ? { primaryRhythmOrnaments: source.primaryRhythmOrnaments }
       : {}),

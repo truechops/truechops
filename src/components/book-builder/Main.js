@@ -1178,6 +1178,7 @@ export default function BookBuilderPanel() {
             exerciseCount={linesPerPage * selectedSubsectionPages.length}
             onChange={updateSelectedPageGenerationDraft}
             ornaments={selectedPageGenerationSettings.ornaments}
+            randomOrnaments={selectedPageGenerationSettings.randomOrnaments}
             segments={selectedPageGenerationSettings.ornamentSegments}
           />
           <SecondaryRowsEditor
@@ -1194,6 +1195,7 @@ export default function BookBuilderPanel() {
             ornaments={selectedPageGenerationSettings.ornaments}
             playEveryNote={selectedPageGenerationSettings.playEveryNote}
             pool={selectedSection.secondaryRhythms}
+            randomOrnaments={selectedPageGenerationSettings.randomOrnaments}
             segments={selectedPageGenerationSettings.ornamentSegments}
           />
           <Field label="Measures per line">
@@ -1295,6 +1297,50 @@ export default function BookBuilderPanel() {
             />
             <span>Every exercise includes each primary rhythm (off: draw from the pool at random)</span>
           </label>
+          {!selectedPageGenerationSettings.playEveryNote && selectedPageGenerationSettings.playedShareRamp && (
+            <div className={styles.fieldGroup}>
+              <span>Notes played, first exercise → last exercise of the subsection (%)</span>
+              <div className={styles.topicActions}>
+                {[["start", 0], ["start", 1], ["end", 0], ["end", 1]].map(([point, bound]) => (
+                  <input
+                    aria-label={`${point === "start" ? "First" : "Last"} exercise ${bound ? "most" : "fewest"} notes played (%)`}
+                    key={`${point}-${bound}`}
+                    max="100"
+                    min="1"
+                    onChange={(event) => {
+                      const ramp = selectedPageGenerationSettings.playedShareRamp;
+                      const range = [...ramp[point]];
+                      range[bound] = Math.max(0.01, Math.min(1, Number(event.target.value) / 100 || 0.01));
+                      updateSelectedPageGenerationDraft({ playedShareRamp: { ...ramp, [point]: range } });
+                    }}
+                    style={{ width: 72 }}
+                    type="number"
+                    value={Math.round(selectedPageGenerationSettings.playedShareRamp[point][bound] * 100)}
+                  />
+                ))}
+              </div>
+              <p className={styles.layoutSummary}>
+                Starts at {Math.round(selectedPageGenerationSettings.playedShareRamp.start[0] * 100)}–{Math.round(selectedPageGenerationSettings.playedShareRamp.start[1] * 100)}% of notes played and thins evenly to {Math.round(selectedPageGenerationSettings.playedShareRamp.end[0] * 100)}–{Math.round(selectedPageGenerationSettings.playedShareRamp.end[1] * 100)}% by the subsection&apos;s last exercise.
+              </p>
+            </div>
+          )}
+          {!selectedPageGenerationSettings.playEveryNote && (
+            <Field label="Most notes played (%)">
+              <input
+                inputMode="numeric"
+                max="100"
+                min="1"
+                onChange={(event) => updateSelectedPageGenerationDraft({
+                  maxPlayedShare: event.target.value === "" ? null : Number(event.target.value) / 100,
+                })}
+                placeholder="Any"
+                type="number"
+                value={selectedPageGenerationSettings.maxPlayedShare == null
+                  ? ""
+                  : Math.round(selectedPageGenerationSettings.maxPlayedShare * 100)}
+              />
+            </Field>
+          )}
           {!selectedPageGenerationSettings.playEveryNote && (
             <Field label="Fully played primary groups (%)">
               <input

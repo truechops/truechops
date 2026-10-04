@@ -23,19 +23,21 @@
               {
                 "notes": [
                   {
-                    "notes": [],
-                    "duration": 2,
-                    "dots": 1,
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 4,
+                    "dots": 0,
                     "velocity": 0.5
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
+                    "duration": 2,
                     "dots": 1,
-                    "velocity": 1,
-                    "ornaments": "ra"
+                    "velocity": 0.5,
+                    "ornaments": "f"
                   },
                   {
                     "notes": [
@@ -44,7 +46,7 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "r"
+                    "ornaments": "f"
                   },
                   {
                     "notes": [
@@ -53,7 +55,7 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "lca"
+                    "ornaments": "ca"
                   },
                   {
                     "notes": [
@@ -61,8 +63,7 @@
                     ],
                     "duration": 4,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
+                    "velocity": 0.5
                   },
                   {
                     "notes": [
@@ -71,13 +72,22 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "rca"
+                    "ornaments": "fa"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "da"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 6,
+                    "end": 7,
                     "actual": 7,
                     "normal": 4
                   }
@@ -89,8 +99,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r2. n4.:ra n8:r n8:lac n4:l n8:rac |t0-6:7:4",
-  "updatedAt": "2026-10-04T00:55:04.383Z",
+  "exerciseShortForm": "n4 n2.:f n8:f n8:ac n4 n8:af n8:ad |t0-7:7:4",
+  "updatedAt": "2026-10-04T01:37:39.243Z",
   "sectionId": "combined-groupings-6",
   "sectionPageNumber": 2
 }

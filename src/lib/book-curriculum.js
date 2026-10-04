@@ -188,13 +188,9 @@ function createSpanSections(groupId, pdfSettings, familyIds, spanLabel, {
 // at random from a pool of rhythms over two pages: one section per one-beat
 // pool (each adds a rhythm), then one per span category (each adds all of that
 // category's groupings, e.g. every grouping over two quarter notes).
-// No rhythm is required; across the two pages the ornaments grow from none to everything.
+// No rhythm is required, and each exercise picks its own ornaments at random.
 const COMBINED_PAGES_PER_SECTION = 2;
-const COMBINED_ORNAMENT_SEGMENTS = [
-  { ...STUDY_TOPICS[0], count: 2 },
-  { ...STUDY_TOPICS[1], count: 2 },
-  ...STUDY_TOPICS.slice(2).map((topic) => ({ ...topic, count: 3 })),
-].map(({ title, ornaments, count }) => ({ title, ornaments, count: count * COMBINED_PAGES_PER_SECTION }));
+const COMBINED_RANDOM_ORNAMENTS = { from: ["stickings", "accents", "flams", "diddles", "cheese"], min: 2, max: 4 };
 
 // One-beat rhythms in printed form. The pool is generated over one quarter note,
 // so longer groupings are listed as they print and keep their own note values.
@@ -286,11 +282,13 @@ function createCombinedStudies(pdfSettings) {
         pdfSettings,
         generationSettings: {
           prompt: "", sampleJson: "",
-          ornaments: [...new Set(COMBINED_ORNAMENT_SEGMENTS.flatMap((segment) => segment.ornaments))],
-          ornamentSegments: COMBINED_ORNAMENT_SEGMENTS,
+          // Building is done here: each exercise picks its own 2-4 ornaments.
+          ornaments: COMBINED_RANDOM_ORNAMENTS.from,
+          randomOrnaments: COMBINED_RANDOM_ORNAMENTS,
           requirePrimaryRhythms: false,
           primaryRhythmOrnaments: getPoolOrnamentLimits(pool),
-          fullPrimaryGroupShare: 0.5,
+          // Every note at first, thinning to 40-50% of notes by the last exercise.
+          playedShareRamp: { start: [1, 1], end: [0.4, 0.5] },
           minPlayedNotes: 0,
           maxPlayedNotes: 0,
           playEveryNote: false,
