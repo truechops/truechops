@@ -8,7 +8,7 @@ const vm = require("node:vm");
 const babel = require("@babel/core");
 const { migrateBookStructure } = require("../../src/lib/book-structure");
 const generator = require("../generate-ai-book");
-const { createStudySections, createSpanStudy, createCombinedStudies, SPAN_STUDIES, STUDY_TOPICS, STUDY_FAMILIES } = require("../../src/lib/book-curriculum");
+const { createStudySections, createSpanStudy, createCombinedStudies, createTupletCombinationStudies, SPAN_STUDIES, STUDY_TOPICS, STUDY_FAMILIES } = require("../../src/lib/book-curriculum");
 const { getLineStickingSettings, getSpanPrimaryRhythms } = require("../../src/lib/book-structure");
 
 // Load the same ES modules Next uses without starting a server.
@@ -274,6 +274,24 @@ test("combined-subdivision pages draw at random from a pool that grows each sect
     const allowed = tuplet.actual === 6 ? /^[frl]*$/ : tuplet.actual >= 7 ? /^[rl]*$/ : /./;
     notes.forEach((note) => assert(!note.ornaments || allowed.test(note.ornaments), `${tuplet.actual}:${tuplet.normal} has ${note.ornaments}`));
   }));
+});
+
+test("tuplet combinations keep the section's tuplet in every exercise and grow the secondary pool", () => {
+  const { groups, sections } = createTupletCombinationStudies({ measuresPerLine: 2, lineSpacing: 130, noteSize: 100 });
+  assert.equal(sections.length, 7 + SPAN_STUDIES.reduce((sum, study) => sum + study.familyIds.length, 0));
+  const config = generator.createGenerationConfig({}, { structureVersion: 3, groups, sections });
+  const triplets = config.sections[0];
+  assert.equal(triplets.title, "Triplets");
+  const seen = new Set();
+  const tupletKinds = triplets.pages.flatMap((page) => Array.from({ length: 22 }, (_, index) =>
+    generator.createUniqueGeneratedLine(null, page, page.sampleJson, index, seen).score.measures[0].parts[0].voices[0]))
+    .map((voice, index) => {
+      assert(voice.tuplets.some((tuplet) => tuplet.actual === 3 && tuplet.normal === 2), `exercise ${index + 1} lacks triplets`);
+      return voice.tuplets.map((tuplet) => tuplet.actual);
+    });
+  // Sextuplets join the pool at row 4; nontuplets only near the end.
+  assert(tupletKinds.slice(0, 6).every((kinds) => !kinds.includes(6) && !kinds.includes(9)));
+  assert(tupletKinds.slice(36).some((kinds) => kinds.includes(9)));
 });
 
 test("all seven families follow the exact eight sparse / seven full topic order", () => {

@@ -1196,7 +1196,15 @@ function sectionUsesDiddlesOrCheese(section) {
 }
 
 function getRequiredSectionOrnamentChars(section) {
-  const ornaments = section.primaryRhythms ? section.ornaments || [] : getGenerationOrnaments(section);
+  let ornaments = section.primaryRhythms ? section.ornaments || [] : getGenerationOrnaments(section);
+  // Only ornaments some primary rhythm may carry are required on the primary rhythms;
+  // the rest of the exercise's ornaments can still appear on secondary notes.
+  const limits = section.primaryRhythms && section.primaryRhythmOrnaments;
+  if (limits) {
+    const pool = normalizeRhythmPool(section.primaryRhythms);
+    const keys = [...pool.subdivisions, ...pool.tuplets].map(rhythmOrnamentKey);
+    ornaments = ornaments.filter((id) => keys.some((key) => !Array.isArray(limits[key]) || limits[key].includes(id)));
+  }
 
   return ORNAMENT_SETTINGS
     .filter((setting) => setting.id !== "stickings" && ornaments.includes(setting.id))
@@ -1268,9 +1276,11 @@ function applyRhythmPoolOrnaments(section, voice) {
     notes: voice.notes.map((note, index) => {
       const primary = noteMatchesRhythmPool(section.primaryRhythms, voice, index);
       const limit = primary ? limits.get(index) : null;
+      // With randomOrnaments, secondary notes draw from the exercise's own set too.
       const selected = primary
         ? (section.ornaments || []).filter((id) => !limit || limit.includes(id))
-        : getSecondaryNoteOrnaments(secondary, voice, index);
+        : getSecondaryNoteOrnaments(secondary, voice, index)
+          .filter((id) => !section.randomOrnaments || (section.ornaments || []).includes(id));
       const allowed = ORNAMENT_SETTINGS.filter((item) => item.id === "stickings"
         ? sectionUsesStickings(section)
         : selected.includes(item.id))

@@ -1,7 +1,7 @@
 {
   "pageNumber": 225,
   "lineNumber": 9,
-  "title": "Nothing to everything 9",
+  "title": "Growing subdivision pool 9",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -24,7 +24,7 @@
                 "notes": [
                   {
                     "notes": [],
-                    "duration": 8,
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 0.5
                   },
@@ -32,18 +32,19 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
+                    "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "fa"
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
+                    "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [],
@@ -55,8 +56,24 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
+                    "duration": 16,
                     "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "rc"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [],
+                    "duration": 8,
+                    "dots": 1,
                     "velocity": 0.5
                   },
                   {
@@ -66,15 +83,7 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "f"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 4,
-                    "dots": 0,
-                    "velocity": 0.5
+                    "ornaments": "rd"
                   },
                   {
                     "notes": [
@@ -82,7 +91,8 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -90,8 +100,8 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "fa"
+                    "velocity": 0.5,
+                    "ornaments": "lcd"
                   },
                   {
                     "notes": [
@@ -99,25 +109,50 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "rd"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "ld"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 3,
-                    "actual": 3,
-                    "normal": 2
+                    "end": 4,
+                    "actual": 5,
+                    "normal": 4
                   },
                   {
-                    "start": 3,
-                    "end": 6,
-                    "actual": 3,
-                    "normal": 2
+                    "start": 4,
+                    "end": 7,
+                    "actual": 5,
+                    "normal": 4
                   },
                   {
                     "start": 7,
                     "end": 10,
+                    "actual": 3,
+                    "normal": 2
+                  },
+                  {
+                    "start": 10,
+                    "end": 13,
                     "actual": 3,
                     "normal": 2
                   }
@@ -129,8 +164,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r8 n8:af n8 r8 n8 n8:f n4 n8 n8:af n8 |t0-3:3:2,3-6:3:2,7-10:3:2",
-  "updatedAt": "2026-10-04T01:37:39.243Z",
-  "sectionId": "combined-one-beat-1",
+  "exerciseShortForm": "r16 n16:r n16:r r8 n16:rc n16:l r8. n8:rd n8:l n8:ldc n8:r n8:rd n8:ld |t0-4:5:4,4-7:5:4,7-10:3:2,10-13:3:2",
+  "updatedAt": "2026-10-04T19:35:26.300Z",
+  "sectionId": "combinations-one-quarter-triplets",
   "sectionPageNumber": 2
 }

@@ -303,8 +303,100 @@ function createCombinedStudies(pdfSettings) {
   return { groups: COMBINED_GROUPS.map(({ id, title, rhythmSpan }) => ({ id, title, rhythmSpan })), sections };
 }
 
+// Tuplet combinations: for each tuplet in the book, two pages where every
+// exercise contains that tuplet and the rest of the measure draws from basic
+// one-beat subdivisions in a pool that grows down the pages.
+const BASIC_SUBDIVISIONS = [
+  { key: "triplets", familyId: "eighth-triplets" },
+  { key: "sixteenths", familyId: "sixteenths" },
+  { key: "sextuplets", familyId: "sextuplets" },
+  { key: "thirtyseconds", familyId: "thirtyseconds" },
+  { key: "quintuplets", familyId: "quintuplets" },
+  { key: "septuplets", familyId: "septuplets" },
+  { key: "nontuplets", familyId: "nine-eight-thirtyseconds" },
+];
+const COMBINATION_PAGES = 2;
+const COMBINATION_ROWS = 11 * COMBINATION_PAGES;
+
+function createCombinationSection({ groupId, id, title, rhythmSpan, familyId, stages, chainPrimaryGroups }, pdfSettings) {
+  const family = STUDY_FAMILIES.find((candidate) => candidate.id === familyId);
+  const primaryRhythms = normalizeRhythmPool(family, false);
+  // Each stage adds one subdivision to the pool, at evenly spaced rows. A
+  // grouping that ends mid-beat needs sixteenths from the start to finish its beat.
+  const endsMidBeat = (rhythmSpan.count * 32 / rhythmSpan.unit) % 8 !== 0;
+  if (endsMidBeat && stages.includes("sixteenths")) {
+    stages = [stages[0], "sixteenths", ...stages.slice(1).filter((key) => key !== "sixteenths")];
+  }
+  const secondaryRhythmRows = {};
+  stages.forEach((key, index) => {
+    for (const rhythm of [...(POOL_RHYTHMS[key].pool.subdivisions || []), ...(POOL_RHYTHMS[key].pool.tuplets || [])]) {
+      secondaryRhythmRows[rhythmOrnamentKey(rhythm)] = endsMidBeat && key === "sixteenths"
+        ? 1
+        : Math.floor(index * COMBINATION_ROWS / stages.length) + 1;
+    }
+  });
+  const limits = getPoolOrnamentLimits(getSpanPrimaryRhythms(primaryRhythms, rhythmSpan));
+  return {
+    id, groupId, title, density: "mixed", rhythmSpan,
+    primaryRhythms,
+    secondaryRhythms: normalizeRhythmPool({
+      ...mergePools(stages.map((key) => POOL_RHYTHMS[key].pool)),
+      rhythmOrnaments: ONE_BEAT_SECONDARY_RHYTHMS.rhythmOrnaments,
+    }),
+    pdfSettings,
+    pages: Array.from({ length: COMBINATION_PAGES }, () => ({
+      subsectionId: `${id}-combinations`,
+      subsectionPageCount: COMBINATION_PAGES,
+      title: "Growing subdivision pool",
+      pdfSettings,
+      generationSettings: {
+        prompt: "", sampleJson: "",
+        ornaments: COMBINED_RANDOM_ORNAMENTS.from,
+        randomOrnaments: COMBINED_RANDOM_ORNAMENTS,
+        secondaryRhythmRows,
+        ...(Object.keys(limits).length ? { primaryRhythmOrnaments: limits } : {}),
+        ...(chainPrimaryGroups ? { chainPrimaryGroups: true } : {}),
+        fullPrimaryGroupShare: 0.5,
+        minPlayedNotes: 0,
+        maxPlayedNotes: 0,
+        playEveryNote: false,
+        maxSameHandStickingRun: 2,
+        requiredSameHandStickingRuns: [],
+        stickingTail: null,
+      },
+      lines: [],
+    })),
+  };
+}
+
+function createTupletCombinationStudies(pdfSettings) {
+  const oneBeat = { id: "combinations-one-quarter", title: "Tuplet combinations over one quarter note", rhythmSpan: { count: 1, unit: 4 } };
+  const groups = [oneBeat, ...SPAN_STUDIES.map((study) => ({
+    id: `combinations-${study.groupId}`,
+    title: `Tuplet combinations ${study.title.toLowerCase()}`,
+    rhythmSpan: study.rhythmSpan,
+  }))];
+  const sections = [
+    // Over a quarter note, the section's own subdivision leaves the pool.
+    ...BASIC_SUBDIVISIONS.map(({ key, familyId }) => createCombinationSection({
+      groupId: oneBeat.id, id: `${oneBeat.id}-${key}`, title: capitalize(POOL_RHYTHMS[key].name),
+      rhythmSpan: oneBeat.rhythmSpan, familyId,
+      stages: BASIC_SUBDIVISIONS.map((basic) => basic.key).filter((stage) => stage !== key),
+    }, pdfSettings)),
+    ...SPAN_STUDIES.flatMap((study, studyIndex) => study.familyIds.map((familyId) => {
+      const family = STUDY_FAMILIES.find((candidate) => candidate.id === familyId);
+      return createCombinationSection({
+        groupId: groups[studyIndex + 1].id, id: `${groups[studyIndex + 1].id}-${family.notesPerQuarter}`,
+        title: `${family.notesPerQuarter} over ${study.label}`, rhythmSpan: study.rhythmSpan, familyId,
+        stages: BASIC_SUBDIVISIONS.map((basic) => basic.key), chainPrimaryGroups: study.chainPrimaryGroups,
+      }, pdfSettings);
+    })),
+  ];
+  return { groups, sections };
+}
+
 module.exports = {
   STUDY_TOPICS, STUDY_FAMILIES, TWO_BEAT_ORNAMENT_SEGMENTS, COMBINED_GROUPS,
   SPAN_STUDIES, createStudySections, createSpanStudy, createTwoBeatSections, createThreeEighthsSections,
-  createCombinedStudies,
+  createCombinedStudies, createTupletCombinationStudies,
 };

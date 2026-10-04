@@ -1,7 +1,7 @@
 {
   "pageNumber": 260,
   "lineNumber": 3,
-  "title": "Nothing to everything 3",
+  "title": "Growing subdivision pool 3",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -28,7 +28,8 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 1,
+                    "ornaments": "ra"
                   },
                   {
                     "notes": [
@@ -36,13 +37,11 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "f"
+                    "velocity": 1,
+                    "ornaments": "la"
                   },
                   {
-                    "notes": [
-                      "C5"
-                    ],
+                    "notes": [],
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5
@@ -53,8 +52,17 @@
                     ],
                     "duration": 8,
                     "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "lda"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 4,
+                    "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "c"
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -62,7 +70,26 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 1,
+                    "ornaments": "rda"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "lda"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "ra"
                   },
                   {
                     "notes": [
@@ -71,15 +98,39 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "c"
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "la"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "la"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 2,
-                    "end": 6,
-                    "actual": 4,
-                    "normal": 7
+                    "end": 8,
+                    "actual": 7,
+                    "normal": 5
+                  },
+                  {
+                    "start": 8,
+                    "end": 11,
+                    "actual": 3,
+                    "normal": 2
                   }
                 ]
               }
@@ -89,8 +140,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n16 n16:f n8 n8:c n8 n8:c |t2-6:4:7",
-  "updatedAt": "2026-10-04T01:37:39.243Z",
-  "sectionId": "combined-groupings-12",
+  "exerciseShortForm": "n16:ra n16:la r8 n8:lad n4:r n8:rad n8:lad n8:ra n8:r n8:la n8:la |t2-8:7:5,8-11:3:2",
+  "updatedAt": "2026-10-04T19:35:26.300Z",
+  "sectionId": "combinations-five-eighths-7",
   "sectionPageNumber": 1
 }
