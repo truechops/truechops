@@ -61,7 +61,7 @@ Notation rules for every page:
 
 - Stickings follow each exercise's topic: when the topic includes stickings, every note has one; otherwise none do.
 - Diddles and cheese never go on quarter notes or on regular eighths; eighths inside a tuplet are allowed. On successive notes there is no diddle directly before or after a cheese, and no flam directly after a diddle or cheese.
-- Consecutive rests merge into the largest rest, including inside sixteenth-note and faster tuplets. Two quarter rests on beats one and two, or three and four, become a half rest.
+- Consecutive rests merge into the largest rest, including inside sixteenth-note and faster tuplets. In 32nd-note tuplets, a 32nd note followed by a 32nd rest becomes one sixteenth note (plain 32nds already merge this way within a beat). Two quarter rests on beats one and two, or three and four, become a half rest.
 - Eighth-note and shorter notes inside a tuplet share one beam, drawn across rests.
 - Tuplet brackets show only the count (3, 5, 6, 7, 9) for standard groups and a ratio (4:3, 5:3, 7:6, 8:6) otherwise.
 
@@ -69,7 +69,7 @@ The original eighth-note and mixed-tuplet studies remain alongside this curricul
 
 ## Combined subdivisions
 
-The book ends with pages that draw every exercise at random from a pool of rhythms, adding one rhythm to the pool per page (`createCombinedStudies` in `src/lib/book-curriculum.js`): eighths and triplets; triplets and sixteenths; then sextuplets, 32nds, quintuplets, septuplets, and nontuplets; then the two-quarter groupings (quarter-note triplets, 5, 7, and 9 over two beats); then the three-eighth groupings (4, 5, 7, and 8 over three eighths). No rhythm is required (**Every exercise includes each primary rhythm** is off), so the last page is the most varied. Within each page the ornaments grow from none to everything: Nothing (2 exercises), Accents (2), then three each for stickings, diddles, flams, cheese, diddles and flams, and Everything.
+The book ends with sections that draw every exercise at random from a pool of rhythms (`createCombinedStudies` in `src/lib/book-curriculum.js`). Each one-beat pool gets two pages, adding one rhythm per section: eighths and triplets; triplets and sixteenths; then sextuplets, 32nds, quintuplets, septuplets, and nontuplets. Then each span category joins the pool in book order, all of its groupings at once, with two pages each: over two quarters, three eighths, five eighths, three quarters, seven eighths, four quarters, and three through fifteen sixteenths. No rhythm is required (**Every exercise includes each primary rhythm** is off). Across each section's two pages the ornaments grow from none to everything: Nothing (4 exercises), Accents (4), then six each for stickings, diddles, flams, cheese, diddles and flams, and Everything. On these pages, groups of 7, 8, or 9 notes in a quarter note or less (septuplets, 32nds, nontuplets, and 7–9 over three sixteenths) take only stickings, and sextuplets only flams (`primaryRhythmOrnaments`).
 
 ## Exercise generator on the website
 

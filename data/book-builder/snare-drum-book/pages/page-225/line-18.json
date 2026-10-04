@@ -28,8 +28,26 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "rda"
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "ldc"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -61,33 +79,6 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "rfa"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lfa"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "rfa"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
                   },
@@ -98,7 +89,16 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
+                    "ornaments": "rf"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "lca"
                   },
                   {
                     "notes": [
@@ -115,17 +115,8 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
+                    "velocity": 1,
+                    "ornaments": "rca"
                   }
                 ],
                 "tuplets": [
@@ -136,14 +127,14 @@
                     "normal": 2
                   },
                   {
-                    "start": 3,
-                    "end": 6,
+                    "start": 5,
+                    "end": 8,
                     "actual": 3,
                     "normal": 2
                   },
                   {
-                    "start": 9,
-                    "end": 12,
+                    "start": 8,
+                    "end": 11,
                     "actual": 3,
                     "normal": 2
                   }
@@ -155,8 +146,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n8:rad n8:l n8:r r8 n8:raf n8:laf n16:raf n16:r n8:l n8:r n8:r n8:l |t0-3:3:2,3-6:3:2,9-12:3:2",
-  "updatedAt": "2026-10-03T23:08:45.612Z",
-  "sectionId": "combined-one-beat-2",
-  "sectionPageNumber": 1
+  "exerciseShortForm": "n8:l n8:ldc n8:r n8:l n8:r r8 n8:r n8:rf n8:lac n8:r n8:rac |t0-3:3:2,5-8:3:2,8-11:3:2",
+  "updatedAt": "2026-10-04T00:55:04.383Z",
+  "sectionId": "combined-one-beat-1",
+  "sectionPageNumber": 2
 }

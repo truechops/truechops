@@ -1,4 +1,4 @@
-const { normalizeRhythmPool } = require("./book-structure");
+const { normalizeRhythmPool, getSpanPrimaryRhythms, rhythmOrnamentKey } = require("./book-structure");
 
 const STUDY_TOPICS = [
   { id: "nothing", title: "Nothing", ornaments: [] },
@@ -184,17 +184,20 @@ function createSpanSections(groupId, pdfSettings, familyIds, spanLabel, {
   });
 }
 
-// Combined-subdivision studies close the book. Each page draws every exercise at
-// random from a pool of rhythms, and each section adds one rhythm to the pool.
-// No rhythm is required; within a page the ornaments grow from none to everything.
+// Combined-subdivision studies close the book. Each section draws every exercise
+// at random from a pool of rhythms over two pages: one section per one-beat
+// pool (each adds a rhythm), then one per span category (each adds all of that
+// category's groupings, e.g. every grouping over two quarter notes).
+// No rhythm is required; across the two pages the ornaments grow from none to everything.
+const COMBINED_PAGES_PER_SECTION = 2;
 const COMBINED_ORNAMENT_SEGMENTS = [
   { ...STUDY_TOPICS[0], count: 2 },
   { ...STUDY_TOPICS[1], count: 2 },
   ...STUDY_TOPICS.slice(2).map((topic) => ({ ...topic, count: 3 })),
-].map(({ title, ornaments, count }) => ({ title, ornaments, count }));
+].map(({ title, ornaments, count }) => ({ title, ornaments, count: count * COMBINED_PAGES_PER_SECTION }));
 
-// Rhythms in printed form (the pool is generated over one quarter note, so
-// longer groupings keep their own note values).
+// One-beat rhythms in printed form. The pool is generated over one quarter note,
+// so longer groupings are listed as they print and keep their own note values.
 const POOL_RHYTHMS = {
   eighths: { name: "eighths", pool: { subdivisions: ["eighths"] } },
   triplets: { name: "triplets", pool: { tuplets: [{ actual: 3, normal: 2, type: 8 }] } },
@@ -204,33 +207,53 @@ const POOL_RHYTHMS = {
   quintuplets: { name: "quintuplets", pool: { tuplets: [{ actual: 5, normal: 4, type: 16 }] } },
   septuplets: { name: "septuplets", pool: { tuplets: [{ actual: 7, normal: 4, type: 16 }] } },
   nontuplets: { name: "nontuplets", pool: { tuplets: [{ actual: 9, normal: 8, type: 32 }] } },
-  quarterTriplets: { name: "quarter-note triplets", pool: { tuplets: [{ actual: 3, normal: 2, type: 4 }] } },
-  fiveOverTwo: { name: "5 over two beats", pool: { tuplets: [{ actual: 5, normal: 4, type: 8 }] } },
-  sevenOverTwo: { name: "7 over two beats", pool: { tuplets: [{ actual: 7, normal: 4, type: 8 }] } },
-  nineOverTwo: { name: "9 over two beats", pool: { tuplets: [{ actual: 9, normal: 8, type: 16 }] } },
-  fourOverThree: { name: "4 over three eighths", pool: { tuplets: [{ actual: 4, normal: 3, type: 8 }] } },
-  fiveOverThree: { name: "5 over three eighths", pool: { tuplets: [{ actual: 5, normal: 3, type: 8 }] } },
-  sevenOverThree: { name: "7 over three eighths", pool: { tuplets: [{ actual: 7, normal: 6, type: 16 }] } },
-  eightOverThree: { name: "8 over three eighths", pool: { tuplets: [{ actual: 8, normal: 6, type: 16 }] } },
 };
 const ONE_BEAT_KEYS = ["triplets", "sixteenths", "sextuplets", "thirtyseconds", "quintuplets", "septuplets", "nontuplets"];
-const TWO_QUARTER_KEYS = ["quarterTriplets", "fiveOverTwo", "sevenOverTwo", "nineOverTwo"];
-const THREE_EIGHTH_KEYS = ["fourOverThree", "fiveOverThree", "sevenOverThree", "eightOverThree"];
-// Each group's pools, one per section; every pool adds one rhythm to the last.
-const COMBINED_GROUPS = [
-  {
-    id: "combined-one-beat", title: "Combined subdivisions",
-    pools: [["eighths", "triplets"], ...ONE_BEAT_KEYS.slice(1).map((_, index) => ONE_BEAT_KEYS.slice(0, index + 2))],
-  },
-  {
-    id: "combined-two-quarters", title: "Combined subdivisions with two-quarter groupings",
-    pools: TWO_QUARTER_KEYS.map((_, index) => [...ONE_BEAT_KEYS, ...TWO_QUARTER_KEYS.slice(0, index + 1)]),
-  },
-  {
-    id: "combined-three-eighths", title: "Combined subdivisions with three-eighth groupings",
-    pools: THREE_EIGHTH_KEYS.map((_, index) => [...ONE_BEAT_KEYS, ...TWO_QUARTER_KEYS, ...THREE_EIGHTH_KEYS.slice(0, index + 1)]),
-  },
-].map((group) => ({ ...group, rhythmSpan: { count: 1, unit: 4 } }));
+
+// Every span grouping in the book, in book order, each added to the pool in turn.
+const SPAN_POOL_STEPS = SPAN_STUDIES.map((study) => ({
+  study,
+  rhythms: study.familyIds.map((familyId) => {
+    const family = STUDY_FAMILIES.find((candidate) => candidate.id === familyId);
+    return {
+      name: `${family.notesPerQuarter} over ${study.label}`,
+      pool: getSpanPrimaryRhythms(normalizeRhythmPool(family, false), study.rhythmSpan),
+    };
+  }),
+}));
+
+// Groups fit in a quarter note or less with 7-9 notes take only stickings, and
+// sextuplets only flams; everything else takes the exercise's ornaments.
+function getPoolOrnamentLimits(pool) {
+  const notesPerQuarter = { eighths: 2, sixteenths: 4, thirtyseconds: 8 };
+  const limits = {};
+  for (const id of pool.subdivisions) {
+    if (notesPerQuarter[id] >= 7) limits[id] = [];
+  }
+  for (const tuplet of pool.tuplets) {
+    const quarters = tuplet.normal * 4 / tuplet.type;
+    if (quarters > 1) continue;
+    if (tuplet.actual >= 7 && tuplet.actual <= 9) limits[rhythmOrnamentKey(tuplet)] = [];
+    else if (tuplet.actual === 6) limits[rhythmOrnamentKey(tuplet)] = ["flams"];
+  }
+  return limits;
+}
+
+// Each group's pools, one per section. One-beat rhythms join one at a time;
+// then each span category (all its groupings at once) joins in book order.
+const COMBINED_GROUPS = (() => {
+  const oneBeat = [["eighths", "triplets"], ...ONE_BEAT_KEYS.slice(1).map((_, index) => ONE_BEAT_KEYS.slice(0, index + 2))]
+    .map((keys) => ({ rhythms: keys.map((key) => POOL_RHYTHMS[key]) }));
+  let pool = ONE_BEAT_KEYS.map((key) => POOL_RHYTHMS[key]);
+  const spans = SPAN_POOL_STEPS.map(({ study, rhythms }) => ({
+    rhythms: (pool = [...pool, ...rhythms]),
+    title: `+ Groupings ${study.title.toLowerCase()}`,
+  }));
+  return [
+    { id: "combined-one-beat", title: "Combined subdivisions", pools: oneBeat },
+    { id: "combined-groupings", title: "Combined subdivisions + longer groupings", pools: spans },
+  ].map((group) => ({ ...group, rhythmSpan: { count: 1, unit: 4 } }));
+})();
 
 const capitalize = (text) => `${text[0].toUpperCase()}${text.slice(1)}`;
 
@@ -242,22 +265,23 @@ function mergePools(pools) {
 }
 
 function createCombinedStudies(pdfSettings) {
-  const sections = COMBINED_GROUPS.flatMap((group) => group.pools.map((keys, index) => {
+  const sections = COMBINED_GROUPS.flatMap((group) => group.pools.map(({ rhythms, title: poolTitle }, index) => {
     const id = `${group.id}-${index + 1}`;
-    const names = keys.map((key) => POOL_RHYTHMS[key].name);
+    const names = rhythms.map((rhythm) => rhythm.name);
     // The first pools are named in full; later ones by the rhythm they add.
-    const title = group.id === "combined-one-beat" && index < 2
+    const title = poolTitle || (index < 2
       ? capitalize(`${names[0]} and ${names[1]}`)
-      : `+ ${capitalize(names.at(-1))}`;
-    const pool = mergePools(keys.map((key) => POOL_RHYTHMS[key].pool));
+      : `+ ${capitalize(names.at(-1))}`);
+    const pool = normalizeRhythmPool(mergePools(rhythms.map((rhythm) => rhythm.pool)), false);
     return {
       id, groupId: group.id, title, density: "mixed",
       rhythmSpan: group.rhythmSpan,
-      primaryRhythms: normalizeRhythmPool(pool, false),
+      primaryRhythms: pool,
       secondaryRhythms: normalizeRhythmPool({ ...pool, rhythmOrnaments: ONE_BEAT_SECONDARY_RHYTHMS.rhythmOrnaments }),
       pdfSettings,
-      pages: [{
+      pages: Array.from({ length: COMBINED_PAGES_PER_SECTION }, () => ({
         subsectionId: `${id}-mixed`,
+        subsectionPageCount: COMBINED_PAGES_PER_SECTION,
         title: "Nothing to everything",
         pdfSettings,
         generationSettings: {
@@ -265,6 +289,7 @@ function createCombinedStudies(pdfSettings) {
           ornaments: [...new Set(COMBINED_ORNAMENT_SEGMENTS.flatMap((segment) => segment.ornaments))],
           ornamentSegments: COMBINED_ORNAMENT_SEGMENTS,
           requirePrimaryRhythms: false,
+          primaryRhythmOrnaments: getPoolOrnamentLimits(pool),
           fullPrimaryGroupShare: 0.5,
           minPlayedNotes: 0,
           maxPlayedNotes: 0,
@@ -274,7 +299,7 @@ function createCombinedStudies(pdfSettings) {
           stickingTail: null,
         },
         lines: [],
-      }],
+      })),
     };
   }));
   return { groups: COMBINED_GROUPS.map(({ id, title, rhythmSpan }) => ({ id, title, rhythmSpan })), sections };

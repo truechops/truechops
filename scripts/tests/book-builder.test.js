@@ -253,7 +253,11 @@ test("the exercise generator builds fresh measures from a configuration or a boo
 
 test("combined-subdivision pages draw at random from a pool that grows each section", () => {
   const { groups, sections } = createCombinedStudies({ measuresPerLine: 2, lineSpacing: 130, noteSize: 100 });
-  assert.equal(sections.length, 15);
+  // Seven one-beat pools, then one section per span category; two pages each.
+  assert.equal(sections.length, 7 + SPAN_STUDIES.length);
+  assert(sections.every((section) => section.pages.length === 2));
+  assert.equal(sections.at(-1).primaryRhythms.tuplets.length + sections.at(-1).primaryRhythms.subdivisions.length,
+    7 + SPAN_STUDIES.reduce((sum, study) => sum + study.familyIds.length, 0));
   const config = generator.createGenerationConfig({}, { structureVersion: 3, groups, sections });
   const poolSize = (section) => section.primaryRhythms.subdivisions.length + section.primaryRhythms.tuplets.length;
   sections.slice(1).forEach((section, index) => assert(poolSize(section) >= poolSize(sections[index])));
@@ -264,6 +268,12 @@ test("combined-subdivision pages draw at random from a pool that grows each sect
   });
   // No rhythm is required, yet the last page draws widely from its pool.
   assert(used.size >= 8, `only ${used.size} tuplet kinds on the last page`);
+  // Groups of 7-9 in a quarter note or less take only stickings; sextuplets only flams.
+  generate(config.sections[6].pages[0], 22).forEach((voice) => voice.tuplets.forEach((tuplet) => {
+    const notes = voice.notes.slice(tuplet.start, tuplet.end);
+    const allowed = tuplet.actual === 6 ? /^[frl]*$/ : tuplet.actual >= 7 ? /^[rl]*$/ : /./;
+    notes.forEach((note) => assert(!note.ornaments || allowed.test(note.ornaments), `${tuplet.actual}:${tuplet.normal} has ${note.ornaments}`));
+  }));
 });
 
 test("all seven families follow the exact eight sparse / seven full topic order", () => {

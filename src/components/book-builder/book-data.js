@@ -480,6 +480,9 @@ export function normalizePageGenerationSettings(value = {}, fallback = {}) {
     stickingTail: normalizeStickingTail(source.stickingTail),
     ...(source.chainPrimaryGroups ? { chainPrimaryGroups: true } : {}),
     ...(source.requirePrimaryRhythms === false ? { requirePrimaryRhythms: false } : {}),
+    ...(source.primaryRhythmOrnaments && typeof source.primaryRhythmOrnaments === "object"
+      ? { primaryRhythmOrnaments: source.primaryRhythmOrnaments }
+      : {}),
     ...(Number.isFinite(Number(source.fullPrimaryGroupShare)) && source.fullPrimaryGroupShare !== null && source.fullPrimaryGroupShare !== ""
       ? { fullPrimaryGroupShare: Math.max(0, Math.min(1, Number(source.fullPrimaryGroupShare))) }
       : {}),

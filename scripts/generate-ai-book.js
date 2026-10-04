@@ -811,6 +811,23 @@ function preferLongerValuesInGroup(notes) {
   return simplified;
 }
 
+// In 32nd-note tuplets, a 32nd note followed by a 32nd rest reads as one sixteenth.
+function mergeThirtySecondNoteRests(notes) {
+  const merged = [];
+  for (let index = 0; index < notes.length; index += 1) {
+    const note = notes[index];
+    const next = notes[index + 1];
+    const plainThirtySecond = (candidate) => Number(candidate?.duration) === 32 && !Number(candidate?.dots || 0);
+    if (!isRest(note) && plainThirtySecond(note) && next && isRest(next) && plainThirtySecond(next)) {
+      merged.push({ ...note, duration: 16 });
+      index += 1;
+      continue;
+    }
+    merged.push({ ...note });
+  }
+  return merged;
+}
+
 function mergeRestRuns(notes) {
   const merged = [];
   let index = 0;
@@ -935,7 +952,9 @@ function preferLongerValuesInTupletVoice(voice, configuredTuplets = []) {
     // group. Their consecutive rests still merge into the largest rest.
     nextNotes.push(
       ...(preserveConfiguredSubdivision
-        ? mergeRestRuns(tupletNotes.map((note) => ({ ...note })))
+        ? mergeRestRuns(Number(configuredTuplet?.type) === 32
+          ? mergeThirtySecondNoteRests(tupletNotes)
+          : tupletNotes.map((note) => ({ ...note })))
         : preferLongerValues(tupletNotes))
     );
     const tupletEnd = nextNotes.length;
@@ -1210,24 +1229,48 @@ function getPrimaryNoteIndexes(section, voice) {
 
 // Ornaments a secondary note may carry: its rhythm's row in rhythmOrnaments, or
 // the whole pool's ornaments when no per-rhythm table is set.
-function getSecondaryNoteOrnaments(secondary, voice, index) {
-  if (!noteMatchesRhythmPool(secondary, voice, index)) return [];
-  if (!secondary.rhythmOrnaments) return secondary.ornaments;
-  const rhythm = [...secondary.subdivisions, ...secondary.tuplets].find((candidate) =>
+// The pool rhythm a note belongs to, as a rhythmOrnaments key.
+function getPoolNoteRhythmKey(pool, voice, index) {
+  const rhythm = [...pool.subdivisions, ...pool.tuplets].find((candidate) =>
     noteMatchesRhythmPool(typeof candidate === "string"
       ? { subdivisions: [candidate], tuplets: [] }
       : { subdivisions: [], tuplets: [candidate] }, voice, index));
-  return rhythm ? secondary.rhythmOrnaments[rhythmOrnamentKey(rhythm)] || [] : [];
+  return rhythm ? rhythmOrnamentKey(rhythm) : null;
+}
+
+function getSecondaryNoteOrnaments(secondary, voice, index) {
+  if (!noteMatchesRhythmPool(secondary, voice, index)) return [];
+  if (!secondary.rhythmOrnaments) return secondary.ornaments;
+  const key = getPoolNoteRhythmKey(secondary, voice, index);
+  return key ? secondary.rhythmOrnaments[key] || [] : [];
+}
+
+// primaryRhythmOrnaments caps which of the exercise's ornaments a primary rhythm
+// may carry (e.g. { "7:4:16": [], "6:4:16": ["flams"] }); stickings are never capped.
+// Returns note index -> allowed ornament ids, for capped primary notes only.
+function getPrimaryNoteOrnamentLimits(section, voice) {
+  const limits = new Map();
+  if (!section.primaryRhythms || !section.primaryRhythmOrnaments) return limits;
+  voice.notes.forEach((note, index) => {
+    const key = noteMatchesRhythmPool(section.primaryRhythms, voice, index)
+      ? getPoolNoteRhythmKey(section.primaryRhythms, voice, index) : null;
+    if (key && Array.isArray(section.primaryRhythmOrnaments[key])) limits.set(index, section.primaryRhythmOrnaments[key]);
+  });
+  return limits;
 }
 
 function applyRhythmPoolOrnaments(section, voice) {
   if (!section.primaryRhythms) return voice;
   const secondary = normalizeRhythmPool(section.secondaryRhythms);
+  const limits = getPrimaryNoteOrnamentLimits(section, voice);
   return {
     ...voice,
     notes: voice.notes.map((note, index) => {
       const primary = noteMatchesRhythmPool(section.primaryRhythms, voice, index);
-      const selected = primary ? section.ornaments || [] : getSecondaryNoteOrnaments(secondary, voice, index);
+      const limit = primary ? limits.get(index) : null;
+      const selected = primary
+        ? (section.ornaments || []).filter((id) => !limit || limit.includes(id))
+        : getSecondaryNoteOrnaments(secondary, voice, index);
       const allowed = ORNAMENT_SETTINGS.filter((item) => item.id === "stickings"
         ? sectionUsesStickings(section)
         : selected.includes(item.id))
@@ -2409,6 +2452,8 @@ function areAdjacentOrnamentRuleNotes(notes, leftIndex, rightIndex, options = {}
 
 function canAddRequiredOrnament(notes, noteIndex, ornament, options = {}) {
   if (options.primaryNoteIndexes && !options.primaryNoteIndexes.has(noteIndex)) return false;
+  const limit = options.noteOrnamentLimits?.get(noteIndex);
+  if (limit && !limit.includes(ORNAMENT_SETTINGS.find((setting) => setting.chars.includes(ornament))?.id)) return false;
   const note = notes[noteIndex];
 
   if (!note || isRest(note)) {
@@ -2878,6 +2923,7 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
           const durationOrnamentOptions = {
             ...(retryAttempt >= LATE_RETRY_ATTEMPT ? { placementSalt: generationSalt } : {}),
             ...(section.primaryRhythms ? { primaryNoteIndexes: getPrimaryNoteIndexes(section, finalNotationVoice) } : {}),
+            noteOrnamentLimits: getPrimaryNoteOrnamentLimits(section, finalNotationVoice),
             tupletNoteIndexes: finalTupletNoteIndexes,
             tupletPositionByNoteIndex: getTupletPositionByNoteIndex(
               finalNotationVoice.notes,
@@ -3659,6 +3705,7 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         chainPrimaryGroups: Boolean(pageSource.chainPrimaryGroups),
         fullPrimaryGroupShare: pageSource.fullPrimaryGroupShare ?? null,
         requirePrimaryRhythms: pageSource.requirePrimaryRhythms !== false,
+        primaryRhythmOrnaments: pageSource.primaryRhythmOrnaments || null,
         // The sticking tail closes a multi-page subsection, so only its last page uses it.
         finalSubsectionPage: !page.subsectionId || sourcePages[pageIndex + 1]?.subsectionId !== page.subsectionId,
         subsectionLineOffset: getSubsectionLineOffset(sourcePages, pageIndex, sectionPdfSettings),
@@ -3991,6 +4038,7 @@ function createStoredPageGenerationSettings(pageConfig) {
     ...(pageConfig.chainPrimaryGroups ? { chainPrimaryGroups: true } : {}),
     ...(pageConfig.fullPrimaryGroupShare != null ? { fullPrimaryGroupShare: pageConfig.fullPrimaryGroupShare } : {}),
     ...(pageConfig.requirePrimaryRhythms === false ? { requirePrimaryRhythms: false } : {}),
+    ...(pageConfig.primaryRhythmOrnaments ? { primaryRhythmOrnaments: pageConfig.primaryRhythmOrnaments } : {}),
     primaryRhythms: pageConfig.primaryRhythms,
     secondaryRhythms: pageConfig.secondaryRhythms,
     prompt: pageConfig.prompt || "",
