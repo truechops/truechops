@@ -26,7 +26,16 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
@@ -35,7 +44,7 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
@@ -56,13 +65,13 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
@@ -71,25 +80,16 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 2,
-                    "end": 7,
+                    "start": 0,
+                    "end": 5,
                     "actual": 5,
                     "normal": 7
                   }
@@ -101,8 +101,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n16:l n16:r n8:lf n8:l n8:r n8:l n8:r |t2-7:5:7",
-  "updatedAt": "2026-10-04T20:05:15.276Z",
+  "exerciseShortForm": "n8:r n8:l n8:r n8:lf n8:r n16:r n16:l |t0-5:5:7",
+  "updatedAt": "2026-10-04T20:49:43.981Z",
   "sectionId": "random-subdivisions-seven-eighths",
   "sectionPageNumber": 3
 }

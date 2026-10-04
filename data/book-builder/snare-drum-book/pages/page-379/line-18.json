@@ -23,19 +23,22 @@
               {
                 "notes": [
                   {
-                    "notes": [],
-                    "duration": 16,
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -63,21 +66,12 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 2,
-                    "end": 6,
+                    "start": 1,
+                    "end": 5,
                     "actual": 4,
                     "normal": 7
                   }
@@ -89,8 +83,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r16 n16:l n8:la n8:r n8:l n8:r |t2-6:4:7",
-  "updatedAt": "2026-10-04T20:05:15.276Z",
+  "exerciseShortForm": "n8:r n8:r n8:la n8:r n8:l |t1-5:4:7",
+  "updatedAt": "2026-10-04T20:49:43.981Z",
   "sectionId": "random-subdivisions-seven-eighths",
   "sectionPageNumber": 2
 }

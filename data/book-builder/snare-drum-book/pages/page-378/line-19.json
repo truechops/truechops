@@ -23,6 +23,15 @@
               {
                 "notes": [
                   {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
                     "notes": [],
                     "duration": 8,
                     "dots": 0,
@@ -32,25 +41,25 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 2,
+                    "duration": 8,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "la"
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "la"
+                    "ornaments": "ra"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 4,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
@@ -58,8 +67,8 @@
                 ],
                 "tuplets": [
                   {
-                    "start": 0,
-                    "end": 2,
+                    "start": 1,
+                    "end": 5,
                     "actual": 5,
                     "normal": 7
                   }
@@ -71,8 +80,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r8 n2:la n16:la n16:r |t0-2:5:7",
-  "updatedAt": "2026-10-04T20:05:15.276Z",
+  "exerciseShortForm": "n8:l r8 n8:l n8:ra n4:r |t1-5:5:7",
+  "updatedAt": "2026-10-04T20:49:43.981Z",
   "sectionId": "random-subdivisions-seven-eighths",
   "sectionPageNumber": 1
 }

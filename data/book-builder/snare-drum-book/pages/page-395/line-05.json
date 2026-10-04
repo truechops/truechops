@@ -35,6 +35,23 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
+                    "ornaments": "d"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
                     "ornaments": "f"
                   },
                   {
@@ -47,22 +64,9 @@
                     "ornaments": "d"
                   },
                   {
-                    "notes": [],
-                    "duration": 8,
-                    "dots": 1,
-                    "velocity": 0.5
-                  },
-                  {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "d"
-                  },
-                  {
-                    "notes": [],
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5
@@ -85,7 +89,9 @@
                     "velocity": 0.5
                   },
                   {
-                    "notes": [],
+                    "notes": [
+                      "C5"
+                    ],
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5
@@ -100,7 +106,7 @@
                   },
                   {
                     "notes": [],
-                    "duration": 16,
+                    "duration": 32,
                     "dots": 0,
                     "velocity": 0.5
                   },
@@ -108,7 +114,47 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 32,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 32,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 32,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 32,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 32,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 32,
                     "dots": 0,
                     "velocity": 0.5
                   },
@@ -124,15 +170,15 @@
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 7,
+                    "end": 9,
                     "actual": 9,
                     "normal": 11
                   },
                   {
-                    "start": 8,
-                    "end": 13,
-                    "actual": 5,
-                    "normal": 4
+                    "start": 10,
+                    "end": 17,
+                    "actual": 7,
+                    "normal": 6
                   }
                 ]
               }
@@ -142,8 +188,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r16 n16:f n16:d r8. n16:d r16 n16:d n16 r16 n16 r16 n16 n16 |t0-7:9:11,8-13:5:4",
-  "updatedAt": "2026-10-04T20:05:15.276Z",
+  "exerciseShortForm": "r16 n16:d n16 n16:f n16:d n16 n16:d n16 n16 n16 r32 n32 n32 n32 n32 n32 n32 n16 |t0-9:9:11,10-17:7:6",
+  "updatedAt": "2026-10-04T20:49:43.981Z",
   "sectionId": "random-subdivisions-eleven-sixteenths",
   "sectionPageNumber": 3
 }

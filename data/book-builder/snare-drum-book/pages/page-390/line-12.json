@@ -28,24 +28,6 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lca"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
                   },
@@ -64,8 +46,26 @@
                     ],
                     "duration": 16,
                     "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "rf"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
                     "velocity": 1,
-                    "ornaments": "rfa"
+                    "ornaments": "lfa"
                   },
                   {
                     "notes": [
@@ -109,8 +109,8 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "ra"
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -119,7 +119,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "lac"
+                    "ornaments": "lca"
                   },
                   {
                     "notes": [
@@ -137,7 +137,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "rf"
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -145,8 +145,8 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lfa"
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [],
@@ -162,19 +162,28 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 0,
-                    "end": 8,
+                    "start": 3,
+                    "end": 11,
                     "actual": 8,
                     "normal": 9
                   },
                   {
                     "start": 11,
-                    "end": 16,
-                    "actual": 5,
+                    "end": 17,
+                    "actual": 6,
                     "normal": 4
                   }
                 ]
@@ -185,8 +194,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n16:lac n16:r n16:r n16:l n16:raf n16:rac n16:l n16:lac n16:r n16:ra n16:lac n16:r n16:rf n16:laf r16 n16:l |t0-8:8:9,11-16:5:4",
-  "updatedAt": "2026-10-04T20:05:15.276Z",
+  "exerciseShortForm": "n16:r n16:l n16:rf n16:l n16:laf n16:rac n16:l n16:lac n16:r n16:l n16:lac n16:r n16:l n16:r r16 n16:l n16:l |t3-11:8:9,11-17:6:4",
+  "updatedAt": "2026-10-04T20:49:43.981Z",
   "sectionId": "random-subdivisions-nine-sixteenths",
   "sectionPageNumber": 1
 }

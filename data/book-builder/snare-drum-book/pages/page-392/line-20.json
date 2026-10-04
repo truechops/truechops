@@ -38,16 +38,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "rf"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "ld"
+                    "ornaments": "lf"
                   },
                   {
                     "notes": [
@@ -80,25 +71,7 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
@@ -120,6 +93,15 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [],
@@ -152,7 +134,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
+                    "ornaments": "lf"
                   }
                 ],
                 "tuplets": [
@@ -164,9 +146,9 @@
                   },
                   {
                     "start": 8,
-                    "end": 15,
-                    "actual": 7,
-                    "normal": 4
+                    "end": 13,
+                    "actual": 5,
+                    "normal": 3
                   }
                 ]
               }
@@ -176,8 +158,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n16:r n16:rf n16:ld n16:rd n16:ld n16:rd n16:l n16:r n16:r n16:l n16:r r16 n16:r n16:r n16:l |t0-5:5:9,8-15:7:4",
-  "updatedAt": "2026-10-04T20:05:15.276Z",
+  "exerciseShortForm": "n16:r n16:lf n16:rd n16:ld n16:rd n8:r n16:l n16:r n16:l r16 n16:r n16:r n16:lf |t0-5:5:9,8-13:5:3",
+  "updatedAt": "2026-10-04T20:49:43.981Z",
   "sectionId": "random-subdivisions-nine-sixteenths",
   "sectionPageNumber": 3
 }

@@ -23,16 +23,8 @@
               {
                 "notes": [
                   {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 4,
-                    "dots": 1,
-                    "velocity": 0.5
-                  },
-                  {
                     "notes": [],
-                    "duration": 2,
+                    "duration": 4,
                     "dots": 0,
                     "velocity": 0.5
                   },
@@ -53,20 +45,56 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "dc"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 4,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [],
+                    "duration": 8,
+                    "dots": 1,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 1,
-                    "actual": 3,
-                    "normal": 2
-                  },
-                  {
-                    "start": 1,
                     "end": 4,
                     "actual": 7,
                     "normal": 6
+                  },
+                  {
+                    "start": 4,
+                    "end": 8,
+                    "actual": 6,
+                    "normal": 4
                   }
                 ]
               }
@@ -76,8 +104,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n4. r2 n4:f n8:dc |t0-1:3:2,1-4:7:6",
-  "updatedAt": "2026-10-04T20:05:15.276Z",
+  "exerciseShortForm": "r4 n4:f n8:dc n4 r16 n16 r8. n16 |t0-4:7:6,4-8:6:4",
+  "updatedAt": "2026-10-04T20:49:43.981Z",
   "sectionId": "random-subdivisions-three-quarters",
   "sectionPageNumber": 1
 }

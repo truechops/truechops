@@ -344,7 +344,6 @@ const FINAL_CATEGORY_ORDER = [
   "thirteen-sixteenths", "fifteen-sixteenths",
 ];
 const FINAL_PAGES = 3;
-const FINAL_ROWS = 11 * FINAL_PAGES;
 const SECONDARY_ORNAMENTS = ["accents", "flams", "diddles", "cheese"];
 
 function getFinalCategories() {
@@ -364,19 +363,43 @@ function getSecondaryRhythmOrnaments(pool) {
     ONE_BEAT_SECONDARY_RHYTHMS.rhythmOrnaments[key] || limits[key] || (key in limits ? [] : SECONDARY_ORNAMENTS)]));
 }
 
+// Basic one-beat notes that fill around the groupings, by difficulty: easy on
+// a final section's first page, medium on the second, hard on the third.
+const FINAL_DIFFICULTIES = [
+  { title: "Easy", keys: ["triplets", "sixteenths", "sextuplets"] },
+  { title: "Medium", keys: ["sextuplets", "thirtyseconds", "quintuplets"] },
+  { title: "Hard", keys: ["sextuplets", "nontuplets"] },
+];
+const FINAL_ROWS_PER_PASS = 11;
+
 function createFinalStudies(pdfSettings) {
   const group = { id: "random-subdivisions", title: "Random subdivisions and ornaments", rhythmSpan: { count: 1, unit: 4 } };
   const categories = getFinalCategories();
+  const basicPools = ONE_BEAT_KEYS.map((key) => POOL_RHYTHMS[key].pool);
   const sections = categories.map((category) => {
     const id = `${group.id}-${category.id}`;
-    const others = categories.filter((other) => other.id !== category.id);
+    // The groupings walked through on every pass (the basic notes are the passes' own).
+    const others = categories.filter((other) => other.id !== category.id && other.id !== "one-quarter");
     const primaryRhythms = normalizeRhythmPool(mergePools(category.pools), false);
-    const secondaryPool = normalizeRhythmPool(mergePools(others.flatMap((other) => other.pools)));
-    const secondaryRhythmRows = {};
+    const secondaryPool = normalizeRhythmPool(mergePools([...basicPools, ...others.flatMap((other) => other.pools)]));
+    // Basic notes by page: easy, medium, then hard.
+    const secondaryRhythmPhases = FINAL_DIFFICULTIES.map((difficulty) => ({
+      title: difficulty.title,
+      rows: FINAL_ROWS_PER_PASS,
+      rhythmRows: Object.fromEntries(difficulty.keys.flatMap((key) => {
+        const pool = POOL_RHYTHMS[key].pool;
+        return [...(pool.subdivisions || []), ...(pool.tuplets || [])].map((rhythm) => [rhythmOrnamentKey(rhythm), 1]);
+      })),
+    }));
+    // The other categories' groupings join one category at a time, spread evenly
+    // over all of the section's exercises (the first stretch has basic notes only).
+    const exerciseCount = FINAL_ROWS_PER_PASS * FINAL_DIFFICULTIES.length * 2;
+    const secondaryRhythmExercises = {};
     others.forEach((other, index) => {
+      const joinsAt = Math.floor((index + 1) * exerciseCount / (others.length + 1)) + 1;
       for (const pool of other.pools) {
         for (const rhythm of [...(pool.subdivisions || []), ...(pool.tuplets || [])]) {
-          secondaryRhythmRows[rhythmOrnamentKey(rhythm)] = Math.floor(index * FINAL_ROWS / others.length) + 1;
+          secondaryRhythmExercises[rhythmOrnamentKey(rhythm)] = joinsAt;
         }
       }
     });
@@ -396,7 +419,10 @@ function createFinalStudies(pdfSettings) {
           ornaments: RANDOM_ORNAMENTS.from,
           randomOrnaments: RANDOM_ORNAMENTS,
           requirePrimaryRhythms: "any",
-          secondaryRhythmRows,
+          secondaryRhythmPhases,
+          secondaryRhythmExercises,
+          // Sixteenths may still complete a beat after a grouping that ends mid-beat.
+          fillerSubdivisions: ["sixteenths"],
           ...(Object.keys(limits).length ? { primaryRhythmOrnaments: limits } : {}),
           fullPrimaryGroupShare: 0.5,
           minPlayedNotes: 0,

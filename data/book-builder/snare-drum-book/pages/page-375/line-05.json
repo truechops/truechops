@@ -35,13 +35,13 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "lfa"
+                    "ornaments": "rfa"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 1,
                     "ornaments": "lfa"
@@ -59,7 +59,7 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
@@ -68,10 +68,10 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
+                    "duration": 4,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -81,12 +81,21 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "rd"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 7,
+                    "end": 8,
                     "actual": 9,
                     "normal": 8
                   }
@@ -98,8 +107,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r8 n8:laf n4:laf n8:raf n4:l n8:l n8:rd |t0-7:9:8",
-  "updatedAt": "2026-10-04T20:05:15.276Z",
+  "exerciseShortForm": "r8 n8:raf n8:laf n8:raf n8:l n4:r n8:rd n8:l |t0-8:9:8",
+  "updatedAt": "2026-10-04T20:49:43.981Z",
   "sectionId": "random-subdivisions-four-quarters",
   "sectionPageNumber": 1
 }

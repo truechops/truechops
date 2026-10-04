@@ -1184,6 +1184,8 @@ export default function BookBuilderPanel() {
           <SecondaryRowsEditor
             measuresPerLine={selectedPagePdfSettings.measuresPerLine}
             onChange={(secondaryRhythmRows) => updateSelectedPageGenerationDraft({ secondaryRhythmRows })}
+            phases={selectedPageGenerationSettings.secondaryRhythmPhases}
+            exerciseJoins={selectedPageGenerationSettings.secondaryRhythmExercises}
             pool={selectedSection.secondaryRhythms}
             rowCount={systemsPerPage * selectedSubsectionPages.length}
             rows={selectedPageGenerationSettings.secondaryRhythmRows}

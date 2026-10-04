@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const http = require("http");
 const https = require("https");
-const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, getLineStickingSettings, getSpanPrimaryRhythms, normalizeOrnamentSegments, getLineOrnamentSegment, normalizeSecondaryRhythmRows, getLineSecondaryRhythms, rhythmOrnamentKey, normalizeRandomOrnaments, getLineRandomOrnaments } = require("../src/lib/book-structure");
+const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, getLineStickingSettings, getSpanPrimaryRhythms, normalizeOrnamentSegments, getLineOrnamentSegment, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, getLineSecondaryRhythms, rhythmOrnamentKey, normalizeRandomOrnaments, getLineRandomOrnaments } = require("../src/lib/book-structure");
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const DEFAULT_CONFIG_PATH = path.join(
@@ -1317,7 +1317,7 @@ function validatePrimaryRequirements(section, score) {
   }
   const primaryNotes = voice.notes.filter((note, index) => !isRest(note) && noteMatchesRhythmPool(primary, voice, index));
   const secondary = normalizeRhythmPool(section.secondaryRhythms);
-  const subdivisions = getGenerationSubdivisions(section);
+  const subdivisions = [...getGenerationSubdivisions(section), ...(section.fillerSubdivisions || [])];
   for (const [index, note] of voice.notes.entries()) {
     if (isRest(note)) continue;
     const inTuplet = getTupletForNote(voice.tuplets, index);
@@ -3234,7 +3234,8 @@ function createBeatStructuredLayout(requiredBlocks, availableBlocks, random, {
   }
   let remaining = 32 - units.reduce((sum, unit) => sum + slotsOf(unit), 0);
   const optional = [
-    ...regular.map((block) => ({ weight: 0.42, make: () => Array(SLOTS_PER_BEAT / block.slotCount).fill(block) })),
+    ...regular.filter((block) => !block.fillerOnly)
+      .map((block) => ({ weight: 0.42, make: () => Array(SLOTS_PER_BEAT / block.slotCount).fill(block) })),
     ...availableBlocks.filter((block) => block.kind === "tuplet")
       .map((block) => ({ weight: 0.68, make: () => tupletUnit(block, remaining) })),
   ];
@@ -3330,8 +3331,13 @@ function createMixedTupletFallbackGeneratedScore(section, options, random, lineI
       tuplet,
     }))
     .filter((block) => Number.isInteger(block.slotCount) && block.slotCount > 0 && block.slotCount <= 32);
-  const regularBlocks = SUBDIVISION_SETTINGS.filter((setting) => options.subdivisions.includes(setting.id))
-    .map((setting) => ({ kind: "regular", slotCount: 32 / setting.duration, duration: setting.duration, id: setting.id }));
+  // fillerSubdivisions may only complete a beat after a grouping that ends mid-beat.
+  const regularBlocks = SUBDIVISION_SETTINGS.filter((setting) =>
+    options.subdivisions.includes(setting.id) || (section.fillerSubdivisions || []).includes(setting.id))
+    .map((setting) => ({
+      kind: "regular", slotCount: 32 / setting.duration, duration: setting.duration, id: setting.id,
+      ...(options.subdivisions.includes(setting.id) ? {} : { fillerOnly: true }),
+    }));
   const tupletSlotCounts = [...new Set(tupletBlocks.map((block) => block.slotCount))];
   const tupletsCanFillMeasure = canFillMixedTupletSlots(32, tupletSlotCounts);
   const restBlocks = options.subdivisions.length || tupletsCanFillMeasure
@@ -3360,7 +3366,8 @@ function createMixedTupletFallbackGeneratedScore(section, options, random, lineI
   if (primary) {
     // Draw a fresh subset of optional families for each exercise, including none.
     availableBlocks = availableBlocks.filter((block) =>
-      requiredBlocks.includes(block) || requiredSecondaryBlocks.includes(block) || block.kind === "rest" || random() < 0.75
+      requiredBlocks.includes(block) || requiredSecondaryBlocks.includes(block) || block.kind === "rest" || block.fillerOnly ||
+        random() < 0.75
     );
   }
   if (getSectionPlayEveryNote(section) && !canFillMixedTupletSlots(32,
@@ -3646,9 +3653,9 @@ function createUniqueGeneratedLine(input, section, samplePayload, index, usedExe
   const ornamentSeed = section.subsectionId || section.id;
   const randomOrnaments = getLineRandomOrnaments(section, subsectionIndex, ornamentSeed);
   if (randomOrnaments) section = { ...section, ornaments: randomOrnaments };
-  if (section.secondaryRhythmRows) {
+  if (section.secondaryRhythmRows || section.secondaryRhythmPhases || section.secondaryRhythmExercises) {
     section = { ...section, secondaryRhythms: getLineSecondaryRhythms(section, subsectionIndex, pdfSettings.measuresPerLine) };
-    if (section.requireNewestSecondary) {
+    if (section.requireNewestSecondary && section.secondaryRhythmRows) {
       // The most recently added secondary rhythm(s) must appear in the exercise.
       const row = Math.floor(subsectionIndex / Math.max(1, pdfSettings.measuresPerLine)) + 1;
       const joined = Object.entries(normalizeSecondaryRhythmRows(section.secondaryRhythmRows) || {}).filter(([, joinRow]) => joinRow <= row);
@@ -3818,6 +3825,9 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         ornamentSegments: normalizeOrnamentSegments(pageSource.ornamentSegments),
         randomOrnaments: normalizeRandomOrnaments(pageSource.randomOrnaments),
         secondaryRhythmRows: normalizeSecondaryRhythmRows(pageSource.secondaryRhythmRows),
+        secondaryRhythmPhases: normalizeSecondaryRhythmPhases(pageSource.secondaryRhythmPhases),
+        secondaryRhythmExercises: normalizeSecondaryRhythmRows(pageSource.secondaryRhythmExercises),
+        fillerSubdivisions: Array.isArray(pageSource.fillerSubdivisions) ? pageSource.fillerSubdivisions : null,
         chainPrimaryGroups: Boolean(pageSource.chainPrimaryGroups),
         fullPrimaryGroupShare: pageSource.fullPrimaryGroupShare ?? null,
         requirePrimaryRhythms: pageSource.requirePrimaryRhythms === false || pageSource.requirePrimaryRhythms === "any"
@@ -3939,6 +3949,8 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
       `Secondary rhythms are OPTIONAL random fillers: ${JSON.stringify(section.secondaryRhythms)}. Their ornaments belong only on secondary rhythms and are never required. Primary choices take precedence when the same rhythm belongs to both pools.`,
       section.secondaryRhythmRows
         ? `Each secondary rhythm joins the pool at a printed staff row (${normalizePdfSettings(section.pdfSettings).measuresPerLine} exercises per row) and stays from then on: ${JSON.stringify(section.secondaryRhythmRows)}. Rhythms not listed are not used.`
+        : section.secondaryRhythmPhases
+        ? `Secondary rhythms run in passes of printed staff rows; within each pass a rhythm joins at its row and stays until the pass ends: ${JSON.stringify(section.secondaryRhythmPhases)}.`
         : "",
     ] : []),
     subdivisions.length
@@ -4157,6 +4169,9 @@ function createStoredPageGenerationSettings(pageConfig) {
     ...(pageConfig.ornamentSegments ? { ornamentSegments: pageConfig.ornamentSegments } : {}),
     ...(pageConfig.randomOrnaments ? { randomOrnaments: pageConfig.randomOrnaments } : {}),
     ...(pageConfig.secondaryRhythmRows ? { secondaryRhythmRows: pageConfig.secondaryRhythmRows } : {}),
+    ...(pageConfig.secondaryRhythmPhases ? { secondaryRhythmPhases: pageConfig.secondaryRhythmPhases } : {}),
+    ...(pageConfig.secondaryRhythmExercises ? { secondaryRhythmExercises: pageConfig.secondaryRhythmExercises } : {}),
+    ...(pageConfig.fillerSubdivisions ? { fillerSubdivisions: pageConfig.fillerSubdivisions } : {}),
     ...(pageConfig.chainPrimaryGroups ? { chainPrimaryGroups: true } : {}),
     ...(pageConfig.fullPrimaryGroupShare != null ? { fullPrimaryGroupShare: pageConfig.fullPrimaryGroupShare } : {}),
     ...(pageConfig.requirePrimaryRhythms !== true ? { requirePrimaryRhythms: pageConfig.requirePrimaryRhythms } : {}),

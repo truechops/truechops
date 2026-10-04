@@ -28,6 +28,15 @@
                     ],
                     "duration": 16,
                     "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "lca"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
                   },
@@ -48,21 +57,12 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lca"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 1,
-                    "end": 4,
+                    "start": 0,
+                    "end": 3,
                     "actual": 3,
                     "normal": 15
                   }
@@ -74,8 +74,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n16:r n16:rac n16:l n16:lac |t1-4:3:15",
-  "updatedAt": "2026-10-04T20:05:15.276Z",
+  "exerciseShortForm": "n16:lac n16:r n16:rac n16:l |t0-3:3:15",
+  "updatedAt": "2026-10-04T20:49:43.981Z",
   "sectionId": "random-subdivisions-fifteen-sixteenths",
   "sectionPageNumber": 2
 }

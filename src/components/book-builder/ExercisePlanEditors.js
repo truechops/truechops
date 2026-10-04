@@ -227,9 +227,51 @@ export function OrnamentTopicsEditor({ segments, ornaments, randomOrnaments, exe
 }
 
 // Page level: the printed row where each secondary rhythm joins the pool.
-export function SecondaryRowsEditor({ rows, pool, rowCount, measuresPerLine, onChange }) {
+export function SecondaryRowsEditor({ rows, phases, exerciseJoins, pool, rowCount, measuresPerLine, onChange }) {
   const rhythms = poolRhythms(pool);
   if (!rhythms.length) return null;
+  if (phases) {
+    // Passes repeat a row plan (e.g. easy, medium, hard basic notes); shown here, set in the curriculum.
+    let start = 1;
+    return (
+      <div className={styles.fieldGroup}>
+        <span>Secondary rhythms by pass</span>
+        <table className={styles.planTable}>
+          <thead><tr><th scope="col">Pass</th><th scope="col">Rows</th><th scope="col">From its first row</th><th scope="col">Joins later in the pass</th></tr></thead>
+          <tbody>
+            {phases.map((phase) => {
+              const first = start;
+              start += phase.rows;
+              const label = (keys) => rhythms.filter((rhythm) => keys.includes(rhythmOrnamentKey(rhythm))).map(rhythmLabel).join(", ") || "None";
+              const entries = Object.entries(phase.rhythmRows);
+              return (
+                <tr key={first}>
+                  <td>{phase.title || `Pass ${first}`}</td>
+                  <td>{first}–{first + phase.rows - 1}</td>
+                  <td>{label(entries.filter(([, row]) => row === 1).map(([key]) => key))}</td>
+                  <td>{label(entries.filter(([, row]) => row > 1).map(([key]) => key))}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        <p className={styles.layoutSummary}>Each pass starts over: rhythms join at their row within the pass and stay until it ends.</p>
+        {exerciseJoins && (
+          <table className={styles.planTable}>
+            <thead><tr><th scope="col">Joins at exercise</th><th scope="col">Groupings</th></tr></thead>
+            <tbody>
+              {[...new Set(Object.values(exerciseJoins))].sort((left, right) => left - right).map((exercise) => (
+                <tr key={exercise}>
+                  <td>{exercise}</td>
+                  <td>{rhythms.filter((rhythm) => exerciseJoins[rhythmOrnamentKey(rhythm)] === exercise).map(rhythmLabel).join(", ")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    );
+  }
   if (!rows) {
     return (
       <div className={styles.fieldGroup}>

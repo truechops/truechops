@@ -23,7 +23,9 @@
               {
                 "notes": [
                   {
-                    "notes": [],
+                    "notes": [
+                      "C5"
+                    ],
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5
@@ -34,8 +36,7 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "ad"
+                    "velocity": 0.5
                   },
                   {
                     "notes": [
@@ -69,50 +70,15 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "d"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
                     "velocity": 1,
-                    "ornaments": "da"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "d"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "c"
+                    "ornaments": "cda"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 2,
-                    "end": 10,
-                    "actual": 8,
+                    "end": 6,
+                    "actual": 4,
                     "normal": 7
                   }
                 ]
@@ -123,8 +89,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r16 n16:ad n8:ad n8 n8:af n8:d n8:ad n8:d n8 n8:c |t2-10:8:7",
-  "updatedAt": "2026-10-04T20:05:15.276Z",
+  "exerciseShortForm": "n16 n16 n8:ad n8 n8:af n8:adc |t2-6:4:7",
+  "updatedAt": "2026-10-04T20:49:43.981Z",
   "sectionId": "random-subdivisions-seven-eighths",
   "sectionPageNumber": 2
 }

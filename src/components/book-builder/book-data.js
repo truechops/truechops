@@ -1,7 +1,7 @@
 import _ from "lodash";
 import { getEmptyMeasure } from "../../helpers/score";
 import { DEFAULT_TEMPO } from "../../consts/score";
-import { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, groupSubsectionPages, normalizeSubsectionPageCount, normalizeOrnamentSegments, normalizeSecondaryRhythmRows, normalizeRandomOrnaments } from "../../lib/book-structure";
+import { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, groupSubsectionPages, normalizeSubsectionPageCount, normalizeOrnamentSegments, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, normalizeRandomOrnaments } from "../../lib/book-structure";
 
 export { normalizeRhythmPool };
 
@@ -495,6 +495,13 @@ export function normalizePageGenerationSettings(value = {}, fallback = {}) {
       : {}),
     ...(Number.isFinite(Number(source.fullPrimaryGroupShare)) && source.fullPrimaryGroupShare !== null && source.fullPrimaryGroupShare !== ""
       ? { fullPrimaryGroupShare: Math.max(0, Math.min(1, Number(source.fullPrimaryGroupShare))) }
+      : {}),
+    ...(Array.isArray(source.fillerSubdivisions) ? { fillerSubdivisions: source.fillerSubdivisions } : {}),
+    ...(normalizeSecondaryRhythmRows(source.secondaryRhythmExercises)
+      ? { secondaryRhythmExercises: normalizeSecondaryRhythmRows(source.secondaryRhythmExercises) }
+      : {}),
+    ...(normalizeSecondaryRhythmPhases(source.secondaryRhythmPhases)
+      ? { secondaryRhythmPhases: normalizeSecondaryRhythmPhases(source.secondaryRhythmPhases) }
       : {}),
     ...(normalizeSecondaryRhythmRows(source.secondaryRhythmRows)
       ? { secondaryRhythmRows: normalizeSecondaryRhythmRows(source.secondaryRhythmRows) }

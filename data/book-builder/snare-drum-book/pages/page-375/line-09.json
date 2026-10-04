@@ -32,7 +32,16 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 2,
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "lcd"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
@@ -41,34 +50,16 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
+                    "duration": 4,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "rd"
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "rcd"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
+                    "duration": 2,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
@@ -77,7 +68,7 @@
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 6,
+                    "end": 5,
                     "actual": 3,
                     "normal": 2
                   }
@@ -89,8 +80,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r2 n2:r n8:rd n8:l n8:rdc n8:l |t0-6:3:2",
-  "updatedAt": "2026-10-04T20:05:15.276Z",
+  "exerciseShortForm": "r2 n8:ldc n8:r n4:r n2:l |t0-5:3:2",
+  "updatedAt": "2026-10-04T20:49:43.981Z",
   "sectionId": "random-subdivisions-four-quarters",
   "sectionPageNumber": 1
 }

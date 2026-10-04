@@ -128,12 +128,49 @@ function normalizeSecondaryRhythmRows(value) {
   return Object.keys(rows).length ? rows : null;
 }
 
+// Phases repeat a row plan in passes, e.g. three pages that each walk through
+// the same groupings with a harder set of basic notes:
+// [{ title: "Easy", rows: 11, rhythmRows: { sixteenths: 1, ... } }, ...].
+function normalizeSecondaryRhythmPhases(value) {
+  if (!Array.isArray(value)) return null;
+  const phases = value.map((phase) => ({
+    ...(phase?.title ? { title: String(phase.title) } : {}),
+    rows: Math.max(1, Number.parseInt(phase?.rows, 10) || 1),
+    rhythmRows: normalizeSecondaryRhythmRows(phase?.rhythmRows) || {},
+  }));
+  return phases.length ? phases : null;
+}
+
+// The phase a printed row falls in, and the row within that phase.
+function getSecondaryRhythmPhase(settings, row) {
+  const phases = normalizeSecondaryRhythmPhases(settings?.secondaryRhythmPhases);
+  if (!phases) return null;
+  let start = 0;
+  for (const [index, phase] of phases.entries()) {
+    if (row <= start + phase.rows || index === phases.length - 1) return { phase, index, row: row - start };
+    start += phase.rows;
+  }
+  return null;
+}
+
 function getLineSecondaryRhythms(settings, lineIndex, measuresPerLine) {
   const secondary = normalizeRhythmPool(settings.secondaryRhythms);
-  const rows = normalizeSecondaryRhythmRows(settings.secondaryRhythmRows);
-  if (!rows) return secondary;
-  const row = Math.floor(lineIndex / Math.max(1, measuresPerLine)) + 1;
-  const available = (rhythm) => rows[rhythmOrnamentKey(rhythm)] <= row;
+  let row = Math.floor(lineIndex / Math.max(1, measuresPerLine)) + 1;
+  let rows = normalizeSecondaryRhythmRows(settings.secondaryRhythmRows);
+  const phase = getSecondaryRhythmPhase(settings, row);
+  if (phase) {
+    rows = phase.phase.rhythmRows;
+    row = phase.row;
+  }
+  // secondaryRhythmExercises: the exercise (1-based, across the subsection)
+  // where a rhythm joins, so a pool can grow evenly and mid-row.
+  const exerciseJoins = normalizeSecondaryRhythmRows(settings.secondaryRhythmExercises) || {};
+  if (!rows && !Object.keys(exerciseJoins).length) return secondary;
+  const available = (rhythm) => {
+    const key = rhythmOrnamentKey(rhythm);
+    if (key in exerciseJoins) return exerciseJoins[key] <= lineIndex + 1;
+    return Boolean(rows) && rows[key] <= row;
+  };
   return {
     ...secondary,
     subdivisions: secondary.subdivisions.filter(available),
@@ -326,6 +363,6 @@ module.exports = {
   getSpanPrimaryRhythms,
   normalizeBookGroups, normalizeStickingTail, getLineStickingSettings,
   normalizeOrnamentSegments, getLineOrnamentSegment, normalizeRandomOrnaments, getLineRandomOrnaments,
-  normalizeSecondaryRhythmRows, getLineSecondaryRhythms,
+  normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, getSecondaryRhythmPhase, getLineSecondaryRhythms,
   normalizeRhythmPool, rhythmOrnamentKey, migrateBookStructure, createStructureTableOfContents,
 };
