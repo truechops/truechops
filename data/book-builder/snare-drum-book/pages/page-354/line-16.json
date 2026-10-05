@@ -28,7 +28,8 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -37,7 +38,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "f"
+                    "ornaments": "rd"
                   },
                   {
                     "notes": [
@@ -46,15 +47,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "c"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -63,13 +56,22 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "f"
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 0,
-                    "end": 4,
+                    "start": 1,
+                    "end": 5,
                     "actual": 4,
                     "normal": 15
                   }
@@ -81,8 +83,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n16 n16:f n16:c n16 n16:f |t0-4:4:15",
-  "updatedAt": "2026-10-04T22:01:00.545Z",
+  "exerciseShortForm": "n16:l n16:rd n16:l n16:l n16:r |t1-5:4:15",
+  "updatedAt": "2026-10-05T01:21:59.176Z",
   "sectionId": "combinations-fifteen-sixteenths-4",
   "sectionPageNumber": 1
 }

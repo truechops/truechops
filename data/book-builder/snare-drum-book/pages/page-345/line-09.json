@@ -28,15 +28,8 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -45,7 +38,16 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "f"
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "ld"
                   },
                   {
                     "notes": [],
@@ -59,8 +61,8 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "fa"
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [],
@@ -74,8 +76,8 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "fa"
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   }
                 ],
                 "tuplets": [
@@ -93,8 +95,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n8 n16 n16:f r16 n16:af r8 n16:af |t2-7:6:13",
-  "updatedAt": "2026-10-04T22:01:00.545Z",
+  "exerciseShortForm": "n8:r n16:r n16:ld r16 n16:r r8 n16:l |t2-7:6:13",
+  "updatedAt": "2026-10-05T01:21:59.176Z",
   "sectionId": "combinations-thirteen-sixteenths-6",
   "sectionPageNumber": 2
 }

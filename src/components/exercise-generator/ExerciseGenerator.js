@@ -54,8 +54,9 @@ function describeConfig(config) {
   const subdivision = SUBDIVISION_CHOICES.find((choice) => choice.id === config.subdivision)?.label || config.subdivision;
   const span = SPAN_CHOICES.find((choice) => choice.count === config.rhythmSpan.count && choice.unit === config.rhythmSpan.unit);
   const ornaments = config.ornaments.map((id) => ORNAMENT_LABELS[id]).join(", ") || "No ornaments";
-  const nested = config.nestedTuplets === "cycle" ? " · nested tuplets in turn"
-    : config.nestedTuplets ? ` · nested ${config.nestedTuplets.actual} over ${config.nestedTuplets.hostNotes}` : "";
+  const nested = (config.nestedTuplets === "cycle" ? " · nested tuplets in turn"
+    : config.nestedTuplets ? ` · nested ${config.nestedTuplets.actual} over ${config.nestedTuplets.hostNotes}` : "") +
+    (config.nestedTuplets && config.nestedSteps ? " in four steps" : "");
   return `${subdivision}${span && span.id !== "1/4" ? ` ${span.label.toLowerCase()}` : ""}${nested} · ${config.playEveryNote ? "every note" : "sparse"} · ${ornaments}`;
 }
 
@@ -68,7 +69,8 @@ function Chip({ on, onClick, children }) {
 }
 
 // A smaller tuplet nested inside the subdivision: off, every variant in turn,
-// or one variant (e.g. 5 notes in the time of 2 of the subdivision's notes).
+// or one variant (e.g. 5 notes in the time of 2 of the subdivision's notes),
+// optionally stepping each one through the book's four steps.
 function NestedTupletField({ value, onChange }) {
   const variants = getConfigNestedVariants(value);
   if (!variants.length) {
@@ -77,30 +79,51 @@ function NestedTupletField({ value, onChange }) {
   const selected = value.nestedTuplets === "cycle" ? "cycle"
     : value.nestedTuplets ? `${value.nestedTuplets.actual}:${value.nestedTuplets.hostNotes}` : "off";
   return (
-    <label style={styles.field}>
-      Nested tuplets
-      <select
-        onChange={(event) => {
-          const choice = event.target.value;
-          if (choice === "off") onChange(null);
-          else if (choice === "cycle") onChange("cycle");
-          else {
-            const [actual, hostNotes] = choice.split(":").map(Number);
-            onChange({ actual, hostNotes });
-          }
-        }}
-        style={styles.input}
-        value={selected}
-      >
-        <option value="off">None</option>
-        <option value="cycle">Each nested tuplet in turn ({variants.length}, one per measure)</option>
-        {variants.map((variant) => (
-          <option key={`${variant.actual}:${variant.hostNotes}`} value={`${variant.actual}:${variant.hostNotes}`}>
-            {variant.label}
+    <div style={styles.section}>
+      <label style={styles.field}>
+        Nested tuplets
+        <select
+          onChange={(event) => {
+            const choice = event.target.value;
+            if (choice === "off") onChange({ nestedTuplets: null });
+            else if (choice === "cycle") onChange({ nestedTuplets: "cycle" });
+            else {
+              const [actual, hostNotes] = choice.split(":").map(Number);
+              onChange({ nestedTuplets: { actual, hostNotes } });
+            }
+          }}
+          style={styles.input}
+          value={selected}
+        >
+          <option value="off">None</option>
+          <option value="cycle">
+            Each nested tuplet in turn ({variants.length}, {value.nestedSteps ? "four measures each" : "one per measure"})
           </option>
-        ))}
-      </select>
-    </label>
+          {variants.map((variant) => (
+            <option key={`${variant.actual}:${variant.hostNotes}`} value={`${variant.actual}:${variant.hostNotes}`}>
+              {variant.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      {value.nestedTuplets && (
+        <>
+          <button
+            aria-pressed={value.nestedSteps}
+            onClick={() => onChange({ nestedSteps: !value.nestedSteps })}
+            style={{ ...styles.chip, ...(value.nestedSteps ? styles.chipOn : {}), alignSelf: "flex-start" }}
+            type="button"
+          >
+            Steps: every note → accents → sparse with accents → ornaments
+          </button>
+          <p style={styles.note}>
+            {value.nestedSteps
+              ? "Each nested tuplet takes four measures, one per step. The steps set the density and ornaments (stickings on every note)."
+              : "Every measure uses the density and ornaments below."}
+          </p>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -148,7 +171,7 @@ export function ExerciseConfigEditor({ value, onChange, topics = [] }) {
         </label>
       </div>
 
-      <NestedTupletField onChange={(nestedTuplets) => update({ nestedTuplets })} value={value} />
+      <NestedTupletField onChange={update} value={value} />
 
       <div style={styles.section}>
         <p style={styles.heading}>Density</p>
@@ -257,10 +280,16 @@ export default function ExerciseGenerator({ pageConfig = null, topics = [], mode
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  // Measures added one at a time continue the configuration's plan (e.g. the
+  // next nested tuplet or step); changing the settings starts it over.
+  const [nextMeasure, setNextMeasure] = useState(0);
+  const draftKey = JSON.stringify(draft);
 
   useEffect(() => {
     if (selected) setDraft(selected.config);
   }, [selected?.key, selected?.config]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => setNextMeasure(0), [draftKey]);
 
   const changed = selected && JSON.stringify(normalizeExerciseConfig(selected.config)) !== JSON.stringify(normalizeExerciseConfig(draft));
 
@@ -285,7 +314,9 @@ export default function ExerciseGenerator({ pageConfig = null, topics = [], mode
   });
 
   const generate = (count) => run(async () => {
-    const result = await generateMeasures(draft, count);
+    const start = mode === "append" ? nextMeasure : 0;
+    const result = await generateMeasures(draft, count, start);
+    if (mode === "append") setNextMeasure(start + count);
     onMeasures(result, draft);
   });
 

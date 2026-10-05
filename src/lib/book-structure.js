@@ -179,15 +179,17 @@ function getLineSecondaryRhythms(settings, lineIndex, measuresPerLine) {
 }
 
 // randomOrnaments picks each exercise's ornaments at random, e.g.
-// { from: [...ornament ids], min: 2, max: 4 }, and never repeats the previous
+// { always: ["stickings"], from: [...ornament ids], min: 1, max: 3 }: every
+// `always` ornament plus min-max drawn from `from`, never repeating the previous
 // exercise's set. Seeded by `seed`, so regenerating gives the same plan.
 function normalizeRandomOrnaments(value) {
   if (!value || !Array.isArray(value.from)) return null;
-  const from = ornamentIds.filter((id) => value.from.includes(id));
+  const always = ornamentIds.filter((id) => (Array.isArray(value.always) ? value.always : []).includes(id));
+  const from = ornamentIds.filter((id) => value.from.includes(id) && !always.includes(id));
   if (!from.length) return null;
   const min = Math.max(1, Math.min(from.length, Number.parseInt(value.min, 10) || 1));
   const max = Math.max(min, Math.min(from.length, Number.parseInt(value.max, 10) || from.length));
-  return { from, min, max };
+  return { ...(always.length ? { always } : {}), from, min, max };
 }
 
 function seededRandom(seed) {
@@ -212,8 +214,8 @@ function getLineRandomOrnaments(settings, lineIndex, seed) {
     do {
       const count = config.min + Math.floor(random() * (config.max - config.min + 1));
       const shuffled = [...config.from].sort(() => random() - 0.5);
-      chosen = ornamentIds.filter((id) => shuffled.slice(0, count).includes(id));
-    } while (chosen.join() === previous && config.from.length > 1);
+      chosen = ornamentIds.filter((id) => (config.always || []).includes(id) || shuffled.slice(0, count).includes(id));
+    } while (chosen.join() === previous && config.min < config.from.length);
     previous = chosen.join();
   }
   return chosen;
@@ -281,6 +283,62 @@ function getLineNestedTuplet(settings, lineIndex) {
   if (!plan) return null;
   let end = 0;
   return plan.find((variant) => (end += variant.count) > lineIndex) || plan[plan.length - 1];
+}
+
+// nestedTupletStages: steps every nested variant goes through in order, e.g.
+// every note with stickings, then accents, then sparse with accents, then random
+// ornaments. Each step sets the exercise's density and ornaments:
+// { title, playEveryNote, fullPrimaryGroupShare?, playedShare?: [min, max], ornaments }
+// or, instead of ornaments, randomOrnaments.
+function normalizeNestedTupletStages(value) {
+  if (!Array.isArray(value)) return null;
+  const stages = value.filter((stage) => stage && typeof stage === "object").map((stage) => {
+    const random = normalizeRandomOrnaments(stage.randomOrnaments);
+    const share = Number.parseFloat(stage.fullPrimaryGroupShare);
+    const playEveryNote = stage.playEveryNote === true || stage.playEveryNote === "true";
+    const playedShare = Array.isArray(stage.playedShare)
+      ? stage.playedShare.map((value) => Math.max(0, Math.min(1, Number.parseFloat(value))))
+      : null;
+    return {
+      title: String(stage.title || "").slice(0, 80),
+      playEveryNote,
+      ...(!playEveryNote && Number.isFinite(share) ? { fullPrimaryGroupShare: Math.max(0, Math.min(1, share)) } : {}),
+      ...(!playEveryNote && playedShare?.length === 2 && playedShare.every(Number.isFinite) && playedShare[0] <= playedShare[1]
+        ? { playedShare } : {}),
+      ornaments: random
+        ? ornamentIds.filter((id) => (random.always || []).includes(id) || random.from.includes(id))
+        : ornamentIds.filter((id) => (Array.isArray(stage.ornaments) ? stage.ornaments : []).includes(id)),
+      ...(random ? { randomOrnaments: random } : {}),
+    };
+  });
+  return stages.length ? stages : null;
+}
+
+// How a nested variant's `count` exercises split over the steps: evenly, with
+// any extra exercises going to the later steps.
+function getNestedStageCounts(count, stageCount) {
+  const base = Math.floor(count / stageCount);
+  const extra = count % stageCount;
+  return Array.from({ length: stageCount }, (_, index) => base + (index >= stageCount - extra ? 1 : 0));
+}
+
+function getLineNestedStage(settings, lineIndex) {
+  const stages = normalizeNestedTupletStages(settings?.nestedTupletStages);
+  const plan = normalizeNestedTupletPlan(settings?.nestedTupletPlan);
+  if (!stages || !plan) return null;
+  let start = 0;
+  let variant = null;
+  for (const candidate of plan) {
+    if (lineIndex < start + candidate.count) {
+      variant = candidate;
+      break;
+    }
+    start += candidate.count;
+  }
+  if (!variant) return stages[stages.length - 1];
+  let end = 0;
+  const counts = getNestedStageCounts(variant.count, stages.length);
+  return stages[counts.findIndex((count) => (end += count) > lineIndex - start)] || stages[stages.length - 1];
 }
 
 function getLineOrnamentSegment(settings, lineIndex) {
@@ -428,6 +486,7 @@ module.exports = {
   normalizeBookGroups, normalizeStickingTail, getLineStickingSettings,
   normalizeOrnamentSegments, getLineOrnamentSegment, normalizeRandomOrnaments, getLineRandomOrnaments,
   getNestedTupletNotation, getNestedTupletVariants, nestedTupletLabel, normalizeNestedTupletPlan, getLineNestedTuplet,
+  normalizeNestedTupletStages, getNestedStageCounts, getLineNestedStage,
   normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, getSecondaryRhythmPhase, getLineSecondaryRhythms,
   normalizeRhythmPool, rhythmOrnamentKey, migrateBookStructure, createStructureTableOfContents,
 };

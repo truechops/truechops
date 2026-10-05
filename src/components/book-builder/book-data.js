@@ -1,7 +1,7 @@
 import _ from "lodash";
 import { getEmptyMeasure } from "../../helpers/score";
 import { DEFAULT_TEMPO } from "../../consts/score";
-import { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, groupSubsectionPages, normalizeSubsectionPageCount, normalizeOrnamentSegments, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, normalizeRandomOrnaments, normalizeNestedTupletPlan } from "../../lib/book-structure";
+import { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, groupSubsectionPages, normalizeSubsectionPageCount, normalizeOrnamentSegments, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, normalizeRandomOrnaments, normalizeNestedTupletPlan, normalizeNestedTupletStages } from "../../lib/book-structure";
 
 export { normalizeRhythmPool };
 
@@ -497,6 +497,9 @@ export function normalizePageGenerationSettings(value = {}, fallback = {}) {
       ? { fullPrimaryGroupShare: Math.max(0, Math.min(1, Number(source.fullPrimaryGroupShare))) }
       : {}),
     ...(Array.isArray(source.fillerSubdivisions) ? { fillerSubdivisions: source.fillerSubdivisions } : {}),
+    ...(normalizeNestedTupletStages(source.nestedTupletStages)
+      ? { nestedTupletStages: normalizeNestedTupletStages(source.nestedTupletStages) }
+      : {}),
     ...(normalizeNestedTupletPlan(source.nestedTupletPlan)
       ? { nestedTupletPlan: normalizeNestedTupletPlan(source.nestedTupletPlan) }
       : {}),

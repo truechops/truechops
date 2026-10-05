@@ -490,6 +490,7 @@ export default function BookBuilderPanel() {
     selectedPage,
     selectedSection
   );
+  const nestedStagesActive = Boolean(selectedPageGenerationSettings.nestedTupletPlan && selectedPageGenerationSettings.nestedTupletStages);
   const pdfSettings = normalizePdfSettings(book.pdfSettings);
   const selectedPagePdfSettings = getPagePdfSettings(selectedPage, pdfSettings);
   const linesPerPage = getLinesPerPage(selectedPagePdfSettings);
@@ -1175,19 +1176,27 @@ export default function BookBuilderPanel() {
               ))}
             </div>
           )}
-          <OrnamentTopicsEditor
-            exerciseCount={linesPerPage * selectedSubsectionPages.length}
-            onChange={updateSelectedPageGenerationDraft}
-            ornaments={selectedPageGenerationSettings.ornaments}
-            randomOrnaments={selectedPageGenerationSettings.randomOrnaments}
-            segments={selectedPageGenerationSettings.ornamentSegments}
-          />
+          {nestedStagesActive ? (
+            <div className={styles.fieldGroup}>
+              <span>Primary ornaments</span>
+              <p className={styles.layoutSummary}>Each exercise&apos;s ornaments and density follow the nested tuplet steps below.</p>
+            </div>
+          ) : (
+            <OrnamentTopicsEditor
+              exerciseCount={linesPerPage * selectedSubsectionPages.length}
+              onChange={updateSelectedPageGenerationDraft}
+              ornaments={selectedPageGenerationSettings.ornaments}
+              randomOrnaments={selectedPageGenerationSettings.randomOrnaments}
+              segments={selectedPageGenerationSettings.ornamentSegments}
+            />
+          )}
           <NestedTupletPlanEditor
             exerciseCount={linesPerPage * selectedSubsectionPages.length}
-            onChange={(nestedTupletPlan) => updateSelectedPageGenerationDraft({ nestedTupletPlan })}
+            onChange={updateSelectedPageGenerationDraft}
             plan={selectedPageGenerationSettings.nestedTupletPlan}
             primaryRhythms={selectedSection.primaryRhythms}
             rhythmSpan={selectedSection.rhythmSpan}
+            stages={selectedPageGenerationSettings.nestedTupletStages}
           />
           <SecondaryRowsEditor
             measuresPerLine={selectedPagePdfSettings.measuresPerLine}
@@ -1203,6 +1212,7 @@ export default function BookBuilderPanel() {
             rows={selectedPageGenerationSettings.secondaryRhythmRows}
             measuresPerLine={selectedPagePdfSettings.measuresPerLine}
             ornaments={selectedPageGenerationSettings.ornaments}
+            nestedStages={nestedStagesActive ? selectedPageGenerationSettings.nestedTupletStages : null}
             playEveryNote={selectedPageGenerationSettings.playEveryNote}
             pool={selectedSection.secondaryRhythms}
             randomOrnaments={selectedPageGenerationSettings.randomOrnaments}
@@ -1285,7 +1295,7 @@ export default function BookBuilderPanel() {
               }
               type="checkbox"
             />
-            <span>No rests — play every note</span>
+            <span>No rests — play every note{nestedStagesActive ? " (nested tuplet steps set this per exercise)" : ""}</span>
           </label>
           <label className={styles.toggleField}>
             <input

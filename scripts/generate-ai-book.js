@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const http = require("http");
 const https = require("https");
-const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, getLineStickingSettings, getSpanPrimaryRhythms, normalizeOrnamentSegments, getLineOrnamentSegment, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, getLineSecondaryRhythms, rhythmOrnamentKey, normalizeRandomOrnaments, getLineRandomOrnaments, getNestedTupletNotation, normalizeNestedTupletPlan, getLineNestedTuplet } = require("../src/lib/book-structure");
+const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, getLineStickingSettings, getSpanPrimaryRhythms, normalizeOrnamentSegments, getLineOrnamentSegment, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, getLineSecondaryRhythms, rhythmOrnamentKey, normalizeRandomOrnaments, getLineRandomOrnaments, getNestedTupletNotation, normalizeNestedTupletPlan, getLineNestedTuplet, normalizeNestedTupletStages, getLineNestedStage } = require("../src/lib/book-structure");
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const DEFAULT_CONFIG_PATH = path.join(
@@ -1284,6 +1284,44 @@ function noteMatchesRhythmPool(pool, voice, noteIndex) {
   );
 }
 
+// Nested steps show each of their ornaments: one the primary rhythm can't carry
+// (e.g. accents on a stickings-only septuplet host) goes on a secondary note
+// whose rhythm may carry it.
+function ensureLineOrnamentsOnSecondaryNotes(section, notes, voice, lineIndex, options = {}) {
+  if (!section.lineOrnamentsOnly || !section.primaryRhythms) return notes;
+  const secondary = normalizeRhythmPool(section.secondaryRhythms);
+  const nextNotes = notes.map((note) => ({ ...note }));
+  const placementOptions = { ...options, primaryNoteIndexes: null, noteOrnamentLimits: null };
+  for (const setting of ORNAMENT_SETTINGS) {
+    if (setting.id === "stickings" || !(section.ornaments || []).includes(setting.id)) continue;
+    const char = setting.chars;
+    if (nextNotes.some((note) => !isRest(note) && String(note.ornaments || "").includes(char))) continue;
+    const candidates = nextNotes.map((_, index) => index).filter((index) =>
+      !options.primaryNoteIndexes?.has(index) &&
+      getSecondaryNoteOrnaments(secondary, { ...voice, notes: nextNotes }, index).includes(setting.id) &&
+      canAddRequiredOrnament(nextNotes, index, char, placementOptions));
+    if (!candidates.length) continue;
+    const index = candidates[hashString(`${section.id || section.title}:${lineIndex}:${char}:${options.placementSalt || ""}`) % candidates.length];
+    nextNotes[index] = { ...nextNotes[index], ornaments: `${nextNotes[index].ornaments || ""}${char}` };
+  }
+  return nextNotes;
+}
+
+// When the primary group leaves room for secondary rhythms that may carry them,
+// every ornament of a nested step must show in the exercise.
+function validateLineOrnamentsShown(section, voice) {
+  if (!section.lineOrnamentsOnly) return;
+  const span = normalizeRhythmSpan(section.rhythmSpan);
+  if (span.count / span.unit >= 1) return;
+  const secondary = normalizeRhythmPool(section.secondaryRhythms);
+  const carried = new Set(secondary.rhythmOrnaments ? Object.values(secondary.rhythmOrnaments).flat() : secondary.ornaments);
+  const shown = voice.notes.filter((note) => !isRest(note)).map((note) => String(note.ornaments || "")).join("");
+  for (const setting of ORNAMENT_SETTINGS) {
+    if (setting.id === "stickings" || !(section.ornaments || []).includes(setting.id) || !carried.has(setting.id)) continue;
+    if (![...setting.chars].some((char) => shown.includes(char))) throw new Error(`Exercise must show its step's ${setting.label}.`);
+  }
+}
+
 function getPrimaryNoteIndexes(section, voice) {
   return new Set(voice.notes.flatMap((note, index) =>
     noteMatchesRhythmPool(section.primaryRhythms, voice, index) ? [index] : []
@@ -1331,11 +1369,11 @@ function applyRhythmPoolOrnaments(section, voice) {
     notes: voice.notes.map((note, index) => {
       const primary = noteMatchesRhythmPool(section.primaryRhythms, voice, index);
       const limit = primary ? limits.get(index) : null;
-      // With randomOrnaments, secondary notes draw from the exercise's own set too.
+      // With randomOrnaments or nested steps, secondary notes draw from the exercise's own set too.
       const selected = primary
         ? (section.ornaments || []).filter((id) => !limit || limit.includes(id))
         : getSecondaryNoteOrnaments(secondary, voice, index)
-          .filter((id) => !section.randomOrnaments || (section.ornaments || []).includes(id));
+          .filter((id) => !(section.randomOrnaments || section.lineOrnamentsOnly) || (section.ornaments || []).includes(id));
       const allowed = ORNAMENT_SETTINGS.filter((item) => item.id === "stickings"
         ? sectionUsesStickings(section)
         : selected.includes(item.id))
@@ -1403,6 +1441,7 @@ function validatePrimaryRequirements(section, score) {
     throw new Error("Exercise cannot satisfy the configured played-note limits.");
   }
   if (getSectionPlayEveryNote(section) && voice.notes.some(isRest)) throw new Error("No-rest subsection contains rests.");
+  validateLineOrnamentsShown(section, voice);
 }
 
 function applySectionOrnamentPolicy(section, score) {
@@ -3017,15 +3056,21 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
             requiredSameHandRunLength,
           };
           const notationNotes = applyRhythmPoolOrnaments(section, finalNotationVoice).notes;
-          const ornamentedNotes = ensureRequiredOrnamentsOnNotes(
+          const ornamentedNotes = ensureLineOrnamentsOnSecondaryNotes(
             section,
-            removeDiddleBeforeConsecutiveCheese(
-              cleanSequentialOrnaments(
-                enforceDurationOrnamentRules(notationNotes, durationOrnamentOptions),
+            ensureRequiredOrnamentsOnNotes(
+              section,
+              removeDiddleBeforeConsecutiveCheese(
+                cleanSequentialOrnaments(
+                  enforceDurationOrnamentRules(notationNotes, durationOrnamentOptions),
+                  durationOrnamentOptions
+                ),
                 durationOrnamentOptions
               ),
+              lineIndex,
               durationOrnamentOptions
             ),
+            finalNotationVoice,
             lineIndex,
             durationOrnamentOptions
           );
@@ -3384,7 +3429,10 @@ function balancePrimaryGroupRests(layout, blockEvents, playedSlots, primaryBlock
       if (fullyPlayed) {
         indexes.forEach((index) => { playedSlots[index] = true; });
       } else {
-        const restIndex = Number(block.tuplet.type) >= 16 ? indexes[randomInteger(random, 0, count - 1)] : indexes[0];
+        // Nested notes are always played, so the rest goes on one of the host's own notes.
+        const hostIndexes = indexes.filter((_, offset) => !blockEvents[blockIndex][offset].nested);
+        const candidates = hostIndexes.length ? hostIndexes : indexes;
+        const restIndex = Number(block.tuplet.type) >= 16 ? candidates[randomInteger(random, 0, candidates.length - 1)] : candidates[0];
         playedSlots[restIndex] = false;
         if (indexes.every((index) => !playedSlots[index])) {
           playedSlots[indexes.find((index) => index !== restIndex)] = true;
@@ -3744,6 +3792,21 @@ function getPlayedShareRange(ramp, index, count) {
   return [lerp(ramp.start[0], ramp.end[0]), lerp(ramp.start[1], ramp.end[1])];
 }
 
+// A nested step's random ornaments, without diddles and cheese when no note can
+// carry them: a measure-long host of quarter or half notes whose nested group is
+// no faster than quarters leaves no secondary notes and no eighths in a tuplet.
+function getNestedStageRandomOrnaments(section, stage, nestedTuplet) {
+  const config = stage.randomOrnaments;
+  if (!config) return null;
+  const span = normalizeRhythmSpan(section.rhythmSpan);
+  const host = normalizeRhythmPool(section.primaryRhythms).tuplets[0];
+  if (!host || span.count / span.unit < 1) return config;
+  if (Math.max(Number(host.type), getNestedTupletNotation(nestedTuplet, host).type) >= 8) return config;
+  const from = config.from.filter((id) => id !== "diddles" && id !== "cheese");
+  if (!from.length) return config;
+  return { ...config, from, min: Math.min(config.min, Math.max(1, from.length - 1)), max: Math.min(config.max, from.length) };
+}
+
 function createUniqueGeneratedLine(input, section, samplePayload, index, usedExerciseShortForms) {
   const pdfSettings = normalizePdfSettings(section.pdfSettings);
   if (section.finalSubsectionPage !== false) {
@@ -3756,6 +3819,20 @@ function createUniqueGeneratedLine(input, section, samplePayload, index, usedExe
   if (ornamentSegment) section = { ...section, ornaments: ornamentSegment.ornaments };
   const nestedTuplet = getLineNestedTuplet(section, subsectionIndex);
   if (nestedTuplet) section = { ...section, lineNestedTuplet: nestedTuplet };
+  // Each nested variant steps through the page's stages, which set the
+  // exercise's density and ornaments (secondary notes included).
+  const nestedStage = nestedTuplet ? getLineNestedStage(section, subsectionIndex) : null;
+  if (nestedStage) {
+    section = {
+      ...section,
+      ornaments: nestedStage.ornaments,
+      randomOrnaments: getNestedStageRandomOrnaments(section, nestedStage, nestedTuplet),
+      playEveryNote: nestedStage.playEveryNote,
+      ...(nestedStage.fullPrimaryGroupShare != null ? { fullPrimaryGroupShare: nestedStage.fullPrimaryGroupShare } : {}),
+      ...(nestedStage.playedShare ? { playedShareRange: nestedStage.playedShare } : {}),
+      lineOrnamentsOnly: true,
+    };
+  }
   const ornamentSeed = section.subsectionId || section.id;
   const randomOrnaments = getLineRandomOrnaments(section, subsectionIndex, ornamentSeed);
   if (randomOrnaments) section = { ...section, ornaments: randomOrnaments };
@@ -3769,7 +3846,7 @@ function createUniqueGeneratedLine(input, section, samplePayload, index, usedExe
       section = { ...section, requiredSecondaryKeys: joined.filter(([, joinRow]) => joinRow === newest).map(([key]) => key) };
     }
   }
-  if (section.playedShareRamp) {
+  if (section.playedShareRamp && !section.playedShareRange) {
     section = { ...section, playedShareRange: getPlayedShareRange(section.playedShareRamp, subsectionIndex, section.subsectionLineCount) };
   }
   let lastError = null;
@@ -3935,6 +4012,7 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         secondaryRhythmExercises: normalizeSecondaryRhythmRows(pageSource.secondaryRhythmExercises),
         fillerSubdivisions: Array.isArray(pageSource.fillerSubdivisions) ? pageSource.fillerSubdivisions : null,
         nestedTupletPlan: normalizeNestedTupletPlan(pageSource.nestedTupletPlan),
+        nestedTupletStages: normalizeNestedTupletStages(pageSource.nestedTupletStages),
         chainPrimaryGroups: Boolean(pageSource.chainPrimaryGroups),
         fullPrimaryGroupShare: pageSource.fullPrimaryGroupShare ?? null,
         requirePrimaryRhythms: pageSource.requirePrimaryRhythms === false || pageSource.requirePrimaryRhythms === "any"
@@ -4280,6 +4358,7 @@ function createStoredPageGenerationSettings(pageConfig) {
     ...(pageConfig.secondaryRhythmExercises ? { secondaryRhythmExercises: pageConfig.secondaryRhythmExercises } : {}),
     ...(pageConfig.fillerSubdivisions ? { fillerSubdivisions: pageConfig.fillerSubdivisions } : {}),
     ...(pageConfig.nestedTupletPlan ? { nestedTupletPlan: pageConfig.nestedTupletPlan } : {}),
+    ...(pageConfig.nestedTupletStages ? { nestedTupletStages: pageConfig.nestedTupletStages } : {}),
     ...(pageConfig.chainPrimaryGroups ? { chainPrimaryGroups: true } : {}),
     ...(pageConfig.fullPrimaryGroupShare != null ? { fullPrimaryGroupShare: pageConfig.fullPrimaryGroupShare } : {}),
     ...(pageConfig.requirePrimaryRhythms !== true ? { requirePrimaryRhythms: pageConfig.requirePrimaryRhythms } : {}),

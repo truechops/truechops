@@ -23,19 +23,22 @@
               {
                 "notes": [
                   {
-                    "notes": [],
-                    "duration": 16,
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 4,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "r"
+                    "ornaments": "l"
                   },
                   {
                     "notes": [],
@@ -47,34 +50,28 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
                   },
                   {
-                    "notes": [],
-                    "duration": 16,
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
+                    "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 4,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "lf"
+                    "velocity": 1,
+                    "ornaments": "ra"
                   },
                   {
                     "notes": [
@@ -89,16 +86,7 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 4,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
@@ -107,21 +95,27 @@
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 5,
-                    "actual": 6,
+                    "end": 2,
+                    "actual": 3,
+                    "normal": 2
+                  },
+                  {
+                    "start": 2,
+                    "end": 6,
+                    "actual": 5,
                     "normal": 4
                   },
                   {
-                    "start": 5,
-                    "end": 10,
-                    "actual": 4,
+                    "start": 3,
+                    "end": 5,
+                    "actual": 2,
                     "normal": 3
                   },
                   {
-                    "start": 5,
-                    "end": 9,
-                    "actual": 4,
-                    "normal": 3
+                    "start": 6,
+                    "end": 8,
+                    "actual": 3,
+                    "normal": 2
                   }
                 ]
               }
@@ -131,8 +125,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r16 n16:r r8 n16:l r16 n4:r n4:lf n4:l n4:r n4:r |t0-5:6:4,5-10:4:3,5-9:4:3",
-  "updatedAt": "2026-10-04T22:01:00.545Z",
-  "sectionId": "nested-three-quarters-4",
+  "exerciseShortForm": "n8:l n4:l r8 n8:l n8:l n8:ra n4:l n8:r |t0-2:3:2,2-6:5:4,3-5:2:3,6-8:3:2",
+  "updatedAt": "2026-10-05T01:21:59.176Z",
+  "sectionId": "nested-two-quarters-5",
   "sectionPageNumber": 2
 }

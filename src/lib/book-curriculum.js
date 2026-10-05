@@ -55,11 +55,13 @@ function createStudySections(groupId, pdfSettings, tailUnit = "staffRows") {
 }
 
 // Span studies (over two beats, over three eighths) put every ornament topic on
-// one page, about three exercises each, to keep the book short.
+// one page, about three exercises each, to keep the book short. Past the
+// one-beat pages every exercise has stickings, so they start with accents and
+// stickings for seven exercises.
 const TWO_BEAT_FAMILY_IDS = ["eighth-triplets", "quintuplets", "septuplets", "nine-eight-thirtyseconds"];
 const TWO_BEAT_ORNAMENT_SEGMENTS = [
-  { ...STUDY_TOPICS[1], count: 4 },
-  ...STUDY_TOPICS.slice(2).map((topic) => ({ ...topic, count: 3 })),
+  { ...STUDY_TOPICS[2], count: 7 },
+  ...STUDY_TOPICS.slice(3).map((topic) => ({ ...topic, count: 3 })),
 ].map(({ title, ornaments, count }) => ({ title, ornaments, count }));
 // Secondary ornaments: everything on triplets, sixteenths, and quintuplets; only
 // flams on sextuplets; none on eighths, septuplets, thirty-seconds, or 9s.
@@ -184,9 +186,10 @@ function createSpanSections(groupId, pdfSettings, familyIds, spanLabel, {
   });
 }
 
-// Ornaments for the combination and random-subdivision pages: each exercise
-// picks 2-4 at random, never repeating the previous exercise's set.
-const RANDOM_ORNAMENTS = { from: ["stickings", "accents", "flams", "diddles", "cheese"], min: 2, max: 4 };
+// Ornaments for the combination and random-subdivision pages: stickings on every
+// exercise plus 1-3 others at random, never repeating the previous exercise's set.
+const RANDOM_ORNAMENTS = { always: ["stickings"], from: ["accents", "flams", "diddles", "cheese"], min: 1, max: 3 };
+const RANDOM_ORNAMENT_IDS = [...RANDOM_ORNAMENTS.always, ...RANDOM_ORNAMENTS.from];
 
 // One-beat rhythms in printed form. The pool is generated over one quarter note,
 // so longer groupings are listed as they print and keep their own note values.
@@ -288,7 +291,7 @@ function createCombinationSection({ groupId, id, title, rhythmSpan, familyId, st
       pdfSettings,
       generationSettings: {
         prompt: "", sampleJson: "",
-        ornaments: RANDOM_ORNAMENTS.from,
+        ornaments: RANDOM_ORNAMENT_IDS,
         randomOrnaments: RANDOM_ORNAMENTS,
         secondaryRhythmRows,
         // Each exercise includes the most recently added subdivision.
@@ -416,7 +419,7 @@ function createFinalStudies(pdfSettings) {
         pdfSettings,
         generationSettings: {
           prompt: "", sampleJson: "",
-          ornaments: RANDOM_ORNAMENTS.from,
+          ornaments: RANDOM_ORNAMENT_IDS,
           randomOrnaments: RANDOM_ORNAMENTS,
           requirePrimaryRhythms: "any",
           secondaryRhythmPhases,
@@ -440,11 +443,20 @@ function createFinalStudies(pdfSettings) {
 }
 
 // Nested tuplets: for each tuplet over one, two, three, or four quarter notes,
-// two pages where every exercise has that tuplet with a smaller tuplet nested in
-// part of it, cycling systematically through the nested variants (see
-// getNestedTupletVariants). Easy basic notes fill the rest of the measure.
-const NESTED_PAGES = 2;
-const NESTED_EXERCISES = 22 * NESTED_PAGES;
+// at least three pages where every exercise has that tuplet with a smaller tuplet
+// nested in part of it, going systematically through the nested variants (see
+// getNestedTupletVariants). Each variant's exercises step through the stages
+// below, so a host with many variants gets more pages. Easy basic notes fill the
+// rest of the measure.
+const NESTED_MIN_PAGES = 3;
+const NESTED_EXERCISES_PER_PAGE = 22;
+const NESTED_TUPLET_STAGES = [
+  { title: "Every note, stickings", playEveryNote: true, ornaments: ["stickings"] },
+  { title: "Every note, accents", playEveryNote: true, ornaments: ["stickings", "accents"] },
+  { title: "Sparse, accents", playEveryNote: false, fullPrimaryGroupShare: 0, playedShare: [0.5, 0.75], ornaments: ["stickings", "accents"] },
+  { title: "Every note, ornaments", playEveryNote: true,
+    randomOrnaments: { always: ["stickings"], from: ["accents", "flams", "diddles", "cheese"], min: 2, max: 4 } },
+];
 const NESTED_HOST_SPANS = [
   { id: "one-quarter", title: "over one quarter note", label: "one quarter", rhythmSpan: { count: 1, unit: 4 },
     familyIds: ["eighth-triplets", "quintuplets", "sextuplets", "septuplets", "nine-eight-thirtyseconds"] },
@@ -454,10 +466,15 @@ const NESTED_HOST_SPANS = [
   }),
 ];
 
+// Enough pages for every variant to go through every stage.
+function getNestedPageCount(variants) {
+  return Math.max(NESTED_MIN_PAGES, Math.ceil(variants.length * NESTED_TUPLET_STAGES.length / NESTED_EXERCISES_PER_PAGE));
+}
+
 // Spread the exercises evenly over the variants, in order.
-function createNestedTupletPlan(variants) {
-  const base = Math.floor(NESTED_EXERCISES / variants.length);
-  const extra = NESTED_EXERCISES % variants.length;
+function createNestedTupletPlan(variants, exercises) {
+  const base = Math.floor(exercises / variants.length);
+  const extra = exercises % variants.length;
   return variants.map((variant, index) => ({ ...variant, count: base + (index < extra ? 1 : 0) }));
 }
 
@@ -473,6 +490,8 @@ function createNestedStudies(pdfSettings) {
     const host = getSpanPrimaryRhythms(primaryRhythms, span.rhythmSpan).tuplets[0];
     const id = `${groups[spanIndex].id}-${family.notesPerQuarter}`;
     const limits = getPoolOrnamentLimits(getSpanPrimaryRhythms(primaryRhythms, span.rhythmSpan));
+    const variants = getNestedTupletVariants(host);
+    const pageCount = getNestedPageCount(variants);
     return {
       id, groupId: groups[spanIndex].id, density: "mixed", rhythmSpan: span.rhythmSpan,
       title: span.id === "one-quarter" ? capitalize(POOL_RHYTHMS[ONE_BEAT_KEYS.find((key) =>
@@ -481,16 +500,16 @@ function createNestedStudies(pdfSettings) {
       primaryRhythms,
       secondaryRhythms: normalizeRhythmPool({ ...secondaryPool, rhythmOrnaments: getSecondaryRhythmOrnaments(secondaryPool) }),
       pdfSettings,
-      pages: Array.from({ length: NESTED_PAGES }, () => ({
+      pages: Array.from({ length: pageCount }, () => ({
         subsectionId: `${id}-nested`,
-        subsectionPageCount: NESTED_PAGES,
+        subsectionPageCount: pageCount,
         title: "Nested tuplets",
         pdfSettings,
         generationSettings: {
           prompt: "", sampleJson: "",
-          ornaments: RANDOM_ORNAMENTS.from,
-          randomOrnaments: RANDOM_ORNAMENTS,
-          nestedTupletPlan: createNestedTupletPlan(getNestedTupletVariants(host)),
+          ornaments: RANDOM_ORNAMENT_IDS,
+          nestedTupletPlan: createNestedTupletPlan(variants, pageCount * NESTED_EXERCISES_PER_PAGE),
+          nestedTupletStages: NESTED_TUPLET_STAGES,
           ...(Object.keys(limits).length ? { primaryRhythmOrnaments: limits } : {}),
           fullPrimaryGroupShare: 0.5,
           minPlayedNotes: 0,
@@ -508,7 +527,7 @@ function createNestedStudies(pdfSettings) {
 }
 
 module.exports = {
-  STUDY_TOPICS, STUDY_FAMILIES, TWO_BEAT_ORNAMENT_SEGMENTS,
+  STUDY_TOPICS, STUDY_FAMILIES, TWO_BEAT_ORNAMENT_SEGMENTS, RANDOM_ORNAMENTS, NESTED_TUPLET_STAGES,
   SPAN_STUDIES, createStudySections, createSpanStudy, createTwoBeatSections, createThreeEighthsSections,
   createTupletCombinationStudies, createNestedStudies, createFinalStudies,
 };

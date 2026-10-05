@@ -9,7 +9,7 @@ const babel = require("@babel/core");
 const { migrateBookStructure } = require("../../src/lib/book-structure");
 const generator = require("../generate-ai-book");
 const { createStudySections, createSpanStudy, createTupletCombinationStudies, createNestedStudies, createFinalStudies, SPAN_STUDIES, STUDY_TOPICS, STUDY_FAMILIES } = require("../../src/lib/book-curriculum");
-const { getLineStickingSettings, getSpanPrimaryRhythms, getNestedTupletNotation, getNestedTupletVariants } = require("../../src/lib/book-structure");
+const { getLineStickingSettings, getSpanPrimaryRhythms, getNestedTupletNotation, getNestedTupletVariants, getLineNestedStage, getLineRandomOrnaments } = require("../../src/lib/book-structure");
 
 // Load the same ES modules Next uses without starting a server.
 const originalLoader = Module._extensions[".js"];
@@ -26,6 +26,8 @@ Module._extensions[".js"] = (module, file) => {
 const { normalizeBook, getPageGenerationSettings } = require("../../src/components/book-builder/book-data");
 
 const pool = (subdivisions = [], tuplets = [], ornaments = []) => ({ subdivisions, tuplets, ornaments });
+// Every struck note carries a sticking (r or l).
+const hasStickings = (voice) => voice.notes.every((note) => !note.notes.length || /[rl]/.test(note.ornaments || ""));
 const triplet = { actual: 3, normal: 2, type: 8 };
 
 function legacyBook() {
@@ -220,9 +222,12 @@ test("span pages cycle ornament topics, grow the secondary pool, and start tuple
       });
     });
     const required = (index) => page.ornamentSegments.flatMap((segment) => Array(segment.count).fill(segment.ornaments))[index];
-    assert.deepEqual(required(3), ["accents"]);
-    assert.deepEqual(required(4), ["stickings", "accents"]);
+    // Past the one-beat pages every exercise has stickings: accents with stickings open the page.
+    assert.deepEqual(required(0), ["stickings", "accents"]);
+    assert.deepEqual(required(6), ["stickings", "accents"]);
+    assert.deepEqual(required(7), ["stickings", "accents", "diddles"]);
     assert.deepEqual(required(21), ["stickings", "accents", "flams", "diddles", "cheese"]);
+    voices.forEach((voice, index) => assert(hasStickings(voice), `${section.title} exercise ${index + 1} lacks stickings`));
   }
 });
 
@@ -262,6 +267,7 @@ test("tuplet combinations keep the section's tuplet in every exercise and grow t
     generator.createUniqueGeneratedLine(null, page, page.sampleJson, index, seen).score.measures[0].parts[0].voices[0]))
     .map((voice, index) => {
       assert(voice.tuplets.some((tuplet) => tuplet.actual === 3 && tuplet.normal === 2), `exercise ${index + 1} lacks triplets`);
+      assert(hasStickings(voice), `exercise ${index + 1} lacks stickings`);
       return voice.tuplets.map((tuplet) => tuplet.actual);
     });
   // Sextuplets join the pool at row 4; nontuplets only near the end.
@@ -294,6 +300,9 @@ test("the final section keeps at least one grouping of its category in every exe
       assert(voice.tuplets.some((tuplet) => [3, 5, 7, 9].includes(tuplet.actual) &&
         voice.notes.slice(tuplet.start, tuplet.end).reduce((sum, note) => sum + 4 / note.duration * (note.dots ? 1.5 : 1), 0) *
           tuplet.normal / tuplet.actual > 1.99), `exercise lacks a two-quarter grouping`);
+      assert(hasStickings(voice), "exercise lacks stickings");
+      const chosen = getLineRandomOrnaments(page, index + page.subsectionLineOffset, page.subsectionId);
+      assert(chosen.includes("stickings") && chosen.length >= 2 && chosen.length <= 4, chosen.join());
     }
   });
 });
@@ -329,22 +338,38 @@ test("nested tuplet pages nest each planned variant inside the primary group and
   assert.equal(groups.length, 4);
   assert.equal(sections.length, 5 + SPAN_STUDIES.filter((study) => ["two-quarters", "three-quarters", "four-quarters"].includes(study.groupId))
     .reduce((sum, study) => sum + study.familyIds.length, 0));
-  assert(sections.every((section) => section.pages.length === 2 && section.pages[0].generationSettings.nestedTupletPlan));
+  // Enough pages for every variant to take all four steps: at least three per host.
+  sections.forEach((section) => {
+    const host = getSpanPrimaryRhythms(section.primaryRhythms, section.rhythmSpan).tuplets[0];
+    const variants = getNestedTupletVariants(host).length;
+    assert.equal(section.pages.length, Math.max(3, Math.ceil(variants * 4 / 22)), section.id);
+    assert(section.pages[0].generationSettings.nestedTupletPlan.every((variant) => variant.count >= 4), section.id);
+  });
+  assert.equal(sections.find((section) => section.id === "nested-four-quarters-9").pages.length, 4);
+  assert.equal(sections.reduce((sum, section) => sum + section.pages.length, 0), 49);
   const quintuplets = sections.find((section) => section.id === "nested-two-quarters-5");
   const config = generator.createGenerationConfig({}, { structureVersion: 3, groups, sections: [quintuplets] });
   const host = getSpanPrimaryRhythms(quintuplets.primaryRhythms, quintuplets.rhythmSpan).tuplets[0];
   const plan = quintuplets.pages[0].generationSettings.nestedTupletPlan;
-  assert.equal(plan.reduce((sum, variant) => sum + variant.count, 0), 44);
+  assert.equal(plan.reduce((sum, variant) => sum + variant.count, 0), 66);
   const seen = new Set();
   let position = 0;
   for (const [pageIndex, page] of config.sections[0].pages.entries()) {
-    for (let index = 0; index < 22; index += 3) {
+    for (let index = 0; index < 22; index += 1) {
       const exercise = pageIndex * 22 + index;
       let end = 0;
       const variant = plan.find((candidate) => (end += candidate.count) > exercise);
       const notation = getNestedTupletNotation(variant, host);
       const voice = generator.createUniqueGeneratedLine(null, page, page.sampleJson, index, seen).score.measures[0].parts[0].voices[0];
       assert(Math.abs(nestedVoiceQuarters(voice) - 4) < 1e-9, `exercise ${exercise + 1} is not 4/4`);
+      // Each variant steps through: every note with stickings, with accents, sparse with accents, with ornaments.
+      const stage = getLineNestedStage(page, exercise);
+      const ornaments = voice.notes.flatMap((note) => [...(note.ornaments || "")].filter((char) => "afdc".includes(char)));
+      assert(hasStickings(voice), `exercise ${exercise + 1} lacks stickings`);
+      assert.equal(voice.notes.some((note) => !note.notes.length), !stage.playEveryNote, `exercise ${exercise + 1} density (${stage.title})`);
+      if (stage.title === "Every note, stickings") assert.equal(ornaments.length, 0);
+      if (stage.ornaments.join() === "stickings,accents") assert(ornaments.length && ornaments.every((char) => char === "a"), `exercise ${exercise + 1} accents`);
+      if (stage.randomOrnaments) assert(ornaments.length, `exercise ${exercise + 1} shows no ornaments`);
       assert(nestedPairs(voice).some(({ outer, inner }) => outer.actual === host.actual && outer.normal === host.normal &&
         inner.actual === notation.actual && inner.normal === notation.normal),
         `exercise ${exercise + 1} lacks ${variant.actual} over ${variant.hostNotes}`);
@@ -366,6 +391,21 @@ test("the website generator nests tuplets on request and the composer records ne
     assert(nestedPairs(voice).length, "generated measure lacks a nested tuplet");
     assert(Math.abs(nestedVoiceQuarters(voice) - 4) < 1e-9);
   }
+  // With steps, each nested tuplet takes four measures: plain, accents, sparse accents, ornaments.
+  const stepped = normalizeExerciseConfig({ ...config, nestedSteps: true });
+  const ornamentChars = (voice) => voice.notes.flatMap((note) => [...(note.ornaments || "")].filter((char) => "afdc".includes(char)));
+  const rests = (voice) => voice.notes.some((note) => !note.notes.length);
+  generateExerciseMeasures(stepped, 8).measures.map((measure) => measure.parts[0].voices[0]).forEach((voice, index) => {
+    const step = index % 4;
+    assert.equal(rests(voice), step === 2, `measure ${index + 1} density`);
+    if (step === 0) assert.equal(ornamentChars(voice).length, 0);
+    if (step === 1 || step === 2) assert(ornamentChars(voice).length && ornamentChars(voice).every((char) => char === "a"));
+    if (step === 3) assert(ornamentChars(voice).length);
+  });
+  // Measures added one at a time continue the plan: start 4 is the second nested tuplet's first step.
+  const second = generateExerciseMeasures(stepped, 1, 4).measures[0].parts[0].voices[0];
+  assert.equal(ornamentChars(second).length, 0);
+  assert(nestedPairs(second).some(({ inner }) => inner.actual === 5));
   const fixed = normalizeExerciseConfig({ ...config, nestedTuplets: { actual: 7, hostNotes: 2 } });
   assert.deepEqual(fixed.nestedTuplets, { actual: 7, hostNotes: 2 });
   assert.equal(normalizeExerciseConfig({ ...config, nestedTuplets: { actual: 4, hostNotes: 2 } }).nestedTuplets, null);

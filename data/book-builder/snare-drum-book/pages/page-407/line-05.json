@@ -1,7 +1,7 @@
 {
   "pageNumber": 407,
   "lineNumber": 5,
-  "title": "Random subdivisions 5",
+  "title": "Nested tuplets 5",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -23,10 +23,13 @@
               {
                 "notes": [
                   {
-                    "notes": [],
+                    "notes": [
+                      "C5"
+                    ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "lc"
                   },
                   {
                     "notes": [
@@ -34,26 +37,8 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "rfa"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lfa"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "rfa"
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -68,10 +53,10 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "r"
+                    "ornaments": "rc"
                   },
                   {
                     "notes": [
@@ -80,7 +65,25 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "rd"
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "lf"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "rdc"
                   },
                   {
                     "notes": [
@@ -98,6 +101,12 @@
                     "end": 8,
                     "actual": 9,
                     "normal": 8
+                  },
+                  {
+                    "start": 2,
+                    "end": 6,
+                    "actual": 4,
+                    "normal": 5
                   }
                 ]
               }
@@ -107,8 +116,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r8 n8:raf n8:laf n8:raf n8:l n4:r n8:rd n8:l |t0-8:9:8",
-  "updatedAt": "2026-10-04T22:01:00.545Z",
-  "sectionId": "random-subdivisions-four-quarters",
-  "sectionPageNumber": 1
+  "exerciseShortForm": "n8:lc n8:r n8:l n8:rc n8:l n8:lf n8:rdc n8:l |t0-8:9:8,2-6:4:5",
+  "updatedAt": "2026-10-05T01:21:59.176Z",
+  "sectionId": "nested-four-quarters-9",
+  "sectionPageNumber": 3
 }

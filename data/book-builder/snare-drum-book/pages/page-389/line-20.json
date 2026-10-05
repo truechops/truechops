@@ -28,8 +28,8 @@
                     ],
                     "duration": 4,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "la"
+                    "velocity": 0.5,
+                    "ornaments": "lf"
                   },
                   {
                     "notes": [
@@ -39,24 +39,6 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 4,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 4,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "ra"
                   },
                   {
                     "notes": [
@@ -89,24 +71,51 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
+                    "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "ra"
+                    "velocity": 0.5,
+                    "ornaments": "rf"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "rdc"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 8,
-                    "actual": 7,
-                    "normal": 4
+                    "end": 5,
+                    "actual": 4,
+                    "normal": 3
                   },
                   {
-                    "start": 0,
-                    "end": 7,
-                    "actual": 7,
-                    "normal": 6
+                    "start": 1,
+                    "end": 5,
+                    "actual": 4,
+                    "normal": 3
                   }
                 ]
               }
@@ -116,8 +125,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n4:la n4:r n4:l n4:ra n4:r n4:l n4:l n4:ra |t0-8:7:4,0-7:7:6",
-  "updatedAt": "2026-10-04T22:01:00.545Z",
-  "sectionId": "nested-four-quarters-7",
-  "sectionPageNumber": 2
+  "exerciseShortForm": "n4:lf n4:r n4:r n4:l n4:l n16:rf n16:rdc n16:l n16:r |t0-5:4:3,1-5:4:3",
+  "updatedAt": "2026-10-05T01:21:59.176Z",
+  "sectionId": "nested-three-quarters-4",
+  "sectionPageNumber": 3
 }

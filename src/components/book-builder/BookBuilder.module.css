@@ -720,6 +720,7 @@
 
 .topicRow > input,
 .topicRow > select,
+.stageOrnaments > select,
 .topicCount input {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -728,6 +729,13 @@
 }
 
 .topicRow .ornamentToggles {
+  grid-column: 1 / -1;
+}
+
+.stageOrnaments,
+.randomOrnamentFields {
+  display: grid;
+  gap: 6px;
   grid-column: 1 / -1;
 }
 

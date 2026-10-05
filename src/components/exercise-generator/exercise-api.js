@@ -58,11 +58,11 @@ export async function deleteConfig(id, signedIn) {
   if (!response.ok) throw new Error(payload.error || "Could not delete the configuration.");
 }
 
-export async function generateMeasures(config, count) {
+export async function generateMeasures(config, count, start = 0) {
   const { response, payload } = await request("/api/exercise-generator", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ config, count }),
+    body: JSON.stringify({ config, count, start }),
   });
   if (!response.ok) throw new Error(payload.error || "Could not generate exercises.");
   return payload;

@@ -34,14 +34,32 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "rd"
+                    "velocity": 1,
+                    "ornaments": "lda"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
                     "duration": 4,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "ra"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 4,
+                    "dots": 1,
+                    "velocity": 1,
+                    "ornaments": "ra"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
@@ -50,28 +68,10 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
-                    "dots": 1,
-                    "velocity": 0.5,
-                    "ornaments": "rf"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "lf"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "rf"
+                    "ornaments": "r"
                   },
                   {
                     "notes": [],
@@ -128,8 +128,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r8 n8:rd n4:l n4.:rf n16:lf n16:rf r16 n16:r n16:r n16:l |t0-4:7:6,4-10:6:4",
-  "updatedAt": "2026-10-04T22:01:00.545Z",
+  "exerciseShortForm": "r8 n8:lad n4:ra n4.:ra n16:l n16:r r16 n16:r n16:r n16:l |t0-4:7:6,4-10:6:4",
+  "updatedAt": "2026-10-05T01:21:59.176Z",
   "sectionId": "combinations-three-quarters-7",
   "sectionPageNumber": 1
 }

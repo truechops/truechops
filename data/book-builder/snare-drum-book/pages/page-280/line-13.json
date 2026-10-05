@@ -24,7 +24,7 @@
                 "notes": [
                   {
                     "notes": [],
-                    "duration": 8,
+                    "duration": 4,
                     "dots": 0,
                     "velocity": 0.5
                   },
@@ -32,52 +32,43 @@
                     "notes": [
                       "C5"
                     ],
+                    "duration": 4,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "lfa"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
                     "duration": 8,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "rca"
+                    "ornaments": "lca"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
                     "duration": 4,
+                    "dots": 1,
+                    "velocity": 1,
+                    "ornaments": "ra"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "r"
+                    "ornaments": "rf"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "la"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "rdca"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
@@ -86,7 +77,7 @@
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 6,
+                    "end": 4,
                     "actual": 8,
                     "normal": 7
                   }
@@ -98,8 +89,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r8 n8:rac n4:r n4:la n8:r n8:radc n8:l |t0-6:8:7",
-  "updatedAt": "2026-10-04T22:01:00.545Z",
+  "exerciseShortForm": "r4 n4:laf n8:lac n4.:ra n16:rf n16:l |t0-4:8:7",
+  "updatedAt": "2026-10-05T01:21:59.176Z",
   "sectionId": "combinations-seven-eighths-8",
   "sectionPageNumber": 1
 }

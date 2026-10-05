@@ -61,7 +61,9 @@ function getConfigNestedVariants(config) {
 }
 
 // "cycle" walks through every variant, one per measure; { actual, hostNotes }
-// nests the same variant in every measure; null turns nesting off.
+// nests the same variant in every measure; null turns nesting off. With
+// nestedSteps, each variant takes the book's four steps (every note with
+// stickings, accents, sparse with accents, ornaments), one measure each.
 function normalizeNestedSetting(value, config) {
   if (!value) return null;
   const variants = getConfigNestedVariants(config);
@@ -94,6 +96,7 @@ function normalizeExerciseConfig(value = {}) {
     rhythmSpan,
     primaryRhythms,
     nestedTuplets: normalizeNestedSetting(source.nestedTuplets, { primaryRhythms, rhythmSpan }),
+    nestedSteps: Boolean(source.nestedSteps && normalizeNestedSetting(source.nestedTuplets, { primaryRhythms, rhythmSpan })),
     secondaryRhythms: secondary,
     ornaments: ORNAMENT_IDS.filter((id) => (source.ornaments || []).includes(id)),
     playEveryNote,
@@ -139,6 +142,7 @@ function exerciseConfigFromBookPage(page, pageRef = {}) {
     maxSameHandStickingRun: settings.maxSameHandStickingRun,
     chainPrimaryGroups: settings.chainPrimaryGroups,
     nestedTuplets: Array.isArray(settings.nestedTupletPlan) ? "cycle" : null,
+    nestedSteps: Array.isArray(settings.nestedTupletPlan) && Array.isArray(settings.nestedTupletStages),
   });
 }
 
