@@ -24,7 +24,13 @@
                 "notes": [
                   {
                     "notes": [],
-                    "duration": 16,
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [],
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5
                   },
@@ -41,10 +47,64 @@
                     "notes": [
                       "C5"
                     ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "rf"
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "rdc"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "lc"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -80,7 +140,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "rc"
+                    "ornaments": "lc"
                   },
                   {
                     "notes": [
@@ -89,24 +149,21 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "rdc"
+                    "ornaments": "r"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 2,
-                    "end": 9,
-                    "actual": 7,
-                    "normal": 13
+                    "start": 1,
+                    "end": 5,
+                    "actual": 4,
+                    "normal": 3
+                  },
+                  {
+                    "start": 5,
+                    "end": 14,
+                    "actual": 9,
+                    "normal": 7
                   }
                 ]
               }
@@ -116,8 +173,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r16 n8:r n16:rf n16:lc n16:r n16:l n16:rc n16:l n16:rdc |t2-9:7:13",
-  "updatedAt": "2026-10-05T01:21:59.176Z",
-  "sectionId": "random-subdivisions-thirteen-sixteenths",
-  "sectionPageNumber": 3
+  "exerciseShortForm": "r8 r8 n8:r n8:r n8:l n16:l n16:rdc n16:l n16:lc n16:r n16:lc n16:r n16:l n16:lc n16:r |t1-5:4:3,5-14:9:7",
+  "updatedAt": "2026-10-05T02:14:21.155Z",
+  "sectionId": "random-subdivisions-seven-sixteenths",
+  "sectionPageNumber": 2
 }

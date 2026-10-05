@@ -2,7 +2,7 @@
 
 In `/book-builder`, span groups contain rhythm sections, and each section contains subsections. A subsection is one page by default; set **Pages in this subsection** to spread it over more pages. Each section selects primary rhythms and an optional pool of secondary rhythms. Each subsection has its own title, primary ornaments, played-note limits, sticking rules, and print layout.
 
-The span group sets a count and note value, such as 1 quarter, 2 eighths, or 3 sixteenths. Primary groups retain their note count and stretch/compress across that span, written in standard tuplet notation: four notes over three sixteenths produce a 4:3 group, three notes over two quarters a quarter-note triplet, and nine over two quarters 9:8 sixteenths. A count that matches the span exactly is written as plain notes. Tuplets that span whole beats always start on a beat. Secondary rhythms fill the remaining space in the 4/4 exercise. A full/no-rest page needs suitable secondary rhythms if its primary span cannot fill 4/4 evenly. Use **Add group** or **Duplicate group** to organize studies over different spans.
+The span group sets a count and note value, such as 1 quarter, 2 eighths, or 3 sixteenths. Primary groups retain their note count and stretch/compress across that span, written in standard tuplet notation: four notes over three sixteenths produce a 4:3 group, three notes over two quarters a quarter-note triplet, and nine over two quarters 9:8 sixteenths. A count that matches the span exactly is written as plain notes. Tuplets that span whole beats start on a beat, except in the off-beat section. Secondary rhythms fill the remaining space in the 4/4 exercise. A full/no-rest page needs suitable secondary rhythms if its primary span cannot fill 4/4 evenly. Use **Add group** or **Duplicate group** to organize studies over different spans.
 
 - Every exercise contains each selected primary subdivision and tuplet type, with every selected primary ornament represented on the primary rhythms.
 - Secondary rhythms are drawn randomly to fill the remaining space. Their ornaments are optional and apply only to secondary rhythms.
@@ -53,6 +53,7 @@ The secondary pool holds every one-beat rhythm (eighths, sixteenths, thirty-seco
 Configure all of this in the subsection editor:
 
 - **Ornaments by rhythm** (in the section's Secondary rhythms box) sets which optional ornaments each secondary rhythm may carry. Triplets, sixteenths, and quintuplets take all of them; sextuplets take flams; the rest take none.
+- **Ornament density (% of the book's)** scales the book's ornament density for one subsection (blank is 100).
 - **Ornament topics, in order** lists each topic's title, exercise count, and primary ornaments, with a running total against the page's exercise count. **Use one set for the whole page** returns to a single ornament choice.
 - **Ornaments, chosen at random for each exercise** (the combination, nested, and final pages) sets the ornaments **On every exercise** (stickings) and the ones **chosen at random**, with how many each exercise adds.
 - **Secondary rhythms by row** sets the printed row where each secondary rhythm joins the pool (or Never). A rhythm stays available on every later row.
@@ -63,10 +64,21 @@ Notation rules for every page:
 - Stickings follow each exercise's topic: when the topic includes stickings, every note has one; otherwise none do. Only the one-beat pages at the start of the book, which give each ornament topic its own page, have topics without stickings (Nothing, Accents). Every exercise after them has stickings.
 - Diddles and cheese never go on quarter notes or on regular eighths; eighths inside a tuplet are allowed. On successive notes there is no diddle directly before or after a cheese, and no flam directly after a diddle or cheese.
 - Consecutive rests merge into the largest rest, including inside sixteenth-note and faster tuplets. In 32nd-note tuplets, a 32nd note followed by a 32nd rest becomes one sixteenth note (plain 32nds already merge this way within a beat). Two quarter rests on beats one and two, or three and four, become a half rest.
-- Eighth-note and shorter notes inside a tuplet share one beam, drawn across rests.
+- Eighth-note and shorter notes inside a tuplet share one beam, drawn across rests. Plain notes are beamed by beat, counted from the start of the measure, so the notes before and after a tuplet that starts or ends mid-beat break at the real beats.
 - Tuplet brackets show only the count (3, 5, 6, 7, 9) for standard groups and a ratio (4:3, 5:3, 7:6, 8:6) otherwise.
 
 The original eighth-note and mixed-tuplet studies remain alongside this curriculum. Secondary pools start empty. Printed contents list span groups, rhythm sections, and subsections across as many contents pages as necessary.
+
+## Tuplets off the beat
+
+After the span sections and before the combinations, each one-beat tuplet (triplets, quintuplets, sextuplets, septuplets, nontuplets) gets two pages where it starts off the beat (`createOffbeatStudies` in `src/lib/book-curriculum.js`): on the "e" for exercises 1–15, the "+" for 16–30, and the "a" for 31–44 (**Off-beat starts, in order** in the subsection editor). The group still lasts one quarter note, so it ends at the same point of the next beat. Sparse sixteenths lead into it, complete its beats, and fill the rest of the measure, so the placement reads against the sixteenth-note grid and the rests (merged into eighths and dotted values) make syncopations; the group can fall in beats 1–2, 2–3, or 3–4. Each start goes through four steps (`OFFBEAT_STEPS`):
+
+1. The tuplet in full with stickings, and 55–80% of the notes played around it.
+2. The same, with accents.
+3. Sparse with accents: 50–75% of the notes, with a rest in every primary group (in 9:8 groups a note and the rest after it read as one sixteenth).
+4. The tuplet in full with sparse notes around it, and stickings plus 2–4 other ornaments chosen at random.
+
+Ornaments are busier than in the rest of the book (**Ornament density (% of the book's)** is 130 on these pages). Every tuplet takes accents here, so the accent steps accent the group itself, even 7s and 9s; septuplets and nontuplets still take no flams, diddles, or cheese, and sextuplets only flams, so those land on the sixteenths.
 
 ## Tuplet combinations
 
@@ -82,7 +94,7 @@ Before the final section, each tuplet over one, two, three, and four quarter not
 
 Ratios that are just shorter regular notes (4 over two, 2 over four) are skipped, as are variants that would need notes shorter than 32nds (so 9 and 11 over two sextuplet sixteenths do not appear). The nested bracket uses the host's note value, or the next shorter value when the nested group has at least twice as many notes: 5 over two triplet eighths is written 5:4 sixteenths.
 
-The variants run in order (**Nested tuplets, in order** in the subsection editor), and each variant's exercises step through four stages (**Steps for each nested tuplet**):
+The variants run in order (**Nested tuplets, in order** in the subsection editor), and each variant's exercises step through four stages (**Steps for each nested tuplet**; the off-beat section uses the same steps for each start):
 
 1. Every note, stickings only.
 2. Every note, stickings and accents.
@@ -93,8 +105,8 @@ A variant's exercises split evenly over the steps, and any extra exercises go to
 
 The renderer draws the nested bracket inside the host's bracket (the stave has extra room above row one for the outer bracket), and playback multiplies the ratio of every tuplet that contains a note.
 
-- **Book builder:** **Nested tuplets** in the subsection editor turns nesting on for any page whose primary rhythm is a tuplet. Choose each variant and its exercise count, reorder them, or use **Spread all evenly**. Below the variants, edit each step's title, density (every note; sparse; or 50–75% of notes with a rest in every primary group), and ornaments (a fixed set, or random with ornaments on every exercise). **Use the page's ornaments and density** removes the steps.
-- **Exercise generator:** **Nested tuplets** offers None, each variant in turn, or one specific variant. **Steps** gives each nested tuplet four measures, one per step, in place of the configuration's density and ornaments; a nested book page's own configuration has it on. In the composer, each **Add measure** continues to the next step or nested tuplet.
+- **Book builder:** **Nested tuplets** in the subsection editor turns nesting on for any page whose primary rhythm is a tuplet. Choose each variant and its exercise count, reorder them, or use **Spread all evenly**. Below the variants, edit each step's title, density (every note; primary groups in full with sparse notes around them; sparse; or 50–75% of notes with a rest in every primary group), and ornaments (a fixed set, or random with ornaments on every exercise). **Use the page's ornaments and density** removes the steps.
+- **Exercise generator:** **Nested tuplets** offers None, each variant in turn, or one specific variant, and **Start the tuplet** offers the beat, the "e", "+", or "a", or each in turn (one or the other, not both). **Steps** gives each nested tuplet or start four measures, one per step, in place of the configuration's density and ornaments; a nested or off-beat book page's own configuration has it on. Off-beat groups get sixteenths around them when the configuration has no plain secondary subdivision. In the composer, each **Add measure** continues to the next step, nested tuplet, or start.
 - **Composer:** with a tuplet selected, clicking a note inside an existing tuplet nests the new tuplet there (one level deep).
 
 ## Random subdivisions and ornaments

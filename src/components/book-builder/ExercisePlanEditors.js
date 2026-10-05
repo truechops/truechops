@@ -1,9 +1,9 @@
 import { FaArrowDown, FaArrowUp, FaPlus, FaTrash } from "react-icons/fa";
 import { ORNAMENT_OPTIONS, SUBDIVISION_OPTIONS, TUPLET_TYPE_OPTIONS } from "./book-data";
 import {
-  getNestedStageCounts, getNestedTupletVariants, getSpanPrimaryRhythms, nestedTupletLabel, normalizeRhythmPool, rhythmOrnamentKey,
+  OFFBEAT_LABELS, getStepCounts, getNestedTupletVariants, getSpanPrimaryRhythms, nestedTupletLabel, normalizeRhythmPool, rhythmOrnamentKey,
 } from "../../lib/book-structure";
-import { NESTED_TUPLET_STAGES, RANDOM_ORNAMENTS } from "../../lib/book-curriculum";
+import { EXERCISE_STEPS, RANDOM_ORNAMENTS } from "../../lib/book-curriculum";
 import styles from "./BookBuilder.module.css";
 
 // Editors for a page's exercise plan: ornament topics by exercise, the simpler
@@ -268,6 +268,11 @@ function evenNestedPlan(variants, exerciseCount) {
 
 const DENSITY_CHOICES = [
   { id: "every", label: "Every note", updates: { playEveryNote: true, fullPrimaryGroupShare: null, playedShare: null } },
+  {
+    id: "full-groups",
+    label: "Primary groups in full, sparse around them (55–80% of notes)",
+    updates: { playEveryNote: false, fullPrimaryGroupShare: 1, playedShare: [0.55, 0.8] },
+  },
   { id: "sparse", label: "Sparse", updates: { playEveryNote: false, fullPrimaryGroupShare: null, playedShare: null } },
   {
     id: "sparse-rests",
@@ -278,17 +283,18 @@ const DENSITY_CHOICES = [
 
 function stageDensity(stage) {
   if (stage.playEveryNote) return "every";
+  if (stage.fullPrimaryGroupShare === 1) return "full-groups";
   return stage.fullPrimaryGroupShare === 0 ? "sparse-rests" : "sparse";
 }
 
 // The steps every nested tuplet goes through, each with its own density and
 // ornaments (on primary and secondary notes).
-function NestedStagesEditor({ stages, exampleCount, onChange }) {
+function ExerciseStepsEditor({ stages, exampleCount, runName, onChange }) {
   if (!stages) {
     return (
       <div className={styles.topicFooter}>
-        <button className={styles.button} onClick={() => onChange(NESTED_TUPLET_STAGES)} type="button">
-          Step each nested tuplet through density and ornaments
+        <button className={styles.button} onClick={() => onChange(EXERCISE_STEPS)} type="button">
+          Step each {runName} through density and ornaments
         </button>
       </div>
     );
@@ -300,11 +306,11 @@ function NestedStagesEditor({ stages, exampleCount, onChange }) {
     next.splice(index + direction, 0, stage);
     onChange(next);
   };
-  const counts = getNestedStageCounts(exampleCount, stages.length);
+  const counts = getStepCounts(exampleCount, stages.length);
 
   return (
     <>
-      <span>Steps for each nested tuplet</span>
+      <span>Steps for each {runName}</span>
       {stages.map((stage, index) => (
         <div className={styles.topicRow} key={index}>
           <input
@@ -364,10 +370,10 @@ function NestedStagesEditor({ stages, exampleCount, onChange }) {
         </button>
       </div>
       <p className={styles.layoutSummary}>
-        Each nested tuplet&apos;s exercises run through these steps in order
+        Each {runName}&apos;s exercises run through these steps in order
         {exampleCount ? ` (${exampleCount} exercises: ${counts.join(", ")} per step; extras go to the later steps)` : ""}.
         Steps set the density and the ornaments on every note, in place of the page&apos;s settings.
-        {counts.some((count) => count === 0) && <span className={styles.planWarning}> Some nested tuplets have fewer exercises than steps, so they skip the first steps.</span>}
+        {counts.some((count) => count === 0) && <span className={styles.planWarning}> Some runs have fewer exercises than steps, so they skip the first steps.</span>}
       </p>
     </>
   );
@@ -377,16 +383,17 @@ function NestedStagesEditor({ stages, exampleCount, onChange }) {
 // variant per run of exercises (e.g. 3, 5, 7, 9 over two triplet notes, then 2
 // and 4 over three, ...), each stepping through the stages. Needs a primary
 // rhythm written as a tuplet.
-export function NestedTupletPlanEditor({ plan, stages, primaryRhythms, rhythmSpan, exerciseCount, onChange }) {
+export function NestedTupletPlanEditor({ plan, stages, primaryRhythms, rhythmSpan, exerciseCount, offbeatActive, onChange }) {
   const host = getSpanPrimaryRhythms(normalizeRhythmPool(primaryRhythms, false), rhythmSpan).tuplets[0];
   const variants = host ? getNestedTupletVariants(host) : [];
+  if (!plan && offbeatActive) return null;
   if (!variants.length) {
     if (!plan) return null;
     return (
       <div className={styles.fieldGroup}>
         <span>Nested tuplets</span>
         <p className={`${styles.layoutSummary} ${styles.planWarning}`}>This section&apos;s primary rhythm is not a tuplet, so nothing can be nested.</p>
-        <button className={styles.button} onClick={() => onChange({ nestedTupletPlan: null, nestedTupletStages: null })} type="button">Turn off nested tuplets</button>
+        <button className={styles.button} onClick={() => onChange({ nestedTupletPlan: null, exerciseSteps: null })} type="button">Turn off nested tuplets</button>
       </div>
     );
   }
@@ -398,7 +405,7 @@ export function NestedTupletPlanEditor({ plan, stages, primaryRhythms, rhythmSpa
         <p className={styles.layoutSummary}>No nesting. The {hostName} primary tuplet can hold {variants.length} nested tuplets.</p>
         <button
           className={styles.button}
-          onClick={() => onChange({ nestedTupletPlan: evenNestedPlan(variants, exerciseCount), nestedTupletStages: NESTED_TUPLET_STAGES })}
+          onClick={() => onChange({ nestedTupletPlan: evenNestedPlan(variants, exerciseCount), exerciseSteps: EXERCISE_STEPS })}
           type="button"
         >
           Nest tuplets in the primary tuplet
@@ -470,7 +477,7 @@ export function NestedTupletPlanEditor({ plan, stages, primaryRhythms, rhythmSpa
         <button className={styles.button} onClick={() => setPlan(evenNestedPlan(variants, exerciseCount))} type="button">
           Spread all {variants.length} evenly
         </button>
-        <button className={styles.button} onClick={() => onChange({ nestedTupletPlan: null, nestedTupletStages: null })} type="button">
+        <button className={styles.button} onClick={() => onChange({ nestedTupletPlan: null, exerciseSteps: null })} type="button">
           Turn off nested tuplets
         </button>
       </div>
@@ -479,9 +486,112 @@ export function NestedTupletPlanEditor({ plan, stages, primaryRhythms, rhythmSpa
         {total < exerciseCount && " The last nested tuplet continues to the end."}
         {total > exerciseCount && " Nested tuplets past the last exercise are not used."}
       </p>
-      <NestedStagesEditor
+      <ExerciseStepsEditor
         exampleCount={plan[0].count}
-        onChange={(nestedTupletStages) => onChange({ nestedTupletStages })}
+        runName="nested tuplet"
+        onChange={(exerciseSteps) => onChange({ exerciseSteps })}
+        stages={stages}
+      />
+    </div>
+  );
+}
+
+function evenOffbeatPlan(exerciseCount) {
+  return [1, 2, 3].map((offset, index) => ({ offset, count: Math.max(1, Math.floor(exerciseCount / 3) + (index < exerciseCount % 3 ? 1 : 0)) }));
+}
+
+// Subsection level: the primary tuplet starts on the "e", "+", or "a" of a
+// beat, one start per run of exercises, each stepping through the stages.
+export function OffbeatTupletPlanEditor({ plan, stages, primaryRhythms, secondaryRhythms, rhythmSpan, exerciseCount, nestedActive, onChange }) {
+  const host = getSpanPrimaryRhythms(normalizeRhythmPool(primaryRhythms, false), rhythmSpan).tuplets[0];
+  if (!host && !plan) return null;
+  if (!plan && nestedActive) return null;
+  if (!plan) {
+    return (
+      <div className={styles.fieldGroup}>
+        <span>Off-beat starts</span>
+        <p className={styles.layoutSummary}>The {host.actual}:{host.normal} primary tuplet starts on a beat.</p>
+        <button
+          className={styles.button}
+          onClick={() => onChange({ offbeatTupletPlan: evenOffbeatPlan(exerciseCount), exerciseSteps: stages || EXERCISE_STEPS })}
+          type="button"
+        >
+          Start the primary tuplet off the beat
+        </button>
+      </div>
+    );
+  }
+  const total = plan.reduce((sum, run) => sum + run.count, 0);
+  const setPlan = (offbeatTupletPlan) => onChange({ offbeatTupletPlan });
+  const update = (index, updates) => setPlan(plan.map((run, i) => (i === index ? { ...run, ...updates } : run)));
+  const move = (index, direction) => {
+    const next = [...plan];
+    const [run] = next.splice(index, 1);
+    next.splice(index + direction, 0, run);
+    setPlan(next);
+  };
+  let start = 1;
+
+  return (
+    <div className={styles.fieldGroup}>
+      <span>Off-beat starts, in order</span>
+      {plan.map((run, index) => {
+        const first = start;
+        start += run.count;
+        return (
+          <div className={styles.topicRow} key={index}>
+            <select
+              aria-label={`Start ${index + 1}`}
+              onChange={(event) => update(index, { offset: Number(event.target.value) })}
+              value={run.offset}
+            >
+              {Object.entries(OFFBEAT_LABELS).map(([offset, label]) => (
+                <option key={offset} value={offset}>On the &ldquo;{label}&rdquo; ({offset} sixteenth{offset === "1" ? "" : "s"} after the beat)</option>
+              ))}
+            </select>
+            <label className={styles.topicCount}>
+              <input
+                aria-label={`Start ${index + 1} exercises`}
+                min="1"
+                onChange={(event) => update(index, { count: Math.max(1, Number.parseInt(event.target.value, 10) || 1) })}
+                type="number"
+                value={run.count}
+              />
+              <span>{first > exerciseCount ? "unused" : `ex. ${first}${run.count > 1 ? `–${Math.min(exerciseCount, first + run.count - 1)}` : ""}`}</span>
+            </label>
+            <div className={styles.topicActions}>
+              <button className={styles.button} disabled={index === 0} onClick={() => move(index, -1)} title="Move earlier" type="button"><FaArrowUp /></button>
+              <button className={styles.button} disabled={index === plan.length - 1} onClick={() => move(index, 1)} title="Move later" type="button"><FaArrowDown /></button>
+              <button className={`${styles.button} ${styles.danger}`} disabled={plan.length === 1} onClick={() => setPlan(plan.filter((_, i) => i !== index))} title="Remove start" type="button"><FaTrash /></button>
+            </div>
+          </div>
+        );
+      })}
+      <div className={styles.topicFooter}>
+        <button className={styles.button} onClick={() => setPlan([...plan, { offset: plan.at(-1).offset % 3 + 1, count: stages?.length || 1 }])} type="button">
+          <FaPlus /> Add start
+        </button>
+        <button className={styles.button} onClick={() => setPlan(evenOffbeatPlan(exerciseCount))} type="button">
+          Spread e, +, and a evenly
+        </button>
+        <button className={styles.button} onClick={() => onChange({ offbeatTupletPlan: null, exerciseSteps: null })} type="button">
+          Start on the beat
+        </button>
+      </div>
+      {!secondaryRhythms?.subdivisions?.length && (
+        <p className={`${styles.layoutSummary} ${styles.planWarning}`}>
+          Add a plain subdivision (such as sixteenths) to the secondary rhythms: it leads into the group and completes its beats.
+        </p>
+      )}
+      <p className={`${styles.layoutSummary} ${total !== exerciseCount ? styles.planWarning : ""}`}>
+        Each exercise starts one {host ? `${host.actual}:${host.normal} ` : ""}primary group off the beat, with plain notes before and after it to complete the beats. {total} of {exerciseCount} exercises assigned.
+        {total < exerciseCount && " The last start continues to the end."}
+        {total > exerciseCount && " Starts past the last exercise are not used."}
+      </p>
+      <ExerciseStepsEditor
+        exampleCount={plan[0].count}
+        onChange={(exerciseSteps) => onChange({ exerciseSteps })}
+        runName="start"
         stages={stages}
       />
     </div>
@@ -596,7 +706,7 @@ export function SecondaryRowsEditor({ rows, phases, exerciseJoins, pool, rowCoun
 }
 
 // Read-only overview: which exercises, rows, ornaments, and secondary rhythms each topic covers.
-export function PagePlanSummary({ segments, ornaments, randomOrnaments, nestedStages, rows: rhythmRows, pool, exerciseCount, measuresPerLine, playEveryNote }) {
+export function PagePlanSummary({ segments, ornaments, randomOrnaments, exerciseSteps, rows: rhythmRows, pool, exerciseCount, measuresPerLine, playEveryNote }) {
   const rhythms = poolRhythms(pool);
   const ornamentNames = (list) => ORNAMENT_OPTIONS.filter((option) => list.includes(option.id))
     .map((option) => option.label).join(", ") || "None";
@@ -611,8 +721,8 @@ export function PagePlanSummary({ segments, ornaments, randomOrnaments, nestedSt
   };
   const plan = [];
   let start = 1;
-  const fallback = nestedStages
-    ? { title: `Nested tuplet steps: ${nestedStages.map((stage) => stage.title).join(" → ")}`, count: exerciseCount, ornaments: [...new Set(nestedStages.flatMap((stage) => stage.ornaments))] }
+  const fallback = exerciseSteps
+    ? { title: `Steps: ${exerciseSteps.map((stage) => stage.title).join(" → ")}`, count: exerciseCount, ornaments: [...new Set(exerciseSteps.flatMap((stage) => stage.ornaments))] }
     : randomOrnaments
       ? {
         title: `${randomOrnaments.always?.length ? `${ornamentNames(randomOrnaments.always)} + ` : ""}${randomOrnaments.min}–${randomOrnaments.max} random per exercise`,
@@ -620,7 +730,7 @@ export function PagePlanSummary({ segments, ornaments, randomOrnaments, nestedSt
         ornaments: randomOrnamentIds(randomOrnaments),
       }
       : { title: "All exercises", count: exerciseCount, ornaments };
-  for (const [index, segment] of (randomOrnaments || nestedStages ? [fallback] : segments || [fallback]).entries()) {
+  for (const [index, segment] of (randomOrnaments || exerciseSteps ? [fallback] : segments || [fallback]).entries()) {
     if (start > exerciseCount) break;
     const isLast = index === (segments?.length || 1) - 1;
     const end = Math.min(exerciseCount, isLast ? exerciseCount : start + segment.count - 1);
@@ -648,7 +758,7 @@ export function PagePlanSummary({ segments, ornaments, randomOrnaments, nestedSt
         </tbody>
       </table>
       <p className={styles.layoutSummary}>
-        {nestedStages ? "Each nested tuplet step sets its own density." : playEveryNote ? "Every note is played (no rests)." : "Sparse: notes and rests are mixed."}
+        {exerciseSteps ? "Each step sets its own density." : playEveryNote ? "Every note is played (no rests)." : "Sparse: notes and rests are mixed."}
       </p>
     </div>
   );

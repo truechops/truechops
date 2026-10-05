@@ -3,21 +3,39 @@
 const crypto = require("crypto");
 const generator = require("../../scripts/generate-ai-book");
 const { MAX_GENERATED_MEASURES, normalizeExerciseConfig, getConfigNestedVariants } = require("./exercise-config");
-const { NESTED_TUPLET_STAGES } = require("./book-curriculum");
+const { EXERCISE_STEPS, OFFBEAT_STEPS } = require("./book-curriculum");
 
 // The website shows one exercise per row, so allow the full row width.
 const TOOL_PDF_SETTINGS = { measuresPerLine: 1, lineSpacing: 130, noteSize: 100 };
 
-// Nested tuplets in measure order: every variant in turn or one variant, one
-// measure each, or one measure per step with nestedSteps.
-function createNestedSettings(config) {
-  if (!config.nestedTuplets) return {};
-  const variants = config.nestedTuplets === "cycle" ? getConfigNestedVariants(config) : [config.nestedTuplets];
-  const count = config.nestedSteps ? NESTED_TUPLET_STAGES.length : 1;
-  return {
-    nestedTupletPlan: variants.map(({ actual, hostNotes }) => ({ actual, hostNotes, count })),
-    ...(config.nestedSteps ? { nestedTupletStages: NESTED_TUPLET_STAGES } : {}),
-  };
+// Nested tuplets or off-beat starts in measure order (every one in turn, or one
+// of them), one measure each, or one measure per step with steps (the book's:
+// off-beat steps keep the tuplet whole with sparse notes around it).
+function createRunSettings(config) {
+  if (config.nestedTuplets) {
+    const count = config.steps ? EXERCISE_STEPS.length : 1;
+    const variants = config.nestedTuplets === "cycle" ? getConfigNestedVariants(config) : [config.nestedTuplets];
+    return {
+      nestedTupletPlan: variants.map(({ actual, hostNotes }) => ({ actual, hostNotes, count })),
+      ...(config.steps ? { exerciseSteps: EXERCISE_STEPS } : {}),
+    };
+  }
+  if (config.offbeat) {
+    const count = config.steps ? OFFBEAT_STEPS.length : 1;
+    const offsets = config.offbeat === "cycle" ? [1, 2, 3] : [config.offbeat];
+    return {
+      offbeatTupletPlan: offsets.map((offset) => ({ offset, count })),
+      ...(config.steps ? { exerciseSteps: OFFBEAT_STEPS } : {}),
+    };
+  }
+  return {};
+}
+
+// An off-beat group needs plain notes to lead into it and complete its beats:
+// sixteenths when the secondary pool has no plain subdivision.
+function getToolSecondaryRhythms(config) {
+  const pool = config.secondaryRhythms;
+  return config.offbeat && !pool.subdivisions.length ? { ...pool, subdivisions: ["sixteenths"] } : pool;
 }
 
 function createToolBook(config, sectionId) {
@@ -31,7 +49,7 @@ function createToolBook(config, sectionId) {
       title: config.name,
       rhythmSpan: config.rhythmSpan,
       primaryRhythms: config.primaryRhythms,
-      secondaryRhythms: config.secondaryRhythms,
+      secondaryRhythms: getToolSecondaryRhythms(config),
       pdfSettings: TOOL_PDF_SETTINGS,
       pages: [{
         subsectionId: `${sectionId}-page`,
@@ -46,7 +64,7 @@ function createToolBook(config, sectionId) {
           requiredSameHandStickingRuns: [],
           ...(config.fullPrimaryGroupShare != null ? { fullPrimaryGroupShare: config.fullPrimaryGroupShare } : {}),
           ...(config.chainPrimaryGroups ? { chainPrimaryGroups: true } : {}),
-          ...createNestedSettings(config),
+          ...createRunSettings(config),
         },
       }],
     }],
@@ -55,7 +73,7 @@ function createToolBook(config, sectionId) {
 
 // Returns `count` one-measure scores' measures, starting at measure `start` of
 // the configuration's plan (the composer adds one measure at a time), which
-// repeats once every nested tuplet has had its turn. A random section id seeds
+// repeats once every nested tuplet or off-beat start has had its turn. A random section id seeds
 // the generator, so every request gives new exercises.
 function generateExerciseMeasures(rawConfig, rawCount = 1, rawStart = 0) {
   const config = normalizeExerciseConfig(rawConfig);
@@ -64,7 +82,7 @@ function generateExerciseMeasures(rawConfig, rawCount = 1, rawStart = 0) {
   const sectionId = `tool-${crypto.randomBytes(6).toString("hex")}`;
   const generation = generator.createGenerationConfig({}, createToolBook(config, sectionId));
   const page = generation.sections[0].pages[0];
-  const period = (page.nestedTupletPlan || []).reduce((sum, variant) => sum + variant.count, 0) || Infinity;
+  const period = (page.nestedTupletPlan || page.offbeatTupletPlan || []).reduce((sum, run) => sum + run.count, 0) || Infinity;
   const used = new Set();
   const measures = Array.from({ length: count }, (_, index) =>
     generator.createUniqueGeneratedLine(null, page, page.sampleJson, (start + index) % period, used).score.measures[0]);

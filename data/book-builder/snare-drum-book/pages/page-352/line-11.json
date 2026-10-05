@@ -29,11 +29,11 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "r"
+                    "ornaments": "l"
                   },
                   {
                     "notes": [],
-                    "duration": 16,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5
                   },
@@ -43,6 +43,24 @@
                     ],
                     "duration": 16,
                     "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "la"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
                   },
@@ -52,16 +70,16 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "lf"
+                    "velocity": 1,
+                    "ornaments": "la"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 1,
+                    "start": 0,
                     "end": 4,
-                    "actual": 3,
-                    "normal": 15
+                    "actual": 5,
+                    "normal": 13
                   }
                 ]
               }
@@ -71,8 +89,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n16:r r16 n16:r n16:lf |t1-4:3:15",
-  "updatedAt": "2026-10-05T01:21:59.176Z",
-  "sectionId": "combinations-fifteen-sixteenths-3",
+  "exerciseShortForm": "n16:l r8 n16:la n16:r n8:r n16:la |t0-4:5:13",
+  "updatedAt": "2026-10-05T02:14:21.155Z",
+  "sectionId": "combinations-thirteen-sixteenths-5",
   "sectionPageNumber": 1
 }

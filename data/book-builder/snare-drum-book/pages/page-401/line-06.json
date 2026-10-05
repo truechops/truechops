@@ -24,7 +24,7 @@
                 "notes": [
                   {
                     "notes": [],
-                    "duration": 2,
+                    "duration": 4,
                     "dots": 0,
                     "velocity": 0.5
                   },
@@ -43,14 +43,59 @@
                     ],
                     "duration": 4,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "ra"
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 1,
                     "ornaments": "la"
@@ -59,24 +104,48 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [],
+                    "duration": 4,
+                    "dots": 0,
+                    "velocity": 0.5
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 5,
+                    "end": 12,
                     "actual": 5,
-                    "normal": 4
+                    "normal": 3
                   },
                   {
-                    "start": 1,
-                    "end": 5,
-                    "actual": 4,
-                    "normal": 3
+                    "start": 3,
+                    "end": 12,
+                    "actual": 9,
+                    "normal": 8
                   }
                 ]
               }
@@ -86,8 +155,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r2 n4:r n4:ra n4:la n4:l |t0-5:5:4,1-5:4:3",
-  "updatedAt": "2026-10-05T01:21:59.176Z",
-  "sectionId": "nested-four-quarters-5",
-  "sectionPageNumber": 3
+  "exerciseShortForm": "r4 n4:r n4:l n16:r n16:r n16:l n16:r n16:l n16:la n16:r n16:l n16:r r4 |t0-12:5:3,3-12:9:8",
+  "updatedAt": "2026-10-05T02:14:21.155Z",
+  "sectionId": "nested-three-quarters-5",
+  "sectionPageNumber": 2
 }

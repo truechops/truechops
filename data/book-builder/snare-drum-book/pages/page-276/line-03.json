@@ -23,19 +23,22 @@
               {
                 "notes": [
                   {
-                    "notes": [],
-                    "duration": 4,
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "lf"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
+                    "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "rf"
+                    "velocity": 1,
+                    "ornaments": "la"
                   },
                   {
                     "notes": [
@@ -44,11 +47,11 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "lc"
+                    "ornaments": "r"
                   },
                   {
                     "notes": [],
-                    "duration": 16,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5
                   },
@@ -56,7 +59,34 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 4,
+                    "dots": 1,
+                    "velocity": 1,
+                    "ornaments": "ra"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 4,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "rfa"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "lca"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
@@ -66,8 +96,14 @@
                   {
                     "start": 0,
                     "end": 3,
-                    "actual": 5,
-                    "normal": 7
+                    "actual": 3,
+                    "normal": 2
+                  },
+                  {
+                    "start": 3,
+                    "end": 8,
+                    "actual": 4,
+                    "normal": 3
                   }
                 ]
               }
@@ -77,8 +113,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r4 n4:rf n8:lc r16 n16:r |t0-3:5:7",
-  "updatedAt": "2026-10-05T01:21:59.176Z",
-  "sectionId": "combinations-seven-eighths-5",
+  "exerciseShortForm": "n8:lf n8:la n8:r r8 n4.:ra n4:raf n8:lac n8:r |t0-3:3:2,3-8:4:3",
+  "updatedAt": "2026-10-05T02:14:21.155Z",
+  "sectionId": "combinations-three-quarters-4",
   "sectionPageNumber": 1
 }

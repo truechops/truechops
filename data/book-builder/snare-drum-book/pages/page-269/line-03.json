@@ -32,17 +32,8 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
+                    "duration": 4,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "ldc"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 2,
-                    "dots": 1,
                     "velocity": 0.5,
                     "ornaments": "r"
                   },
@@ -50,10 +41,37 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "rf"
+                    "ornaments": "rc"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "rdc"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -71,7 +89,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "lf"
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -83,10 +101,22 @@
                     "ornaments": "r"
                   },
                   {
-                    "notes": [],
+                    "notes": [
+                      "C5"
+                    ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -101,13 +131,13 @@
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 4,
-                    "actual": 5,
-                    "normal": 3
+                    "end": 5,
+                    "actual": 6,
+                    "normal": 5
                   },
                   {
-                    "start": 4,
-                    "end": 9,
+                    "start": 7,
+                    "end": 12,
                     "actual": 5,
                     "normal": 4
                   }
@@ -119,8 +149,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r8 n8:ldc n2.:r n4:rf n16:l n16:lf n16:r r16 n16:rd |t0-4:5:3,4-9:5:4",
-  "updatedAt": "2026-10-05T01:21:59.176Z",
-  "sectionId": "combinations-three-quarters-5",
+  "exerciseShortForm": "r8 n4:r n8:rc n8:l n8:rdc n16:r n16:l n16:l n16:r n16:r n16:l n16:rd |t0-5:6:5,7-12:5:4",
+  "updatedAt": "2026-10-05T02:14:21.155Z",
+  "sectionId": "combinations-five-eighths-6",
   "sectionPageNumber": 2
 }

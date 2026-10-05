@@ -23,17 +23,8 @@
               {
                 "notes": [
                   {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "lcd"
-                  },
-                  {
                     "notes": [],
-                    "duration": 8,
+                    "duration": 4,
                     "dots": 0,
                     "velocity": 0.5
                   },
@@ -43,16 +34,34 @@
                     ],
                     "duration": 16,
                     "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "ra"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "r"
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "ra"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
                     "end": 2,
-                    "actual": 3,
-                    "normal": 15
+                    "actual": 5,
+                    "normal": 13
                   }
                 ]
               }
@@ -62,8 +71,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n16:ldc r8 n16:r |t0-2:3:15",
-  "updatedAt": "2026-10-05T01:21:59.176Z",
-  "sectionId": "combinations-fifteen-sixteenths-3",
+  "exerciseShortForm": "r4 n16:ra n8:l n16:ra |t0-2:5:13",
+  "updatedAt": "2026-10-05T02:14:21.155Z",
+  "sectionId": "combinations-thirteen-sixteenths-5",
   "sectionPageNumber": 2
 }

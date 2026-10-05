@@ -47,13 +47,25 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "lc"
+                    "ornaments": "r"
                   },
                   {
-                    "notes": [],
+                    "notes": [
+                      "C5"
+                    ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "rc"
                   },
                   {
                     "notes": [
@@ -89,6 +101,15 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
                     "ornaments": "lc"
                   }
                 ],
@@ -100,10 +121,10 @@
                     "normal": 2
                   },
                   {
-                    "start": 4,
-                    "end": 8,
+                    "start": 6,
+                    "end": 10,
                     "actual": 4,
-                    "normal": 11
+                    "normal": 9
                   }
                 ]
               }
@@ -113,8 +134,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n8:l n8:r n8:lc r16 n16:l n16:l n16:r n16:lc |t0-3:3:2,4-8:4:11",
-  "updatedAt": "2026-10-05T01:21:59.176Z",
-  "sectionId": "combinations-eleven-sixteenths-4",
+  "exerciseShortForm": "n8:l n8:r n8:r n16:l n16:rc n16:l n16:l n16:r n16:r n16:lc |t0-3:3:2,6-10:4:9",
+  "updatedAt": "2026-10-05T02:14:21.155Z",
+  "sectionId": "combinations-nine-sixteenths-4",
   "sectionPageNumber": 1
 }

@@ -46,6 +46,7 @@ import {
 import styles from "./BookBuilder.module.css";
 import {
   NestedTupletPlanEditor,
+  OffbeatTupletPlanEditor,
   OrnamentTopicsEditor,
   PagePlanSummary,
   SecondaryRowsEditor,
@@ -490,7 +491,8 @@ export default function BookBuilderPanel() {
     selectedPage,
     selectedSection
   );
-  const nestedStagesActive = Boolean(selectedPageGenerationSettings.nestedTupletPlan && selectedPageGenerationSettings.nestedTupletStages);
+  const stepsActive = Boolean((selectedPageGenerationSettings.nestedTupletPlan || selectedPageGenerationSettings.offbeatTupletPlan) &&
+    selectedPageGenerationSettings.exerciseSteps);
   const pdfSettings = normalizePdfSettings(book.pdfSettings);
   const selectedPagePdfSettings = getPagePdfSettings(selectedPage, pdfSettings);
   const linesPerPage = getLinesPerPage(selectedPagePdfSettings);
@@ -1176,10 +1178,10 @@ export default function BookBuilderPanel() {
               ))}
             </div>
           )}
-          {nestedStagesActive ? (
+          {stepsActive ? (
             <div className={styles.fieldGroup}>
               <span>Primary ornaments</span>
-              <p className={styles.layoutSummary}>Each exercise&apos;s ornaments and density follow the nested tuplet steps below.</p>
+              <p className={styles.layoutSummary}>Each exercise&apos;s ornaments and density follow the steps below.</p>
             </div>
           ) : (
             <OrnamentTopicsEditor
@@ -1192,11 +1194,22 @@ export default function BookBuilderPanel() {
           )}
           <NestedTupletPlanEditor
             exerciseCount={linesPerPage * selectedSubsectionPages.length}
+            offbeatActive={Boolean(selectedPageGenerationSettings.offbeatTupletPlan)}
             onChange={updateSelectedPageGenerationDraft}
             plan={selectedPageGenerationSettings.nestedTupletPlan}
             primaryRhythms={selectedSection.primaryRhythms}
             rhythmSpan={selectedSection.rhythmSpan}
-            stages={selectedPageGenerationSettings.nestedTupletStages}
+            stages={selectedPageGenerationSettings.exerciseSteps}
+          />
+          <OffbeatTupletPlanEditor
+            exerciseCount={linesPerPage * selectedSubsectionPages.length}
+            nestedActive={Boolean(selectedPageGenerationSettings.nestedTupletPlan)}
+            onChange={updateSelectedPageGenerationDraft}
+            plan={selectedPageGenerationSettings.offbeatTupletPlan}
+            primaryRhythms={selectedSection.primaryRhythms}
+            secondaryRhythms={selectedSection.secondaryRhythms}
+            rhythmSpan={selectedSection.rhythmSpan}
+            stages={selectedPageGenerationSettings.exerciseSteps}
           />
           <SecondaryRowsEditor
             measuresPerLine={selectedPagePdfSettings.measuresPerLine}
@@ -1212,7 +1225,7 @@ export default function BookBuilderPanel() {
             rows={selectedPageGenerationSettings.secondaryRhythmRows}
             measuresPerLine={selectedPagePdfSettings.measuresPerLine}
             ornaments={selectedPageGenerationSettings.ornaments}
-            nestedStages={nestedStagesActive ? selectedPageGenerationSettings.nestedTupletStages : null}
+            exerciseSteps={stepsActive ? selectedPageGenerationSettings.exerciseSteps : null}
             playEveryNote={selectedPageGenerationSettings.playEveryNote}
             pool={selectedSection.secondaryRhythms}
             randomOrnaments={selectedPageGenerationSettings.randomOrnaments}
@@ -1295,7 +1308,7 @@ export default function BookBuilderPanel() {
               }
               type="checkbox"
             />
-            <span>No rests — play every note{nestedStagesActive ? " (nested tuplet steps set this per exercise)" : ""}</span>
+            <span>No rests — play every note{stepsActive ? " (the steps set this per exercise)" : ""}</span>
           </label>
           <label className={styles.toggleField}>
             <input
@@ -1374,6 +1387,19 @@ export default function BookBuilderPanel() {
               />
             </Field>
           )}
+          <Field label="Ornament density (% of the book's)">
+            <input
+              inputMode="numeric"
+              max="300"
+              min="25"
+              onChange={(event) => updateSelectedPageGenerationDraft({
+                ornamentDensity: event.target.value === "" ? null : Number(event.target.value),
+              })}
+              placeholder="100"
+              type="number"
+              value={selectedPageGenerationSettings.ornamentDensity ?? ""}
+            />
+          </Field>
           {!selectedPageGenerationSettings.playEveryNote && (
             <Field label="Fully played primary groups (%)">
               <input

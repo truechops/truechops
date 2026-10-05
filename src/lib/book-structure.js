@@ -285,60 +285,93 @@ function getLineNestedTuplet(settings, lineIndex) {
   return plan.find((variant) => (end += variant.count) > lineIndex) || plan[plan.length - 1];
 }
 
-// nestedTupletStages: steps every nested variant goes through in order, e.g.
-// every note with stickings, then accents, then sparse with accents, then random
-// ornaments. Each step sets the exercise's density and ornaments:
+// ornamentDensity: a page's ornament frequency as a percentage of the book's
+// (100 = the book's own setting), for pages that should be busier or calmer.
+function normalizePageOrnamentDensity(value) {
+  const number = Number.parseFloat(value);
+  return Number.isFinite(number) ? Math.max(25, Math.min(300, Math.round(number))) : null;
+}
+
+// offbeatTupletPlan: [{ offset, count }] in order; each exercise starts its
+// primary tuplet `offset` sixteenths after a beat (1 = "e", 2 = "+", 3 = "a"),
+// by the run its position falls in (the last one continues to the end).
+const OFFBEAT_LABELS = { 1: "e", 2: "+", 3: "a" };
+
+function normalizeOffbeatTupletPlan(value) {
+  if (!Array.isArray(value)) return null;
+  const plan = value
+    .map((run) => ({ offset: Number.parseInt(run?.offset, 10), count: Math.max(1, Number.parseInt(run?.count, 10) || 1) }))
+    .filter((run) => OFFBEAT_LABELS[run.offset]);
+  return plan.length ? plan : null;
+}
+
+function getLineOffbeatTuplet(settings, lineIndex) {
+  const plan = normalizeOffbeatTupletPlan(settings?.offbeatTupletPlan);
+  if (!plan) return null;
+  let end = 0;
+  return plan.find((run) => (end += run.count) > lineIndex) || plan[plan.length - 1];
+}
+
+// exerciseSteps: steps each run of the page's plan (a nested tuplet, or an
+// off-beat start) goes through in order, e.g. every note with stickings, then
+// accents, then sparse with accents, then random ornaments. Each step sets the
+// exercise's density and ornaments:
 // { title, playEveryNote, fullPrimaryGroupShare?, playedShare?: [min, max], ornaments }
 // or, instead of ornaments, randomOrnaments.
-function normalizeNestedTupletStages(value) {
+function normalizeExerciseSteps(value) {
   if (!Array.isArray(value)) return null;
-  const stages = value.filter((stage) => stage && typeof stage === "object").map((stage) => {
-    const random = normalizeRandomOrnaments(stage.randomOrnaments);
-    const share = Number.parseFloat(stage.fullPrimaryGroupShare);
-    const playEveryNote = stage.playEveryNote === true || stage.playEveryNote === "true";
-    const playedShare = Array.isArray(stage.playedShare)
-      ? stage.playedShare.map((value) => Math.max(0, Math.min(1, Number.parseFloat(value))))
+  const steps = value.filter((step) => step && typeof step === "object").map((step) => {
+    const random = normalizeRandomOrnaments(step.randomOrnaments);
+    const share = Number.parseFloat(step.fullPrimaryGroupShare);
+    const playEveryNote = step.playEveryNote === true || step.playEveryNote === "true";
+    const playedShare = Array.isArray(step.playedShare)
+      ? step.playedShare.map((value) => Math.max(0, Math.min(1, Number.parseFloat(value))))
       : null;
     return {
-      title: String(stage.title || "").slice(0, 80),
+      title: String(step.title || "").slice(0, 80),
       playEveryNote,
       ...(!playEveryNote && Number.isFinite(share) ? { fullPrimaryGroupShare: Math.max(0, Math.min(1, share)) } : {}),
       ...(!playEveryNote && playedShare?.length === 2 && playedShare.every(Number.isFinite) && playedShare[0] <= playedShare[1]
         ? { playedShare } : {}),
       ornaments: random
         ? ornamentIds.filter((id) => (random.always || []).includes(id) || random.from.includes(id))
-        : ornamentIds.filter((id) => (Array.isArray(stage.ornaments) ? stage.ornaments : []).includes(id)),
+        : ornamentIds.filter((id) => (Array.isArray(step.ornaments) ? step.ornaments : []).includes(id)),
       ...(random ? { randomOrnaments: random } : {}),
     };
   });
-  return stages.length ? stages : null;
+  return steps.length ? steps : null;
 }
 
-// How a nested variant's `count` exercises split over the steps: evenly, with
-// any extra exercises going to the later steps.
-function getNestedStageCounts(count, stageCount) {
-  const base = Math.floor(count / stageCount);
-  const extra = count % stageCount;
-  return Array.from({ length: stageCount }, (_, index) => base + (index >= stageCount - extra ? 1 : 0));
+// How a run's `count` exercises split over the steps: evenly, with any extra
+// exercises going to the later steps.
+function getStepCounts(count, stepCount) {
+  const base = Math.floor(count / stepCount);
+  const extra = count % stepCount;
+  return Array.from({ length: stepCount }, (_, index) => base + (index >= stepCount - extra ? 1 : 0));
 }
 
-function getLineNestedStage(settings, lineIndex) {
-  const stages = normalizeNestedTupletStages(settings?.nestedTupletStages);
-  const plan = normalizeNestedTupletPlan(settings?.nestedTupletPlan);
-  if (!stages || !plan) return null;
+// The runs the steps repeat over: the nested tuplet plan or the off-beat plan.
+function getStepRuns(settings) {
+  return normalizeNestedTupletPlan(settings?.nestedTupletPlan) || normalizeOffbeatTupletPlan(settings?.offbeatTupletPlan);
+}
+
+function getLineExerciseStep(settings, lineIndex) {
+  const steps = normalizeExerciseSteps(settings?.exerciseSteps);
+  const plan = getStepRuns(settings);
+  if (!steps || !plan) return null;
   let start = 0;
-  let variant = null;
+  let run = null;
   for (const candidate of plan) {
     if (lineIndex < start + candidate.count) {
-      variant = candidate;
+      run = candidate;
       break;
     }
     start += candidate.count;
   }
-  if (!variant) return stages[stages.length - 1];
+  if (!run) return steps[steps.length - 1];
   let end = 0;
-  const counts = getNestedStageCounts(variant.count, stages.length);
-  return stages[counts.findIndex((count) => (end += count) > lineIndex - start)] || stages[stages.length - 1];
+  const counts = getStepCounts(run.count, steps.length);
+  return steps[counts.findIndex((count) => (end += count) > lineIndex - start)] || steps[steps.length - 1];
 }
 
 function getLineOrnamentSegment(settings, lineIndex) {
@@ -486,7 +519,8 @@ module.exports = {
   normalizeBookGroups, normalizeStickingTail, getLineStickingSettings,
   normalizeOrnamentSegments, getLineOrnamentSegment, normalizeRandomOrnaments, getLineRandomOrnaments,
   getNestedTupletNotation, getNestedTupletVariants, nestedTupletLabel, normalizeNestedTupletPlan, getLineNestedTuplet,
-  normalizeNestedTupletStages, getNestedStageCounts, getLineNestedStage,
+  OFFBEAT_LABELS, normalizeOffbeatTupletPlan, getLineOffbeatTuplet, normalizePageOrnamentDensity,
+  normalizeExerciseSteps, getStepCounts, getStepRuns, getLineExerciseStep,
   normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, getSecondaryRhythmPhase, getLineSecondaryRhythms,
   normalizeRhythmPool, rhythmOrnamentKey, migrateBookStructure, createStructureTableOfContents,
 };

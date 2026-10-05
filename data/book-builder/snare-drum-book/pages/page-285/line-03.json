@@ -23,8 +23,26 @@
               {
                 "notes": [
                   {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "ld"
+                  },
+                  {
                     "notes": [],
-                    "duration": 4,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5
                   },
@@ -35,7 +53,7 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
+                    "ornaments": "lf"
                   },
                   {
                     "notes": [
@@ -50,7 +68,7 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 1,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
@@ -58,10 +76,10 @@
                 ],
                 "tuplets": [
                   {
-                    "start": 0,
-                    "end": 4,
-                    "actual": 3,
-                    "normal": 2
+                    "start": 2,
+                    "end": 6,
+                    "actual": 4,
+                    "normal": 7
                   }
                 ]
               }
@@ -71,8 +89,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r4 n8:l n8:rdc n1:l |t0-4:3:2",
-  "updatedAt": "2026-10-05T01:21:59.176Z",
-  "sectionId": "combinations-four-quarters-3",
+  "exerciseShortForm": "n16:r n16:ld r8 n8:lf n8:rdc n8:l |t2-6:4:7",
+  "updatedAt": "2026-10-05T02:14:21.155Z",
+  "sectionId": "combinations-seven-eighths-4",
   "sectionPageNumber": 2
 }

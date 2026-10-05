@@ -573,6 +573,27 @@ function createAutomaticBeams(vfNotes, timeSig) {
   });
 }
 
+// Plain notes between tuplets are beamed by the beat they fall in, counted from
+// the start of the measure, so a run that starts mid-beat (after a tuplet that
+// starts or ends off the beat) still breaks at the real beat boundaries.
+function createAutomaticBeamsFrom(vfNotes, startTicks, timeSig) {
+  const groupTicks = timeSigs[`${timeSig.num}/${timeSig.type}`].groups
+    .map((group) => Vex.Flow.RESOLUTION * group[0] / group[1]);
+  const boundaries = [];
+  for (let tick = 0, index = 0; boundaries.length < 64; index += 1) {
+    tick += groupTicks[index % groupTicks.length];
+    boundaries.push(tick);
+  }
+  const chunks = new Map();
+  let position = startTicks;
+  vfNotes.forEach((note) => {
+    const group = boundaries.findIndex((boundary) => position < boundary - 1e-6);
+    chunks.set(group, [...(chunks.get(group) || []), note]);
+    position += note.getTicks().value();
+  });
+  return [...chunks.values()].flatMap((chunk) => createAutomaticBeams(chunk, timeSig));
+}
+
 function hasQuarterOrLongerDuration(jsonNote) {
   return Number(jsonNote?.duration) <= LONGEST_UNBEAMED_TUPLET_DURATION;
 }
@@ -663,18 +684,23 @@ function getVoiceBeams(vfNotes, jsonNotes, tuplets, timeSig) {
   }
 
   const automaticBeams = [];
+  const startTicks = [];
+  vfNotes.reduce((tick, note, index) => {
+    startTicks[index] = tick;
+    return tick + note.getTicks().value();
+  }, 0);
   let cursor = 0;
 
   forcedTupletRanges.forEach((tuplet) => {
     if (tuplet.start > cursor) {
-      automaticBeams.push(...createAutomaticBeams(vfNotes.slice(cursor, tuplet.start), timeSig));
+      automaticBeams.push(...createAutomaticBeamsFrom(vfNotes.slice(cursor, tuplet.start), startTicks[cursor], timeSig));
     }
 
     cursor = Math.max(cursor, tuplet.end);
   });
 
   if (cursor < vfNotes.length) {
-    automaticBeams.push(...createAutomaticBeams(vfNotes.slice(cursor), timeSig));
+    automaticBeams.push(...createAutomaticBeamsFrom(vfNotes.slice(cursor), startTicks[cursor], timeSig));
   }
 
   return [...automaticBeams, ...tupletBeams];

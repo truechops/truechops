@@ -61,9 +61,9 @@ function getConfigNestedVariants(config) {
 }
 
 // "cycle" walks through every variant, one per measure; { actual, hostNotes }
-// nests the same variant in every measure; null turns nesting off. With
-// nestedSteps, each variant takes the book's four steps (every note with
-// stickings, accents, sparse with accents, ornaments), one measure each.
+// nests the same variant in every measure; null turns nesting off. With steps,
+// each variant takes the book's four steps (every note with stickings, accents,
+// sparse with accents, ornaments), one measure each.
 function normalizeNestedSetting(value, config) {
   if (!value) return null;
   const variants = getConfigNestedVariants(config);
@@ -71,6 +71,17 @@ function normalizeNestedSetting(value, config) {
   if (value === "cycle") return "cycle";
   const match = variants.find((variant) => variant.actual === Number(value.actual) && variant.hostNotes === Number(value.hostNotes));
   return match ? { actual: match.actual, hostNotes: match.hostNotes } : null;
+}
+
+// Off-beat starts for the primary tuplet: "cycle" goes through the "e", "+",
+// and "a" in turn; 1, 2, or 3 (sixteenths after the beat) keeps one; null
+// starts on the beat. Needs a primary tuplet, and not with nested tuplets.
+function normalizeOffbeatSetting(value, config) {
+  if (!value) return null;
+  const host = getSpanPrimaryRhythms(normalizeRhythmPool(config.primaryRhythms, false), normalizeRhythmSpan(config.rhythmSpan)).tuplets[0];
+  if (!host) return null;
+  if (value === "cycle") return "cycle";
+  return [1, 2, 3].includes(Number(value)) ? Number(value) : null;
 }
 
 function clampNumber(value, minimum, maximum, fallback) {
@@ -88,6 +99,8 @@ function normalizeExerciseConfig(value = {}) {
   const share = source.fullPrimaryGroupShare;
   const rhythmSpan = normalizeRhythmSpan(source.rhythmSpan);
   const primaryRhythms = normalizeRhythmPool(choice.pool, false);
+  const nestedTuplets = normalizeNestedSetting(source.nestedTuplets, { primaryRhythms, rhythmSpan });
+  const offbeat = nestedTuplets ? null : normalizeOffbeatSetting(source.offbeat, { primaryRhythms, rhythmSpan });
   return {
     ...(source.id ? { id: String(source.id) } : {}),
     name: String(source.name || "").slice(0, 80) || "Untitled configuration",
@@ -95,8 +108,10 @@ function normalizeExerciseConfig(value = {}) {
     subdivision: choice.id,
     rhythmSpan,
     primaryRhythms,
-    nestedTuplets: normalizeNestedSetting(source.nestedTuplets, { primaryRhythms, rhythmSpan }),
-    nestedSteps: Boolean(source.nestedSteps && normalizeNestedSetting(source.nestedTuplets, { primaryRhythms, rhythmSpan })),
+    nestedTuplets,
+    offbeat,
+    // Saved before off-beat starts existed, steps were "nestedSteps".
+    steps: Boolean((source.steps ?? source.nestedSteps) && (nestedTuplets || offbeat)),
     secondaryRhythms: secondary,
     ornaments: ORNAMENT_IDS.filter((id) => (source.ornaments || []).includes(id)),
     playEveryNote,
@@ -142,7 +157,8 @@ function exerciseConfigFromBookPage(page, pageRef = {}) {
     maxSameHandStickingRun: settings.maxSameHandStickingRun,
     chainPrimaryGroups: settings.chainPrimaryGroups,
     nestedTuplets: Array.isArray(settings.nestedTupletPlan) ? "cycle" : null,
-    nestedSteps: Array.isArray(settings.nestedTupletPlan) && Array.isArray(settings.nestedTupletStages),
+    offbeat: Array.isArray(settings.offbeatTupletPlan) ? "cycle" : null,
+    steps: Array.isArray(settings.exerciseSteps),
   });
 }
 

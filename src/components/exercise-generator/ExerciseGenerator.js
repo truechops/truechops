@@ -54,9 +54,12 @@ function describeConfig(config) {
   const subdivision = SUBDIVISION_CHOICES.find((choice) => choice.id === config.subdivision)?.label || config.subdivision;
   const span = SPAN_CHOICES.find((choice) => choice.count === config.rhythmSpan.count && choice.unit === config.rhythmSpan.unit);
   const ornaments = config.ornaments.map((id) => ORNAMENT_LABELS[id]).join(", ") || "No ornaments";
+  const OFFBEAT_NAMES = { 1: "e", 2: "+", 3: "a" };
   const nested = (config.nestedTuplets === "cycle" ? " · nested tuplets in turn"
-    : config.nestedTuplets ? ` · nested ${config.nestedTuplets.actual} over ${config.nestedTuplets.hostNotes}` : "") +
-    (config.nestedTuplets && config.nestedSteps ? " in four steps" : "");
+    : config.nestedTuplets ? ` · nested ${config.nestedTuplets.actual} over ${config.nestedTuplets.hostNotes}`
+      : config.offbeat === "cycle" ? " · starting on e, +, and a"
+        : config.offbeat ? ` · starting on the ${OFFBEAT_NAMES[config.offbeat]}` : "") +
+    (config.steps ? " in four steps" : "");
   return `${subdivision}${span && span.id !== "1/4" ? ` ${span.label.toLowerCase()}` : ""}${nested} · ${config.playEveryNote ? "every note" : "sparse"} · ${ornaments}`;
 }
 
@@ -68,15 +71,16 @@ function Chip({ on, onClick, children }) {
   );
 }
 
-// A smaller tuplet nested inside the subdivision: off, every variant in turn,
-// or one variant (e.g. 5 notes in the time of 2 of the subdivision's notes),
+// Where the subdivision's tuplet goes: a smaller tuplet nested inside it (every
+// variant in turn, or one), or starting off the beat (the "e", "+", or "a"),
 // optionally stepping each one through the book's four steps.
-function NestedTupletField({ value, onChange }) {
+function TupletPlacementField({ value, onChange }) {
   const variants = getConfigNestedVariants(value);
   if (!variants.length) {
-    return <p style={styles.note}>Nested tuplets need a tuplet subdivision (not plain eighths, sixteenths, or 32nds).</p>;
+    return <p style={styles.note}>Nested and off-beat tuplets need a tuplet subdivision (not plain eighths, sixteenths, or 32nds).</p>;
   }
-  const selected = value.nestedTuplets === "cycle" ? "cycle"
+  const runs = value.nestedTuplets === "cycle" ? `${variants.length} nested tuplets` : value.offbeat === "cycle" ? "e, +, and a" : "";
+  const nestedChoice = value.nestedTuplets === "cycle" ? "cycle"
     : value.nestedTuplets ? `${value.nestedTuplets.actual}:${value.nestedTuplets.hostNotes}` : "off";
   return (
     <div style={styles.section}>
@@ -86,18 +90,18 @@ function NestedTupletField({ value, onChange }) {
           onChange={(event) => {
             const choice = event.target.value;
             if (choice === "off") onChange({ nestedTuplets: null });
-            else if (choice === "cycle") onChange({ nestedTuplets: "cycle" });
+            else if (choice === "cycle") onChange({ nestedTuplets: "cycle", offbeat: null });
             else {
               const [actual, hostNotes] = choice.split(":").map(Number);
-              onChange({ nestedTuplets: { actual, hostNotes } });
+              onChange({ nestedTuplets: { actual, hostNotes }, offbeat: null });
             }
           }}
           style={styles.input}
-          value={selected}
+          value={nestedChoice}
         >
           <option value="off">None</option>
           <option value="cycle">
-            Each nested tuplet in turn ({variants.length}, {value.nestedSteps ? "four measures each" : "one per measure"})
+            Each nested tuplet in turn ({variants.length}, {value.steps ? "four measures each" : "one per measure"})
           </option>
           {variants.map((variant) => (
             <option key={`${variant.actual}:${variant.hostNotes}`} value={`${variant.actual}:${variant.hostNotes}`}>
@@ -106,19 +110,36 @@ function NestedTupletField({ value, onChange }) {
           ))}
         </select>
       </label>
-      {value.nestedTuplets && (
+      <label style={styles.field}>
+        Start the tuplet
+        <select
+          onChange={(event) => {
+            const choice = event.target.value;
+            onChange(choice === "beat" ? { offbeat: null } : { offbeat: choice === "cycle" ? "cycle" : Number(choice), nestedTuplets: null });
+          }}
+          style={styles.input}
+          value={value.offbeat ? String(value.offbeat) : "beat"}
+        >
+          <option value="beat">On the beat</option>
+          <option value="cycle">On the e, +, and a in turn ({value.steps ? "four measures each" : "one per measure"})</option>
+          <option value="1">On the &ldquo;e&rdquo;</option>
+          <option value="2">On the &ldquo;+&rdquo;</option>
+          <option value="3">On the &ldquo;a&rdquo;</option>
+        </select>
+      </label>
+      {(value.nestedTuplets || value.offbeat) && (
         <>
           <button
-            aria-pressed={value.nestedSteps}
-            onClick={() => onChange({ nestedSteps: !value.nestedSteps })}
-            style={{ ...styles.chip, ...(value.nestedSteps ? styles.chipOn : {}), alignSelf: "flex-start" }}
+            aria-pressed={value.steps}
+            onClick={() => onChange({ steps: !value.steps })}
+            style={{ ...styles.chip, ...(value.steps ? styles.chipOn : {}), alignSelf: "flex-start" }}
             type="button"
           >
             Steps: every note → accents → sparse with accents → ornaments
           </button>
           <p style={styles.note}>
-            {value.nestedSteps
-              ? "Each nested tuplet takes four measures, one per step. The steps set the density and ornaments (stickings on every note)."
+            {value.steps
+              ? `${runs ? `Each of the ${runs} takes` : "Each measure group takes"} four measures, one per step. The steps set the density and ornaments (stickings on every note).`
               : "Every measure uses the density and ornaments below."}
           </p>
         </>
@@ -171,7 +192,7 @@ export function ExerciseConfigEditor({ value, onChange, topics = [] }) {
         </label>
       </div>
 
-      <NestedTupletField onChange={update} value={value} />
+      <TupletPlacementField onChange={update} value={value} />
 
       <div style={styles.section}>
         <p style={styles.heading}>Density</p>

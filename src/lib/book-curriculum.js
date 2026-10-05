@@ -450,7 +450,7 @@ function createFinalStudies(pdfSettings) {
 // rest of the measure.
 const NESTED_MIN_PAGES = 3;
 const NESTED_EXERCISES_PER_PAGE = 22;
-const NESTED_TUPLET_STAGES = [
+const EXERCISE_STEPS = [
   { title: "Every note, stickings", playEveryNote: true, ornaments: ["stickings"] },
   { title: "Every note, accents", playEveryNote: true, ornaments: ["stickings", "accents"] },
   { title: "Sparse, accents", playEveryNote: false, fullPrimaryGroupShare: 0, playedShare: [0.5, 0.75], ornaments: ["stickings", "accents"] },
@@ -468,7 +468,7 @@ const NESTED_HOST_SPANS = [
 
 // Enough pages for every variant to go through every stage.
 function getNestedPageCount(variants) {
-  return Math.max(NESTED_MIN_PAGES, Math.ceil(variants.length * NESTED_TUPLET_STAGES.length / NESTED_EXERCISES_PER_PAGE));
+  return Math.max(NESTED_MIN_PAGES, Math.ceil(variants.length * EXERCISE_STEPS.length / NESTED_EXERCISES_PER_PAGE));
 }
 
 // Spread the exercises evenly over the variants, in order.
@@ -476,6 +476,12 @@ function createNestedTupletPlan(variants, exercises) {
   const base = Math.floor(exercises / variants.length);
   const extra = exercises % variants.length;
   return variants.map((variant, index) => ({ ...variant, count: base + (index < extra ? 1 : 0) }));
+}
+
+// "Triplets", "Quintuplets", ... for a one-beat tuplet.
+function oneBeatTupletTitle(tuplet) {
+  return capitalize(POOL_RHYTHMS[ONE_BEAT_KEYS.find((key) =>
+    POOL_RHYTHMS[key].pool.tuplets?.some((candidate) => candidate.actual === tuplet.actual))]?.name || `${tuplet.actual}s`);
 }
 
 function createNestedStudies(pdfSettings) {
@@ -494,9 +500,7 @@ function createNestedStudies(pdfSettings) {
     const pageCount = getNestedPageCount(variants);
     return {
       id, groupId: groups[spanIndex].id, density: "mixed", rhythmSpan: span.rhythmSpan,
-      title: span.id === "one-quarter" ? capitalize(POOL_RHYTHMS[ONE_BEAT_KEYS.find((key) =>
-        POOL_RHYTHMS[key].pool.tuplets?.some((tuplet) => tuplet.actual === host.actual))]?.name || `${host.actual}s`)
-        : `${family.notesPerQuarter} over ${span.label}`,
+      title: span.id === "one-quarter" ? oneBeatTupletTitle(host) : `${family.notesPerQuarter} over ${span.label}`,
       primaryRhythms,
       secondaryRhythms: normalizeRhythmPool({ ...secondaryPool, rhythmOrnaments: getSecondaryRhythmOrnaments(secondaryPool) }),
       pdfSettings,
@@ -509,7 +513,7 @@ function createNestedStudies(pdfSettings) {
           prompt: "", sampleJson: "",
           ornaments: RANDOM_ORNAMENT_IDS,
           nestedTupletPlan: createNestedTupletPlan(variants, pageCount * NESTED_EXERCISES_PER_PAGE),
-          nestedTupletStages: NESTED_TUPLET_STAGES,
+          exerciseSteps: EXERCISE_STEPS,
           ...(Object.keys(limits).length ? { primaryRhythmOrnaments: limits } : {}),
           fullPrimaryGroupShare: 0.5,
           minPlayedNotes: 0,
@@ -526,8 +530,77 @@ function createNestedStudies(pdfSettings) {
   return { groups, sections };
 }
 
+// Tuplets off the beat: each one-beat tuplet, triplets through nontuplets, gets
+// two pages where it starts on the "e", then the "+", then the "a" of a beat,
+// each start going through its steps. Sparse sixteenths fill the rest of the
+// measure, before and after the group, so the placement reads against the
+// sixteenth-note grid and the rests make syncopations; the tuplet itself is
+// played in full except on the sparse step. Ornaments are busier than the
+// book's usual density.
+const OFFBEAT_PAGES = 2;
+const OFFBEAT_ORNAMENT_DENSITY = 130;
+const SPARSE_AROUND_GROUPS = { playEveryNote: false, fullPrimaryGroupShare: 1, playedShare: [0.55, 0.8] };
+const OFFBEAT_STEPS = [
+  { title: "Tuplet in full, stickings", ...SPARSE_AROUND_GROUPS, ornaments: ["stickings"] },
+  { title: "Tuplet in full, accents", ...SPARSE_AROUND_GROUPS, ornaments: ["stickings", "accents"] },
+  { title: "Sparse, accents", playEveryNote: false, fullPrimaryGroupShare: 0, playedShare: [0.5, 0.75], ornaments: ["stickings", "accents"] },
+  { title: "Tuplet in full, ornaments", ...SPARSE_AROUND_GROUPS,
+    randomOrnaments: { always: ["stickings"], from: ["accents", "flams", "diddles", "cheese"], min: 2, max: 4 } },
+];
+const OFFBEAT_FAMILY_IDS = ["eighth-triplets", "quintuplets", "sextuplets", "septuplets", "nine-eight-thirtyseconds"];
+
+function createOffbeatStudies(pdfSettings) {
+  const group = { id: "offbeat-tuplets", title: "Tuplets off the beat", rhythmSpan: { count: 1, unit: 4 } };
+  const exercises = OFFBEAT_PAGES * NESTED_EXERCISES_PER_PAGE;
+  const offbeatTupletPlan = [1, 2, 3].map((offset, index) => ({
+    offset, count: Math.floor(exercises / 3) + (index < exercises % 3 ? 1 : 0),
+  }));
+  const secondaryRhythms = normalizeRhythmPool({
+    subdivisions: ["sixteenths"], tuplets: [], rhythmOrnaments: { sixteenths: ALL_SECONDARY_ORNAMENTS },
+  });
+  const sections = OFFBEAT_FAMILY_IDS.map((familyId) => {
+    const family = STUDY_FAMILIES.find((candidate) => candidate.id === familyId);
+    const primaryRhythms = normalizeRhythmPool(family, false);
+    const id = `offbeat-${family.notesPerQuarter}`;
+    // Every tuplet takes accents here (the accent steps accent the tuplet);
+    // fast groups keep their other limits.
+    const limits = Object.fromEntries(Object.entries(getPoolOrnamentLimits(getSpanPrimaryRhythms(primaryRhythms, group.rhythmSpan)))
+      .map(([key, allowed]) => [key, [...new Set(["accents", ...allowed])]]));
+    return {
+      id, groupId: group.id, density: "mixed", rhythmSpan: group.rhythmSpan,
+      title: oneBeatTupletTitle(primaryRhythms.tuplets[0]),
+      primaryRhythms,
+      secondaryRhythms,
+      pdfSettings,
+      pages: Array.from({ length: OFFBEAT_PAGES }, () => ({
+        subsectionId: `${id}-offbeat`,
+        subsectionPageCount: OFFBEAT_PAGES,
+        title: "Starting on e, +, and a",
+        pdfSettings,
+        generationSettings: {
+          prompt: "", sampleJson: "",
+          ornaments: RANDOM_ORNAMENT_IDS,
+          offbeatTupletPlan,
+          exerciseSteps: OFFBEAT_STEPS,
+          ornamentDensity: OFFBEAT_ORNAMENT_DENSITY,
+          ...(Object.keys(limits).length ? { primaryRhythmOrnaments: limits } : {}),
+          fullPrimaryGroupShare: 0.5,
+          minPlayedNotes: 0,
+          maxPlayedNotes: 0,
+          playEveryNote: false,
+          maxSameHandStickingRun: 2,
+          requiredSameHandStickingRuns: [],
+          stickingTail: null,
+        },
+        lines: [],
+      })),
+    };
+  });
+  return { groups: [group], sections };
+}
+
 module.exports = {
-  STUDY_TOPICS, STUDY_FAMILIES, TWO_BEAT_ORNAMENT_SEGMENTS, RANDOM_ORNAMENTS, NESTED_TUPLET_STAGES,
+  STUDY_TOPICS, STUDY_FAMILIES, TWO_BEAT_ORNAMENT_SEGMENTS, RANDOM_ORNAMENTS, EXERCISE_STEPS, OFFBEAT_STEPS,
   SPAN_STUDIES, createStudySections, createSpanStudy, createTwoBeatSections, createThreeEighthsSections,
-  createTupletCombinationStudies, createNestedStudies, createFinalStudies,
+  createOffbeatStudies, createTupletCombinationStudies, createNestedStudies, createFinalStudies,
 };

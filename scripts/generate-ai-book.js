@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const http = require("http");
 const https = require("https");
-const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, getLineStickingSettings, getSpanPrimaryRhythms, normalizeOrnamentSegments, getLineOrnamentSegment, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, getLineSecondaryRhythms, rhythmOrnamentKey, normalizeRandomOrnaments, getLineRandomOrnaments, getNestedTupletNotation, normalizeNestedTupletPlan, getLineNestedTuplet, normalizeNestedTupletStages, getLineNestedStage } = require("../src/lib/book-structure");
+const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, getLineStickingSettings, getSpanPrimaryRhythms, normalizeOrnamentSegments, getLineOrnamentSegment, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, getLineSecondaryRhythms, rhythmOrnamentKey, normalizeRandomOrnaments, getLineRandomOrnaments, getNestedTupletNotation, normalizeNestedTupletPlan, getLineNestedTuplet, normalizeExerciseSteps, getLineExerciseStep, OFFBEAT_LABELS, normalizeOffbeatTupletPlan, getLineOffbeatTuplet, normalizePageOrnamentDensity } = require("../src/lib/book-structure");
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const DEFAULT_CONFIG_PATH = path.join(
@@ -1427,6 +1427,17 @@ function validatePrimaryRequirements(section, score) {
       }));
     if (!nested) throw new Error(`Exercise must contain ${actual} in the time of ${hostNotes} host notes.`);
   }
+  if (section.lineTupletOffset) {
+    // Start of each note in quarter notes, with every containing tuplet's ratio.
+    const starts = [];
+    voice.notes.reduce((position, note, index) => {
+      starts[index] = position;
+      return position + getNoteQuarterUnits(note) * getContainingTupletRatio(voice.tuplets, index);
+    }, 0);
+    const offbeat = voice.tuplets.some((tuplet) => noteMatchesRhythmPool(primary, voice, Number(tuplet.start)) &&
+      Math.abs((starts[Number(tuplet.start)] * 4) % 4 - section.lineTupletOffset) < 1e-6);
+    if (!offbeat) throw new Error(`Exercise must start its primary tuplet on the "${OFFBEAT_LABELS[section.lineTupletOffset]}" of a beat.`);
+  }
   const tupletNoteIndexes = new Set(voice.tuplets.flatMap((tuplet) =>
     Array.from({ length: tuplet.end - tuplet.start }, (_, offset) => tuplet.start + offset)));
   const primaryIndexes = new Set(voice.notes.flatMap((note, index) => noteMatchesRhythmPool(primary, voice, index) ? [index] : []));
@@ -1441,6 +1452,9 @@ function validatePrimaryRequirements(section, score) {
     throw new Error("Exercise cannot satisfy the configured played-note limits.");
   }
   if (getSectionPlayEveryNote(section) && voice.notes.some(isRest)) throw new Error("No-rest subsection contains rests.");
+  if (section.lineOrnamentsOnly && !getSectionPlayEveryNote(section) && !voice.notes.some(isRest)) {
+    throw new Error("A sparse step needs rests.");
+  }
   validateLineOrnamentsShown(section, voice);
 }
 
@@ -3295,8 +3309,10 @@ function blockRhythmKey(block) {
 
 // requiredSecondaryBlocks are placed after the primary groups whenever they fit,
 // with their first notes struck (forcePlay).
+// With primaryOffsetSlots, the primary group starts that many slots after a
+// beat, with regular notes before it and after it to complete the beats.
 function createBeatStructuredLayout(requiredBlocks, availableBlocks, random, {
-  chainPrimaryGroups = false, requiredSecondaryBlocks = [],
+  chainPrimaryGroups = false, requiredSecondaryBlocks = [], primaryOffsetSlots = 0,
 } = {}) {
   const regular = availableBlocks.filter((block) => block.kind === "regular" && SLOTS_PER_BEAT % block.slotCount === 0);
   const slotsOf = (unit) => unit.reduce((sum, block) => sum + block.slotCount, 0);
@@ -3312,7 +3328,15 @@ function createBeatStructuredLayout(requiredBlocks, availableBlocks, random, {
     const filler = Array(fillerSlots / value.slotCount).fill(value);
     return random() < 0.5 ? [...filler, ...groups] : [...groups, ...filler];
   };
+  const offsetUnit = (block) => {
+    const tail = (SLOTS_PER_BEAT - (primaryOffsetSlots + block.slotCount) % SLOTS_PER_BEAT) % SLOTS_PER_BEAT;
+    const fitting = regular.filter((candidate) => primaryOffsetSlots % candidate.slotCount === 0 && tail % candidate.slotCount === 0);
+    if (!fitting.length) return null;
+    const value = fitting[randomInteger(random, 0, fitting.length - 1)];
+    return [...Array(primaryOffsetSlots / value.slotCount).fill(value), block, ...Array(tail / value.slotCount).fill(value)];
+  };
   const tupletUnit = (block, maxSlots = 32) => {
+    if (primaryOffsetSlots && requiredBlocks.includes(block)) return offsetUnit(block);
     if (!chainPrimaryGroups || !requiredBlocks.includes(block)) return groupUnit(block, 1);
     // Usually one group; each extra group in a row is an occasional surprise.
     let count = 1;
@@ -3347,7 +3371,8 @@ function createBeatStructuredLayout(requiredBlocks, availableBlocks, random, {
   const optional = [
     ...regular.filter((block) => !block.fillerOnly)
       .map((block) => ({ weight: 0.42, make: () => Array(SLOTS_PER_BEAT / block.slotCount).fill(block) })),
-    ...availableBlocks.filter((block) => block.kind === "tuplet")
+    // An off-beat primary group appears only off the beat.
+    ...availableBlocks.filter((block) => block.kind === "tuplet" && !(primaryOffsetSlots && requiredBlocks.includes(block)))
       .map((block) => ({ weight: 0.68, make: () => tupletUnit(block, remaining) })),
   ];
   while (remaining > 0) {
@@ -3489,9 +3514,10 @@ function createMixedTupletFallbackGeneratedScore(section, options, random, lineI
   if (requiredSlots > 32) throw new Error("The selected primary rhythms cannot all fit in one 4/4 measure. Select fewer primary rhythms.");
   if (primary) {
     // Draw a fresh subset of optional families for each exercise, including none.
+    // Off-beat pages always keep their regular notes, which lead into the group.
     availableBlocks = availableBlocks.filter((block) =>
       requiredBlocks.includes(block) || requiredSecondaryBlocks.includes(block) || block.kind === "rest" || block.fillerOnly ||
-        random() < 0.75
+        (section.lineTupletOffset && block.kind === "regular") || random() < 0.75
     );
   }
   if (getSectionPlayEveryNote(section) && !canFillMixedTupletSlots(32,
@@ -3509,6 +3535,7 @@ function createMixedTupletFallbackGeneratedScore(section, options, random, lineI
     const candidate = createBeatStructuredLayout(requiredBlocks, availableBlocks, random, {
       chainPrimaryGroups: Boolean(section.chainPrimaryGroups),
       requiredSecondaryBlocks,
+      primaryOffsetSlots: section.lineTupletOffset ? section.lineTupletOffset * SLOTS_PER_BEAT / 4 : 0,
     });
     const eventCount = (candidate || []).reduce((count, block) =>
       count + (block.kind === "tuplet" ? block.tuplet.actual : block.kind === "regular" ? 1 : 0), 0);
@@ -3795,9 +3822,10 @@ function getPlayedShareRange(ramp, index, count) {
 // A nested step's random ornaments, without diddles and cheese when no note can
 // carry them: a measure-long host of quarter or half notes whose nested group is
 // no faster than quarters leaves no secondary notes and no eighths in a tuplet.
-function getNestedStageRandomOrnaments(section, stage, nestedTuplet) {
+function getStepRandomOrnaments(section, stage, nestedTuplet) {
   const config = stage.randomOrnaments;
   if (!config) return null;
+  if (!nestedTuplet) return config;
   const span = normalizeRhythmSpan(section.rhythmSpan);
   const host = normalizeRhythmPool(section.primaryRhythms).tuplets[0];
   if (!host || span.count / span.unit < 1) return config;
@@ -3819,17 +3847,19 @@ function createUniqueGeneratedLine(input, section, samplePayload, index, usedExe
   if (ornamentSegment) section = { ...section, ornaments: ornamentSegment.ornaments };
   const nestedTuplet = getLineNestedTuplet(section, subsectionIndex);
   if (nestedTuplet) section = { ...section, lineNestedTuplet: nestedTuplet };
+  const offbeatTuplet = nestedTuplet ? null : getLineOffbeatTuplet(section, subsectionIndex);
+  if (offbeatTuplet) section = { ...section, lineTupletOffset: offbeatTuplet.offset };
   // Each nested variant steps through the page's stages, which set the
   // exercise's density and ornaments (secondary notes included).
-  const nestedStage = nestedTuplet ? getLineNestedStage(section, subsectionIndex) : null;
-  if (nestedStage) {
+  const exerciseStep = nestedTuplet || offbeatTuplet ? getLineExerciseStep(section, subsectionIndex) : null;
+  if (exerciseStep) {
     section = {
       ...section,
-      ornaments: nestedStage.ornaments,
-      randomOrnaments: getNestedStageRandomOrnaments(section, nestedStage, nestedTuplet),
-      playEveryNote: nestedStage.playEveryNote,
-      ...(nestedStage.fullPrimaryGroupShare != null ? { fullPrimaryGroupShare: nestedStage.fullPrimaryGroupShare } : {}),
-      ...(nestedStage.playedShare ? { playedShareRange: nestedStage.playedShare } : {}),
+      ornaments: exerciseStep.ornaments,
+      randomOrnaments: getStepRandomOrnaments(section, exerciseStep, nestedTuplet),
+      playEveryNote: exerciseStep.playEveryNote,
+      ...(exerciseStep.fullPrimaryGroupShare != null ? { fullPrimaryGroupShare: exerciseStep.fullPrimaryGroupShare } : {}),
+      ...(exerciseStep.playedShare ? { playedShareRange: exerciseStep.playedShare } : {}),
       lineOrnamentsOnly: true,
     };
   }
@@ -3989,12 +4019,17 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
       const subdivisions = getGenerationSubdivisions(pageSource, sampleJson);
       const ornaments = pageSource.primaryRhythms ? pageSource.ornaments || [] : getGenerationOrnaments(pageSource, sampleJson);
       const tuplets = getGenerationTuplets(pageSource, sampleJson);
+      // A page's ornament density scales the book's.
+      const pageOrnamentDensity = normalizePageOrnamentDensity(pageSource.ornamentDensity);
+      const ornamentDensity = pageOrnamentDensity
+        ? normalizeGlobalOrnamentDensity(globalOrnamentDensity * pageOrnamentDensity / 100)
+        : globalOrnamentDensity;
       const structuredPage = {
         ...pageSource,
         subdivisions,
         ornaments,
         tuplets,
-        globalOrnamentDensity,
+        globalOrnamentDensity: ornamentDensity,
         sampleJson,
       };
 
@@ -4012,7 +4047,9 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         secondaryRhythmExercises: normalizeSecondaryRhythmRows(pageSource.secondaryRhythmExercises),
         fillerSubdivisions: Array.isArray(pageSource.fillerSubdivisions) ? pageSource.fillerSubdivisions : null,
         nestedTupletPlan: normalizeNestedTupletPlan(pageSource.nestedTupletPlan),
-        nestedTupletStages: normalizeNestedTupletStages(pageSource.nestedTupletStages),
+        exerciseSteps: normalizeExerciseSteps(pageSource.exerciseSteps),
+        offbeatTupletPlan: normalizeOffbeatTupletPlan(pageSource.offbeatTupletPlan),
+        ornamentDensity: pageOrnamentDensity,
         chainPrimaryGroups: Boolean(pageSource.chainPrimaryGroups),
         fullPrimaryGroupShare: pageSource.fullPrimaryGroupShare ?? null,
         requirePrimaryRhythms: pageSource.requirePrimaryRhythms === false || pageSource.requirePrimaryRhythms === "any"
@@ -4034,7 +4071,7 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         maxSameHandStickingRun: getSectionMaxSameHandStickingRun(pageSource),
         requiredSameHandStickingRuns: getSectionRequiredSameHandStickingRuns(pageSource),
         globalRules,
-        globalOrnamentDensity,
+        globalOrnamentDensity: ornamentDensity,
         instructions: createStructuredSectionInstructions(structuredPage, sampleJson),
         prompt: pageSource.prompt || pageSource.instructions || "",
         subdivisions,
@@ -4358,7 +4395,9 @@ function createStoredPageGenerationSettings(pageConfig) {
     ...(pageConfig.secondaryRhythmExercises ? { secondaryRhythmExercises: pageConfig.secondaryRhythmExercises } : {}),
     ...(pageConfig.fillerSubdivisions ? { fillerSubdivisions: pageConfig.fillerSubdivisions } : {}),
     ...(pageConfig.nestedTupletPlan ? { nestedTupletPlan: pageConfig.nestedTupletPlan } : {}),
-    ...(pageConfig.nestedTupletStages ? { nestedTupletStages: pageConfig.nestedTupletStages } : {}),
+    ...(pageConfig.exerciseSteps ? { exerciseSteps: pageConfig.exerciseSteps } : {}),
+    ...(pageConfig.offbeatTupletPlan ? { offbeatTupletPlan: pageConfig.offbeatTupletPlan } : {}),
+    ...(normalizePageOrnamentDensity(pageConfig.ornamentDensity) ? { ornamentDensity: normalizePageOrnamentDensity(pageConfig.ornamentDensity) } : {}),
     ...(pageConfig.chainPrimaryGroups ? { chainPrimaryGroups: true } : {}),
     ...(pageConfig.fullPrimaryGroupShare != null ? { fullPrimaryGroupShare: pageConfig.fullPrimaryGroupShare } : {}),
     ...(pageConfig.requirePrimaryRhythms !== true ? { requirePrimaryRhythms: pageConfig.requirePrimaryRhythms } : {}),
