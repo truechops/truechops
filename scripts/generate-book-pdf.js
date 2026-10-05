@@ -239,9 +239,26 @@ function linePath(bookRoot, pageNumber, lineNumber) {
   return path.join(pageDir(bookRoot, pageNumber), `line-${String(lineNumber).padStart(2, "0")}.json`);
 }
 
+// Reading thousands of exercise files at once exhausts file handles, so reads
+// run at most 32 at a time.
+const MAX_OPEN_READS = 32;
+let openReads = 0;
+const waitingReads = [];
+
+async function readFileLimited(filePath) {
+  if (openReads >= MAX_OPEN_READS) await new Promise((resolve) => waitingReads.push(resolve));
+  openReads += 1;
+  try {
+    return await fs.readFile(filePath, "utf8");
+  } finally {
+    openReads -= 1;
+    waitingReads.shift()?.();
+  }
+}
+
 async function readJson(filePath) {
   try {
-    return JSON.parse(await fs.readFile(filePath, "utf8"));
+    return JSON.parse(await readFileLimited(filePath));
   } catch (error) {
     if (error.code === "ENOENT") {
       return null;

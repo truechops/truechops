@@ -2,7 +2,7 @@
 // generator and rules as the book. Server only (the generator reads files).
 const crypto = require("crypto");
 const generator = require("../../scripts/generate-ai-book");
-const { MAX_GENERATED_MEASURES, normalizeExerciseConfig } = require("./exercise-config");
+const { MAX_GENERATED_MEASURES, normalizeExerciseConfig, getConfigNestedVariants } = require("./exercise-config");
 
 // The website shows one exercise per row, so allow the full row width.
 const TOOL_PDF_SETTINGS = { measuresPerLine: 1, lineSpacing: 130, noteSize: 100 };
@@ -33,6 +33,12 @@ function createToolBook(config, sectionId) {
           requiredSameHandStickingRuns: [],
           ...(config.fullPrimaryGroupShare != null ? { fullPrimaryGroupShare: config.fullPrimaryGroupShare } : {}),
           ...(config.chainPrimaryGroups ? { chainPrimaryGroups: true } : {}),
+          // Cycle through every nested variant (one per measure) or repeat one.
+          ...(config.nestedTuplets ? {
+            nestedTupletPlan: config.nestedTuplets === "cycle"
+              ? getConfigNestedVariants(config).map((variant) => ({ ...variant, count: 1 }))
+              : [{ ...config.nestedTuplets, count: 1 }],
+          } : {}),
         },
       }],
     }],

@@ -219,6 +219,70 @@ function getLineRandomOrnaments(settings, lineIndex, seed) {
   return chosen;
 }
 
+// Nested tuplets: `actual` notes in the time of `hostNotes` notes of a host
+// tuplet. Written in the next shorter values when faster (5 in the time of two
+// triplet eighths is 5:4 sixteenths), in the host's values when slower.
+function getNestedTupletNotation(variant, host) {
+  const hostType = Number(host.type);
+  let type = hostType;
+  if (variant.actual > variant.hostNotes) {
+    while (variant.hostNotes * (type / hostType) * 2 <= variant.actual) type *= 2;
+  }
+  return { actual: variant.actual, normal: variant.hostNotes * (type / hostType), type };
+}
+
+// The systematic variants for a host with `actual` notes of value `type`:
+// 3, 5, 7, 9, and 11 in the time of two host notes, then for each larger span of
+// k host notes (short of the whole group), k - 1 and k + 1 notes, plus 11 in the
+// time of eight in nine-note hosts. Only variants written in 32nds or longer.
+function getNestedTupletVariants(host) {
+  const isPowerOfTwo = (value) => Number.isInteger(value) && value > 0 && (value & (value - 1)) === 0;
+  const related = (m, k) => isPowerOfTwo(m / k) || isPowerOfTwo(k / m);
+  const candidates = [
+    ...[3, 5, 7, 9, 11].map((actual) => ({ actual, hostNotes: 2 })),
+    ...Array.from({ length: Math.max(0, host.actual - 3) }, (_, index) => index + 3)
+      .flatMap((k) => [k - 1, k + 1].map((actual) => ({ actual, hostNotes: k }))),
+    ...(host.actual === 9 ? [{ actual: 11, hostNotes: 8 }] : []),
+  ];
+  const seen = new Set();
+  return candidates.filter((variant) => {
+    const key = `${variant.actual}:${variant.hostNotes}`;
+    if (seen.has(key) || variant.actual < 2 || variant.hostNotes >= host.actual || related(variant.actual, variant.hostNotes)) return false;
+    seen.add(key);
+    return getNestedTupletNotation(variant, host).type <= 32;
+  });
+}
+
+const NOTE_VALUE_NAMES = { 2: "half", 4: "quarter", 8: "eighth", 16: "sixteenth", 32: "thirty-second" };
+
+// "5 over 2 notes (5:4 sixteenths)": how many notes, in the time of how many
+// host notes, and how the nested bracket is written.
+function nestedTupletLabel(variant, host) {
+  const notation = getNestedTupletNotation(variant, host);
+  return `${variant.actual} over ${variant.hostNotes} notes (${notation.actual}:${notation.normal} ${NOTE_VALUE_NAMES[notation.type]}s)`;
+}
+
+// nestedTupletPlan: [{ actual, hostNotes, count }] in order; each exercise
+// nests the variant its position falls in (the last one continues to the end).
+function normalizeNestedTupletPlan(value) {
+  if (!Array.isArray(value)) return null;
+  const plan = value
+    .map((variant) => ({
+      actual: Number.parseInt(variant?.actual, 10),
+      hostNotes: Number.parseInt(variant?.hostNotes, 10),
+      count: Math.max(1, Number.parseInt(variant?.count, 10) || 1),
+    }))
+    .filter((variant) => variant.actual >= 2 && variant.hostNotes >= 1 && variant.actual <= 16);
+  return plan.length ? plan : null;
+}
+
+function getLineNestedTuplet(settings, lineIndex) {
+  const plan = normalizeNestedTupletPlan(settings?.nestedTupletPlan);
+  if (!plan) return null;
+  let end = 0;
+  return plan.find((variant) => (end += variant.count) > lineIndex) || plan[plan.length - 1];
+}
+
 function getLineOrnamentSegment(settings, lineIndex) {
   const segments = normalizeOrnamentSegments(settings?.ornamentSegments);
   if (!segments) return null;
@@ -363,6 +427,7 @@ module.exports = {
   getSpanPrimaryRhythms,
   normalizeBookGroups, normalizeStickingTail, getLineStickingSettings,
   normalizeOrnamentSegments, getLineOrnamentSegment, normalizeRandomOrnaments, getLineRandomOrnaments,
+  getNestedTupletNotation, getNestedTupletVariants, nestedTupletLabel, normalizeNestedTupletPlan, getLineNestedTuplet,
   normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, getSecondaryRhythmPhase, getLineSecondaryRhythms,
   normalizeRhythmPool, rhythmOrnamentKey, migrateBookStructure, createStructureTableOfContents,
 };

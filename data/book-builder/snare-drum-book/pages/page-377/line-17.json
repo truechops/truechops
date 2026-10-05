@@ -1,7 +1,7 @@
 {
   "pageNumber": 377,
   "lineNumber": 17,
-  "title": "Random subdivisions 17",
+  "title": "Nested tuplets 17",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -23,34 +23,10 @@
               {
                 "notes": [
                   {
-                    "notes": [],
-                    "duration": 4,
-                    "dots": 1,
-                    "velocity": 0.5
-                  },
-                  {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "rfa"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "lf"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 4,
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
@@ -59,27 +35,165 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "rfa"
+                    "ornaments": "la"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 2,
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "lfa"
+                    "ornaments": "la"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "la"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 6,
-                    "actual": 3,
-                    "normal": 2
+                    "end": 8,
+                    "actual": 9,
+                    "normal": 8
+                  },
+                  {
+                    "start": 1,
+                    "end": 8,
+                    "actual": 7,
+                    "normal": 8
+                  },
+                  {
+                    "start": 8,
+                    "end": 17,
+                    "actual": 9,
+                    "normal": 8
                   }
                 ]
               }
@@ -89,8 +203,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r4. n8:raf n8:lf n4:l n8:raf n2:laf |t0-6:3:2",
-  "updatedAt": "2026-10-04T20:49:43.981Z",
-  "sectionId": "random-subdivisions-four-quarters",
-  "sectionPageNumber": 3
+  "exerciseShortForm": "n16:l n16:la n16:r n16:r n16:l n16:l n16:r n16:r n16:la n16:l n16:r n16:la n16:r n16:r n16:l n16:r n16:r |t0-8:9:8,1-8:7:8,8-17:9:8",
+  "updatedAt": "2026-10-04T22:01:00.545Z",
+  "sectionId": "nested-two-quarters-9",
+  "sectionPageNumber": 2
 }

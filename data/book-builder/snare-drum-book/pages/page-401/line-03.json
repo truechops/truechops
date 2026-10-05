@@ -23,8 +23,35 @@
               {
                 "notes": [
                   {
-                    "notes": [],
+                    "notes": [
+                      "C5"
+                    ],
                     "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [],
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5
                   },
@@ -32,17 +59,8 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "ld"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
+                    "duration": 4,
+                    "dots": 1,
                     "velocity": 0.5,
                     "ornaments": "r"
                   },
@@ -50,52 +68,16 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
+                    "ornaments": "rd"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lda"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "rda"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
+                    "duration": 4,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
@@ -103,10 +85,10 @@
                 ],
                 "tuplets": [
                   {
-                    "start": 0,
-                    "end": 8,
-                    "actual": 8,
-                    "normal": 15
+                    "start": 3,
+                    "end": 7,
+                    "actual": 7,
+                    "normal": 6
                   }
                 ]
               }
@@ -116,8 +98,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r16 n16:ld n16:r n16:l n16:lad n16:r n16:rad n16:l n16:l |t0-8:8:15",
-  "updatedAt": "2026-10-04T20:49:43.981Z",
-  "sectionId": "random-subdivisions-fifteen-sixteenths",
-  "sectionPageNumber": 3
+  "exerciseShortForm": "n16:r n16:r n8:l r8 n4.:r n8:rd n4:l |t3-7:7:6",
+  "updatedAt": "2026-10-04T22:01:00.545Z",
+  "sectionId": "random-subdivisions-three-quarters",
+  "sectionPageNumber": 1
 }

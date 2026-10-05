@@ -1,7 +1,7 @@
 {
   "pageNumber": 390,
   "lineNumber": 17,
-  "title": "Random subdivisions 17",
+  "title": "Nested tuplets 17",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -23,13 +23,10 @@
               {
                 "notes": [
                   {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
+                    "notes": [],
+                    "duration": 2,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "d"
+                    "velocity": 0.5
                   },
                   {
                     "notes": [
@@ -37,68 +34,17 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "f"
-                  },
-                  {
-                    "notes": [],
-                    "duration": 4,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "cd"
-                  },
-                  {
-                    "notes": [],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "f"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5
+                    "ornaments": "r"
                   },
                   {
                     "notes": [],
@@ -110,24 +56,24 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "f"
+                    "velocity": 1,
+                    "ornaments": "la"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 2,
-                    "end": 7,
-                    "actual": 8,
-                    "normal": 9
+                    "start": 0,
+                    "end": 5,
+                    "actual": 9,
+                    "normal": 8
                   },
                   {
-                    "start": 7,
-                    "end": 12,
-                    "actual": 6,
-                    "normal": 4
+                    "start": 1,
+                    "end": 3,
+                    "actual": 2,
+                    "normal": 3
                   }
                 ]
               }
@@ -137,8 +83,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n16:d n8 r16 n16:f r4 n16:dc r16 n16:f n16 n16 r8 n16:f |t2-7:8:9,7-12:6:4",
-  "updatedAt": "2026-10-04T20:49:43.981Z",
-  "sectionId": "random-subdivisions-nine-sixteenths",
+  "exerciseShortForm": "r2 n8:r n8:r r8 n8:la |t0-5:9:8,1-3:2:3",
+  "updatedAt": "2026-10-04T22:01:00.545Z",
+  "sectionId": "nested-four-quarters-9",
   "sectionPageNumber": 1
 }

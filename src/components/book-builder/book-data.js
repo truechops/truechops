@@ -1,7 +1,7 @@
 import _ from "lodash";
 import { getEmptyMeasure } from "../../helpers/score";
 import { DEFAULT_TEMPO } from "../../consts/score";
-import { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, groupSubsectionPages, normalizeSubsectionPageCount, normalizeOrnamentSegments, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, normalizeRandomOrnaments } from "../../lib/book-structure";
+import { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, groupSubsectionPages, normalizeSubsectionPageCount, normalizeOrnamentSegments, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, normalizeRandomOrnaments, normalizeNestedTupletPlan } from "../../lib/book-structure";
 
 export { normalizeRhythmPool };
 
@@ -497,6 +497,9 @@ export function normalizePageGenerationSettings(value = {}, fallback = {}) {
       ? { fullPrimaryGroupShare: Math.max(0, Math.min(1, Number(source.fullPrimaryGroupShare))) }
       : {}),
     ...(Array.isArray(source.fillerSubdivisions) ? { fillerSubdivisions: source.fillerSubdivisions } : {}),
+    ...(normalizeNestedTupletPlan(source.nestedTupletPlan)
+      ? { nestedTupletPlan: normalizeNestedTupletPlan(source.nestedTupletPlan) }
+      : {}),
     ...(normalizeSecondaryRhythmRows(source.secondaryRhythmExercises)
       ? { secondaryRhythmExercises: normalizeSecondaryRhythmRows(source.secondaryRhythmExercises) }
       : {}),
@@ -878,7 +881,12 @@ function normalizeTupletVoiceNoteValues(voice) {
         .sort((left, right) => left.start - right.start)
     : [];
 
-  if (!tuplets.length) {
+  // Voices with nested tuplets are already written as intended; rewriting note
+  // values here would drop the nested groups.
+  const hasNestedTuplets = tuplets.some((tuplet) => tuplets.some((other) => other !== tuplet &&
+    other.start <= tuplet.start && tuplet.end <= other.end && other.end - other.start > tuplet.end - tuplet.start));
+
+  if (!tuplets.length || hasNestedTuplets) {
     return {
       ...voice,
       notes: notes.map((note) => ({ ...note })),

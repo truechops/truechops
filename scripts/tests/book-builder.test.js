@@ -8,8 +8,8 @@ const vm = require("node:vm");
 const babel = require("@babel/core");
 const { migrateBookStructure } = require("../../src/lib/book-structure");
 const generator = require("../generate-ai-book");
-const { createStudySections, createSpanStudy, createTupletCombinationStudies, createFinalStudies, SPAN_STUDIES, STUDY_TOPICS, STUDY_FAMILIES } = require("../../src/lib/book-curriculum");
-const { getLineStickingSettings, getSpanPrimaryRhythms } = require("../../src/lib/book-structure");
+const { createStudySections, createSpanStudy, createTupletCombinationStudies, createNestedStudies, createFinalStudies, SPAN_STUDIES, STUDY_TOPICS, STUDY_FAMILIES } = require("../../src/lib/book-curriculum");
+const { getLineStickingSettings, getSpanPrimaryRhythms, getNestedTupletNotation, getNestedTupletVariants } = require("../../src/lib/book-structure");
 
 // Load the same ES modules Next uses without starting a server.
 const originalLoader = Module._extensions[".js"];
@@ -296,6 +296,96 @@ test("the final section keeps at least one grouping of its category in every exe
           tuplet.normal / tuplet.actual > 1.99), `exercise lacks a two-quarter grouping`);
     }
   });
+});
+
+// Quarter-note length of a voice, with every containing tuplet's ratio applied.
+function nestedVoiceQuarters(voice) {
+  return voice.notes.reduce((sum, note, index) => sum + 4 / note.duration * (note.dots ? 1.5 : 1) *
+    voice.tuplets.filter((tuplet) => index >= tuplet.start && index < tuplet.end)
+      .reduce((ratio, tuplet) => ratio * tuplet.normal / tuplet.actual, 1), 0);
+}
+
+function nestedPairs(voice) {
+  return voice.tuplets.flatMap((inner) => voice.tuplets
+    .filter((outer) => outer !== inner && outer.start <= inner.start && inner.end <= outer.end && outer.end - outer.start > inner.end - inner.start)
+    .map((outer) => ({ outer, inner })));
+}
+
+test("nested tuplet variants go through 3-11 over two host notes, then the smaller spans", () => {
+  const key = (variants) => variants.map((variant) => `${variant.actual}/${variant.hostNotes}`);
+  assert.deepEqual(key(getNestedTupletVariants({ actual: 3, normal: 2, type: 8 })), ["3/2", "5/2", "7/2", "9/2", "11/2"]);
+  assert.deepEqual(key(getNestedTupletVariants({ actual: 5, normal: 4, type: 8 })), ["3/2", "5/2", "7/2", "9/2", "11/2", "2/3", "4/3", "3/4", "5/4"]);
+  // 9 and 11 over two quintuplet sixteenths would need 64ths.
+  assert.deepEqual(key(getNestedTupletVariants({ actual: 5, normal: 4, type: 16 })), ["3/2", "5/2", "7/2", "2/3", "4/3", "3/4", "5/4"]);
+  assert(!key(getNestedTupletVariants({ actual: 9, normal: 8, type: 32 })).includes("9/2"));
+  assert(key(getNestedTupletVariants({ actual: 9, normal: 8, type: 32 })).includes("11/8"));
+  // Five in the time of two triplet eighths is written as 5:4 sixteenths.
+  assert.deepEqual(getNestedTupletNotation({ actual: 5, hostNotes: 2 }, { actual: 3, normal: 2, type: 8 }), { actual: 5, normal: 4, type: 16 });
+  assert.deepEqual(getNestedTupletNotation({ actual: 4, hostNotes: 5 }, { actual: 5, normal: 4, type: 8 }), { actual: 4, normal: 5, type: 8 });
+});
+
+test("nested tuplet pages nest each planned variant inside the primary group and keep 4/4", () => {
+  const { groups, sections } = createNestedStudies({ measuresPerLine: 2, lineSpacing: 130, noteSize: 100 });
+  assert.equal(groups.length, 4);
+  assert.equal(sections.length, 5 + SPAN_STUDIES.filter((study) => ["two-quarters", "three-quarters", "four-quarters"].includes(study.groupId))
+    .reduce((sum, study) => sum + study.familyIds.length, 0));
+  assert(sections.every((section) => section.pages.length === 2 && section.pages[0].generationSettings.nestedTupletPlan));
+  const quintuplets = sections.find((section) => section.id === "nested-two-quarters-5");
+  const config = generator.createGenerationConfig({}, { structureVersion: 3, groups, sections: [quintuplets] });
+  const host = getSpanPrimaryRhythms(quintuplets.primaryRhythms, quintuplets.rhythmSpan).tuplets[0];
+  const plan = quintuplets.pages[0].generationSettings.nestedTupletPlan;
+  assert.equal(plan.reduce((sum, variant) => sum + variant.count, 0), 44);
+  const seen = new Set();
+  let position = 0;
+  for (const [pageIndex, page] of config.sections[0].pages.entries()) {
+    for (let index = 0; index < 22; index += 3) {
+      const exercise = pageIndex * 22 + index;
+      let end = 0;
+      const variant = plan.find((candidate) => (end += candidate.count) > exercise);
+      const notation = getNestedTupletNotation(variant, host);
+      const voice = generator.createUniqueGeneratedLine(null, page, page.sampleJson, index, seen).score.measures[0].parts[0].voices[0];
+      assert(Math.abs(nestedVoiceQuarters(voice) - 4) < 1e-9, `exercise ${exercise + 1} is not 4/4`);
+      assert(nestedPairs(voice).some(({ outer, inner }) => outer.actual === host.actual && outer.normal === host.normal &&
+        inner.actual === notation.actual && inner.normal === notation.normal),
+        `exercise ${exercise + 1} lacks ${variant.actual} over ${variant.hostNotes}`);
+      position += 1;
+    }
+  }
+  assert(position > 10);
+});
+
+test("the website generator nests tuplets on request and the composer records nested groups", () => {
+  const { generateExerciseMeasures } = require("../../src/lib/exercise-generator");
+  const { normalizeExerciseConfig, getConfigNestedVariants } = require("../../src/lib/exercise-config");
+  assert.equal(normalizeExerciseConfig({ subdivision: "sixteenths", nestedTuplets: "cycle" }).nestedTuplets, null);
+  const config = normalizeExerciseConfig({ subdivision: "quintuplets", rhythmSpan: { count: 2, unit: 4 }, nestedTuplets: "cycle", ornaments: ["stickings"] });
+  assert.equal(config.nestedTuplets, "cycle");
+  assert.equal(getConfigNestedVariants(config).length, 9);
+  for (const measure of generateExerciseMeasures(config, 4).measures) {
+    const voice = measure.parts[0].voices[0];
+    assert(nestedPairs(voice).length, "generated measure lacks a nested tuplet");
+    assert(Math.abs(nestedVoiceQuarters(voice) - 4) < 1e-9);
+  }
+  const fixed = normalizeExerciseConfig({ ...config, nestedTuplets: { actual: 7, hostNotes: 2 } });
+  assert.deepEqual(fixed.nestedTuplets, { actual: 7, hostNotes: 2 });
+  assert.equal(normalizeExerciseConfig({ ...config, nestedTuplets: { actual: 4, hostNotes: 2 } }).nestedTuplets, null);
+
+  // Composer: a 32nd triplet on a quintuplet note nests inside the quintuplet.
+  const { modifyNote } = require("../../src/services/score-service");
+  const note = (duration) => ({ notes: ["C5"], duration, velocity: 0.5 });
+  const state = {
+    score: { parts: { snare: { enabled: true } }, measures: [{ timeSig: { num: 4, type: 4 }, parts: [{ instrument: "snare", voices: [{
+      notes: [note(16), note(16), note(16), note(16), note(16), note(4), note(4), note(4)],
+      tuplets: [{ start: 0, end: 5, actual: 5, normal: 4 }],
+    }] }] }] },
+    voices: { snare: {} },
+    dotSelected: false,
+    tuplet: { selected: true, actual: 3, normal: 2, type: 32 },
+  };
+  modifyNote(state, 2, false, { measureIndex: 0, partIndex: 0, voiceIndex: 0, noteIndex: 1, instrument: "snare" });
+  const voice = state.score.measures[0].parts[0].voices[0];
+  assert(nestedPairs(voice).some(({ outer, inner }) => outer.actual === 5 && inner.actual === 3));
+  assert(Math.abs(nestedVoiceQuarters(voice) - 4) < 1e-9);
 });
 
 test("all seven families follow the exact eight sparse / seven full topic order", () => {

@@ -9,6 +9,7 @@ import {
   SECONDARY_CHOICES,
   SPAN_CHOICES,
   SUBDIVISION_CHOICES,
+  getConfigNestedVariants,
   normalizeExerciseConfig,
 } from "../../lib/exercise-config";
 import { rhythmOrnamentKey } from "../../lib/book-structure";
@@ -53,7 +54,9 @@ function describeConfig(config) {
   const subdivision = SUBDIVISION_CHOICES.find((choice) => choice.id === config.subdivision)?.label || config.subdivision;
   const span = SPAN_CHOICES.find((choice) => choice.count === config.rhythmSpan.count && choice.unit === config.rhythmSpan.unit);
   const ornaments = config.ornaments.map((id) => ORNAMENT_LABELS[id]).join(", ") || "No ornaments";
-  return `${subdivision}${span && span.id !== "1/4" ? ` ${span.label.toLowerCase()}` : ""} · ${config.playEveryNote ? "every note" : "sparse"} · ${ornaments}`;
+  const nested = config.nestedTuplets === "cycle" ? " · nested tuplets in turn"
+    : config.nestedTuplets ? ` · nested ${config.nestedTuplets.actual} over ${config.nestedTuplets.hostNotes}` : "";
+  return `${subdivision}${span && span.id !== "1/4" ? ` ${span.label.toLowerCase()}` : ""}${nested} · ${config.playEveryNote ? "every note" : "sparse"} · ${ornaments}`;
 }
 
 function Chip({ on, onClick, children }) {
@@ -61,6 +64,43 @@ function Chip({ on, onClick, children }) {
     <button aria-pressed={on} onClick={onClick} style={{ ...styles.chip, ...(on ? styles.chipOn : {}) }} type="button">
       {children}
     </button>
+  );
+}
+
+// A smaller tuplet nested inside the subdivision: off, every variant in turn,
+// or one variant (e.g. 5 notes in the time of 2 of the subdivision's notes).
+function NestedTupletField({ value, onChange }) {
+  const variants = getConfigNestedVariants(value);
+  if (!variants.length) {
+    return <p style={styles.note}>Nested tuplets need a tuplet subdivision (not plain eighths, sixteenths, or 32nds).</p>;
+  }
+  const selected = value.nestedTuplets === "cycle" ? "cycle"
+    : value.nestedTuplets ? `${value.nestedTuplets.actual}:${value.nestedTuplets.hostNotes}` : "off";
+  return (
+    <label style={styles.field}>
+      Nested tuplets
+      <select
+        onChange={(event) => {
+          const choice = event.target.value;
+          if (choice === "off") onChange(null);
+          else if (choice === "cycle") onChange("cycle");
+          else {
+            const [actual, hostNotes] = choice.split(":").map(Number);
+            onChange({ actual, hostNotes });
+          }
+        }}
+        style={styles.input}
+        value={selected}
+      >
+        <option value="off">None</option>
+        <option value="cycle">Each nested tuplet in turn ({variants.length}, one per measure)</option>
+        {variants.map((variant) => (
+          <option key={`${variant.actual}:${variant.hostNotes}`} value={`${variant.actual}:${variant.hostNotes}`}>
+            {variant.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
@@ -107,6 +147,8 @@ export function ExerciseConfigEditor({ value, onChange, topics = [] }) {
           </select>
         </label>
       </div>
+
+      <NestedTupletField onChange={(nestedTuplets) => update({ nestedTuplets })} value={value} />
 
       <div style={styles.section}>
         <p style={styles.heading}>Density</p>

@@ -1,6 +1,8 @@
 import { FaArrowDown, FaArrowUp, FaPlus, FaTrash } from "react-icons/fa";
 import { ORNAMENT_OPTIONS, SUBDIVISION_OPTIONS, TUPLET_TYPE_OPTIONS } from "./book-data";
-import { rhythmOrnamentKey } from "../../lib/book-structure";
+import {
+  getNestedTupletVariants, getSpanPrimaryRhythms, nestedTupletLabel, normalizeRhythmPool, rhythmOrnamentKey,
+} from "../../lib/book-structure";
 import styles from "./BookBuilder.module.css";
 
 // Editors for a page's exercise plan: ornament topics by exercise, the simpler
@@ -221,6 +223,116 @@ export function OrnamentTopicsEditor({ segments, ornaments, randomOrnaments, exe
         {total} of {exerciseCount} exercises assigned.
         {total < exerciseCount && " The last topic continues to the end of the page."}
         {total > exerciseCount && " Topics past the end of the page are not used."}
+      </p>
+    </div>
+  );
+}
+
+function evenNestedPlan(variants, exerciseCount) {
+  const base = Math.max(1, Math.floor(exerciseCount / variants.length));
+  const extra = Math.max(0, exerciseCount - base * variants.length);
+  return variants.map((variant, index) => ({ ...variant, count: base + (index < extra ? 1 : 0) }));
+}
+
+// Subsection level: a smaller tuplet nested inside the primary tuplet, one
+// variant per run of exercises (e.g. 3, 5, 7, 9 over two triplet notes, then 2
+// and 4 over three, ...). Needs a primary rhythm written as a tuplet.
+export function NestedTupletPlanEditor({ plan, primaryRhythms, rhythmSpan, exerciseCount, onChange }) {
+  const host = getSpanPrimaryRhythms(normalizeRhythmPool(primaryRhythms, false), rhythmSpan).tuplets[0];
+  const variants = host ? getNestedTupletVariants(host) : [];
+  if (!variants.length) {
+    if (!plan) return null;
+    return (
+      <div className={styles.fieldGroup}>
+        <span>Nested tuplets</span>
+        <p className={`${styles.layoutSummary} ${styles.planWarning}`}>This section&apos;s primary rhythm is not a tuplet, so nothing can be nested.</p>
+        <button className={styles.button} onClick={() => onChange(null)} type="button">Turn off nested tuplets</button>
+      </div>
+    );
+  }
+  const hostName = `${host.actual}:${host.normal}`;
+  if (!plan) {
+    return (
+      <div className={styles.fieldGroup}>
+        <span>Nested tuplets</span>
+        <p className={styles.layoutSummary}>No nesting. The {hostName} primary tuplet can hold {variants.length} nested tuplets.</p>
+        <button className={styles.button} onClick={() => onChange(evenNestedPlan(variants, exerciseCount))} type="button">
+          Nest tuplets in the primary tuplet
+        </button>
+      </div>
+    );
+  }
+
+  const key = (variant) => `${variant.actual}:${variant.hostNotes}`;
+  const total = plan.reduce((sum, variant) => sum + variant.count, 0);
+  const update = (index, updates) => onChange(plan.map((variant, i) => (i === index ? { ...variant, ...updates } : variant)));
+  const move = (index, direction) => {
+    const next = [...plan];
+    const [variant] = next.splice(index, 1);
+    next.splice(index + direction, 0, variant);
+    onChange(next);
+  };
+  let start = 1;
+
+  return (
+    <div className={styles.fieldGroup}>
+      <span>Nested tuplets, in order</span>
+      {plan.map((variant, index) => {
+        const first = start;
+        start += variant.count;
+        const known = variants.some((candidate) => key(candidate) === key(variant));
+        return (
+          <div className={styles.topicRow} key={index}>
+            <select
+              aria-label={`Nested tuplet ${index + 1}`}
+              onChange={(event) => {
+                const [actual, hostNotes] = event.target.value.split(":").map(Number);
+                update(index, { actual, hostNotes });
+              }}
+              value={key(variant)}
+            >
+              {!known && <option value={key(variant)}>{variant.actual} over {variant.hostNotes} notes (not available)</option>}
+              {variants.map((candidate) => (
+                <option key={key(candidate)} value={key(candidate)}>{nestedTupletLabel(candidate, host)}</option>
+              ))}
+            </select>
+            <label className={styles.topicCount}>
+              <input
+                aria-label={`Nested tuplet ${index + 1} exercises`}
+                min="1"
+                onChange={(event) => update(index, { count: Math.max(1, Number.parseInt(event.target.value, 10) || 1) })}
+                type="number"
+                value={variant.count}
+              />
+              <span>{first > exerciseCount ? "unused" : `ex. ${first}${variant.count > 1 ? `–${Math.min(exerciseCount, first + variant.count - 1)}` : ""}`}</span>
+            </label>
+            <div className={styles.topicActions}>
+              <button className={styles.button} disabled={index === 0} onClick={() => move(index, -1)} title="Move earlier" type="button"><FaArrowUp /></button>
+              <button className={styles.button} disabled={index === plan.length - 1} onClick={() => move(index, 1)} title="Move later" type="button"><FaArrowDown /></button>
+              <button className={`${styles.button} ${styles.danger}`} disabled={plan.length === 1} onClick={() => onChange(plan.filter((_, i) => i !== index))} title="Remove nested tuplet" type="button"><FaTrash /></button>
+            </div>
+          </div>
+        );
+      })}
+      <div className={styles.topicFooter}>
+        <button
+          className={styles.button}
+          onClick={() => onChange([...plan, { ...(variants.find((candidate) => !plan.some((variant) => key(variant) === key(candidate))) || variants[0]), count: 1 }])}
+          type="button"
+        >
+          <FaPlus /> Add nested tuplet
+        </button>
+        <button className={styles.button} onClick={() => onChange(evenNestedPlan(variants, exerciseCount))} type="button">
+          Spread all {variants.length} evenly
+        </button>
+        <button className={styles.button} onClick={() => onChange(null)} type="button">
+          Turn off nested tuplets
+        </button>
+      </div>
+      <p className={`${styles.layoutSummary} ${total !== exerciseCount ? styles.planWarning : ""}`}>
+        Each exercise nests its tuplet inside one {hostName} primary group. {total} of {exerciseCount} exercises assigned.
+        {total < exerciseCount && " The last nested tuplet continues to the end."}
+        {total > exerciseCount && " Nested tuplets past the last exercise are not used."}
       </p>
     </div>
   );

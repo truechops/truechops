@@ -1,7 +1,9 @@
 // Exercise generator configurations, shared by the website tool, its API, and
 // the book's QR pages. A configuration is the subset of a book page's
 // generation settings that the tool exposes, plus a name.
-const { normalizeRhythmPool, normalizeRhythmSpan, rhythmSpanLabel, rhythmOrnamentKey } = require("./book-structure");
+const {
+  normalizeRhythmPool, normalizeRhythmSpan, rhythmSpanLabel, rhythmOrnamentKey, getSpanPrimaryRhythms, getNestedTupletVariants, nestedTupletLabel,
+} = require("./book-structure");
 const { STUDY_FAMILIES } = require("./book-curriculum");
 
 const MAX_GENERATED_MEASURES = 16;
@@ -51,6 +53,24 @@ function getSubdivisionChoice(primaryRhythms) {
   }) || null;
 }
 
+// Nested tuplets the configuration's subdivision can host (none for plain
+// notes), each with its label, e.g. "5 over 2 notes (5:4 sixteenths)".
+function getConfigNestedVariants(config) {
+  const host = getSpanPrimaryRhythms(normalizeRhythmPool(config.primaryRhythms, false), normalizeRhythmSpan(config.rhythmSpan)).tuplets[0];
+  return host ? getNestedTupletVariants(host).map((variant) => ({ ...variant, label: nestedTupletLabel(variant, host) })) : [];
+}
+
+// "cycle" walks through every variant, one per measure; { actual, hostNotes }
+// nests the same variant in every measure; null turns nesting off.
+function normalizeNestedSetting(value, config) {
+  if (!value) return null;
+  const variants = getConfigNestedVariants(config);
+  if (!variants.length) return null;
+  if (value === "cycle") return "cycle";
+  const match = variants.find((variant) => variant.actual === Number(value.actual) && variant.hostNotes === Number(value.hostNotes));
+  return match ? { actual: match.actual, hostNotes: match.hostNotes } : null;
+}
+
 function clampNumber(value, minimum, maximum, fallback) {
   const number = Number(value);
   return Number.isFinite(number) ? Math.max(minimum, Math.min(maximum, number)) : fallback;
@@ -64,13 +84,16 @@ function normalizeExerciseConfig(value = {}) {
   const secondary = normalizeRhythmPool({ ...(source.secondaryRhythms || {}), rhythmOrnaments: source.secondaryRhythms?.rhythmOrnaments || DEFAULT_RHYTHM_ORNAMENTS });
   const playEveryNote = Boolean(source.playEveryNote);
   const share = source.fullPrimaryGroupShare;
+  const rhythmSpan = normalizeRhythmSpan(source.rhythmSpan);
+  const primaryRhythms = normalizeRhythmPool(choice.pool, false);
   return {
     ...(source.id ? { id: String(source.id) } : {}),
     name: String(source.name || "").slice(0, 80) || "Untitled configuration",
     ...(source.sourcePage ? { sourcePage: { page: Number(source.sourcePage.page), title: String(source.sourcePage.title || "") } } : {}),
     subdivision: choice.id,
-    rhythmSpan: normalizeRhythmSpan(source.rhythmSpan),
-    primaryRhythms: normalizeRhythmPool(choice.pool, false),
+    rhythmSpan,
+    primaryRhythms,
+    nestedTuplets: normalizeNestedSetting(source.nestedTuplets, { primaryRhythms, rhythmSpan }),
     secondaryRhythms: secondary,
     ornaments: ORNAMENT_IDS.filter((id) => (source.ornaments || []).includes(id)),
     playEveryNote,
@@ -115,6 +138,7 @@ function exerciseConfigFromBookPage(page, pageRef = {}) {
     maxPlayedNotes: settings.maxPlayedNotes,
     maxSameHandStickingRun: settings.maxSameHandStickingRun,
     chainPrimaryGroups: settings.chainPrimaryGroups,
+    nestedTuplets: Array.isArray(settings.nestedTupletPlan) ? "cycle" : null,
   });
 }
 
@@ -129,4 +153,5 @@ function getBookPageOrnamentTopics(page) {
 module.exports = {
   MAX_GENERATED_MEASURES, ORNAMENT_IDS, SUBDIVISION_CHOICES, SPAN_CHOICES, SECONDARY_CHOICES,
   DEFAULT_EXERCISE_CONFIG, normalizeExerciseConfig, exerciseConfigFromBookPage, getBookPageOrnamentTopics,
+  getConfigNestedVariants,
 };

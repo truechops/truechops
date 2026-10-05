@@ -16,6 +16,9 @@ import {
 const VF = Vex.Flow;
 const BASE_STAVE_SPACE = 125;
 let STAVE_SPACE = BASE_STAVE_SPACE;
+// Extra room above the first row when a nested tuplet's raised outer bracket needs it.
+const NESTED_TUPLET_HEADROOM = 12;
+let STAVE_TOP = 0;
 const PADDING = 50;
 const FORMAT_PADDING = 13;
 const MIN_BAR_SIZE = 100;
@@ -106,6 +109,7 @@ export function drawScore(
     ? configuredMeasuresPerLine
     : Number.POSITIVE_INFINITY;
   STAVE_SPACE = baseSystemSpacing * measurePartsArray[0].length;
+  STAVE_TOP = scoreHasNestedTuplets(score) ? NESTED_TUPLET_HEADROOM : 0;
   const svgWidth = Math.max(svgWidthProposed, SCORE_MIN_WIDTH);
   const fixedMeasureWidth = Number.isFinite(effectiveMeasuresPerLine)
     ? (svgWidth - effectiveMeasureGap * (effectiveMeasuresPerLine - 1)) /
@@ -232,7 +236,7 @@ export function drawScore(
 
   renderer.resize(
     (maxWidth + PADDING) * (hResize ?? 1),
-    (STAVE_SPACE * (row + 1)) * (vResize ?? 1) /** scale * scaleWidthMultipler*/
+    (STAVE_TOP + STAVE_SPACE * (row + 1)) * (vResize ?? 1) /** scale * scaleWidthMultipler*/
   );
 
   context.scale(scale, scale);
@@ -412,7 +416,7 @@ function renderStaves(
       let systemWidth = (width + additionalWidths[renderDataIndex]);
       const stave = new VF.Stave(
         x,
-        partIndex * BASE_STAVE_SPACE + row * STAVE_SPACE,
+        STAVE_TOP + partIndex * BASE_STAVE_SPACE + row * STAVE_SPACE,
         systemWidth,
         {
           space_above_staff_ln: 6,
@@ -612,11 +616,25 @@ function createTupletBeams(vfNotes, jsonNotes) {
   return beams;
 }
 
+// A tuplet nested inside another shares its host's beam, so only top-level
+// tuplets get beams of their own.
+function scoreHasNestedTuplets(score) {
+  return (score?.measures || []).some((measure) => (measure.parts || []).some((part) =>
+    (part.voices || []).some((voice) => (voice.tuplets || []).some((tuplet) => isNestedTuplet(tuplet, voice.tuplets)))));
+}
+
+function isNestedTuplet(tuplet, tuplets) {
+  return tuplets.some((other) => other !== tuplet &&
+    Number(other.start) <= Number(tuplet.start) && Number(tuplet.end) <= Number(other.end) &&
+    Number(other.end) - Number(other.start) > Number(tuplet.end) - Number(tuplet.start));
+}
+
 function getVoiceBeams(vfNotes, jsonNotes, tuplets, timeSig) {
   const forcedTupletRanges = [];
   const tupletBeams = [];
 
   tuplets
+    .filter((tuplet) => !isNestedTuplet(tuplet, tuplets))
     .map((tuplet) => ({
       end: Math.min(Number(tuplet.end), vfNotes.length),
       start: Math.max(0, Number(tuplet.start)),

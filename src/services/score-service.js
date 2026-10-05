@@ -28,24 +28,16 @@ export function modifyNote(state, newNoteValueIn, isRest, selectedNote) {
 
   let tuplets =
     score.measures[measureIndex].parts[partIndex].voices[voiceIndex].tuplets;
-  let selectedTuplet = null;
 
-  //Used when updating tuplet start/end indices
-  let nextTupletIndex = 0;
+  // Tuplets containing the selected note, innermost first. A new tuplet may be
+  // nested one level inside another, but not deeper.
+  const containingTuplets = tuplets
+    .filter((candidate) => noteIndex >= candidate.start && noteIndex < candidate.end)
+    .sort((left, right) => (left.end - left.start) - (right.end - right.start));
+  const selectedTuplet = containingTuplets[0] || null;
 
-  if (tuplets.length) {
-    for (var i = 0; i < tuplets.length; i++) {
-      if (noteIndex >= tuplets[i].start && noteIndex < tuplets[i].end) {
-        selectedTuplet = tuplets[i];
-
-        //No nested tuplets.
-        if(tuplet.selected) {
-          return;
-        }
-
-        break;
-      } 
-    }
+  if (tuplet.selected && containingTuplets.length >= 2) {
+    return;
   }
 
   if (selectedTuplet) {
@@ -180,9 +172,10 @@ export function modifyNote(state, newNoteValueIn, isRest, selectedNote) {
   }
 
   const numMoreNotes = newNotes.length - notesToDelete;
-  if (selectedTuplet) {
-    selectedTuplet.end += numMoreNotes;
-  }
+  // Every enclosing tuplet grows or shrinks with the change.
+  containingTuplets.forEach((containing) => {
+    containing.end += numMoreNotes;
+  });
 
   //Adjust tuplet start/end after the selected tuplet
   for (let k = 0; k < tuplets.length; k++) {

@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const http = require("http");
 const https = require("https");
-const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, getLineStickingSettings, getSpanPrimaryRhythms, normalizeOrnamentSegments, getLineOrnamentSegment, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, getLineSecondaryRhythms, rhythmOrnamentKey, normalizeRandomOrnaments, getLineRandomOrnaments } = require("../src/lib/book-structure");
+const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, getLineStickingSettings, getSpanPrimaryRhythms, normalizeOrnamentSegments, getLineOrnamentSegment, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, getLineSecondaryRhythms, rhythmOrnamentKey, normalizeRandomOrnaments, getLineRandomOrnaments, getNestedTupletNotation, normalizeNestedTupletPlan, getLineNestedTuplet } = require("../src/lib/book-structure");
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const DEFAULT_CONFIG_PATH = path.join(
@@ -593,25 +593,32 @@ function getNoteQuarterUnits(note) {
   return (4 / duration) * dotMultiplier;
 }
 
-function getNotesQuarterUnits(notes) {
-  return notes.reduce((total, note) => total + getNoteQuarterUnits(note), 0);
+// The outermost tuplet containing the note (a nested group's notes belong to their host).
+function getTupletForNote(tuplets, noteIndex) {
+  return (tuplets || [])
+    .filter((tuplet) => noteIndex >= Number(tuplet.start) && noteIndex < Number(tuplet.end))
+    .sort((left, right) => (right.end - right.start) - (left.end - left.start))[0];
 }
 
-function getTupletForNote(tuplets, noteIndex) {
-  return (tuplets || []).find((tuplet) =>
-    noteIndex >= Number(tuplet.start) && noteIndex < Number(tuplet.end)
-  );
+// Product of normal/actual for the tuplets containing the note that sit inside
+// `within` (or all of them when omitted): a note in a nested group counts both.
+function getContainingTupletRatio(tuplets, noteIndex, within = null) {
+  return (tuplets || []).reduce((ratio, tuplet) => {
+    const contains = noteIndex >= Number(tuplet.start) && noteIndex < Number(tuplet.end);
+    // Strictly inside: a smaller range within it (so copies of `within` don't count).
+    const inside = !within || (
+      Number(tuplet.start) >= Number(within.start) && Number(tuplet.end) <= Number(within.end) &&
+      Number(tuplet.end) - Number(tuplet.start) < Number(within.end) - Number(within.start));
+    return contains && inside ? ratio * Number(tuplet.normal) / Number(tuplet.actual) : ratio;
+  }, 1);
 }
 
 function getVoiceQuarterUnits(voice) {
   const notes = voice && Array.isArray(voice.notes) ? voice.notes : [];
   const tuplets = voice && Array.isArray(voice.tuplets) ? voice.tuplets : [];
 
-  return notes.reduce((total, note, noteIndex) => {
-    const tuplet = getTupletForNote(tuplets, noteIndex);
-    const tupletRatio = tuplet ? Number(tuplet.normal) / Number(tuplet.actual) : 1;
-    return total + getNoteQuarterUnits(note) * tupletRatio;
-  }, 0);
+  return notes.reduce((total, note, noteIndex) =>
+    total + getNoteQuarterUnits(note) * getContainingTupletRatio(tuplets, noteIndex), 0);
 }
 
 function isRest(note) {
@@ -891,8 +898,9 @@ function preferLongerValues(notes, options = {}) {
 
 function preferLongerValuesInTupletVoice(voice, configuredTuplets = []) {
   const notes = Array.isArray(voice && voice.notes) ? voice.notes : [];
+  // Hosts sort before the groups nested inside them.
   const tuplets = normalizeVoiceTuplets(voice && voice.tuplets, notes)
-    .sort((left, right) => left.start - right.start);
+    .sort((left, right) => left.start - right.start || (right.end - right.start) - (left.end - left.start));
   const normalizedConfiguredTuplets = normalizeTupletConfigs(configuredTuplets);
 
   if (!tuplets.length) {
@@ -922,7 +930,29 @@ function preferLongerValuesInTupletVoice(voice, configuredTuplets = []) {
     }
 
     const tupletNotes = notes.slice(tuplet.start, tuplet.end);
-    slot += Math.round(sliceSlots(tupletNotes) * Number(tuplet.normal) / Number(tuplet.actual));
+    slot += Math.round(tupletNotes.reduce((total, note, offset) => total +
+      getNoteSlotCount(note) * getContainingTupletRatio(tuplets, tuplet.start + offset), 0));
+
+    // A host with nested groups keeps its played notes; rests merge only within
+    // each stretch of host notes and within each nested group.
+    const nestedGroups = getNestedTuplets(tuplets, tuplet).sort((left, right) => left.start - right.start);
+    if (nestedGroups.length && groupHasPlayedNotes(tupletNotes)) {
+      const hostStart = nextNotes.length;
+      const innerTuplets = [];
+      let local = tuplet.start;
+      for (const inner of nestedGroups) {
+        if (inner.start < local) continue;
+        nextNotes.push(...mergeRestRuns(notes.slice(local, inner.start)));
+        const innerStart = nextNotes.length;
+        nextNotes.push(...mergeRestRuns(notes.slice(inner.start, inner.end)));
+        innerTuplets.push({ ...inner, start: innerStart, end: nextNotes.length });
+        local = inner.end;
+      }
+      nextNotes.push(...mergeRestRuns(notes.slice(local, tuplet.end)));
+      nextTuplets.push({ ...tuplet, start: hostStart, end: nextNotes.length }, ...innerTuplets);
+      cursor = tuplet.end;
+      continue;
+    }
     if (!groupHasPlayedNotes(tupletNotes)) {
       const rawRestSlots = tupletNotes.reduce(
         (total, note) => total + getNoteSlotCount(note),
@@ -991,7 +1021,7 @@ function getTupletPositionByNoteIndex(notes, tuplets, configuredTuplets = []) {
     const configuredTuplet = normalizedConfiguredTuplets.find((candidate) =>
       Number(candidate.actual) === Number(tuplet.actual) &&
       Number(candidate.normal) === Number(tuplet.normal) &&
-      Math.abs(candidate.type - getVoiceTupletType({ notes }, tuplet)) < 0.001
+      Math.abs(candidate.type - getVoiceTupletType({ notes, tuplets }, tuplet)) < 0.001
     );
     const configuredType = Number(configuredTuplet?.type);
 
@@ -1008,7 +1038,8 @@ function getTupletPositionByNoteIndex(notes, tuplets, configuredTuplets = []) {
         position: Math.round(position) % Number(tuplet.actual),
         type: configuredType,
       });
-      position += getNoteQuarterUnits(notes[noteIndex]) / configuredUnit;
+      position += getNoteQuarterUnits(notes[noteIndex]) *
+        getContainingTupletRatio(tuplets, noteIndex, tuplet) / configuredUnit;
     }
   }
 
@@ -1196,6 +1227,18 @@ function sectionUsesDiddlesOrCheese(section) {
   return ornaments.includes("diddles") || ornaments.includes("cheese");
 }
 
+// On nested pages, diddles and cheese are required only when some played primary
+// note is short enough to carry them (quarter-note hosts often have none); they
+// can still appear on secondary notes.
+function getFeasibleRequiredOrnamentChars(section, notes, primaryNoteIndexes, tupletNoteIndexes) {
+  const required = getRequiredSectionOrnamentChars(section);
+  if (!section.lineNestedTuplet) return required;
+  const canDiddle = (notes || []).some((note, index) => !isRest(note) &&
+    (!primaryNoteIndexes || primaryNoteIndexes.has(index)) &&
+    durationAllowsDiddles(note.duration, Boolean(tupletNoteIndexes?.has(index))));
+  return canDiddle ? required : required.filter((char) => char !== "d" && char !== "c");
+}
+
 function getRequiredSectionOrnamentChars(section) {
   let ornaments = section.primaryRhythms ? section.ornaments || [] : getGenerationOrnaments(section);
   // Only ornaments some primary rhythm may carry are required on the primary rhythms;
@@ -1213,8 +1256,19 @@ function getRequiredSectionOrnamentChars(section) {
 }
 
 function getVoiceTupletType(voice, tuplet) {
-  const units = getNotesQuarterUnits(voice.notes.slice(tuplet.start, tuplet.end));
+  // A nested group inside the tuplet counts as the host notes it replaces.
+  let units = 0;
+  for (let index = Number(tuplet.start); index < Number(tuplet.end); index += 1) {
+    units += getNoteQuarterUnits(voice.notes[index]) * getContainingTupletRatio(voice.tuplets, index, tuplet);
+  }
   return Number(tuplet.actual) * 4 / units;
+}
+
+// The tuplets strictly inside another (its nested groups).
+function getNestedTuplets(tuplets, host) {
+  return (tuplets || []).filter((tuplet) => tuplet !== host &&
+    Number(tuplet.start) >= Number(host.start) && Number(tuplet.end) <= Number(host.end) &&
+    Number(tuplet.end) - Number(tuplet.start) < Number(host.end) - Number(host.start));
 }
 
 function noteMatchesRhythmPool(pool, voice, noteIndex) {
@@ -1326,7 +1380,19 @@ function validatePrimaryRequirements(section, score) {
       throw new Error("Exercise contains a rhythm outside the selected pools.");
     }
   }
-  for (const char of getRequiredSectionOrnamentChars(section)) {
+  if (section.lineNestedTuplet) {
+    const { actual, hostNotes } = section.lineNestedTuplet;
+    const nested = voice.tuplets.some((host) => noteMatchesRhythmPool(primary, voice, Number(host.start)) &&
+      getNestedTuplets(voice.tuplets, host).some((inner) => {
+        const expected = getNestedTupletNotation({ actual, hostNotes }, { actual: host.actual, type: getVoiceTupletType(voice, host) });
+        return Number(inner.actual) === expected.actual && Number(inner.normal) === expected.normal;
+      }));
+    if (!nested) throw new Error(`Exercise must contain ${actual} in the time of ${hostNotes} host notes.`);
+  }
+  const tupletNoteIndexes = new Set(voice.tuplets.flatMap((tuplet) =>
+    Array.from({ length: tuplet.end - tuplet.start }, (_, offset) => tuplet.start + offset)));
+  const primaryIndexes = new Set(voice.notes.flatMap((note, index) => noteMatchesRhythmPool(primary, voice, index) ? [index] : []));
+  for (const char of getFeasibleRequiredOrnamentChars(section, voice.notes, primaryIndexes, tupletNoteIndexes)) {
     if (!primaryNotes.some((note) => String(note.ornaments || "").includes(char))) {
       throw new Error(`Cannot place required primary ornament "${char}" on a primary rhythm.`);
     }
@@ -2615,7 +2681,7 @@ function getScaledOrnamentTarget(section, baseTarget, maximumTarget, lineIndex, 
 }
 
 function getOrnamentFrequencyProfile(section, notes, lineIndex, options = {}) {
-  const requiredOrnaments = getRequiredSectionOrnamentChars(section);
+  const requiredOrnaments = getFeasibleRequiredOrnamentChars(section, notes, options.primaryNoteIndexes, options.tupletNoteIndexes);
   const varietyOrnaments = requiredOrnaments.filter((ornament) => ornament !== "a");
   const targets = new Map(requiredOrnaments.map((ornament) => [ornament, 1]));
 
@@ -2685,7 +2751,7 @@ function resetProfiledOrnaments(notes, requiredOrnaments, options = {}) {
 function ensureRequiredOrnamentsOnNotes(section, notes, lineIndex = 0, options = {}) {
   // Late retries vary placement too, so small pages don't repeat one failing choice.
   const placementLine = options.placementSalt ? `${lineIndex}:${options.placementSalt}` : lineIndex;
-  const requiredOrnaments = getRequiredSectionOrnamentChars(section);
+  const requiredOrnaments = getFeasibleRequiredOrnamentChars(section, notes, options.primaryNoteIndexes, options.tupletNoteIndexes);
   const shouldApplyFrequencyProfile = requiredOrnaments.length > 1;
   const nextNotes = shouldApplyFrequencyProfile
     ? resetProfiledOrnaments(notes, requiredOrnaments, options)
@@ -3275,6 +3341,16 @@ function separatePrimaryUnits(units, primaryBlocks) {
 
 function getBlockEvents(block, random) {
   if (block.kind === "regular") return [{ duration: block.duration, dots: 0, tuplet: null }];
+  if (block.nest) {
+    // Host notes, with `hostNotes` of them replaced by the nested group.
+    const { position, hostNotes, notation } = block.nest;
+    const hostEvent = () => ({ duration: Number(block.tuplet.type), dots: 0, tuplet: block.tuplet });
+    return [
+      ...Array.from({ length: position }, hostEvent),
+      ...Array.from({ length: notation.actual }, () => ({ duration: notation.type, dots: 0, tuplet: block.tuplet, nested: true })),
+      ...Array.from({ length: block.tuplet.actual - position - hostNotes }, hostEvent),
+    ];
+  }
   if (block.kind === "rest") return [{ ...getNotationValueBySlots(block.slotCount), forceRest: true, tuplet: null }];
   // Half- and quarter-note tuplets may split a note into two of the next shorter
   // value (down to eighths), which can carry diddles.
@@ -3433,8 +3509,25 @@ function createMixedTupletFallbackGeneratedScore(section, options, random, lineI
 
   if (!layout) return null;
 
+  // A nested variant goes inside the first required host group, at a random spot.
+  if (section.lineNestedTuplet) {
+    const hostIndex = layout.findIndex((block) => block.kind === "tuplet" && requiredBlocks.includes(block));
+    const host = layout[hostIndex]?.tuplet;
+    const variant = section.lineNestedTuplet;
+    if (!host || variant.hostNotes >= host.actual) return null;
+    layout = [...layout];
+    layout[hostIndex] = {
+      ...layout[hostIndex],
+      nest: {
+        position: randomInteger(random, 0, host.actual - variant.hostNotes),
+        hostNotes: variant.hostNotes,
+        notation: getNestedTupletNotation(variant, host),
+      },
+    };
+  }
+
   const blockEvents = layout.map((block) => getBlockEvents(
-    beatStructured && block.kind === "tuplet" ? { ...block, splitQuarters: true } : block,
+    beatStructured && block.kind === "tuplet" && !block.nest ? { ...block, splitQuarters: true } : block,
     random
   ));
   const events = blockEvents.flat();
@@ -3479,9 +3572,12 @@ function createMixedTupletFallbackGeneratedScore(section, options, random, lineI
   }
   balancePrimaryGroupRests(layout, blockEvents, playedSlots,
     section.requirePrimaryRhythms === false ? layout.filter((block) => block.kind === "tuplet")
-      : section.requirePrimaryRhythms === "any" ? layout.filter((block) => primaryBlocks.includes(block))
-        : requiredBlocks,
+      : section.requirePrimaryRhythms === "any" ? layout.filter((block) => primaryBlocks.includes(block) || block.nest)
+        : [...requiredBlocks, ...layout.filter((block) => block.nest)],
     section, random, lineIndex, attempt);
+  events.forEach((event, index) => {
+    if (event.nested) playedSlots[index] = true;
+  });
   // Required secondary rhythms get struck notes so they read as that rhythm.
   let forcedStart = 0;
   layout.forEach((block, blockIndex) => {
@@ -3523,6 +3619,14 @@ function createMixedTupletFallbackGeneratedScore(section, options, random, lineI
         actual: block.tuplet.actual,
         normal: block.tuplet.normal,
       });
+      if (block.nest) {
+        tuplets.push({
+          start: start + block.nest.position,
+          end: start + block.nest.position + block.nest.notation.actual,
+          actual: block.nest.notation.actual,
+          normal: block.nest.notation.normal,
+        });
+      }
     }
   }
 
@@ -3650,6 +3754,8 @@ function createUniqueGeneratedLine(input, section, samplePayload, index, usedExe
   const subsectionIndex = index + (section.subsectionLineOffset || 0);
   const ornamentSegment = getLineOrnamentSegment(section, subsectionIndex);
   if (ornamentSegment) section = { ...section, ornaments: ornamentSegment.ornaments };
+  const nestedTuplet = getLineNestedTuplet(section, subsectionIndex);
+  if (nestedTuplet) section = { ...section, lineNestedTuplet: nestedTuplet };
   const ornamentSeed = section.subsectionId || section.id;
   const randomOrnaments = getLineRandomOrnaments(section, subsectionIndex, ornamentSeed);
   if (randomOrnaments) section = { ...section, ornaments: randomOrnaments };
@@ -3828,6 +3934,7 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         secondaryRhythmPhases: normalizeSecondaryRhythmPhases(pageSource.secondaryRhythmPhases),
         secondaryRhythmExercises: normalizeSecondaryRhythmRows(pageSource.secondaryRhythmExercises),
         fillerSubdivisions: Array.isArray(pageSource.fillerSubdivisions) ? pageSource.fillerSubdivisions : null,
+        nestedTupletPlan: normalizeNestedTupletPlan(pageSource.nestedTupletPlan),
         chainPrimaryGroups: Boolean(pageSource.chainPrimaryGroups),
         fullPrimaryGroupShare: pageSource.fullPrimaryGroupShare ?? null,
         requirePrimaryRhythms: pageSource.requirePrimaryRhythms === false || pageSource.requirePrimaryRhythms === "any"
@@ -4172,6 +4279,7 @@ function createStoredPageGenerationSettings(pageConfig) {
     ...(pageConfig.secondaryRhythmPhases ? { secondaryRhythmPhases: pageConfig.secondaryRhythmPhases } : {}),
     ...(pageConfig.secondaryRhythmExercises ? { secondaryRhythmExercises: pageConfig.secondaryRhythmExercises } : {}),
     ...(pageConfig.fillerSubdivisions ? { fillerSubdivisions: pageConfig.fillerSubdivisions } : {}),
+    ...(pageConfig.nestedTupletPlan ? { nestedTupletPlan: pageConfig.nestedTupletPlan } : {}),
     ...(pageConfig.chainPrimaryGroups ? { chainPrimaryGroups: true } : {}),
     ...(pageConfig.fullPrimaryGroupShare != null ? { fullPrimaryGroupShare: pageConfig.fullPrimaryGroupShare } : {}),
     ...(pageConfig.requirePrimaryRhythms !== true ? { requirePrimaryRhythms: pageConfig.requirePrimaryRhythms } : {}),

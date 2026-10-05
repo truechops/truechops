@@ -45,6 +45,7 @@ import {
 } from "./book-data";
 import styles from "./BookBuilder.module.css";
 import {
+  NestedTupletPlanEditor,
   OrnamentTopicsEditor,
   PagePlanSummary,
   SecondaryRowsEditor,
@@ -1180,6 +1181,13 @@ export default function BookBuilderPanel() {
             ornaments={selectedPageGenerationSettings.ornaments}
             randomOrnaments={selectedPageGenerationSettings.randomOrnaments}
             segments={selectedPageGenerationSettings.ornamentSegments}
+          />
+          <NestedTupletPlanEditor
+            exerciseCount={linesPerPage * selectedSubsectionPages.length}
+            onChange={(nestedTupletPlan) => updateSelectedPageGenerationDraft({ nestedTupletPlan })}
+            plan={selectedPageGenerationSettings.nestedTupletPlan}
+            primaryRhythms={selectedSection.primaryRhythms}
+            rhythmSpan={selectedSection.rhythmSpan}
           />
           <SecondaryRowsEditor
             measuresPerLine={selectedPagePdfSettings.measuresPerLine}

@@ -1,4 +1,4 @@
-const { normalizeRhythmPool, getSpanPrimaryRhythms, rhythmOrnamentKey } = require("./book-structure");
+const { normalizeRhythmPool, getSpanPrimaryRhythms, rhythmOrnamentKey, getNestedTupletVariants } = require("./book-structure");
 
 const STUDY_TOPICS = [
   { id: "nothing", title: "Nothing", ornaments: [] },
@@ -439,8 +439,76 @@ function createFinalStudies(pdfSettings) {
   return { groups: [group], sections };
 }
 
+// Nested tuplets: for each tuplet over one, two, three, or four quarter notes,
+// two pages where every exercise has that tuplet with a smaller tuplet nested in
+// part of it, cycling systematically through the nested variants (see
+// getNestedTupletVariants). Easy basic notes fill the rest of the measure.
+const NESTED_PAGES = 2;
+const NESTED_EXERCISES = 22 * NESTED_PAGES;
+const NESTED_HOST_SPANS = [
+  { id: "one-quarter", title: "over one quarter note", label: "one quarter", rhythmSpan: { count: 1, unit: 4 },
+    familyIds: ["eighth-triplets", "quintuplets", "sextuplets", "septuplets", "nine-eight-thirtyseconds"] },
+  ...["two-quarters", "three-quarters", "four-quarters"].map((groupId) => {
+    const study = SPAN_STUDIES.find((candidate) => candidate.groupId === groupId);
+    return { id: groupId, title: study.title.toLowerCase(), label: study.label, rhythmSpan: study.rhythmSpan, familyIds: study.familyIds };
+  }),
+];
+
+// Spread the exercises evenly over the variants, in order.
+function createNestedTupletPlan(variants) {
+  const base = Math.floor(NESTED_EXERCISES / variants.length);
+  const extra = NESTED_EXERCISES % variants.length;
+  return variants.map((variant, index) => ({ ...variant, count: base + (index < extra ? 1 : 0) }));
+}
+
+function createNestedStudies(pdfSettings) {
+  const easy = FINAL_DIFFICULTIES[0].keys.map((key) => POOL_RHYTHMS[key].pool);
+  const secondaryPool = normalizeRhythmPool(mergePools(easy));
+  const groups = NESTED_HOST_SPANS.map((span) => ({
+    id: `nested-${span.id}`, title: `Nested tuplets ${span.title}`, rhythmSpan: span.rhythmSpan,
+  }));
+  const sections = NESTED_HOST_SPANS.flatMap((span, spanIndex) => span.familyIds.map((familyId) => {
+    const family = STUDY_FAMILIES.find((candidate) => candidate.id === familyId);
+    const primaryRhythms = normalizeRhythmPool(family, false);
+    const host = getSpanPrimaryRhythms(primaryRhythms, span.rhythmSpan).tuplets[0];
+    const id = `${groups[spanIndex].id}-${family.notesPerQuarter}`;
+    const limits = getPoolOrnamentLimits(getSpanPrimaryRhythms(primaryRhythms, span.rhythmSpan));
+    return {
+      id, groupId: groups[spanIndex].id, density: "mixed", rhythmSpan: span.rhythmSpan,
+      title: span.id === "one-quarter" ? capitalize(POOL_RHYTHMS[ONE_BEAT_KEYS.find((key) =>
+        POOL_RHYTHMS[key].pool.tuplets?.some((tuplet) => tuplet.actual === host.actual))]?.name || `${host.actual}s`)
+        : `${family.notesPerQuarter} over ${span.label}`,
+      primaryRhythms,
+      secondaryRhythms: normalizeRhythmPool({ ...secondaryPool, rhythmOrnaments: getSecondaryRhythmOrnaments(secondaryPool) }),
+      pdfSettings,
+      pages: Array.from({ length: NESTED_PAGES }, () => ({
+        subsectionId: `${id}-nested`,
+        subsectionPageCount: NESTED_PAGES,
+        title: "Nested tuplets",
+        pdfSettings,
+        generationSettings: {
+          prompt: "", sampleJson: "",
+          ornaments: RANDOM_ORNAMENTS.from,
+          randomOrnaments: RANDOM_ORNAMENTS,
+          nestedTupletPlan: createNestedTupletPlan(getNestedTupletVariants(host)),
+          ...(Object.keys(limits).length ? { primaryRhythmOrnaments: limits } : {}),
+          fullPrimaryGroupShare: 0.5,
+          minPlayedNotes: 0,
+          maxPlayedNotes: 0,
+          playEveryNote: false,
+          maxSameHandStickingRun: 2,
+          requiredSameHandStickingRuns: [],
+          stickingTail: null,
+        },
+        lines: [],
+      })),
+    };
+  }));
+  return { groups, sections };
+}
+
 module.exports = {
   STUDY_TOPICS, STUDY_FAMILIES, TWO_BEAT_ORNAMENT_SEGMENTS,
   SPAN_STUDIES, createStudySections, createSpanStudy, createTwoBeatSections, createThreeEighthsSections,
-  createTupletCombinationStudies, createFinalStudies,
+  createTupletCombinationStudies, createNestedStudies, createFinalStudies,
 };
