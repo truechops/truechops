@@ -532,8 +532,8 @@ function createNestedStudies(pdfSettings) {
 
 // Tuplets off the beat: each one-beat tuplet, triplets through nontuplets, gets
 // two pages where it starts on the "e", then the "+", then the "a" of a beat,
-// each start going through the ornament steps: accents, then accents with
-// diddles, with flams, with cheese, then everything (stickings throughout).
+// each start going through the ornament steps: plain, accents, then accents
+// with diddles, with flams, with diddles and flams, then everything (stickings throughout).
 // Sparse sixteenths fill the rest of the measure, before and after the group,
 // so the placement reads against the sixteenth-note grid and the rests make
 // syncopations; two in three groups are played in full, the rest keep a rest.
@@ -544,10 +544,11 @@ const OFFBEAT_MIX_PAGES = 2;
 const OFFBEAT_ORNAMENT_DENSITY = 130;
 const SPARSE_AROUND_GROUPS = { playEveryNote: false, fullPrimaryGroupShare: 2 / 3, playedShare: [0.55, 0.8] };
 const OFFBEAT_STEPS = [
+  { title: "No ornaments", ...SPARSE_AROUND_GROUPS, ornaments: ["stickings"] },
   { title: "Stickings and accents", ...SPARSE_AROUND_GROUPS, ornaments: ["stickings", "accents"] },
   { title: "Accents and diddles", ...SPARSE_AROUND_GROUPS, ornaments: ["stickings", "accents", "diddles"] },
   { title: "Accents and flams", ...SPARSE_AROUND_GROUPS, ornaments: ["stickings", "accents", "flams"] },
-  { title: "Accents and cheese", ...SPARSE_AROUND_GROUPS, ornaments: ["stickings", "accents", "cheese"] },
+  { title: "Accents, diddles and flams", ...SPARSE_AROUND_GROUPS, ornaments: ["stickings", "accents", "diddles", "flams"] },
   { title: "Everything", ...SPARSE_AROUND_GROUPS, ornaments: ["stickings", "accents", "flams", "diddles", "cheese"] },
 ];
 const OFFBEAT_FAMILY_IDS = ["eighth-triplets", "quintuplets", "sextuplets", "septuplets", "nine-eight-thirtyseconds"];

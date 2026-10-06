@@ -78,7 +78,7 @@ function Chip({ on, onClick, children }) {
 // starts go through the ornaments.
 const STEP_LABELS = {
   nested: { measures: "four measures each", chip: "Steps: every note → accents → sparse with accents → ornaments" },
-  offbeat: { measures: "five measures each", chip: "Steps: accents → diddles → flams → cheese → everything" },
+  offbeat: { measures: "six measures each", chip: "Steps: plain → accents → diddles + accents → flams + accents → diddles + flams + accents → everything" },
 };
 
 function TupletPlacementField({ value, onChange }) {

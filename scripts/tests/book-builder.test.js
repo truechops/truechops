@@ -481,7 +481,15 @@ test("off-beat tuplets start on the e, +, and a, stepping through the ornaments,
   assert(sections.every((section) => section.pages.length === 2 && section.pages[0].generationSettings.ornamentDensity === 130));
   assert.deepEqual(sections[0].pages[0].generationSettings.offbeatTupletPlan.map((run) => [run.offset, run.count]), [[1, 15], [2, 15], [3, 14]]);
   assert.deepEqual(sections[0].pages[0].generationSettings.exerciseSteps.map((step) => step.ornaments.filter((id) => id !== "stickings").join("+")),
-    ["accents", "accents+diddles", "accents+flams", "accents+cheese", "accents+flams+diddles+cheese"]);
+    ["", "accents", "accents+diddles", "accents+flams", "accents+diddles+flams", "accents+flams+diddles+cheese"]);
+  const settings = sections[0].pages[0].generationSettings;
+  let runStart = 0;
+  for (const run of settings.offbeatTupletPlan) {
+    const steps = Array.from({ length: run.count }, (_, index) => getLineExerciseStep(settings, runStart + index).title);
+    assert.deepEqual([...new Set(steps)], settings.exerciseSteps.map((step) => step.title));
+    assert.equal(steps[0], "No ornaments");
+    runStart += run.count;
+  }
   const CHARS = { accents: "a", flams: "f", diddles: "d", cheese: "c" };
   const mixed = sections.find((section) => section.id === "offbeat-mixed");
   const config = generator.createGenerationConfig({}, { structureVersion: 3, groups, sections: [sections[0], sections[4], mixed] });
@@ -490,6 +498,7 @@ test("off-beat tuplets start on the e, +, and a, stepping through the ornaments,
     let fullGroups = 0;
     let groupCount = 0;
     let ornamentedTotal = 0;
+    let ornamentedGroupCount = 0;
     let diddleSteps = 0;
     let diddlePairs = 0;
     const featured = {};
@@ -522,7 +531,12 @@ test("off-beat tuplets start on the e, +, and a, stepping through the ornaments,
           if (played.length === tuplet.actual) fullGroups += 1;
           // The moving tuplet carries a few ornaments, not one on every note.
           const ornamented = played.filter((note) => /[afdc]/.test(note.ornaments || "")).length;
-          assert(ornamented >= 1 && ornamented <= Math.min(4, played.length), `${where}: ${ornamented} ornamented notes in a ${tuplet.actual}-note group`);
+          if (step.ornaments.includes("accents")) {
+            ornamentedGroupCount += 1;
+            assert(ornamented >= 1 && ornamented <= Math.min(4, played.length), `${where}: ${ornamented} ornamented notes in a ${tuplet.actual}-note group`);
+          } else {
+            assert.equal(ornamented, 0, `${where}: the plain step has ornaments`);
+          }
           ornamentedTotal += ornamented;
           // Triplets carry the step's flam, diddle, or cheese.
           if (section.title === "Triplets" && stepRudiments.length === 1 && played.length === tuplet.actual) {
@@ -556,22 +570,24 @@ test("off-beat tuplets start on the e, +, and a, stepping through the ornaments,
     });
     Object.entries(featured).forEach(([title, { exercises, count }]) =>
       assert(count / exercises >= 2.5, `${section.title} ${title}: ${count / exercises} of the step's ornament per exercise`));
-    assert(ornamentedTotal / groupCount >= 1.3, `${section.title}: ${ornamentedTotal / groupCount} ornamented notes per group`);
+    assert(ornamentedTotal / ornamentedGroupCount >= 1.3, `${section.title}: ${ornamentedTotal / ornamentedGroupCount} ornamented notes per ornamented group`);
     // Diddle steps often put a pair of diddles in a row on the triplet.
     if (diddleSteps) assert(diddlePairs / diddleSteps >= 0.4, `${section.title}: ${diddlePairs} of ${diddleSteps} triplets have diddles in a row`);
     // About two in three tuplets are played in full.
     assert(fullGroups / groupCount > 0.5 && fullGroups / groupCount < 0.85, `${section.title}: ${fullGroups} of ${groupCount} groups in full`);
   }
-  // The website tool: e, +, and a in turn, five measures each with steps.
+  // The website tool: e, +, and a in turn, six measures each with steps.
   const { generateExerciseMeasures } = require("../../src/lib/exercise-generator");
   const { normalizeExerciseConfig } = require("../../src/lib/exercise-config");
   const tool = normalizeExerciseConfig({ subdivision: "quintuplets", offbeat: "cycle", steps: true });
   assert.equal(normalizeExerciseConfig({ subdivision: "sixteenths", offbeat: 2 }).offbeat, null);
-  generateExerciseMeasures(tool, 8).measures.forEach((measure, index) => {
+  generateExerciseMeasures(tool, 18).measures.forEach((measure, index) => {
     const voice = measure.parts[0].voices[0];
     const starts = noteStarts(voice);
     const quintuplet = voice.tuplets.find((tuplet) => tuplet.actual === 5);
-    assert.equal(Math.round(starts[quintuplet.start] * 4 % 4), index < 5 ? 1 : 2);
+    assert.equal(Math.round(starts[quintuplet.start] * 4 % 4), Math.floor(index / 6) + 1);
+    const shown = new Set(voice.notes.flatMap((note) => [...(note.notes.length ? note.ornaments || "" : "")]).filter((char) => "afdc".includes(char)));
+    assert.deepEqual([...shown].sort(), settings.exerciseSteps[index % 6].ornaments.filter((id) => id !== "stickings").map((id) => CHARS[id]).sort());
   });
 });
 
