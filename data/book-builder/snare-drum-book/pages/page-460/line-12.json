@@ -29,16 +29,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "lda"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
+                    "ornaments": "rfa"
                   },
                   {
                     "notes": [
@@ -47,7 +38,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "lfa"
+                    "ornaments": "rda"
                   },
                   {
                     "notes": [
@@ -55,24 +46,21 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "rf"
+                    "velocity": 1,
+                    "ornaments": "la"
                   },
                   {
-                    "notes": [
-                      "C5"
-                    ],
+                    "notes": [],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
+                    "velocity": 0.5
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 4,
-                    "actual": 4,
+                    "end": 3,
+                    "actual": 3,
                     "normal": 15
                   }
                 ]
@@ -83,8 +71,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n16:lad n16:r n16:laf n16:rf n16:r |t0-4:4:15",
-  "updatedAt": "2026-10-05T02:14:21.155Z",
+  "exerciseShortForm": "n16:raf n16:rad n16:la r16 |t0-3:3:15",
+  "updatedAt": "2026-10-06T01:22:22.705Z",
   "sectionId": "random-subdivisions-fifteen-sixteenths",
-  "sectionPageNumber": 3
+  "sectionPageNumber": 1
 }

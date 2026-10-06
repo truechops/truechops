@@ -3,7 +3,7 @@ import { ORNAMENT_OPTIONS, SUBDIVISION_OPTIONS, TUPLET_TYPE_OPTIONS } from "./bo
 import {
   OFFBEAT_LABELS, getStepCounts, getNestedTupletVariants, getSpanPrimaryRhythms, nestedTupletLabel, normalizeRhythmPool, rhythmOrnamentKey,
 } from "../../lib/book-structure";
-import { EXERCISE_STEPS, RANDOM_ORNAMENTS } from "../../lib/book-curriculum";
+import { EXERCISE_STEPS, OFFBEAT_STEPS, RANDOM_ORNAMENTS } from "../../lib/book-curriculum";
 import styles from "./BookBuilder.module.css";
 
 // Editors for a page's exercise plan: ornament topics by exercise, the simpler
@@ -273,6 +273,11 @@ const DENSITY_CHOICES = [
     label: "Primary groups in full, sparse around them (55–80% of notes)",
     updates: { playEveryNote: false, fullPrimaryGroupShare: 1, playedShare: [0.55, 0.8] },
   },
+  {
+    id: "mostly-full-groups",
+    label: "Two in three primary groups in full, sparse around them (55–80% of notes)",
+    updates: { playEveryNote: false, fullPrimaryGroupShare: 2 / 3, playedShare: [0.55, 0.8] },
+  },
   { id: "sparse", label: "Sparse", updates: { playEveryNote: false, fullPrimaryGroupShare: null, playedShare: null } },
   {
     id: "sparse-rests",
@@ -281,10 +286,12 @@ const DENSITY_CHOICES = [
   },
 ];
 
+// The density choice a step matches, or "custom" for other settings.
 function stageDensity(stage) {
-  if (stage.playEveryNote) return "every";
-  if (stage.fullPrimaryGroupShare === 1) return "full-groups";
-  return stage.fullPrimaryGroupShare === 0 ? "sparse-rests" : "sparse";
+  const match = DENSITY_CHOICES.find(({ updates }) => updates.playEveryNote === Boolean(stage.playEveryNote) &&
+    (stage.playEveryNote || (Math.abs((updates.fullPrimaryGroupShare ?? -1) - (stage.fullPrimaryGroupShare ?? -1)) < 0.01 &&
+      JSON.stringify(updates.playedShare ?? null) === JSON.stringify(stage.playedShare ?? null))));
+  return match?.id || "custom";
 }
 
 // The steps every nested tuplet goes through, each with its own density and
@@ -330,6 +337,7 @@ function ExerciseStepsEditor({ stages, exampleCount, runName, onChange }) {
               value={stageDensity(stage)}
             >
               {DENSITY_CHOICES.map((choice) => <option key={choice.id} value={choice.id}>{choice.label}</option>)}
+              {stageDensity(stage) === "custom" && <option disabled value="custom">Custom (from the curriculum)</option>}
             </select>
             <label className={styles.toggleField}>
               <input
@@ -502,22 +510,60 @@ function evenOffbeatPlan(exerciseCount) {
 
 // Subsection level: the primary tuplet starts on the "e", "+", or "a" of a
 // beat, one start per run of exercises, each stepping through the stages.
-export function OffbeatTupletPlanEditor({ plan, stages, primaryRhythms, secondaryRhythms, rhythmSpan, exerciseCount, nestedActive, onChange }) {
-  const host = getSpanPrimaryRhythms(normalizeRhythmPool(primaryRhythms, false), rhythmSpan).tuplets[0];
-  if (!host && !plan) return null;
-  if (!plan && nestedActive) return null;
+export function OffbeatTupletPlanEditor({ plan, groups, stages, primaryRhythms, secondaryRhythms, rhythmSpan, exerciseCount, nestedActive, onChange }) {
+  const tuplets = getSpanPrimaryRhythms(normalizeRhythmPool(primaryRhythms, false), rhythmSpan).tuplets;
+  const host = tuplets[0];
+  if (!host && !plan && !groups) return null;
+  if (!plan && !groups && nestedActive) return null;
+  if (groups) {
+    // Two different primary tuplets per exercise, every pair in turn.
+    const names = tuplets.map((tuplet) => tuplet.actual).sort((left, right) => left - right);
+    const pairCount = names.length * (names.length - 1) / 2;
+    return (
+      <div className={styles.fieldGroup}>
+        <span>Two off-beat tuplets per exercise</span>
+        <p className={`${styles.layoutSummary} ${pairCount ? "" : styles.planWarning}`}>
+          {pairCount
+            ? `Each exercise pairs two different primary tuplets (${names.join(", ")}), going through all ${pairCount} pairs in turn from the slowest to the fastest. Each group starts on a random "e", "+", or "a", with plain notes before and after it.`
+            : "Select at least two primary tuplets to pair."}
+        </p>
+        <div className={styles.topicFooter}>
+          <button className={styles.button} onClick={() => onChange({ offbeatGroups: null, exerciseSteps: null })} type="button">
+            Use one primary tuplet per exercise
+          </button>
+        </div>
+        <ExerciseStepsEditor
+          exampleCount={exerciseCount}
+          onChange={(exerciseSteps) => onChange({ exerciseSteps })}
+          runName="subsection"
+          stages={stages}
+        />
+      </div>
+    );
+  }
   if (!plan) {
     return (
       <div className={styles.fieldGroup}>
         <span>Off-beat starts</span>
         <p className={styles.layoutSummary}>The {host.actual}:{host.normal} primary tuplet starts on a beat.</p>
-        <button
-          className={styles.button}
-          onClick={() => onChange({ offbeatTupletPlan: evenOffbeatPlan(exerciseCount), exerciseSteps: stages || EXERCISE_STEPS })}
-          type="button"
-        >
-          Start the primary tuplet off the beat
-        </button>
+        <div className={styles.topicFooter}>
+          <button
+            className={styles.button}
+            onClick={() => onChange({ offbeatTupletPlan: evenOffbeatPlan(exerciseCount), exerciseSteps: stages || OFFBEAT_STEPS })}
+            type="button"
+          >
+            Start the primary tuplet off the beat
+          </button>
+          {tuplets.length > 1 && (
+            <button
+              className={styles.button}
+              onClick={() => onChange({ offbeatGroups: 2, requirePrimaryRhythms: "any", exerciseSteps: stages || OFFBEAT_STEPS })}
+              type="button"
+            >
+              Pair two off-beat tuplets per exercise
+            </button>
+          )}
+        </div>
       </div>
     );
   }

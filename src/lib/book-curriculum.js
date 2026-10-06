@@ -532,20 +532,23 @@ function createNestedStudies(pdfSettings) {
 
 // Tuplets off the beat: each one-beat tuplet, triplets through nontuplets, gets
 // two pages where it starts on the "e", then the "+", then the "a" of a beat,
-// each start going through its steps. Sparse sixteenths fill the rest of the
-// measure, before and after the group, so the placement reads against the
-// sixteenth-note grid and the rests make syncopations; the tuplet itself is
-// played in full except on the sparse step. Ornaments are busier than the
-// book's usual density.
+// each start going through the ornament steps: accents, then accents with
+// diddles, with flams, with cheese, then everything (stickings throughout).
+// Sparse sixteenths fill the rest of the measure, before and after the group,
+// so the placement reads against the sixteenth-note grid and the rests make
+// syncopations; two in three groups are played in full, the rest keep a rest.
+// Then two pages mix two different off-beat tuplets in each exercise.
+// Ornaments are busier than the book's usual density.
 const OFFBEAT_PAGES = 2;
+const OFFBEAT_MIX_PAGES = 2;
 const OFFBEAT_ORNAMENT_DENSITY = 130;
-const SPARSE_AROUND_GROUPS = { playEveryNote: false, fullPrimaryGroupShare: 1, playedShare: [0.55, 0.8] };
+const SPARSE_AROUND_GROUPS = { playEveryNote: false, fullPrimaryGroupShare: 2 / 3, playedShare: [0.55, 0.8] };
 const OFFBEAT_STEPS = [
-  { title: "Tuplet in full, stickings", ...SPARSE_AROUND_GROUPS, ornaments: ["stickings"] },
-  { title: "Tuplet in full, accents", ...SPARSE_AROUND_GROUPS, ornaments: ["stickings", "accents"] },
-  { title: "Sparse, accents", playEveryNote: false, fullPrimaryGroupShare: 0, playedShare: [0.5, 0.75], ornaments: ["stickings", "accents"] },
-  { title: "Tuplet in full, ornaments", ...SPARSE_AROUND_GROUPS,
-    randomOrnaments: { always: ["stickings"], from: ["accents", "flams", "diddles", "cheese"], min: 2, max: 4 } },
+  { title: "Stickings and accents", ...SPARSE_AROUND_GROUPS, ornaments: ["stickings", "accents"] },
+  { title: "Accents and diddles", ...SPARSE_AROUND_GROUPS, ornaments: ["stickings", "accents", "diddles"] },
+  { title: "Accents and flams", ...SPARSE_AROUND_GROUPS, ornaments: ["stickings", "accents", "flams"] },
+  { title: "Accents and cheese", ...SPARSE_AROUND_GROUPS, ornaments: ["stickings", "accents", "cheese"] },
+  { title: "Everything", ...SPARSE_AROUND_GROUPS, ornaments: ["stickings", "accents", "flams", "diddles", "cheese"] },
 ];
 const OFFBEAT_FAMILY_IDS = ["eighth-triplets", "quintuplets", "sextuplets", "septuplets", "nine-eight-thirtyseconds"];
 
@@ -558,14 +561,32 @@ function createOffbeatStudies(pdfSettings) {
   const secondaryRhythms = normalizeRhythmPool({
     subdivisions: ["sixteenths"], tuplets: [], rhythmOrnaments: { sixteenths: ALL_SECONDARY_ORNAMENTS },
   });
+  // Every tuplet takes accents here (each step accents the tuplet); fast groups
+  // keep their other limits.
+  const accentedLimits = (primaryRhythms) => Object.fromEntries(
+    Object.entries(getPoolOrnamentLimits(getSpanPrimaryRhythms(primaryRhythms, group.rhythmSpan)))
+      .map(([key, allowed]) => [key, [...new Set(["accents", ...allowed])]]));
+  const offbeatSettings = (primaryRhythms) => {
+    const limits = accentedLimits(primaryRhythms);
+    return {
+      prompt: "", sampleJson: "",
+      ornaments: RANDOM_ORNAMENT_IDS,
+      exerciseSteps: OFFBEAT_STEPS,
+      ornamentDensity: OFFBEAT_ORNAMENT_DENSITY,
+      ...(Object.keys(limits).length ? { primaryRhythmOrnaments: limits } : {}),
+      fullPrimaryGroupShare: 0.5,
+      minPlayedNotes: 0,
+      maxPlayedNotes: 0,
+      playEveryNote: false,
+      maxSameHandStickingRun: 2,
+      requiredSameHandStickingRuns: [],
+      stickingTail: null,
+    };
+  };
   const sections = OFFBEAT_FAMILY_IDS.map((familyId) => {
     const family = STUDY_FAMILIES.find((candidate) => candidate.id === familyId);
     const primaryRhythms = normalizeRhythmPool(family, false);
     const id = `offbeat-${family.notesPerQuarter}`;
-    // Every tuplet takes accents here (the accent steps accent the tuplet);
-    // fast groups keep their other limits.
-    const limits = Object.fromEntries(Object.entries(getPoolOrnamentLimits(getSpanPrimaryRhythms(primaryRhythms, group.rhythmSpan)))
-      .map(([key, allowed]) => [key, [...new Set(["accents", ...allowed])]]));
     return {
       id, groupId: group.id, density: "mixed", rhythmSpan: group.rhythmSpan,
       title: oneBeatTupletTitle(primaryRhythms.tuplets[0]),
@@ -577,24 +598,30 @@ function createOffbeatStudies(pdfSettings) {
         subsectionPageCount: OFFBEAT_PAGES,
         title: "Starting on e, +, and a",
         pdfSettings,
-        generationSettings: {
-          prompt: "", sampleJson: "",
-          ornaments: RANDOM_ORNAMENT_IDS,
-          offbeatTupletPlan,
-          exerciseSteps: OFFBEAT_STEPS,
-          ornamentDensity: OFFBEAT_ORNAMENT_DENSITY,
-          ...(Object.keys(limits).length ? { primaryRhythmOrnaments: limits } : {}),
-          fullPrimaryGroupShare: 0.5,
-          minPlayedNotes: 0,
-          maxPlayedNotes: 0,
-          playEveryNote: false,
-          maxSameHandStickingRun: 2,
-          requiredSameHandStickingRuns: [],
-          stickingTail: null,
-        },
+        generationSettings: { ...offbeatSettings(primaryRhythms), offbeatTupletPlan },
         lines: [],
       })),
     };
+  });
+  // Mixing: two different off-beat tuplets in each exercise, every pair in turn
+  // (3 and 5, 3 and 6, 5 and 6, ... 7 and 9), each on a random "e", "+", or "a".
+  // The ornament steps run once across the two pages.
+  const mixedRhythms = normalizeRhythmPool(mergePools(OFFBEAT_FAMILY_IDS.map((familyId) =>
+    STUDY_FAMILIES.find((candidate) => candidate.id === familyId))), false);
+  sections.push({
+    id: "offbeat-mixed", groupId: group.id, density: "mixed", rhythmSpan: group.rhythmSpan,
+    title: "Mixing off-beat tuplets",
+    primaryRhythms: mixedRhythms,
+    secondaryRhythms,
+    pdfSettings,
+    pages: Array.from({ length: OFFBEAT_MIX_PAGES }, () => ({
+      subsectionId: "offbeat-mixed-pairs",
+      subsectionPageCount: OFFBEAT_MIX_PAGES,
+      title: "Two off-beat tuplets",
+      pdfSettings,
+      generationSettings: { ...offbeatSettings(mixedRhythms), offbeatGroups: 2, requirePrimaryRhythms: "any" },
+      lines: [],
+    })),
   });
   return { groups: [group], sections };
 }

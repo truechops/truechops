@@ -32,6 +32,15 @@
                     "notes": [
                       "C5"
                     ],
+                    "duration": 4,
+                    "dots": 1,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
                     "duration": 2,
                     "dots": 0,
                     "velocity": 0.5,
@@ -41,16 +50,16 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 2,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "r"
+                    "ornaments": "rcd"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 3,
+                    "end": 4,
                     "actual": 3,
                     "normal": 2
                   }
@@ -62,8 +71,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r2 n2:lf n2:r |t0-3:3:2",
-  "updatedAt": "2026-10-05T02:14:21.155Z",
+  "exerciseShortForm": "r2 n4.:l n2:lf n8:rdc |t0-4:3:2",
+  "updatedAt": "2026-10-06T01:22:22.705Z",
   "sectionId": "random-subdivisions-four-quarters",
-  "sectionPageNumber": 3
+  "sectionPageNumber": 1
 }

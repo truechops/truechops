@@ -1,7 +1,7 @@
 import _ from "lodash";
 import { getEmptyMeasure } from "../../helpers/score";
 import { DEFAULT_TEMPO } from "../../consts/score";
-import { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, groupSubsectionPages, normalizeSubsectionPageCount, normalizeOrnamentSegments, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, normalizeRandomOrnaments, normalizeNestedTupletPlan, normalizeExerciseSteps, normalizeOffbeatTupletPlan, normalizePageOrnamentDensity } from "../../lib/book-structure";
+import { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, groupSubsectionPages, normalizeSubsectionPageCount, normalizeOrnamentSegments, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, normalizeRandomOrnaments, normalizeNestedTupletPlan, normalizeExerciseSteps, normalizeOffbeatTupletPlan, normalizePageOrnamentDensity, normalizeOffbeatGroups } from "../../lib/book-structure";
 
 export { normalizeRhythmPool };
 
@@ -506,6 +506,7 @@ export function normalizePageGenerationSettings(value = {}, fallback = {}) {
     ...(normalizeOffbeatTupletPlan(source.offbeatTupletPlan)
       ? { offbeatTupletPlan: normalizeOffbeatTupletPlan(source.offbeatTupletPlan) }
       : {}),
+    ...(normalizeOffbeatGroups(source.offbeatGroups) ? { offbeatGroups: 2 } : {}),
     ...(normalizePageOrnamentDensity(source.ornamentDensity)
       ? { ornamentDensity: normalizePageOrnamentDensity(source.ornamentDensity) }
       : {}),

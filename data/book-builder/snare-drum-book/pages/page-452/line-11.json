@@ -23,13 +23,10 @@
               {
                 "notes": [
                   {
-                    "notes": [
-                      "C5"
-                    ],
+                    "notes": [],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
+                    "velocity": 0.5
                   },
                   {
                     "notes": [
@@ -37,17 +34,8 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "lf"
+                    "velocity": 1,
+                    "ornaments": "lda"
                   },
                   {
                     "notes": [],
@@ -61,8 +49,17 @@
                     ],
                     "duration": 16,
                     "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "rfa"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -92,12 +89,6 @@
                     "ornaments": "l"
                   },
                   {
-                    "notes": [],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
                     "notes": [
                       "C5"
                     ],
@@ -105,15 +96,6 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -140,7 +122,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -149,19 +131,19 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "r"
+                    "ornaments": "l"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 1,
-                    "end": 9,
-                    "actual": 8,
-                    "normal": 11
+                    "start": 0,
+                    "end": 4,
+                    "actual": 4,
+                    "normal": 9
                   },
                   {
-                    "start": 9,
-                    "end": 15,
+                    "start": 7,
+                    "end": 13,
                     "actual": 6,
                     "normal": 4
                   }
@@ -173,8 +155,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n16:r n16:l n16:lf r16 n16:l n16:l n16:r n16:l r16 n16:l n16:r n16:r n16:lf n16:l n16:r |t1-9:8:11,9-15:6:4",
-  "updatedAt": "2026-10-05T02:14:21.155Z",
-  "sectionId": "random-subdivisions-eleven-sixteenths",
-  "sectionPageNumber": 1
+  "exerciseShortForm": "r16 n16:lad r16 n16:raf n16:r n16:l n16:r n16:l n16:l n16:r n16:lf n16:r n16:l |t0-4:4:9,7-13:6:4",
+  "updatedAt": "2026-10-06T01:22:22.705Z",
+  "sectionId": "random-subdivisions-nine-sixteenths",
+  "sectionPageNumber": 2
 }

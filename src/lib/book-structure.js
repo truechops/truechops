@@ -305,6 +305,22 @@ function normalizeOffbeatTupletPlan(value) {
   return plan.length ? plan : null;
 }
 
+// offbeatGroups: 2 puts two different primary tuplets in each exercise, each
+// starting on a random "e", "+", or "a" (see getLineOffbeatPair).
+function normalizeOffbeatGroups(value) {
+  return Number(value) === 2 ? 2 : null;
+}
+
+// The pair of primary tuplets for an exercise: every pair in turn, from the
+// slowest to the fastest (3 and 5, 3 and 6, 5 and 6, 3 and 7, ... 7 and 9).
+function getLineOffbeatPair(settings, lineIndex) {
+  if (!normalizeOffbeatGroups(settings?.offbeatGroups)) return null;
+  const perQuarter = (tuplet) => tuplet.actual * tuplet.type / (4 * tuplet.normal);
+  const tuplets = [...(settings.primaryRhythms?.tuplets || [])].sort((left, right) => perQuarter(left) - perQuarter(right));
+  const pairs = tuplets.flatMap((later, laterIndex) => tuplets.slice(0, laterIndex).map((earlier) => [earlier, later]));
+  return pairs.length ? pairs[lineIndex % pairs.length] : null;
+}
+
 function getLineOffbeatTuplet(settings, lineIndex) {
   const plan = normalizeOffbeatTupletPlan(settings?.offbeatTupletPlan);
   if (!plan) return null;
@@ -357,8 +373,9 @@ function getStepRuns(settings) {
 
 function getLineExerciseStep(settings, lineIndex) {
   const steps = normalizeExerciseSteps(settings?.exerciseSteps);
-  const plan = getStepRuns(settings);
-  if (!steps || !plan) return null;
+  if (!steps) return null;
+  // Without a nested or off-beat plan, the steps run once across the subsection.
+  const plan = getStepRuns(settings) || [{ count: Math.max(1, Number.parseInt(settings?.subsectionLineCount, 10) || steps.length) }];
   let start = 0;
   let run = null;
   for (const candidate of plan) {
@@ -520,6 +537,7 @@ module.exports = {
   normalizeOrnamentSegments, getLineOrnamentSegment, normalizeRandomOrnaments, getLineRandomOrnaments,
   getNestedTupletNotation, getNestedTupletVariants, nestedTupletLabel, normalizeNestedTupletPlan, getLineNestedTuplet,
   OFFBEAT_LABELS, normalizeOffbeatTupletPlan, getLineOffbeatTuplet, normalizePageOrnamentDensity,
+  normalizeOffbeatGroups, getLineOffbeatPair,
   normalizeExerciseSteps, getStepCounts, getStepRuns, getLineExerciseStep,
   normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, getSecondaryRhythmPhase, getLineSecondaryRhythms,
   normalizeRhythmPool, rhythmOrnamentKey, migrateBookStructure, createStructureTableOfContents,

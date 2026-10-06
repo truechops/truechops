@@ -491,8 +491,7 @@ export default function BookBuilderPanel() {
     selectedPage,
     selectedSection
   );
-  const stepsActive = Boolean((selectedPageGenerationSettings.nestedTupletPlan || selectedPageGenerationSettings.offbeatTupletPlan) &&
-    selectedPageGenerationSettings.exerciseSteps);
+  const stepsActive = Boolean(selectedPageGenerationSettings.exerciseSteps);
   const pdfSettings = normalizePdfSettings(book.pdfSettings);
   const selectedPagePdfSettings = getPagePdfSettings(selectedPage, pdfSettings);
   const linesPerPage = getLinesPerPage(selectedPagePdfSettings);
@@ -1194,7 +1193,7 @@ export default function BookBuilderPanel() {
           )}
           <NestedTupletPlanEditor
             exerciseCount={linesPerPage * selectedSubsectionPages.length}
-            offbeatActive={Boolean(selectedPageGenerationSettings.offbeatTupletPlan)}
+            offbeatActive={Boolean(selectedPageGenerationSettings.offbeatTupletPlan || selectedPageGenerationSettings.offbeatGroups)}
             onChange={updateSelectedPageGenerationDraft}
             plan={selectedPageGenerationSettings.nestedTupletPlan}
             primaryRhythms={selectedSection.primaryRhythms}
@@ -1203,6 +1202,7 @@ export default function BookBuilderPanel() {
           />
           <OffbeatTupletPlanEditor
             exerciseCount={linesPerPage * selectedSubsectionPages.length}
+            groups={selectedPageGenerationSettings.offbeatGroups}
             nestedActive={Boolean(selectedPageGenerationSettings.nestedTupletPlan)}
             onChange={updateSelectedPageGenerationDraft}
             plan={selectedPageGenerationSettings.offbeatTupletPlan}

@@ -71,14 +71,19 @@ The original eighth-note and mixed-tuplet studies remain alongside this curricul
 
 ## Tuplets off the beat
 
-After the span sections and before the combinations, each one-beat tuplet (triplets, quintuplets, sextuplets, septuplets, nontuplets) gets two pages where it starts off the beat (`createOffbeatStudies` in `src/lib/book-curriculum.js`): on the "e" for exercises 1–15, the "+" for 16–30, and the "a" for 31–44 (**Off-beat starts, in order** in the subsection editor). The group still lasts one quarter note, so it ends at the same point of the next beat. Sparse sixteenths lead into it, complete its beats, and fill the rest of the measure, so the placement reads against the sixteenth-note grid and the rests (merged into eighths and dotted values) make syncopations; the group can fall in beats 1–2, 2–3, or 3–4. Each start goes through four steps (`OFFBEAT_STEPS`):
+After the span sections and before the combinations, each one-beat tuplet (triplets, quintuplets, sextuplets, septuplets, nontuplets) gets two pages where it starts off the beat (`createOffbeatStudies` in `src/lib/book-curriculum.js`): on the "e" for exercises 1–15, the "+" for 16–30, and the "a" for 31–44 (**Off-beat starts, in order** in the subsection editor). The group still lasts one quarter note, so it ends at the same point of the next beat. Sparse sixteenths (55–80% of the notes) lead into it, complete its beats, and fill the rest of the measure, so the placement reads against the sixteenth-note grid and the rests (merged into eighths and dotted values) make syncopations; the group can fall in beats 1–2, 2–3, or 3–4. Two in three groups are played in full; the rest keep a rest inside (in 9:8 groups a note and the rest after it read as one sixteenth).
 
-1. The tuplet in full with stickings, and 55–80% of the notes played around it.
-2. The same, with accents.
-3. Sparse with accents: 50–75% of the notes, with a rest in every primary group (in 9:8 groups a note and the rest after it read as one sixteenth).
-4. The tuplet in full with sparse notes around it, and stickings plus 2–4 other ornaments chosen at random.
+Each start goes through the ornament steps (`OFFBEAT_STEPS`), about three exercises each, with stickings on every note throughout:
 
-Ornaments are busier than in the rest of the book (**Ornament density (% of the book's)** is 130 on these pages). Every tuplet takes accents here, so the accent steps accent the group itself, even 7s and 9s; septuplets and nontuplets still take no flams, diddles, or cheese, and sextuplets only flams, so those land on the sixteenths.
+1. Accents.
+2. Accents and diddles.
+3. Accents and flams.
+4. Accents and cheese.
+5. Everything (accents, flams, diddles, and cheese).
+
+Every exercise shows each of its step's ornaments and no others. Ornaments are busier than in the rest of the book (**Ornament density (% of the book's)** is 130 on these pages). Every tuplet takes accents here, so each step accents the group itself, even 7s and 9s; septuplets and nontuplets still take no flams, diddles, or cheese, and sextuplets only flams, so those land on the sixteenths.
+
+**Mixing off-beat tuplets** (two more pages) puts two different tuplets in each exercise, each starting on a random "e", "+", or "a" with sparse sixteenths before and after it, going through every pair in turn from the slowest to the fastest: 3 and 5, 3 and 6, 5 and 6, 3 and 7, 5 and 7, 6 and 7, 3 and 9, 5 and 9, 6 and 9, 7 and 9 (**Two off-beat tuplets per exercise** in the subsection editor). The same ornament steps run once across the two pages, about nine exercises each.
 
 ## Tuplet combinations
 
@@ -105,8 +110,8 @@ A variant's exercises split evenly over the steps, and any extra exercises go to
 
 The renderer draws the nested bracket inside the host's bracket (the stave has extra room above row one for the outer bracket), and playback multiplies the ratio of every tuplet that contains a note.
 
-- **Book builder:** **Nested tuplets** in the subsection editor turns nesting on for any page whose primary rhythm is a tuplet. Choose each variant and its exercise count, reorder them, or use **Spread all evenly**. Below the variants, edit each step's title, density (every note; primary groups in full with sparse notes around them; sparse; or 50–75% of notes with a rest in every primary group), and ornaments (a fixed set, or random with ornaments on every exercise). **Use the page's ornaments and density** removes the steps.
-- **Exercise generator:** **Nested tuplets** offers None, each variant in turn, or one specific variant, and **Start the tuplet** offers the beat, the "e", "+", or "a", or each in turn (one or the other, not both). **Steps** gives each nested tuplet or start four measures, one per step, in place of the configuration's density and ornaments; a nested or off-beat book page's own configuration has it on. Off-beat groups get sixteenths around them when the configuration has no plain secondary subdivision. In the composer, each **Add measure** continues to the next step, nested tuplet, or start.
+- **Book builder:** **Nested tuplets** in the subsection editor turns nesting on for any page whose primary rhythm is a tuplet. Choose each variant and its exercise count, reorder them, or use **Spread all evenly**. Below the variants, edit each step's title, density (every note; all or two in three primary groups in full with sparse notes around them; sparse; or 50–75% of notes with a rest in every primary group), and ornaments (a fixed set, or random with ornaments on every exercise). **Use the page's ornaments and density** removes the steps.
+- **Exercise generator:** **Nested tuplets** offers None, each variant in turn, or one specific variant, and **Start the tuplet** offers the beat, the "e", "+", or "a", or each in turn (one or the other, not both). **Steps** gives each nested tuplet four measures (every note to sparse) or each off-beat start five (the ornament steps), one per step, in place of the configuration's density and ornaments; a nested or off-beat book page's own configuration has it on. Off-beat groups get sixteenths around them when the configuration has no plain secondary subdivision. In the composer, each **Add measure** continues to the next step, nested tuplet, or start.
 - **Composer:** with a tuplet selected, clicking a note inside an existing tuplet nests the new tuplet there (one level deep).
 
 ## Random subdivisions and ornaments

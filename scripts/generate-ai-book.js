@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const http = require("http");
 const https = require("https");
-const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, getLineStickingSettings, getSpanPrimaryRhythms, normalizeOrnamentSegments, getLineOrnamentSegment, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, getLineSecondaryRhythms, rhythmOrnamentKey, normalizeRandomOrnaments, getLineRandomOrnaments, getNestedTupletNotation, normalizeNestedTupletPlan, getLineNestedTuplet, normalizeExerciseSteps, getLineExerciseStep, OFFBEAT_LABELS, normalizeOffbeatTupletPlan, getLineOffbeatTuplet, normalizePageOrnamentDensity } = require("../src/lib/book-structure");
+const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, getLineStickingSettings, getSpanPrimaryRhythms, normalizeOrnamentSegments, getLineOrnamentSegment, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, getLineSecondaryRhythms, rhythmOrnamentKey, normalizeRandomOrnaments, getLineRandomOrnaments, getNestedTupletNotation, normalizeNestedTupletPlan, getLineNestedTuplet, normalizeExerciseSteps, getLineExerciseStep, OFFBEAT_LABELS, normalizeOffbeatTupletPlan, getLineOffbeatTuplet, normalizePageOrnamentDensity, normalizeOffbeatGroups, getLineOffbeatPair } = require("../src/lib/book-structure");
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const DEFAULT_CONFIG_PATH = path.join(
@@ -1245,7 +1245,10 @@ function getRequiredSectionOrnamentChars(section) {
   // the rest of the exercise's ornaments can still appear on secondary notes.
   const limits = section.primaryRhythms && section.primaryRhythmOrnaments;
   if (limits) {
-    const pool = normalizeRhythmPool(section.primaryRhythms);
+    // An off-beat pair needs only what its own two tuplets can carry.
+    const pool = section.lineOffbeatPair
+      ? normalizeRhythmPool({ subdivisions: [], tuplets: section.lineOffbeatPair })
+      : normalizeRhythmPool(section.primaryRhythms);
     const keys = [...pool.subdivisions, ...pool.tuplets].map(rhythmOrnamentKey);
     ornaments = ornaments.filter((id) => keys.some((key) => !Array.isArray(limits[key]) || limits[key].includes(id)));
   }
@@ -1385,6 +1388,16 @@ function applyRhythmPoolOrnaments(section, voice) {
   };
 }
 
+// Start of each note in quarter notes, with every containing tuplet's ratio.
+function getNoteStartQuarters(voice) {
+  const starts = [];
+  voice.notes.reduce((position, note, index) => {
+    starts[index] = position;
+    return position + getNoteQuarterUnits(note) * getContainingTupletRatio(voice.tuplets, index);
+  }, 0);
+  return starts;
+}
+
 function validatePrimaryRequirements(section, score) {
   if (!section.primaryRhythms) return;
   const timeSig = score.measures[0].timeSig;
@@ -1428,15 +1441,22 @@ function validatePrimaryRequirements(section, score) {
     if (!nested) throw new Error(`Exercise must contain ${actual} in the time of ${hostNotes} host notes.`);
   }
   if (section.lineTupletOffset) {
-    // Start of each note in quarter notes, with every containing tuplet's ratio.
-    const starts = [];
-    voice.notes.reduce((position, note, index) => {
-      starts[index] = position;
-      return position + getNoteQuarterUnits(note) * getContainingTupletRatio(voice.tuplets, index);
-    }, 0);
+    const starts = getNoteStartQuarters(voice);
     const offbeat = voice.tuplets.some((tuplet) => noteMatchesRhythmPool(primary, voice, Number(tuplet.start)) &&
       Math.abs((starts[Number(tuplet.start)] * 4) % 4 - section.lineTupletOffset) < 1e-6);
     if (!offbeat) throw new Error(`Exercise must start its primary tuplet on the "${OFFBEAT_LABELS[section.lineTupletOffset]}" of a beat.`);
+  }
+  if (section.lineOffbeatPair) {
+    // Both tuplets of the pair, each starting on an "e", "+", or "a".
+    const starts = getNoteStartQuarters(voice);
+    for (const pairTuplet of section.lineOffbeatPair) {
+      const group = voice.tuplets.find((tuplet) => Number(tuplet.actual) === pairTuplet.actual && Number(tuplet.normal) === pairTuplet.normal &&
+        noteMatchesRhythmPool({ subdivisions: [], tuplets: [pairTuplet] }, voice, Number(tuplet.start)));
+      const sixteenths = group ? (starts[Number(group.start)] * 4) % 4 : 0;
+      if (!group || Math.abs(sixteenths - Math.round(sixteenths)) > 1e-6 || Math.round(sixteenths) % 4 === 0) {
+        throw new Error(`Exercise must start its ${pairTuplet.actual}:${pairTuplet.normal} group off the beat.`);
+      }
+    }
   }
   const tupletNoteIndexes = new Set(voice.tuplets.flatMap((tuplet) =>
     Array.from({ length: tuplet.end - tuplet.start }, (_, offset) => tuplet.start + offset)));
@@ -3309,10 +3329,10 @@ function blockRhythmKey(block) {
 
 // requiredSecondaryBlocks are placed after the primary groups whenever they fit,
 // with their first notes struck (forcePlay).
-// With primaryOffsetSlots, the primary group starts that many slots after a
-// beat, with regular notes before it and after it to complete the beats.
+// primaryOffsets maps a primary group to the slots after a beat where it
+// starts, with regular notes before it and after it to complete the beats.
 function createBeatStructuredLayout(requiredBlocks, availableBlocks, random, {
-  chainPrimaryGroups = false, requiredSecondaryBlocks = [], primaryOffsetSlots = 0,
+  chainPrimaryGroups = false, requiredSecondaryBlocks = [], primaryOffsets = new Map(),
 } = {}) {
   const regular = availableBlocks.filter((block) => block.kind === "regular" && SLOTS_PER_BEAT % block.slotCount === 0);
   const slotsOf = (unit) => unit.reduce((sum, block) => sum + block.slotCount, 0);
@@ -3328,15 +3348,15 @@ function createBeatStructuredLayout(requiredBlocks, availableBlocks, random, {
     const filler = Array(fillerSlots / value.slotCount).fill(value);
     return random() < 0.5 ? [...filler, ...groups] : [...groups, ...filler];
   };
-  const offsetUnit = (block) => {
-    const tail = (SLOTS_PER_BEAT - (primaryOffsetSlots + block.slotCount) % SLOTS_PER_BEAT) % SLOTS_PER_BEAT;
-    const fitting = regular.filter((candidate) => primaryOffsetSlots % candidate.slotCount === 0 && tail % candidate.slotCount === 0);
+  const offsetUnit = (block, offsetSlots) => {
+    const tail = (SLOTS_PER_BEAT - (offsetSlots + block.slotCount) % SLOTS_PER_BEAT) % SLOTS_PER_BEAT;
+    const fitting = regular.filter((candidate) => offsetSlots % candidate.slotCount === 0 && tail % candidate.slotCount === 0);
     if (!fitting.length) return null;
     const value = fitting[randomInteger(random, 0, fitting.length - 1)];
-    return [...Array(primaryOffsetSlots / value.slotCount).fill(value), block, ...Array(tail / value.slotCount).fill(value)];
+    return [...Array(offsetSlots / value.slotCount).fill(value), block, ...Array(tail / value.slotCount).fill(value)];
   };
   const tupletUnit = (block, maxSlots = 32) => {
-    if (primaryOffsetSlots && requiredBlocks.includes(block)) return offsetUnit(block);
+    if (primaryOffsets.has(block)) return offsetUnit(block, primaryOffsets.get(block));
     if (!chainPrimaryGroups || !requiredBlocks.includes(block)) return groupUnit(block, 1);
     // Usually one group; each extra group in a row is an occasional surprise.
     let count = 1;
@@ -3372,7 +3392,7 @@ function createBeatStructuredLayout(requiredBlocks, availableBlocks, random, {
     ...regular.filter((block) => !block.fillerOnly)
       .map((block) => ({ weight: 0.42, make: () => Array(SLOTS_PER_BEAT / block.slotCount).fill(block) })),
     // An off-beat primary group appears only off the beat.
-    ...availableBlocks.filter((block) => block.kind === "tuplet" && !(primaryOffsetSlots && requiredBlocks.includes(block)))
+    ...availableBlocks.filter((block) => block.kind === "tuplet" && !primaryOffsets.has(block))
       .map((block) => ({ weight: 0.68, make: () => tupletUnit(block, remaining) })),
   ];
   while (remaining > 0) {
@@ -3504,7 +3524,10 @@ function createMixedTupletFallbackGeneratedScore(section, options, random, lineI
       : block.kind === "tuplet" && primary.tuplets.some((tuplet) =>
         tuplet.actual === block.tuplet.actual && tuplet.normal === block.tuplet.normal && tuplet.type === block.tuplet.type)
   ) : [];
-  const requiredBlocks = !primary || section.requirePrimaryRhythms === false ? []
+  const pairBlocks = (section.lineOffbeatPair || []).map((tuplet) => primaryBlocks.find((block) => block.kind === "tuplet" &&
+    block.tuplet.actual === tuplet.actual && block.tuplet.normal === tuplet.normal && block.tuplet.type === tuplet.type)).filter(Boolean);
+  const requiredBlocks = pairBlocks.length === 2 ? pairBlocks
+    : !primary || section.requirePrimaryRhythms === false ? []
     : section.requirePrimaryRhythms === "any" && primaryBlocks.length
       ? [primaryBlocks[randomInteger(random, 0, primaryBlocks.length - 1)]]
       : primaryBlocks;
@@ -3514,10 +3537,10 @@ function createMixedTupletFallbackGeneratedScore(section, options, random, lineI
   if (requiredSlots > 32) throw new Error("The selected primary rhythms cannot all fit in one 4/4 measure. Select fewer primary rhythms.");
   if (primary) {
     // Draw a fresh subset of optional families for each exercise, including none.
-    // Off-beat pages always keep their regular notes, which lead into the group.
+    // Off-beat pages always keep their regular notes, which lead into the groups.
     availableBlocks = availableBlocks.filter((block) =>
       requiredBlocks.includes(block) || requiredSecondaryBlocks.includes(block) || block.kind === "rest" || block.fillerOnly ||
-        (section.lineTupletOffset && block.kind === "regular") || random() < 0.75
+        ((section.lineTupletOffset || pairBlocks.length) && block.kind === "regular") || random() < 0.75
     );
   }
   if (getSectionPlayEveryNote(section) && !canFillMixedTupletSlots(32,
@@ -3530,12 +3553,17 @@ function createMixedTupletFallbackGeneratedScore(section, options, random, lineI
   const requireRegularSubdivision = options.subdivisions.length > 0 &&
     getMaximumMixedEventCount(32, availableBlocks, true) >= minimumPlayedNotes;
   let layout = null;
+  // Off-beat groups: one start for the page's run, or a random "e", "+", or "a"
+  // for each group of a pair.
+  const primaryOffsets = new Map(pairBlocks.length === 2
+    ? pairBlocks.map((block) => [block, randomInteger(random, 1, 3) * SLOTS_PER_BEAT / 4])
+    : section.lineTupletOffset ? requiredBlocks.map((block) => [block, section.lineTupletOffset * SLOTS_PER_BEAT / 4]) : []);
 
   for (let attempt = 0; beatStructured && attempt < 200 && !layout; attempt += 1) {
     const candidate = createBeatStructuredLayout(requiredBlocks, availableBlocks, random, {
       chainPrimaryGroups: Boolean(section.chainPrimaryGroups),
       requiredSecondaryBlocks,
-      primaryOffsetSlots: section.lineTupletOffset ? section.lineTupletOffset * SLOTS_PER_BEAT / 4 : 0,
+      primaryOffsets,
     });
     const eventCount = (candidate || []).reduce((count, block) =>
       count + (block.kind === "tuplet" ? block.tuplet.actual : block.kind === "regular" ? 1 : 0), 0);
@@ -3849,9 +3877,11 @@ function createUniqueGeneratedLine(input, section, samplePayload, index, usedExe
   if (nestedTuplet) section = { ...section, lineNestedTuplet: nestedTuplet };
   const offbeatTuplet = nestedTuplet ? null : getLineOffbeatTuplet(section, subsectionIndex);
   if (offbeatTuplet) section = { ...section, lineTupletOffset: offbeatTuplet.offset };
-  // Each nested variant steps through the page's stages, which set the
-  // exercise's density and ornaments (secondary notes included).
-  const exerciseStep = nestedTuplet || offbeatTuplet ? getLineExerciseStep(section, subsectionIndex) : null;
+  const offbeatPair = nestedTuplet || offbeatTuplet ? null : getLineOffbeatPair(section, subsectionIndex);
+  if (offbeatPair) section = { ...section, lineOffbeatPair: offbeatPair };
+  // Steps set each exercise's density and ornaments (secondary notes included),
+  // per nested tuplet or off-beat start, or once across the subsection.
+  const exerciseStep = getLineExerciseStep(section, subsectionIndex);
   if (exerciseStep) {
     section = {
       ...section,
@@ -4049,6 +4079,7 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         nestedTupletPlan: normalizeNestedTupletPlan(pageSource.nestedTupletPlan),
         exerciseSteps: normalizeExerciseSteps(pageSource.exerciseSteps),
         offbeatTupletPlan: normalizeOffbeatTupletPlan(pageSource.offbeatTupletPlan),
+        offbeatGroups: normalizeOffbeatGroups(pageSource.offbeatGroups),
         ornamentDensity: pageOrnamentDensity,
         chainPrimaryGroups: Boolean(pageSource.chainPrimaryGroups),
         fullPrimaryGroupShare: pageSource.fullPrimaryGroupShare ?? null,
@@ -4397,6 +4428,7 @@ function createStoredPageGenerationSettings(pageConfig) {
     ...(pageConfig.nestedTupletPlan ? { nestedTupletPlan: pageConfig.nestedTupletPlan } : {}),
     ...(pageConfig.exerciseSteps ? { exerciseSteps: pageConfig.exerciseSteps } : {}),
     ...(pageConfig.offbeatTupletPlan ? { offbeatTupletPlan: pageConfig.offbeatTupletPlan } : {}),
+    ...(pageConfig.offbeatGroups ? { offbeatGroups: pageConfig.offbeatGroups } : {}),
     ...(normalizePageOrnamentDensity(pageConfig.ornamentDensity) ? { ornamentDensity: normalizePageOrnamentDensity(pageConfig.ornamentDensity) } : {}),
     ...(pageConfig.chainPrimaryGroups ? { chainPrimaryGroups: true } : {}),
     ...(pageConfig.fullPrimaryGroupShare != null ? { fullPrimaryGroupShare: pageConfig.fullPrimaryGroupShare } : {}),
