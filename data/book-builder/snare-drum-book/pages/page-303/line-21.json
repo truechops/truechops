@@ -24,7 +24,7 @@
                 "notes": [
                   {
                     "notes": [],
-                    "duration": 4,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5
                   },
@@ -35,7 +35,7 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -51,7 +51,16 @@
                       "C5"
                     ],
                     "duration": 4,
-                    "dots": 1,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
                   },
@@ -62,15 +71,24 @@
                     "duration": 4,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "rf"
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 4,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 5,
-                    "actual": 9,
-                    "normal": 8
+                    "end": 7,
+                    "actual": 5,
+                    "normal": 4
                   }
                 ]
               }
@@ -80,8 +98,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r4 n8:l n8:ld n4.:r n4:rf |t0-5:9:8",
-  "updatedAt": "2026-10-06T01:22:22.705Z",
-  "sectionId": "combinations-four-quarters-9",
+  "exerciseShortForm": "r8 n8:r n8:ld n4:l n8:r n4:l n4:l |t0-7:5:4",
+  "updatedAt": "2026-10-06T02:56:12.424Z",
+  "sectionId": "combinations-four-quarters-5",
   "sectionPageNumber": 2
 }

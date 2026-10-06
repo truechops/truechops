@@ -24,36 +24,9 @@
                 "notes": [
                   {
                     "notes": [],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "ld"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lfa"
+                    "velocity": 0.5
                   },
                   {
                     "notes": [
@@ -63,6 +36,12 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "ldc"
+                  },
+                  {
+                    "notes": [],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5
                   },
                   {
                     "notes": [
@@ -88,14 +67,8 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "rca"
-                  },
-                  {
-                    "notes": [],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -104,7 +77,16 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "lca"
+                    "ornaments": "lfa"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "rca"
                   },
                   {
                     "notes": [],
@@ -116,23 +98,29 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
+                    "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
+                    "velocity": 1,
+                    "ornaments": "rca"
+                  },
+                  {
+                    "notes": [],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 0,
-                    "end": 3,
-                    "actual": 3,
-                    "normal": 2
+                    "start": 1,
+                    "end": 6,
+                    "actual": 5,
+                    "normal": 7
                   },
                   {
-                    "start": 4,
+                    "start": 7,
                     "end": 11,
-                    "actual": 8,
+                    "actual": 5,
                     "normal": 7
                   }
                 ]
@@ -143,8 +131,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r8 n8:ld n8:r n16:laf n16:ldc n16:r n16:lf n16:rac r16 n16:lac r8 n4:r |t0-3:3:2,4-11:8:7",
-  "updatedAt": "2026-10-06T01:22:22.705Z",
-  "sectionId": "seven-sixteenths-thirtyseconds",
+  "exerciseShortForm": "r16 n16:ldc r16 n16:r n16:lf n16:r n16:laf n16:rac r8 n16:rac r16 |t1-6:5:7,7-11:5:7",
+  "updatedAt": "2026-10-06T02:56:12.424Z",
+  "sectionId": "seven-sixteenths-quintuplets",
   "sectionPageNumber": 2
 }

@@ -23,73 +23,16 @@
               {
                 "notes": [
                   {
-                    "notes": [
-                      "C5"
-                    ],
+                    "notes": [],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
+                    "velocity": 0.5
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 32,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 32,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 32,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 32,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 32,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 32,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 32,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
@@ -101,7 +44,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "lda"
+                    "ornaments": "rda"
                   },
                   {
                     "notes": [],
@@ -123,20 +66,29 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 4,
+                    "dots": 1,
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 0,
-                    "end": 8,
-                    "actual": 9,
-                    "normal": 8
+                    "start": 2,
+                    "end": 6,
+                    "actual": 4,
+                    "normal": 9
                   },
                   {
-                    "start": 8,
-                    "end": 11,
+                    "start": 6,
+                    "end": 7,
                     "actual": 3,
-                    "normal": 11
+                    "normal": 2
                   }
                 ]
               }
@@ -146,8 +98,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n16:r n32:l n32:l n32:r n32:l n32:l n32:r n32:r n16:lad r16 n16:raf r16 |t0-8:9:8,8-11:3:11",
-  "updatedAt": "2026-10-06T01:22:22.705Z",
-  "sectionId": "eleven-sixteenths-eighth-triplets",
+  "exerciseShortForm": "r16 n8:r n16:rad r16 n16:raf r16 n4.:r |t2-6:4:9,6-7:3:2",
+  "updatedAt": "2026-10-06T02:56:12.424Z",
+  "sectionId": "nine-sixteenths-sixteenths",
   "sectionPageNumber": 1
 }

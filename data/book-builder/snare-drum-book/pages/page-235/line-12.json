@@ -1,7 +1,7 @@
 {
   "pageNumber": 235,
   "lineNumber": 12,
-  "title": "Two off-beat tuplets 12",
+  "title": "Starting on e, +, and a 12",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -29,7 +29,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
+                    "ornaments": "ld"
                   },
                   {
                     "notes": [
@@ -38,7 +38,16 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
+                    "ornaments": "rd"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "lad"
                   },
                   {
                     "notes": [
@@ -56,16 +65,7 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "ra"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
+                    "ornaments": "la"
                   },
                   {
                     "notes": [
@@ -91,24 +91,6 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "ra"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "la"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
                   },
@@ -116,10 +98,10 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
+                    "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
+                    "velocity": 1,
+                    "ornaments": "la"
                   },
                   {
                     "notes": [
@@ -127,12 +109,12 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "la"
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [],
-                    "duration": 4,
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 0.5
                   },
@@ -140,10 +122,19 @@
                     "notes": [
                       "C5"
                     ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "rca"
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -153,20 +144,41 @@
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 1,
-                    "end": 8,
+                    "start": 3,
+                    "end": 10,
                     "actual": 7,
                     "normal": 4
-                  },
-                  {
-                    "start": 12,
-                    "end": 14,
-                    "actual": 3,
-                    "normal": 2
                   }
                 ]
               }
@@ -176,8 +188,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n16:l n16:l n16:ra n16:ra n16:l n16:l n16:r n16:ra n16:la n8:l n8:r n16:la r4 n8:rac n16:r |t1-8:7:4,12-14:3:2",
-  "updatedAt": "2026-10-06T01:22:22.705Z",
-  "sectionId": "offbeat-mixed",
+  "exerciseShortForm": "n16:ld n16:rd n16:lad n16:ra n16:la n16:l n16:r n16:l n16:la n16:r r16 n16:r n8:l n16:r n16:r n16:l n8:r |t3-10:7:4",
+  "updatedAt": "2026-10-06T02:56:12.424Z",
+  "sectionId": "offbeat-7",
   "sectionPageNumber": 2
 }

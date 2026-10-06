@@ -8,7 +8,7 @@ const vm = require("node:vm");
 const babel = require("@babel/core");
 const { migrateBookStructure } = require("../../src/lib/book-structure");
 const generator = require("../generate-ai-book");
-const { createStudySections, createSpanStudy, createOffbeatStudies, createTupletCombinationStudies, createNestedStudies, createFinalStudies, SPAN_STUDIES, STUDY_TOPICS, STUDY_FAMILIES } = require("../../src/lib/book-curriculum");
+const { createStudySections, createSpanStudy, createQuarterNoteStudy, createOffbeatStudies, createTupletCombinationStudies, createNestedStudies, createFinalStudies, SPAN_STUDIES, STUDY_TOPICS, STUDY_FAMILIES } = require("../../src/lib/book-curriculum");
 const { getLineStickingSettings, getSpanPrimaryRhythms, getNestedTupletNotation, getNestedTupletVariants, getLineExerciseStep, getLineRandomOrnaments, getLineOffbeatTuplet, getLineOffbeatPair } = require("../../src/lib/book-structure");
 
 // Load the same ES modules Next uses without starting a server.
@@ -431,6 +431,39 @@ test("the website generator nests tuplets on request and the composer records ne
   assert(Math.abs(nestedVoiceQuarters(voice) - 4) < 1e-9);
 });
 
+// A played quarter note (or longer) outside any tuplet.
+function hasPlainQuarterNotes(voice) {
+  return voice.notes.some((note, index) => note.notes.length && Number(note.duration) <= 4 &&
+    !voice.tuplets.some((tuplet) => index >= tuplet.start && index < tuplet.end));
+}
+
+test("quarter notes have one short section with stickings, accents, and flams, and appear nowhere else", () => {
+  const pdf = { measuresPerLine: 2, lineSpacing: 130, noteSize: 100 };
+  const quarters = createQuarterNoteStudy(pdf);
+  assert.deepEqual(quarters.pages.map((page) => page.generationSettings.ornaments), [
+    ["stickings"], ["stickings", "accents"], ["stickings", "flams"], ["stickings", "accents", "flams"],
+  ]);
+  const spans = createSpanStudy(SPAN_STUDIES[0], pdf).sections.slice(0, 1);
+  const config = generator.createGenerationConfig({}, { structureVersion: 3,
+    groups: [{ id: "one-quarter", rhythmSpan: { count: 1, unit: 4 } }, { id: "two-quarters", rhythmSpan: { count: 2, unit: 4 } }],
+    sections: [quarters, ...createStudySections(pdf).slice(0, 2), ...spans] });
+  const seen = new Set();
+  for (const section of config.sections) {
+    for (const page of section.pages) {
+      for (let index = 0; index < 22; index += 1) {
+        const voice = generator.createUniqueGeneratedLine(null, page, page.sampleJson, index, seen).score.measures[0].parts[0].voices[0];
+        if (section.id === "quarter-notes") {
+          assert(voice.notes.every((note) => !note.notes.length || Number(note.duration) === 4), "only quarter notes and rests");
+          assert(voice.notes.every((note) => !/[dc]/.test(note.ornaments || "")), "no diddles or cheese");
+          assert(hasStickings(voice));
+        } else {
+          assert(!hasPlainQuarterNotes(voice), `${section.title} has a quarter note`);
+        }
+      }
+    }
+  }
+});
+
 // Start of each note in quarter notes, with every containing tuplet's ratio.
 function noteStarts(voice) {
   const starts = [];
@@ -456,6 +489,10 @@ test("off-beat tuplets start on the e, +, and a, stepping through the ornaments,
     const seen = new Set();
     let fullGroups = 0;
     let groupCount = 0;
+    let ornamentedTotal = 0;
+    let diddleSteps = 0;
+    let diddlePairs = 0;
+    const featured = {};
     section.pages.forEach((page, pageIndex) => {
       for (let index = 0; index < 22; index += 1) {
         const exercise = pageIndex * 22 + index;
@@ -474,16 +511,54 @@ test("off-beat tuplets start on the e, +, and a, stepping through the ornaments,
         assert(Math.abs(nestedVoiceQuarters(voice) - 4) < 1e-9);
         assert(hasStickings(voice));
         assert(voice.notes.some((note) => !note.notes.length), `${where}: sparse notes around the tuplet`);
+        assert(!hasPlainQuarterNotes(voice), `${where}: quarter notes appear only on the quarter-note pages`);
+        const step = getLineExerciseStep(page, exercise);
+        const stepRudiments = step.ornaments.filter((id) => ["flams", "diddles", "cheese"].includes(id));
         voice.tuplets.forEach((tuplet) => {
           groupCount += 1;
-          if (voice.notes.slice(tuplet.start, tuplet.end).filter((note) => note.notes.length).length === tuplet.actual) fullGroups += 1;
+          const indexes = Array.from({ length: tuplet.end - tuplet.start }, (_, offset) => tuplet.start + offset)
+            .filter((index) => voice.notes[index].notes.length);
+          const played = indexes.map((index) => voice.notes[index]);
+          if (played.length === tuplet.actual) fullGroups += 1;
+          // The moving tuplet carries a few ornaments, not one on every note.
+          const ornamented = played.filter((note) => /[afdc]/.test(note.ornaments || "")).length;
+          assert(ornamented >= 1 && ornamented <= Math.min(4, played.length), `${where}: ${ornamented} ornamented notes in a ${tuplet.actual}-note group`);
+          ornamentedTotal += ornamented;
+          // Triplets carry the step's flam, diddle, or cheese.
+          if (section.title === "Triplets" && stepRudiments.length === 1 && played.length === tuplet.actual) {
+            assert(played.some((note) => (note.ornaments || "").includes(CHARS[stepRudiments[0]])), `${where}: the triplet lacks the step's ${stepRudiments[0]}`);
+          }
+          if (stepRudiments.join() === "diddles" && tuplet.actual === 3 && played.length === 3) {
+            diddleSteps += 1;
+            if (indexes.some((index, position) => indexes[position + 1] === index + 1 &&
+              /d/.test(voice.notes[index].ornaments || "") && /d/.test(voice.notes[index + 1].ornaments || ""))) diddlePairs += 1;
+          }
+        });
+        // Diddles in a row alternate hands (RRLL).
+        voice.notes.forEach((note, index) => {
+          const next = voice.notes[index + 1];
+          if (note.notes.length && next?.notes.length && /d/.test(note.ornaments || "") && /d/.test(next.ornaments || "")) {
+            assert.notEqual((note.ornaments.match(/[rl]/) || [])[0], (next.ornaments.match(/[rl]/) || [])[0], `${where}: diddles in a row on one hand`);
+          }
         });
         // Each step shows exactly its ornaments (stickings throughout).
-        const step = getLineExerciseStep(page, exercise);
         const shown = new Set(voice.notes.flatMap((note) => [...(note.notes.length ? note.ornaments || "" : "")]).filter((char) => "afdc".includes(char)));
         assert.deepEqual([...shown].sort(), step.ornaments.filter((id) => id !== "stickings").map((id) => CHARS[id]).sort(), `${where} (${step.title})`);
+        // A step that adds one flam, diddle, or cheese features it.
+        const rudiments = step.ornaments.filter((id) => ["flams", "diddles", "cheese"].includes(id));
+        if (rudiments.length === 1) {
+          const char = CHARS[rudiments[0]];
+          const entry = (featured[step.title] ||= { exercises: 0, count: 0 });
+          entry.exercises += 1;
+          entry.count += voice.notes.filter((note) => note.notes.length && (note.ornaments || "").includes(char)).length;
+        }
       }
     });
+    Object.entries(featured).forEach(([title, { exercises, count }]) =>
+      assert(count / exercises >= 2.5, `${section.title} ${title}: ${count / exercises} of the step's ornament per exercise`));
+    assert(ornamentedTotal / groupCount >= 1.3, `${section.title}: ${ornamentedTotal / groupCount} ornamented notes per group`);
+    // Diddle steps often put a pair of diddles in a row on the triplet.
+    if (diddleSteps) assert(diddlePairs / diddleSteps >= 0.4, `${section.title}: ${diddlePairs} of ${diddleSteps} triplets have diddles in a row`);
     // About two in three tuplets are played in full.
     assert(fullGroups / groupCount > 0.5 && fullGroups / groupCount < 0.85, `${section.title}: ${fullGroups} of ${groupCount} groups in full`);
   }

@@ -1,7 +1,7 @@
 {
   "pageNumber": 234,
   "lineNumber": 7,
-  "title": "Two off-beat tuplets 7",
+  "title": "Starting on e, +, and a 7",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -24,9 +24,18 @@
                 "notes": [
                   {
                     "notes": [],
-                    "duration": 16,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -38,8 +47,26 @@
                     "ornaments": "la"
                   },
                   {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "la"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
                     "notes": [],
-                    "duration": 32,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5
                   },
@@ -58,12 +85,18 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "ra"
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [],
-                    "duration": 32,
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [],
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 0.5
                   },
@@ -71,28 +104,10 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 32,
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 32,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 32,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
+                    "ornaments": "rf"
                   },
                   {
                     "notes": [
@@ -100,8 +115,8 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "ra"
+                    "velocity": 0.5,
+                    "ornaments": "rf"
                   },
                   {
                     "notes": [
@@ -109,67 +124,25 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "ra"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
+                    "ornaments": "lf"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
                     "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "ra"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "l"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
+                    "dots": 1,
                     "velocity": 0.5,
                     "ornaments": "r"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 2,
+                    "start": 3,
                     "end": 9,
-                    "actual": 9,
-                    "normal": 8
-                  },
-                  {
-                    "start": 12,
-                    "end": 15,
-                    "actual": 3,
-                    "normal": 2
+                    "actual": 7,
+                    "normal": 4
                   }
                 ]
               }
@@ -179,8 +152,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r16 n16:la r32 n16:r n16:ra r32 n32:r n32:r n32:l n16:ra n16:ra n8:l n8:r n8:ra n8:l n8:r |t2-9:9:8,12-15:3:2",
-  "updatedAt": "2026-10-06T01:22:22.705Z",
-  "sectionId": "offbeat-mixed",
+  "exerciseShortForm": "r8 n8:r n16:la n16:la n16:r r8 n16:r n16:l r16 r16 n16:rf n16:rf n16:lf n8.:r |t3-9:7:4",
+  "updatedAt": "2026-10-06T02:56:12.424Z",
+  "sectionId": "offbeat-7",
   "sectionPageNumber": 1
 }

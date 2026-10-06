@@ -14,6 +14,7 @@ export const DEFAULT_GLOBAL_AI_RULES = "";
 export const DEFAULT_GLOBAL_ORNAMENT_DENSITY = 100;
 export const DEFAULT_MAX_SAME_HAND_STICKING_RUN = 4;
 export const SUBDIVISION_OPTIONS = [
+  { id: "quarters", label: "Quarters", duration: 4 },
   { id: "eighths", label: "Eighths", duration: 8 },
   { id: "sixteenths", label: "Sixteenths", duration: 16 },
   { id: "thirtyseconds", label: "Thirtyseconds", duration: 32 },
@@ -507,6 +508,7 @@ export function normalizePageGenerationSettings(value = {}, fallback = {}) {
       ? { offbeatTupletPlan: normalizeOffbeatTupletPlan(source.offbeatTupletPlan) }
       : {}),
     ...(normalizeOffbeatGroups(source.offbeatGroups) ? { offbeatGroups: 2 } : {}),
+    ...(source.spreadPrimaryOrnaments === true ? { spreadPrimaryOrnaments: true } : {}),
     ...(normalizePageOrnamentDensity(source.ornamentDensity)
       ? { ornamentDensity: normalizePageOrnamentDensity(source.ornamentDensity) }
       : {}),

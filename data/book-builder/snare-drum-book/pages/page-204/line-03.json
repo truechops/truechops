@@ -1,7 +1,7 @@
 {
   "pageNumber": 204,
   "lineNumber": 3,
-  "title": "Sparse 3",
+  "title": "Every note 3",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -29,22 +29,25 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
                     "ornaments": "r"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
-                  },
-                  {
-                    "notes": [],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5
                   },
                   {
                     "notes": [
@@ -56,10 +59,13 @@
                     "ornaments": "l"
                   },
                   {
-                    "notes": [],
+                    "notes": [
+                      "C5"
+                    ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
@@ -71,16 +77,19 @@
                     "ornaments": "ra"
                   },
                   {
-                    "notes": [],
-                    "duration": 8,
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "r"
@@ -89,24 +98,120 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "rf"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "lf"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "lf"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 2,
-                    "end": 7,
-                    "actual": 7,
-                    "normal": 9
-                  },
-                  {
-                    "start": 7,
-                    "end": 9,
+                    "start": 0,
+                    "end": 3,
                     "actual": 3,
                     "normal": 2
+                  },
+                  {
+                    "start": 3,
+                    "end": 12,
+                    "actual": 9,
+                    "normal": 7
+                  },
+                  {
+                    "start": 13,
+                    "end": 19,
+                    "actual": 6,
+                    "normal": 4
                   }
                 ]
               }
@@ -116,8 +221,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n8:r n16:l r8 n16:l r16 n16:ra r8 n4:r n8:l |t2-7:7:9,7-9:3:2",
-  "updatedAt": "2026-10-06T01:22:22.705Z",
-  "sectionId": "nine-sixteenths-septuplets",
+  "exerciseShortForm": "n8:l n8:r n8:l n16:l n16:r n16:ra n16:l n16:r n16:r n16:l n16:r n16:r n16:l n16:l n16:r n16:rf n16:lf n16:lf n16:r |t0-3:3:2,3-12:9:7,13-19:6:4",
+  "updatedAt": "2026-10-06T02:56:12.424Z",
+  "sectionId": "seven-sixteenths-nine-eight-thirtyseconds",
   "sectionPageNumber": 1
 }

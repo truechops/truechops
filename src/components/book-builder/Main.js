@@ -1312,6 +1312,14 @@ export default function BookBuilderPanel() {
           </label>
           <label className={styles.toggleField}>
             <input
+              checked={Boolean(selectedPageGenerationSettings.spreadPrimaryOrnaments)}
+              onChange={(event) => updateSelectedPageGenerationDraft({ spreadPrimaryOrnaments: event.target.checked })}
+              type="checkbox"
+            />
+            <span>Spread ornaments: each primary group gets an accent and the exercise&apos;s flam, diddle pair, or cheese; the rest go on other notes</span>
+          </label>
+          <label className={styles.toggleField}>
+            <input
               checked={Boolean(selectedPageGenerationSettings.chainPrimaryGroups)}
               onChange={(event) =>
                 updateSelectedPageGenerationDraft({ chainPrimaryGroups: event.target.checked })

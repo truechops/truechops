@@ -50,6 +50,7 @@ const NUMBER_WORDS = {
   twelve: 12,
 };
 const SUBDIVISION_SETTINGS = [
+  { id: "quarters", label: "quarter notes", duration: 4 },
   { id: "eighths", label: "eighth notes", duration: 8 },
   { id: "sixteenths", label: "sixteenth notes", duration: 16 },
   { id: "thirtyseconds", label: "thirty-second notes", duration: 32 },
@@ -719,10 +720,33 @@ function pushCompressedRests(target, slotCount, sourceNote) {
   }
 }
 
-function getPreferLongerValueOptions() {
+// Plain notes merge with the rests after them into longer values within a beat.
+// Quarter notes appear only on pages whose subdivision is quarters; elsewhere a
+// note is at most a dotted eighth, and one that fills a beat reads as an eighth
+// and an eighth rest.
+function getPreferLongerValueOptions(allowQuarterNotes = true) {
   return {
     groupSlots: 8,
+    ...(allowQuarterNotes ? {} : { maxNoteSlots: 6 }),
   };
+}
+
+function sectionAllowsQuarterNotes(section) {
+  return getGenerationSubdivisions(section).includes("quarters");
+}
+
+// Splits played notes longer than maxNoteSlots into an eighth and sixteenth rests,
+// which then merge back into the largest rests.
+function splitLongPlayedNotes(notes, maxNoteSlots) {
+  return (notes || []).flatMap((note) => {
+    const slots = getNoteSlotCount(note);
+    if (isRest(note) || slots <= maxNoteSlots) return [note];
+    const eighthSlots = SLOTS_PER_BEAT / 2;
+    return [
+      createPlayedNoteFromSlots(note, eighthSlots),
+      ...Array.from({ length: (slots - eighthSlots) / 2 }, () => createRestFromSlots(2, note)),
+    ];
+  });
 }
 
 function splitIntoSlotGroups(notes, groupSlots, startSlot = 0) {
@@ -765,7 +789,7 @@ function groupHasPlayedNotes(notes) {
   return (notes || []).some((note) => !isRest(note));
 }
 
-function preferLongerValuesInGroup(notes) {
+function preferLongerValuesInGroup(notes, maxNoteSlots = 0) {
   const simplified = [];
   let index = 0;
 
@@ -802,9 +826,13 @@ function preferLongerValuesInGroup(notes) {
     }
 
     const totalAvailableSlots = noteSlots + restSlots;
-    const preferredNoteSlots = restSlots
+    const longestNoteSlots = restSlots
       ? Math.max(noteSlots, getLargestNotationSlotCount(totalAvailableSlots))
       : noteSlots;
+    // Without quarter notes, a note that would fill the beat is an eighth.
+    const preferredNoteSlots = maxNoteSlots && longestNoteSlots > maxNoteSlots
+      ? Math.max(noteSlots, getLargestNotationSlotCount(Math.min(totalAvailableSlots, SLOTS_PER_BEAT / 2)))
+      : longestNoteSlots;
     const remainingRestSlots = totalAvailableSlots - preferredNoteSlots;
 
     simplified.push(createPlayedNoteFromSlots(note, preferredNoteSlots));
@@ -880,9 +908,11 @@ function preferLongerValues(notes, options = {}) {
   const {
     groupSlots = 0,
     startSlot = 0,
+    maxNoteSlots = 0,
   } = options;
+  const values = maxNoteSlots ? splitLongPlayedNotes(notes, maxNoteSlots) : notes;
 
-  const simplified = splitIntoSlotGroups(notes, groupSlots, startSlot).flatMap((group) => {
+  const simplified = splitIntoSlotGroups(values, groupSlots, startSlot).flatMap((group) => {
     if (!groupHasPlayedNotes(group)) {
       const restSlots = group.reduce((total, note) => total + getNoteSlotCount(note), 0);
       const firstRest = group.find((note) => isRest(note)) || group[0];
@@ -891,12 +921,12 @@ function preferLongerValues(notes, options = {}) {
       return compressedRests;
     }
 
-    return preferLongerValuesInGroup(group);
+    return preferLongerValuesInGroup(group, maxNoteSlots);
   });
   return groupSlots ? mergeBeatRests(simplified, startSlot) : simplified;
 }
 
-function preferLongerValuesInTupletVoice(voice, configuredTuplets = []) {
+function preferLongerValuesInTupletVoice(voice, configuredTuplets = [], longerValueOptions = getPreferLongerValueOptions()) {
   const notes = Array.isArray(voice && voice.notes) ? voice.notes : [];
   // Hosts sort before the groups nested inside them.
   const tuplets = normalizeVoiceTuplets(voice && voice.tuplets, notes)
@@ -905,7 +935,7 @@ function preferLongerValuesInTupletVoice(voice, configuredTuplets = []) {
 
   if (!tuplets.length) {
     return {
-      notes: preferLongerValues(notes, getPreferLongerValueOptions()),
+      notes: preferLongerValues(notes, longerValueOptions),
       tuplets: [],
     };
   }
@@ -924,7 +954,7 @@ function preferLongerValuesInTupletVoice(voice, configuredTuplets = []) {
     if (tuplet.start > cursor) {
       const slice = notes.slice(cursor, tuplet.start);
       nextNotes.push(
-        ...preferLongerValues(slice, { ...getPreferLongerValueOptions(), startSlot: slot })
+        ...preferLongerValues(slice, { ...longerValueOptions, startSlot: slot })
       );
       slot += sliceSlots(slice);
     }
@@ -1003,7 +1033,7 @@ function preferLongerValuesInTupletVoice(voice, configuredTuplets = []) {
 
   if (cursor < notes.length) {
     nextNotes.push(
-      ...preferLongerValues(notes.slice(cursor), { ...getPreferLongerValueOptions(), startSlot: slot })
+      ...preferLongerValues(notes.slice(cursor), { ...longerValueOptions, startSlot: slot })
     );
   }
 
@@ -1231,12 +1261,17 @@ function sectionUsesDiddlesOrCheese(section) {
 // note is short enough to carry them (quarter-note hosts often have none); they
 // can still appear on secondary notes.
 function getFeasibleRequiredOrnamentChars(section, notes, primaryNoteIndexes, tupletNoteIndexes) {
-  const required = getRequiredSectionOrnamentChars(section);
-  if (!section.lineNestedTuplet) return required;
-  const canDiddle = (notes || []).some((note, index) => !isRest(note) &&
-    (!primaryNoteIndexes || primaryNoteIndexes.has(index)) &&
-    durationAllowsDiddles(note.duration, Boolean(tupletNoteIndexes?.has(index))));
-  return canDiddle ? required : required.filter((char) => char !== "d" && char !== "c");
+  let required = getRequiredSectionOrnamentChars(section);
+  if (section.lineNestedTuplet) {
+    const canDiddle = (notes || []).some((note, index) => !isRest(note) &&
+      (!primaryNoteIndexes || primaryNoteIndexes.has(index)) &&
+      durationAllowsDiddles(note.duration, Boolean(tupletNoteIndexes?.has(index))));
+    if (!canDiddle) required = required.filter((char) => char !== "d" && char !== "c");
+  }
+  // Spread ornaments: the primary rhythm only has to carry an accent; flams,
+  // diddles, and cheese reach it now and then and mostly sit on the other notes.
+  if (section.spreadPrimaryOrnaments) return required.includes("a") ? ["a"] : [];
+  return required;
 }
 
 function getRequiredSectionOrnamentChars(section) {
@@ -1287,18 +1322,92 @@ function noteMatchesRhythmPool(pool, voice, noteIndex) {
   );
 }
 
+// Spread ornaments: the moving primary group carries a few ornaments, not one on
+// every note. When the exercise has flams, diddles, or cheese the group can take,
+// it carries one of them: diddles usually as a pair in a row (the stickings then
+// alternate, RRLL), flams one or two, cheese one. An accent leads, often on the
+// group's first note, sharing a note with the rudiment in short groups; larger
+// groups now and then get a second accent, and groups with no rudiment one or two.
+function spreadPrimaryGroupOrnaments(section, notes, voice, lineIndex, options = {}) {
+  if (!section.spreadPrimaryOrnaments || !options.primaryNoteIndexes) return notes;
+  const required = getFeasibleRequiredOrnamentChars(section, notes, options.primaryNoteIndexes, options.tupletNoteIndexes);
+  const random = createSeededRandom(`${section.id || section.title}:${lineIndex}:${options.placementSalt || ""}:spread`);
+  const nextNotes = notes.map((note) => ({ ...note }));
+  const ornamentsOf = (index) => String(nextNotes[index].ornaments || "");
+  const groups = voice.tuplets.filter((tuplet) => options.primaryNoteIndexes.has(Number(tuplet.start)) &&
+    !voice.tuplets.some((other) => other !== tuplet && other.start <= tuplet.start && tuplet.end <= other.end &&
+      other.end - other.start > tuplet.end - tuplet.start));
+  const rudimentChars = ORNAMENT_SETTINGS.filter((setting) => ["flams", "diddles", "cheese"].includes(setting.id) &&
+    (section.ornaments || []).includes(setting.id)).map((setting) => setting.chars);
+  const accents = (section.ornaments || []).includes("accents") || required.includes("a");
+  const add = (index, char) => { nextNotes[index] = { ...nextNotes[index], ornaments: `${ornamentsOf(index)}${char}` }; };
+  const remove = (index, char) => { nextNotes[index] = { ...nextNotes[index], ornaments: ornamentsOf(index).replace(char, "") }; };
+  const fits = (index, char) => !ornamentsOf(index).includes(char) && canAddRequiredOrnament(nextNotes, index, char, options);
+  const shuffle = (list) => [...list].sort(() => random() - 0.5);
+  for (const group of groups) {
+    const indexes = Array.from({ length: group.end - group.start }, (_, offset) => group.start + offset)
+      .filter((index) => options.primaryNoteIndexes.has(index) && !isRest(nextNotes[index]));
+    if (!indexes.length) continue;
+    indexes.forEach((index) => { nextNotes[index] = { ...nextNotes[index], ornaments: ornamentsOf(index).replace(/[afdc]/g, "") }; });
+    const usable = rudimentChars.filter((char) => indexes.some((index) => fits(index, char)));
+    let rudimentNotes = [];
+    if (usable.length) {
+      const char = usable[Math.floor(random() * usable.length)];
+      if (char === "d" && random() < 0.7) {
+        const pairs = indexes.slice(0, -1).map((index, position) => [index, indexes[position + 1]])
+          .filter(([left, right]) => right === left + 1);
+        for (const [left, right] of shuffle(pairs)) {
+          if (!fits(left, "d")) continue;
+          add(left, "d");
+          if (fits(right, "d")) {
+            add(right, "d");
+            rudimentNotes = [left, right];
+            break;
+          }
+          remove(left, "d");
+        }
+      }
+      if (!rudimentNotes.length) {
+        const count = char === "f" && indexes.length >= 3 && random() < 0.5 ? 2 : 1;
+        for (const index of shuffle(indexes)) {
+          if (rudimentNotes.length >= count) break;
+          if (!fits(index, char)) continue;
+          add(index, char);
+          rudimentNotes.push(index);
+        }
+      }
+    }
+    if (!accents) continue;
+    const accentCount = 1 + (indexes.length >= 5 && random() < 0.5 ? 1 : 0) + (!rudimentNotes.length && random() < 0.5 ? 1 : 0);
+    // Short groups put the accent with the rudiment, so not every note is covered.
+    const preferred = indexes.length < 5 && rudimentNotes.length
+      ? [...shuffle(rudimentNotes), ...shuffle(indexes.filter((index) => !rudimentNotes.includes(index)))]
+      : random() < 0.5 ? [indexes[0], ...shuffle(indexes.slice(1))] : shuffle(indexes);
+    let placed = 0;
+    for (const index of preferred) {
+      if (placed >= accentCount) break;
+      if (!fits(index, "a")) continue;
+      add(index, "a");
+      placed += 1;
+    }
+  }
+  return nextNotes;
+}
+
 // Nested steps show each of their ornaments: one the primary rhythm can't carry
 // (e.g. accents on a stickings-only septuplet host) goes on a secondary note
-// whose rhythm may carry it.
+// whose rhythm may carry it. With spread ornaments, each one shows on the
+// secondary notes whether or not the primary rhythm has it.
 function ensureLineOrnamentsOnSecondaryNotes(section, notes, voice, lineIndex, options = {}) {
   if (!section.lineOrnamentsOnly || !section.primaryRhythms) return notes;
   const secondary = normalizeRhythmPool(section.secondaryRhythms);
   const nextNotes = notes.map((note) => ({ ...note }));
   const placementOptions = { ...options, primaryNoteIndexes: null, noteOrnamentLimits: null };
+  const counts = (index) => !section.spreadPrimaryOrnaments || !options.primaryNoteIndexes?.has(index);
   for (const setting of ORNAMENT_SETTINGS) {
     if (setting.id === "stickings" || !(section.ornaments || []).includes(setting.id)) continue;
     const char = setting.chars;
-    if (nextNotes.some((note) => !isRest(note) && String(note.ornaments || "").includes(char))) continue;
+    if (nextNotes.some((note, index) => counts(index) && !isRest(note) && String(note.ornaments || "").includes(char))) continue;
     const candidates = nextNotes.map((_, index) => index).filter((index) =>
       !options.primaryNoteIndexes?.has(index) &&
       getSecondaryNoteOrnaments(secondary, { ...voice, notes: nextNotes }, index).includes(setting.id) &&
@@ -1306,6 +1415,57 @@ function ensureLineOrnamentsOnSecondaryNotes(section, notes, voice, lineIndex, o
     if (!candidates.length) continue;
     const index = candidates[hashString(`${section.id || section.title}:${lineIndex}:${char}:${options.placementSalt || ""}`) % candidates.length];
     nextNotes[index] = { ...nextNotes[index], ornaments: `${nextNotes[index].ornaments || ""}${char}` };
+  }
+  return nextNotes;
+}
+
+// With spread ornaments, a step that adds one flam, diddle, or cheese features
+// it: 3-4 across the measure (counting any on the primary groups), placed on
+// secondary notes that may take it, with at most four accents so it stands out.
+function featureStepOrnament(section, notes, voice, lineIndex, options = {}) {
+  if (!section.spreadPrimaryOrnaments || !section.lineOrnamentsOnly || !section.primaryRhythms) return notes;
+  const rudiments = ORNAMENT_SETTINGS.filter((setting) => ["flams", "diddles", "cheese"].includes(setting.id) &&
+    (section.ornaments || []).includes(setting.id));
+  if (rudiments.length !== 1) return notes;
+  const { id, chars: char } = rudiments[0];
+  const random = createSeededRandom(`${section.id || section.title}:${lineIndex}:${options.placementSalt || ""}:feature`);
+  const secondary = normalizeRhythmPool(section.secondaryRhythms);
+  const placementOptions = { ...options, primaryNoteIndexes: null, noteOrnamentLimits: null };
+  const isSecondary = (index) => !options.primaryNoteIndexes?.has(index);
+  let nextNotes = notes.map((note) => ({ ...note }));
+  const target = 3 + Math.floor(random() * 2);
+  const count = () => nextNotes.filter((note) => !isRest(note) && String(note.ornaments || "").includes(char)).length;
+  const fits = (index) => !isRest(nextNotes[index]) && !String(nextNotes[index].ornaments || "").includes(char) &&
+    getSecondaryNoteOrnaments(secondary, { ...voice, notes: nextNotes }, index).includes(id) &&
+    canAddRequiredOrnament(nextNotes, index, char, placementOptions);
+  const add = (index) => { nextNotes[index] = { ...nextNotes[index], ornaments: `${nextNotes[index].ornaments || ""}${char}` }; };
+  // Diddles go in pairs in a row where two neighbouring notes can take them.
+  if (char === "d") {
+    const pairs = nextNotes.map((_, index) => [index, index + 1])
+      .filter(([left, right]) => right < nextNotes.length && isSecondary(left) && isSecondary(right))
+      .sort(() => random() - 0.5);
+    for (const [left, right] of pairs) {
+      if (count() + 2 > target) break;
+      if (!fits(left)) continue;
+      add(left);
+      if (fits(right)) add(right);
+      else nextNotes[left] = { ...nextNotes[left], ornaments: String(nextNotes[left].ornaments || "").replace("d", "") };
+    }
+  }
+  const order = nextNotes.map((_, index) => index).filter(isSecondary).sort(() => random() - 0.5);
+  for (const index of order) {
+    if (count() >= target) break;
+    if (fits(index)) add(index);
+  }
+  // Accents: at most four, trimmed from the secondary notes.
+  const accented = nextNotes.map((note, index) => index)
+    .filter((index) => isSecondary(index) && !isRest(nextNotes[index]) && String(nextNotes[index].ornaments || "").includes("a"));
+  const accentsOnPrimary = nextNotes.filter((note, index) => !isSecondary(index) && !isRest(note) && String(note.ornaments || "").includes("a")).length;
+  const extra = accented.length + accentsOnPrimary - 4;
+  if (extra > 0) {
+    const removable = accented.sort(() => random() - 0.5).slice(0, Math.min(extra, Math.max(0, accented.length - 1)));
+    nextNotes = nextNotes.map((note, index) => (removable.includes(index)
+      ? { ...note, ornaments: String(note.ornaments || "").replace("a", "") } : note));
   }
   return nextNotes;
 }
@@ -3025,9 +3185,9 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
             ? preferLongerValuesInTupletVoice({
                 ...voice,
                 notes: cleanedNotes,
-              }, configuredTuplets)
+              }, configuredTuplets, getPreferLongerValueOptions(sectionAllowsQuarterNotes(section)))
             : {
-                notes: preferLongerValues(cleanedNotes, getPreferLongerValueOptions()),
+                notes: preferLongerValues(cleanedNotes, getPreferLongerValueOptions(sectionAllowsQuarterNotes(section))),
                 tuplets: [],
               };
           const preliminaryTupletNoteIndexes = new Set(
@@ -3063,9 +3223,9 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
             ? preferLongerValuesInTupletVoice({
                 ...notationVoice,
                 notes: cappedNotes,
-              }, configuredTuplets)
+              }, configuredTuplets, getPreferLongerValueOptions(sectionAllowsQuarterNotes(section)))
             : {
-                notes: preferLongerValues(cappedNotes, getPreferLongerValueOptions()),
+                notes: preferLongerValues(cappedNotes, getPreferLongerValueOptions(sectionAllowsQuarterNotes(section))),
                 tuplets: [],
               };
           const finalTupletNoteIndexes = new Set(
@@ -3090,24 +3250,30 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
             requiredSameHandRunLength,
           };
           const notationNotes = applyRhythmPoolOrnaments(section, finalNotationVoice).notes;
-          const ornamentedNotes = ensureLineOrnamentsOnSecondaryNotes(
+          const ornamentedNotes = featureStepOrnament(section, ensureLineOrnamentsOnSecondaryNotes(
             section,
-            ensureRequiredOrnamentsOnNotes(
+            spreadPrimaryGroupOrnaments(
               section,
-              removeDiddleBeforeConsecutiveCheese(
-                cleanSequentialOrnaments(
-                  enforceDurationOrnamentRules(notationNotes, durationOrnamentOptions),
+              ensureRequiredOrnamentsOnNotes(
+                section,
+                removeDiddleBeforeConsecutiveCheese(
+                  cleanSequentialOrnaments(
+                    enforceDurationOrnamentRules(notationNotes, durationOrnamentOptions),
+                    durationOrnamentOptions
+                  ),
                   durationOrnamentOptions
                 ),
+                lineIndex,
                 durationOrnamentOptions
               ),
+              finalNotationVoice,
               lineIndex,
               durationOrnamentOptions
             ),
             finalNotationVoice,
             lineIndex,
             durationOrnamentOptions
-          );
+          ), finalNotationVoice, lineIndex, durationOrnamentOptions);
           const finalOrnamentNotes = cleanSequentialOrnaments(
             ornamentedNotes,
             durationOrnamentOptions
@@ -4080,6 +4246,7 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         exerciseSteps: normalizeExerciseSteps(pageSource.exerciseSteps),
         offbeatTupletPlan: normalizeOffbeatTupletPlan(pageSource.offbeatTupletPlan),
         offbeatGroups: normalizeOffbeatGroups(pageSource.offbeatGroups),
+        spreadPrimaryOrnaments: Boolean(pageSource.spreadPrimaryOrnaments),
         ornamentDensity: pageOrnamentDensity,
         chainPrimaryGroups: Boolean(pageSource.chainPrimaryGroups),
         fullPrimaryGroupShare: pageSource.fullPrimaryGroupShare ?? null,
@@ -4429,6 +4596,7 @@ function createStoredPageGenerationSettings(pageConfig) {
     ...(pageConfig.exerciseSteps ? { exerciseSteps: pageConfig.exerciseSteps } : {}),
     ...(pageConfig.offbeatTupletPlan ? { offbeatTupletPlan: pageConfig.offbeatTupletPlan } : {}),
     ...(pageConfig.offbeatGroups ? { offbeatGroups: pageConfig.offbeatGroups } : {}),
+    ...(pageConfig.spreadPrimaryOrnaments ? { spreadPrimaryOrnaments: true } : {}),
     ...(normalizePageOrnamentDensity(pageConfig.ornamentDensity) ? { ornamentDensity: normalizePageOrnamentDensity(pageConfig.ornamentDensity) } : {}),
     ...(pageConfig.chainPrimaryGroups ? { chainPrimaryGroups: true } : {}),
     ...(pageConfig.fullPrimaryGroupShare != null ? { fullPrimaryGroupShare: pageConfig.fullPrimaryGroupShare } : {}),

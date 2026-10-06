@@ -11,7 +11,7 @@ The span group sets a count and note value, such as 1 quarter, 2 eighths, or 3 s
 
 Use **Add subsection**, **Move earlier**, **Move later**, and **Delete subsection** to organize topics. Subsections retain stable IDs when reordered, so saved scores stay with their topic. Every page of a subsection shares its title, generation settings, and layout, and each page keeps its own page number and QR code. Lowering the page count removes the subsection's last pages. When a subsection spans several pages, the sticking tail applies only to its last page.
 
-The saved book contains sparse and full sections for sixteenths, eighth-note triplets, quintuplets (5:4 sixteenths), sextuplets (6:4 sixteenths), septuplets (7:4 sixteenths), thirty-second notes, and 9:8 thirty-second-note tuplets. Each sparse section has these eight topics:
+The book opens with **Quarter Notes** (`createQuarterNoteStudy` in `src/lib/book-curriculum.js`), the base of the subdivision pyramid: four short pages of quarter notes and quarter rests with stickings, then accents, then flams, then accents and flams (no diddles or cheese). Quarter notes appear nowhere else: on every other page a note that would fill a beat is written as an eighth and an eighth rest, and plain notes are at most a dotted eighth (quarter-note tuplets, such as the quarter-note triplet over two beats, are part of their tuplet and stay). Then come the eighth notes, and the saved book contains sparse and full sections for sixteenths, eighth-note triplets, quintuplets (5:4 sixteenths), sextuplets (6:4 sixteenths), septuplets (7:4 sixteenths), thirty-second notes, and 9:8 thirty-second-note tuplets. Each sparse section has these eight topics:
 
 1. Nothing
 2. Accents
@@ -53,6 +53,7 @@ The secondary pool holds every one-beat rhythm (eighths, sixteenths, thirty-seco
 Configure all of this in the subsection editor:
 
 - **Ornaments by rhythm** (in the section's Secondary rhythms box) sets which optional ornaments each secondary rhythm may carry. Triplets, sixteenths, and quintuplets take all of them; sextuplets take flams; the rest take none.
+- **Spread ornaments** gives each primary group a few ornaments (an accent and, when it can take one, the exercise's flam, diddle pair, or cheese) and puts each of the exercise's ornaments on the other notes too.
 - **Ornament density (% of the book's)** scales the book's ornament density for one subsection (blank is 100).
 - **Ornament topics, in order** lists each topic's title, exercise count, and primary ornaments, with a running total against the page's exercise count. **Use one set for the whole page** returns to a single ornament choice.
 - **Ornaments, chosen at random for each exercise** (the combination, nested, and final pages) sets the ornaments **On every exercise** (stickings) and the ones **chosen at random**, with how many each exercise adds.
@@ -81,7 +82,7 @@ Each start goes through the ornament steps (`OFFBEAT_STEPS`), about three exerci
 4. Accents and cheese.
 5. Everything (accents, flams, diddles, and cheese).
 
-Every exercise shows each of its step's ornaments and no others. Ornaments are busier than in the rest of the book (**Ornament density (% of the book's)** is 130 on these pages). Every tuplet takes accents here, so each step accents the group itself, even 7s and 9s; septuplets and nontuplets still take no flams, diddles, or cheese, and sextuplets only flams, so those land on the sixteenths.
+Every exercise shows each of its step's ornaments and no others. The ornaments are spread out (**Spread ornaments** in the subsection editor): the moving tuplet carries a few ornaments, not one on every note. When the step has flams, diddles, or cheese the tuplet can take, it carries one of them: diddles usually as a pair in a row (sticked hand to hand, RRLL), flams one or two, cheese one. An accent leads, often on the tuplet's first note (shared with the rudiment in triplets); larger tuplets now and then get a second accent. Each of the step's ornaments also appears on the sixteenths, and the diddles, flams, and cheese steps feature their ornament: 3–4 of it in each exercise (diddles in pairs where they fit), with at most four accents, so each step of the progression reads clearly. Septuplets and nontuplets still take only accents, and sextuplets only accents and flams. Ornaments are busier than in the rest of the book (**Ornament density (% of the book's)** is 130 on these pages). Every tuplet takes accents here, so each step accents the group itself, even 7s and 9s; septuplets and nontuplets still take no flams, diddles, or cheese, and sextuplets only flams, so those land on the sixteenths.
 
 **Mixing off-beat tuplets** (two more pages) puts two different tuplets in each exercise, each starting on a random "e", "+", or "a" with sparse sixteenths before and after it, going through every pair in turn from the slowest to the fastest: 3 and 5, 3 and 6, 5 and 6, 3 and 7, 5 and 7, 6 and 7, 3 and 9, 5 and 9, 6 and 9, 7 and 9 (**Two off-beat tuplets per exercise** in the subsection editor). The same ornament steps run once across the two pages, about nine exercises each.
 

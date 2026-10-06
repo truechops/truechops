@@ -29,7 +29,7 @@
                     "duration": 32,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "r"
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -38,13 +38,28 @@
                     "duration": 32,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "r"
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [],
                     "duration": 32,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
@@ -73,14 +88,14 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
+                    "velocity": 1,
+                    "ornaments": "ra"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 16,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
                     "ornaments": "l"
@@ -97,17 +112,8 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lfa"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "rfa"
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -116,7 +122,31 @@
                     "duration": 16,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
+                    "ornaments": "rcd"
+                  },
+                  {
+                    "notes": [],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "lda"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 1,
+                    "ornaments": "rda"
                   }
                 ],
                 "tuplets": [
@@ -127,10 +157,10 @@
                     "normal": 8
                   },
                   {
-                    "start": 7,
-                    "end": 10,
-                    "actual": 4,
-                    "normal": 11
+                    "start": 9,
+                    "end": 15,
+                    "actual": 8,
+                    "normal": 9
                   }
                 ]
               }
@@ -140,8 +170,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n32:r n32:r n32:l n32:r n32:l n16:r n16:l r8 n16:laf n16:raf n16:l |t0-7:9:8,7-10:4:11",
-  "updatedAt": "2026-10-06T01:22:22.705Z",
-  "sectionId": "combinations-eleven-sixteenths-4",
+  "exerciseShortForm": "n32:l n32:l n16:r r32 n16:l n32:r n32:l n16:ra n8:l r8 n16:l n16:rdc r8 n16:lad n16:rad |t0-7:9:8,9-15:8:9",
+  "updatedAt": "2026-10-06T02:56:12.424Z",
+  "sectionId": "combinations-nine-sixteenths-8",
   "sectionPageNumber": 2
 }

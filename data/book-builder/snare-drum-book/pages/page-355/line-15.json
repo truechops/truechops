@@ -25,7 +25,7 @@
                   {
                     "notes": [],
                     "duration": 8,
-                    "dots": 1,
+                    "dots": 0,
                     "velocity": 0.5
                   },
                   {
@@ -34,8 +34,17 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lfa"
+                    "velocity": 0.5,
+                    "ornaments": "r"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 16,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "lf"
                   },
                   {
                     "notes": [],
@@ -49,33 +58,15 @@
                     ],
                     "duration": 16,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "ra"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "ra"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 16,
-                    "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "l"
+                    "ornaments": "r"
                   }
                 ],
                 "tuplets": [
                   {
-                    "start": 0,
-                    "end": 3,
-                    "actual": 5,
+                    "start": 2,
+                    "end": 5,
+                    "actual": 3,
                     "normal": 13
                   }
                 ]
@@ -86,8 +77,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r8. n16:laf r16 n16:ra n16:ra n16:l |t0-3:5:13",
-  "updatedAt": "2026-10-06T01:22:22.705Z",
-  "sectionId": "combinations-thirteen-sixteenths-5",
+  "exerciseShortForm": "r8 n16:r n16:lf r16 n16:r |t2-5:3:13",
+  "updatedAt": "2026-10-06T02:56:12.424Z",
+  "sectionId": "combinations-thirteen-sixteenths-3",
   "sectionPageNumber": 2
 }

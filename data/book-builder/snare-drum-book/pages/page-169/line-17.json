@@ -32,24 +32,6 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
-                    "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lfa"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 4,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "rf"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
                     "duration": 8,
                     "dots": 0,
                     "velocity": 1,
@@ -68,18 +50,36 @@
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
+                    "duration": 8,
                     "dots": 0,
                     "velocity": 0.5,
-                    "ornaments": "r"
+                    "ornaments": "ld"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "rd"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 6,
-                    "actual": 5,
-                    "normal": 4
+                    "end": 5,
+                    "actual": 6,
+                    "normal": 7
                   }
                 ]
               }
@@ -89,8 +89,8 @@
       }
     ]
   },
-  "exerciseShortForm": "r4 n4:laf n4:rf n8:laf n8:rad n4:r |t0-6:5:4",
-  "updatedAt": "2026-10-06T01:22:22.705Z",
-  "sectionId": "four-quarters-quintuplets",
+  "exerciseShortForm": "r4 n8:laf n8:rad n8:ld n8:rd n8:l |t0-5:6:7",
+  "updatedAt": "2026-10-06T02:56:12.424Z",
+  "sectionId": "seven-eighths-sextuplets",
   "sectionPageNumber": 1
 }

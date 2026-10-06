@@ -573,6 +573,8 @@ function createOffbeatStudies(pdfSettings) {
       ornaments: RANDOM_ORNAMENT_IDS,
       exerciseSteps: OFFBEAT_STEPS,
       ornamentDensity: OFFBEAT_ORNAMENT_DENSITY,
+      // Few ornaments on the moving tuplet; the rest spread over the sixteenths.
+      spreadPrimaryOrnaments: true,
       ...(Object.keys(limits).length ? { primaryRhythmOrnaments: limits } : {}),
       fullPrimaryGroupShare: 0.5,
       minPlayedNotes: 0,
@@ -626,8 +628,49 @@ function createOffbeatStudies(pdfSettings) {
   return { groups: [group], sections };
 }
 
+// Quarter notes, the base of the subdivision pyramid: one short section before
+// the eighth notes, with stickings, accents, and flams only (no diddles or
+// cheese) and quarter rests mixed in. Quarter notes appear nowhere else in the
+// book: elsewhere a note that fills a beat reads as an eighth and a rest.
+const QUARTER_NOTE_TOPICS = [
+  { id: "stickings", title: "Quarters with stickings", ornaments: ["stickings"] },
+  { id: "accents", title: "Quarters with accents", ornaments: ["stickings", "accents"] },
+  // Flams are rarer than accents at the usual density: a bit more, so measures
+  // have one or two.
+  { id: "flams", title: "Quarters with flams", ornaments: ["stickings", "flams"], ornamentDensity: 160 },
+  // Four notes a measure: lighter than the book's usual density, so not every
+  // note has both.
+  { id: "accents-flams", title: "Quarters with accents and flams", ornaments: ["stickings", "accents", "flams"], ornamentDensity: 60 },
+];
+
+function createQuarterNoteStudy(pdfSettings) {
+  return {
+    id: "quarter-notes", groupId: "one-quarter", title: "Quarter Notes", density: "sparse", rhythmSpan: { count: 1, unit: 4 },
+    primaryRhythms: normalizeRhythmPool({ subdivisions: ["quarters"] }, false),
+    secondaryRhythms: normalizeRhythmPool({}),
+    pdfSettings,
+    pages: QUARTER_NOTE_TOPICS.map((topic) => ({
+      subsectionId: `quarter-notes-${topic.id}`,
+      title: topic.title,
+      pdfSettings,
+      generationSettings: {
+        prompt: "", sampleJson: "",
+        ornaments: topic.ornaments,
+        ...(topic.ornamentDensity ? { ornamentDensity: topic.ornamentDensity } : {}),
+        minPlayedNotes: 1,
+        maxPlayedNotes: 0,
+        playEveryNote: false,
+        maxSameHandStickingRun: 2,
+        requiredSameHandStickingRuns: [],
+        stickingTail: null,
+      },
+      lines: [],
+    })),
+  };
+}
+
 module.exports = {
   STUDY_TOPICS, STUDY_FAMILIES, TWO_BEAT_ORNAMENT_SEGMENTS, RANDOM_ORNAMENTS, EXERCISE_STEPS, OFFBEAT_STEPS,
-  SPAN_STUDIES, createStudySections, createSpanStudy, createTwoBeatSections, createThreeEighthsSections,
+  SPAN_STUDIES, createQuarterNoteStudy, createStudySections, createSpanStudy, createTwoBeatSections, createThreeEighthsSections,
   createOffbeatStudies, createTupletCombinationStudies, createNestedStudies, createFinalStudies,
 };

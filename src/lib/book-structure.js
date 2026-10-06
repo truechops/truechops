@@ -398,7 +398,7 @@ function getLineOrnamentSegment(settings, lineIndex) {
   return segments.find((segment) => (end += segment.count) > lineIndex) || segments[segments.length - 1];
 }
 
-const subdivisionIds = ["eighths", "sixteenths", "thirtyseconds"];
+const subdivisionIds = ["quarters", "eighths", "sixteenths", "thirtyseconds"];
 const ornamentIds = ["stickings", "accents", "flams", "diddles", "cheese"];
 
 function normalizeRhythmPool(value = {}, allowEmpty = true) {

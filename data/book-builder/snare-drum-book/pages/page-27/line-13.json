@@ -1,7 +1,7 @@
 {
   "pageNumber": 27,
   "lineNumber": 13,
-  "title": "Everything 13",
+  "title": "Accents with stickings and diddles 13",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -23,13 +23,19 @@
               {
                 "notes": [
                   {
+                    "notes": [],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 4,
+                    "duration": 8,
                     "dots": 0,
-                    "velocity": 1,
-                    "ornaments": "lfa"
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -38,7 +44,7 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "lfa"
+                    "ornaments": "rda"
                   },
                   {
                     "notes": [],
@@ -61,35 +67,8 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "rf"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "ld"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5,
-                    "ornaments": "r"
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
                     "velocity": 1,
-                    "ornaments": "lca"
+                    "ornaments": "lda"
                   },
                   {
                     "notes": [
@@ -106,32 +85,56 @@
                     ],
                     "duration": 4,
                     "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
                     "velocity": 1,
-                    "ornaments": "rfa"
+                    "ornaments": "rda"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 2,
+                    "end": 3,
                     "actual": 3,
                     "normal": 2
                   },
                   {
-                    "start": 2,
-                    "end": 5,
+                    "start": 3,
+                    "end": 6,
                     "actual": 3,
                     "normal": 2
                   },
                   {
-                    "start": 5,
+                    "start": 6,
                     "end": 8,
                     "actual": 3,
                     "normal": 2
                   },
                   {
                     "start": 8,
-                    "end": 10,
+                    "end": 11,
                     "actual": 3,
                     "normal": 2
                   }
@@ -143,8 +146,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n4:laf n8:laf r8 n8:r n8:rf n8:ld n8:r n8:lac n8:r n4:raf |t0-2:3:2,2-5:3:2,5-8:3:2,8-10:3:2",
-  "updatedAt": "2026-10-06T01:22:22.705Z",
+  "exerciseShortForm": "r8 n8:l n8:rad r8 n8:r n8:lad n8:r n4:l r8 n8:rad n8:l |t0-3:3:2,3-6:3:2,6-8:3:2,8-11:3:2",
+  "updatedAt": "2026-10-06T02:56:12.424Z",
   "sectionId": "one-quarter-eighth-triplets-sparse",
-  "sectionPageNumber": 8
+  "sectionPageNumber": 4
 }

@@ -1,7 +1,7 @@
 {
   "pageNumber": 28,
   "lineNumber": 16,
-  "title": "Accents 16",
+  "title": "Accents with stickings and flams 16",
   "notes": "",
   "tempo": 90,
   "score": {
@@ -28,7 +28,17 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 1,
+                    "ornaments": "rfa"
+                  },
+                  {
+                    "notes": [
+                      "C5"
+                    ],
+                    "duration": 4,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
                     "notes": [
@@ -36,36 +46,20 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
-                    "duration": 8,
+                    "duration": 4,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "l"
                   },
                   {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
+                    "notes": [],
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5
@@ -77,12 +71,19 @@
                     "duration": 8,
                     "dots": 0,
                     "velocity": 1,
-                    "ornaments": "a"
+                    "ornaments": "lfa"
                   },
                   {
                     "notes": [
                       "C5"
                     ],
+                    "duration": 8,
+                    "dots": 0,
+                    "velocity": 0.5,
+                    "ornaments": "l"
+                  },
+                  {
+                    "notes": [],
                     "duration": 8,
                     "dots": 0,
                     "velocity": 0.5
@@ -93,7 +94,8 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 1,
+                    "ornaments": "lfa"
                   },
                   {
                     "notes": [
@@ -101,47 +103,32 @@
                     ],
                     "duration": 8,
                     "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5
-                  },
-                  {
-                    "notes": [
-                      "C5"
-                    ],
-                    "duration": 8,
-                    "dots": 0,
-                    "velocity": 0.5
+                    "velocity": 0.5,
+                    "ornaments": "r"
                   }
                 ],
                 "tuplets": [
                   {
                     "start": 0,
-                    "end": 3,
+                    "end": 2,
                     "actual": 3,
                     "normal": 2
                   },
                   {
-                    "start": 3,
-                    "end": 6,
+                    "start": 2,
+                    "end": 4,
                     "actual": 3,
                     "normal": 2
                   },
                   {
-                    "start": 6,
-                    "end": 9,
+                    "start": 4,
+                    "end": 7,
                     "actual": 3,
                     "normal": 2
                   },
                   {
-                    "start": 9,
-                    "end": 12,
+                    "start": 7,
+                    "end": 10,
                     "actual": 3,
                     "normal": 2
                   }
@@ -153,8 +140,8 @@
       }
     ]
   },
-  "exerciseShortForm": "n8 n8 n8 n8 n8 n8 n8:a n8 n8 n8 n8 n8 |t0-3:3:2,3-6:3:2,6-9:3:2,9-12:3:2",
-  "updatedAt": "2026-10-06T01:22:22.705Z",
-  "sectionId": "one-quarter-eighth-triplets-full",
-  "sectionPageNumber": 1
+  "exerciseShortForm": "n8:raf n4:l n8:r n4:l r8 n8:laf n8:l r8 n8:laf n8:r |t0-2:3:2,2-4:3:2,4-7:3:2,7-10:3:2",
+  "updatedAt": "2026-10-06T02:56:12.424Z",
+  "sectionId": "one-quarter-eighth-triplets-sparse",
+  "sectionPageNumber": 5
 }
