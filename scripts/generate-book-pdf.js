@@ -8,6 +8,7 @@ const PDFDocument = require("pdfkit");
 const SVGtoPDF = require("svg-to-pdfkit");
 const QRCode = require("qrcode");
 const { drawBookTableOfContents } = require("../src/lib/book-toc");
+const { getBookVolume } = require("../src/lib/book-volumes");
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const DEFAULT_OUTPUT_PATH = path.join(
@@ -31,6 +32,8 @@ function parseArgs(argv) {
     page: 1,
     output: DEFAULT_OUTPUT_PATH,
     qrOrigin: DEFAULT_QR_ORIGIN,
+    bookRoot: null,
+    volume: null,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -64,6 +67,12 @@ function parseArgs(argv) {
       case "qr-origin":
         options.qrOrigin = nextValue;
         break;
+      case "book-root":
+        options.bookRoot = path.resolve(process.cwd(), nextValue);
+        break;
+      case "volume":
+        options.volume = getBookVolume(nextValue);
+        break;
       default:
         throw new Error(`Unknown option: ${flag}`);
     }
@@ -75,6 +84,13 @@ function parseArgs(argv) {
 
   if (!Number.isInteger(options.page) || options.page < 1) {
     throw new Error("--page must be a positive page number.");
+  }
+
+  if (options.volume) {
+    options.bookRoot ||= path.join(PROJECT_ROOT, "data", "book-builder", options.volume.slug);
+    if (!argv.some((arg) => arg === "--output" || arg.startsWith("--output="))) {
+      options.output = path.join(PROJECT_ROOT, "book-output", `${options.volume.slug}${options.scope === "page" ? `-page-${options.page}` : ""}.pdf`);
+    }
   }
 
   return options;
@@ -94,6 +110,8 @@ Options:
   --page <number>      Page number when --scope page is used. Default: 1.
   --output <path>      PDF destination.
   --qr-origin <origin> Production QR origin. Default: https://truechops.com.
+  --volume <1-6>       Render a generated collection volume.
+  --book-root <path>   Read another generated book directory.
 `);
 }
 
@@ -470,7 +488,8 @@ async function loadBook(bookData, bookRoot) {
     normalizeBook,
   } = bookData;
   const manifestPath = path.join(bookRoot, "book.json");
-  const manifest = (await readJson(manifestPath)) || createDefaultBook();
+  const manifest = await readJson(manifestPath);
+  if (!manifest) throw new Error(`No generated book at ${manifestPath}. Run npm run pdf:book first.`);
   const hydratePage = async (page, pageIndex) => ({
     ...page,
     pageNumber: page.pageNumber || pageIndex + 1,
@@ -478,7 +497,7 @@ async function loadBook(bookData, bookRoot) {
       (page.lines || []).map(async (line, lineIndex) => {
         const pageNumber = page.pageNumber || pageIndex + 1;
         const lineNumber = line.lineNumber || lineIndex + 1;
-        const lineFile = await readJson(linePath(bookRoot, pageNumber, lineNumber));
+        const lineFile = line.score ? null : await readJson(linePath(bookRoot, pageNumber, lineNumber));
 
         return {
           ...line,
@@ -810,7 +829,7 @@ async function main() {
   const bookData = require(path.join(PROJECT_ROOT, "src/components/book-builder/book-data.js"));
   const rendererApi = require(path.join(PROJECT_ROOT, "src/lib/vexflow.js"));
   const { getBookPageQrUrl } = require(path.join(PROJECT_ROOT, "src/lib/book-qr.js"));
-  const bookRoot = path.join(PROJECT_ROOT, "data", "book-builder", bookData.BOOK_SLUG);
+  const bookRoot = options.bookRoot || path.join(PROJECT_ROOT, "data", "book-builder", bookData.BOOK_SLUG);
   const book = await loadBook(bookData, bookRoot);
   enforceBookMinPlayedNotes(book);
   const pages = options.scope === "page"

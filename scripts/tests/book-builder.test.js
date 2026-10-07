@@ -10,6 +10,8 @@ const { migrateBookStructure } = require("../../src/lib/book-structure");
 const generator = require("../generate-ai-book");
 const { createStudySections, createSpanStudy, createQuarterNoteStudy, createOffbeatStudies, createTupletCombinationStudies, createNestedStudies, createFinalStudies, SPAN_STUDIES, STUDY_TOPICS, STUDY_FAMILIES } = require("../../src/lib/book-curriculum");
 const { getLineStickingSettings, getSpanPrimaryRhythms, getNestedTupletNotation, getNestedTupletVariants, getLineExerciseStep, getLineRandomOrnaments, getLineOffbeatTuplet, getLineOffbeatPair } = require("../../src/lib/book-structure");
+const { BOOK_VOLUMES, createBookVolume, getBookVolume } = require("../../src/lib/book-volumes");
+const { RHYTHM_INCLUSION_ORDER, getRhythmKey, getRhythmProgressionStep, getProgressionSecondaryPool } = require("../../src/lib/book-rhythm-progression");
 
 // Load the same ES modules Next uses without starting a server.
 const originalLoader = Module._extensions[".js"];
@@ -29,6 +31,207 @@ const pool = (subdivisions = [], tuplets = [], ornaments = []) => ({ subdivision
 // Every struck note carries a sticking (r or l).
 const hasStickings = (voice) => voice.notes.every((note) => !note.notes.length || /[rl]/.test(note.ornaments || ""));
 const triplet = { actual: 3, normal: 2, type: 8 };
+
+function savedCurriculum() {
+  return JSON.parse(fs.readFileSync(path.resolve(__dirname, "../../data/book-builder/snare-drum-book/book.json"), "utf8"));
+}
+
+test("the six volumes have separate identities and Book 6 preserves the saved curriculum", () => {
+  const source = savedCurriculum();
+  const before = JSON.stringify(source);
+  const volumes = BOOK_VOLUMES.map((volume) => createBookVolume(source, volume.number));
+  assert.equal(JSON.stringify(source), before);
+  assert.equal(new Set(volumes.map((volume) => volume.book)).size, 6);
+  const original = volumes[5];
+  assert.deepEqual(original.groups, source.groups);
+  assert.deepEqual(original.sections.map((section) => ({ ...section, pages: section.pages.map((page) => ({ ...page, lines: [] })) })),
+    source.sections.map((section) => ({ ...section, pages: section.pages.map((page) => ({ ...page, lines: [] })) })));
+  assert.equal(original.pages.length, source.pages.length);
+  assert.throws(() => getBookVolume("../private"), /Unknown book volume/);
+});
+
+test("basic volumes progress from quarters through nontuplets; span volumes exclude one-beat studies", () => {
+  const source = savedCurriculum();
+  for (const number of [4]) {
+    const book = createBookVolume(source, number);
+    assert(book.sections.every((section) => ["one-quarter", "combinations-one-quarter"].includes(section.groupId)));
+    assert.equal(book.sections[0].primaryRhythms.subdivisions[0], "quarters");
+    assert.equal(book.sections[1].primaryRhythms.subdivisions[0], "eighths");
+    const counts = book.sections.filter((section) => section.groupId === "one-quarter").map((section) =>
+      section.primaryRhythms.tuplets[0]?.actual || ({ quarters: 1, eighths: 2, sixteenths: 4, thirtyseconds: 8 })[section.primaryRhythms.subdivisions[0]]);
+    assert.deepEqual([...new Set(counts)], [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    assert(!book.sections.some((section) => /crazy/i.test(section.title)));
+  }
+  for (const number of [2, 5]) {
+    const book = createBookVolume(source, number);
+    assert(book.sections.every((section) => section.rhythmSpan.count * 4 / section.rhythmSpan.unit !== 1));
+    for (const study of SPAN_STUDIES) {
+      for (const section of book.sections.filter((section) => section.groupId === study.groupId)) {
+        const previous = source.sections.find((candidate) => candidate.id === section.id);
+        const exercises = (pages) => pages.reduce((count, page) => count + 11 * page.pdfSettings.measuresPerLine, 0);
+        assert.equal(exercises(section.pages) - exercises(previous.pages), 44);
+        assert(section.pages.some((page) => page.generationSettings.playedShareRamp));
+      }
+    }
+  }
+  for (const number of [3, 6]) {
+    const book = createBookVolume(source, number);
+    for (const prefix of ["offbeat", "nested", "random-subdivisions"]) assert(book.groups.some((group) => group.id.startsWith(prefix)));
+    assert(book.sections.some((section) => /crazy/i.test(section.title)));
+  }
+});
+
+test("unornamented volumes clear all ornament sources and generate clean basic, span, offbeat and nested exercises", () => {
+  const source = savedCurriculum();
+  for (const number of [1, 2, 3]) {
+    const book = createBookVolume(source, number);
+    const config = generator.createGenerationConfig({}, book);
+    for (const section of config.sections) {
+      assert.deepEqual(section.secondaryRhythms.ornaments, []);
+      for (const page of section.pages) {
+        assert.deepEqual(page.ornaments, []);
+        assert.equal(page.stickingTail, null);
+        assert.deepEqual(page.requiredSameHandStickingRuns, []);
+        assert(!page.randomOrnaments);
+        assert(!page.ornamentSegments);
+        for (const step of page.exerciseSteps || []) {
+          assert.deepEqual(step.ornaments, []);
+          assert(!step.randomOrnaments);
+        }
+      }
+    }
+    const targets = config.sections.filter((section) =>
+      ["rhythm-progression-eighths", "two-quarters-quintuplets", "offbeat-5", "nested-one-quarter-5", "random-subdivisions-one-quarter"].includes(section.id));
+    for (const section of targets) {
+      for (const voice of generate(section.pages[0], 12)) {
+        assert(voice.notes.every((note) => !note.ornaments));
+      }
+    }
+  }
+});
+
+test("rhythm-only progression follows the requested order, balances exercise counts, and grows by exercise", () => {
+  const source = savedCurriculum();
+  assert.deepEqual(RHYTHM_INCLUSION_ORDER.map((rhythm) => rhythm.id), [
+    "quarters", "eighths", "sixteenths", "triplets", "sextuplets", "thirtyseconds", "quintuplets", "septuplets", "nontuplets",
+  ]);
+  for (const number of [1, 3]) {
+    const book = normalizeBook(createBookVolume(source, number));
+    const sections = book.sections.slice(0, 8);
+    assert.deepEqual(sections.map((section) => section.id), RHYTHM_INCLUSION_ORDER.slice(1).map((rhythm) => `rhythm-progression-${rhythm.id}`));
+    sections.forEach((section, sectionIndex) => {
+      assert.equal(section.pages.reduce((count, page) => count + page.lines.length, 0), 132);
+      assert.equal(new Set(section.pages.map((page) => page.subsectionId)).size, 3);
+      const previous = RHYTHM_INCLUSION_ORDER.slice(0, sectionIndex + 1).map(getRhythmKey);
+      const plan = section.pages[0].generationSettings.rhythmProgression;
+      assert.deepEqual(plan.preceding, previous);
+      if (previous.length <= 3) {
+        previous.forEach((key, index) => assert.deepEqual(getRhythmProgressionStep(plan, index * 12 / previous.length).keys, [key]));
+      } else {
+        assert(getRhythmProgressionStep(plan, 0).keys.length >= 2);
+      }
+      for (let index = 12; index < 22; index += 1) {
+        const step = getRhythmProgressionStep(plan, index);
+        assert.deepEqual(step.keys, previous.slice(0, Math.min(previous.length, 2 + index - 12)));
+        assert(step.keys.includes(step.requiredKey));
+      }
+    });
+  }
+});
+
+test("every progression exercise is unique, unmarked, in 4/4, and contains its main and companion rhythm", () => {
+  const config = generator.createGenerationConfig({}, createBookVolume(savedCurriculum(), 1));
+  const seen = new Set();
+  for (const section of config.sections) {
+    let exerciseCount = 0;
+    const densities = new Map();
+    for (const page of section.pages) {
+      for (let index = 0; index < 11 * page.pdfSettings.measuresPerLine; index += 1) {
+        const line = generator.createUniqueGeneratedLine(null, page, page.sampleJson, index, seen);
+        const voice = line.score.measures[0].parts[0].voices[0];
+        const step = getRhythmProgressionStep(page.rhythmProgression, index + page.subsectionLineOffset);
+        generator.validatePrimaryRequirements({ ...page,
+          secondaryRhythms: getProgressionSecondaryPool(page.secondaryRhythms, step),
+          requiredSecondaryKeys: [step.requiredKey],
+        }, line.score);
+        assert(voice.notes.every((note) => !note.ornaments));
+        assert(Math.abs(nestedVoiceQuarters(voice) - 4) < 1e-8);
+        exerciseCount += 1;
+        const name = page.rhythmProgression.density;
+        const counts = densities.get(name) || [];
+        counts.push(voice.notes.filter((note) => note.notes.length).length);
+        densities.set(name, counts);
+      }
+    }
+    assert.equal(exerciseCount, 132);
+    const mean = (name) => densities.get(name).reduce((a, b) => a + b) / densities.get(name).length;
+    assert(mean("dense") > mean("sparse"), section.title);
+  }
+  assert.equal(seen.size, 1056);
+});
+
+test("volume CLI validates selections and separate output destinations before generating", () => {
+  const { parseArgs } = require("../build-book-pdf");
+  assert.equal(parseArgs([]).volume, "all");
+  assert.equal(parseArgs(["--volume=6", "--render-only"]).renderOnly, true);
+  assert.throws(() => parseArgs(["--volume", "7"]), /Unknown book volume/);
+  assert.throws(() => parseArgs(["--output", "same.pdf"]), /output-dir/);
+  assert.throws(() => parseArgs(["--page", "0"]), /positive integer/);
+  assert.throws(() => parseArgs(["--volume"]), /Missing value/);
+});
+
+test("volume QR tokens cannot collide with the original or each other", () => {
+  const { getBookPageQrPath, findBookQrPage } = require("../../src/lib/book-qr");
+  const source = savedCurriculum();
+  const books = [source, ...BOOK_VOLUMES.map((volume) => normalizeBook(createBookVolume(source, volume.number)))];
+  const paths = books.map((book) => getBookPageQrPath(1, book));
+  assert.equal(new Set(paths).size, 7);
+  books.forEach((book, index) => {
+    const token = paths[index].split("/").at(-1);
+    assert.equal(findBookQrPage(book, token).page.pageNumber, 1);
+    assert.equal(findBookQrPage(books[(index + 1) % books.length], token), null);
+  });
+});
+
+test("stored volume QR lookup resolves inline scores without requiring individual exercise files", async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "truechops-volume-test-"));
+  try {
+    const file = path.resolve(__dirname, "../../src/lib/book-builder-storage.js");
+    const localRequire = Module.createRequire(file);
+    const storage = { exports: {} };
+    vm.runInThisContext(Module.wrap(compile(file)))(storage.exports,
+      (name) => name === "process" ? { ...process, cwd: () => directory } : localRequire(name),
+      storage, file, path.dirname(file));
+    const { getBookPageQrPath } = require("../../src/lib/book-qr");
+    const config = pageConfig(pool(["sixteenths"]), pool());
+    const score = generator.createUniqueGeneratedLine(null, config, config.sampleJson, 0, new Set()).score;
+    for (const volume of BOOK_VOLUMES) {
+      const book = normalizeBook({ ...legacyBook(), book: `test-volume-${volume.number}`, slug: volume.slug });
+      book.pages[0].lines[0].score = score;
+      const root = path.join(directory, "data", "book-builder", volume.slug);
+      fs.mkdirSync(root, { recursive: true });
+      const { pages, ...stored } = book;
+      fs.writeFileSync(path.join(root, "book.json"), JSON.stringify(stored));
+      fs.writeFileSync(path.join(root, "qr-index.json"), JSON.stringify({
+        book: book.book, edition: book.edition, contentVersion: book.contentVersion,
+        pages: pages.map(({ pageNumber, title }) => ({ pageNumber, title })),
+      }));
+      const token = getBookPageQrPath(1, book).split("/").at(-1);
+      const reference = await storage.exports.findStoredBookQrPage(token);
+      assert.equal(reference.pageRef.book, book.book);
+      assert(!reference.page);
+      const resolved = await storage.exports.findStoredBookQrPage(token, { includeScores: true });
+      assert.equal(resolved.pageRef.book, book.book);
+      assert.deepEqual(resolved.page.lines[0].score, score);
+      const manifest = await storage.exports.loadBook({ volume: volume.number, pageNumbers: [] });
+      assert.equal(manifest.pages[0].lines[0].score, null);
+    }
+    assert.equal(await storage.exports.findStoredBookQrPage("unknown-token"), null);
+  } finally {
+    assert(path.resolve(directory).startsWith(path.resolve(os.tmpdir()) + path.sep));
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
 
 function legacyBook() {
   return { sections: [

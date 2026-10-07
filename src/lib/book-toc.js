@@ -12,8 +12,11 @@ function drawBookTableOfContents(doc, book) {
   const addPage = () => {
     contentsPage += 1;
     doc.addPage();
-    doc.font("Times-Roman").fillColor("#111111").fontSize(24)
-      .text(book.title || "Snare Drum Book", margin, 48, { width, align: "center", lineBreak: false });
+    const title = book.title || "Snare Drum Book";
+    doc.font("Times-Roman").fillColor("#111111").fontSize(24);
+    const titleWidth = doc.widthOfString(title);
+    if (titleWidth > width) doc.fontSize(24 * width / titleWidth);
+    doc.text(title, margin, 48, { width, align: "center", lineBreak: false });
     doc.font("Times-Bold").fontSize(18)
       .text(contentsPage === 1 ? "Table of Contents" : "Table of Contents (continued)", margin, 91,
         { width, align: "center", lineBreak: false });

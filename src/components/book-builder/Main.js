@@ -44,6 +44,7 @@ import {
   renumberPages,
 } from "./book-data";
 import styles from "./BookBuilder.module.css";
+import { BOOK_VOLUMES, getBookVolume } from "../../lib/book-volumes";
 import {
   NestedTupletPlanEditor,
   OffbeatTupletPlanEditor,
@@ -468,6 +469,7 @@ export default function BookBuilderPanel() {
   const [deleteSubsectionDialogOpen, setDeleteSubsectionDialogOpen] = useState(false);
   const [deleteGroupDialogOpen, setDeleteGroupDialogOpen] = useState(false);
   const [pdfDownload, setPdfDownload] = useState({ active: false, label: "", loaded: 0, total: 0 });
+  const [downloadVolume, setDownloadVolume] = useState("1");
 
   const setBook = useCallback((nextBookOrUpdater) => {
     const nextBook = typeof nextBookOrUpdater === "function"
@@ -999,6 +1001,21 @@ export default function BookBuilderPanel() {
           Save page
         </IconButton>
       </div>
+
+      <section className={styles.editor}>
+        <div className={styles.editorTitle}><h3>Six-book collection</h3></div>
+        <Field label="Book to download">
+          <select value={downloadVolume} onChange={(event) => setDownloadVolume(event.target.value)} disabled={pdfDownload.active}>
+            {BOOK_VOLUMES.map((volume) => <option key={volume.number} value={volume.number}>{volume.title}</option>)}
+          </select>
+        </Field>
+        <IconButton icon={<FaFilePdf />} disabled={pdfDownload.active} title="Download selected collection book" onClick={() => {
+          const volume = getBookVolume(downloadVolume);
+          downloadPdf(`/api/book-builder?format=pdf&scope=book&volume=${volume.number}`, `${volume.slug}.pdf`, `Downloading book ${volume.number}...`);
+        }}>
+          Download book {downloadVolume}
+        </IconButton>
+      </section>
 
       <section className={styles.editor}>
         <div className={styles.editorTitle}>

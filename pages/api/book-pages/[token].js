@@ -1,5 +1,4 @@
-import { loadBook } from "../../../src/lib/book-builder-storage";
-import { findBookQrPage } from "../../../src/lib/book-qr";
+import { findStoredBookQrPage } from "../../../src/lib/book-builder-storage";
 
 function setNoStoreHeaders(res) {
   res.setHeader("Cache-Control", "private, no-store, no-cache, max-age=0, must-revalidate");
@@ -24,14 +23,12 @@ export default async function handler(req, res) {
     }
 
     // Find the page from the manifest, then read only that page's exercises.
-    const pageRef = findBookQrPage(await loadBook({ pageNumbers: [] }), token)?.pageRef;
+    const resolved = await findStoredBookQrPage(token, { includeScores: true });
 
-    if (!pageRef) {
+    if (!resolved) {
       res.status(404).json({ error: "Page not found." });
       return;
     }
-
-    const resolved = findBookQrPage(await loadBook({ pageNumbers: [pageRef.page] }), token);
 
     res.status(200).json({
       pageRef: resolved.pageRef,

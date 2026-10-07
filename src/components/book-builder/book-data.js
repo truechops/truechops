@@ -1,6 +1,7 @@
 import _ from "lodash";
 import { getEmptyMeasure } from "../../helpers/score";
 import { DEFAULT_TEMPO } from "../../consts/score";
+import { normalizeRhythmProgression } from "../../lib/book-rhythm-progression";
 import { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, groupSubsectionPages, normalizeSubsectionPageCount, normalizeOrnamentSegments, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, normalizeRandomOrnaments, normalizeNestedTupletPlan, normalizeExerciseSteps, normalizeOffbeatTupletPlan, normalizePageOrnamentDensity, normalizeOffbeatGroups } from "../../lib/book-structure";
 
 export { normalizeRhythmPool };
@@ -488,6 +489,8 @@ export function normalizePageGenerationSettings(value = {}, fallback = {}) {
       : {}),
     ...(source.requireNewestSecondary ? { requireNewestSecondary: true } : {}),
     ...(source.playedShareRamp?.start && source.playedShareRamp?.end ? { playedShareRamp: source.playedShareRamp } : {}),
+    ...(source.rhythmOnly ? { rhythmOnly: true } : {}),
+    ...(normalizeRhythmProgression(source.rhythmProgression) ? { rhythmProgression: normalizeRhythmProgression(source.rhythmProgression) } : {}),
     ...(Number(source.maxPlayedShare) > 0 && source.maxPlayedShare !== null
       ? { maxPlayedShare: Math.min(1, Number(source.maxPlayedShare)) }
       : {}),

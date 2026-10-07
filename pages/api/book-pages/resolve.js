@@ -1,5 +1,4 @@
-import { loadBook } from "../../../src/lib/book-builder-storage";
-import { findBookQrPage } from "../../../src/lib/book-qr";
+import { findStoredBookQrPage } from "../../../src/lib/book-builder-storage";
 
 function setNoStoreHeaders(res) {
   res.setHeader("Cache-Control", "private, no-store, no-cache, max-age=0, must-revalidate");
@@ -25,8 +24,7 @@ export default async function handler(req, res) {
     }
 
     // Tokens come from page numbers, so no exercise files are needed.
-    const book = await loadBook({ pageNumbers: [] });
-    const resolved = findBookQrPage(book, token);
+    const resolved = await findStoredBookQrPage(token);
 
     if (!resolved) {
       res.status(404).json({ error: "QR code not recognized." });

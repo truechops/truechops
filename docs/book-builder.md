@@ -1,4 +1,45 @@
+# Six-book collection
+
+`npm run pdf:book` generates all six volumes from the saved working book in `data/book-builder/snare-drum-book/book.json`, then renders a separate PDF for each in `book-output/`.
+
+| Book | Material |
+| --- | --- |
+| 1 | Progressive subdivision studies, starting with quarters plus eighths; no stickings or ornaments |
+| 2 | All the other saved tuplet spans and their combinations, with extra rest and density permutations; no ornaments |
+| 3 | The complete beginner-to-advanced curriculum, including crazy, off-beat, nested, combination, and final mixed studies; no ornaments |
+| 4 | Book 1's scope with the current ornament curriculum |
+| 5 | Book 2's expanded scope with the current ornament curriculum |
+| 6 | The current working book's complete curriculum, ornament settings, page layouts, and order |
+
+Books 1–3 have **no stickings or ornaments**, including on primary rhythms, secondary rhythms, nested notes, exercise steps, and page tails. Book 6 retains the saved curriculum and order.
+
+The foundations in books 1 and 3 use this inclusion order: **quarter, eighth, sixteenth, triplet, sextuplet, 32nd, quintuplet, septuplet, nontuplet**. The first study mixes quarters and eighths. Each subsequent study always includes its main subdivision, and draws companion rhythms only from earlier items in that list.
+
+Every main subdivision gets **132 unique exercises**: 44 sparse, 44 medium, and 44 dense. Each density pass starts with 12 exercises that isolate the earlier rhythms one at a time. From sextuplets onward, these introductions use two small groups instead, so later subdivisions have the same exercise budget. Exercise 13 starts a pool of the first two earlier rhythms; every following exercise adds the next rhythm until all preceding rhythms are available. The remaining exercises draw from the complete earlier pool. Each exercise includes the current companion rhythm as well as the main subdivision.
+
+Density stays within a controlled band for each pass (normally 45–60%, 60–75%, and 75–90% of the available note positions). The quarters/eighths introduction is selected systematically from its finite vocabulary, with separate sparse, medium, and dense sets. Most studies occupy six pages; 32nds and nontuplets use twelve roomier pages with the same 132 exercises. Quarter notes remain available as companions throughout this progression. These definitions live in `src/lib/book-rhythm-progression.js`.
+
+Advanced rhythm-only pages retain every nested ratio and off-beat start. Nested notes may contain rests. Slow span tuplets can divide a host note into shorter values, down to 32nds, while preserving the tuplet ratio and span; this creates rhythmic differences where the original book used different ornaments or stickings. Books 4–6 retain their ornament curriculum.
+
+Books 2 and 5 exclude the one-quarter-note study group (including its combinations), while retaining quarter-note **tuplets over longer spans**. Every span grouping gains 44 exercises over two additional passes: rest permutations that become sparser, then density and placement permutations that become fuller. Each pass preserves the source's layout, progressive secondary pool, and applicable ornament rules. Exercises are generated uniquely within each book using the existing generator and notation validation.
+
+```sh
+npm run pdf:book                          # Generate and render all six
+npm run pdf:book -- --volume 2            # Generate and render one volume
+npm run pdf:book -- --dry-run             # List each volume's scope/page count
+npm run pdf:book -- --render-only         # Render all previously generated volumes
+npm run pdf:book:render -- --volume 5     # Render one existing volume
+npm run pdf:book:page -- --volume 3 --page 10
+npm run pdf:book -- --volume current      # Regenerate the original working book
+```
+
+Use `--output-dir <directory>` for the collection, or `--volume <number> --output <file.pdf>` for one book. The book builder's **Six-book collection** selector downloads each generated volume. Existing **Page PDF** and **Book PDF** buttons still export the working book. Generation remains a local command.
+
+Volume definitions live in `src/lib/book-volumes.js`. Generated volumes are stored separately in `data/book-builder/snare-drum-book-<number>-*/book.json`, with inline scores; these reproducible files and the PDFs are ignored by Git. The saved working book is not modified. Each volume has its own QR identity, and the practice endpoints resolve all six volumes as well as the working book. Serving the new QR links requires deploying the updated app **and generated volume data** together.
+
 # Book sections and subsections
+
+The following describes the original working book and its ornament curriculum. The rhythm-only collection applies the progression and exceptions described above.
 
 In `/book-builder`, span groups contain rhythm sections, and each section contains subsections. A subsection is one page by default; set **Pages in this subsection** to spread it over more pages. Each section selects primary rhythms and an optional pool of secondary rhythms. Each subsection has its own title, primary ornaments, played-note limits, sticking rules, and print layout.
 
@@ -127,6 +168,6 @@ The same generator makes new exercises on the website from an **exercise configu
 - **Book QR pages:** besides **Choose rhythms**, the **Generate exercises** tab lists the page's own configuration and your saved ones. Edit one, save it, and build a score of 1–16 measures.
 - Saved configurations belong to the signed-in user (`exerciseConfigs` in MongoDB, `/api/exercise-configs`); signed-out visitors keep them in the browser. `/api/exercise-generator` returns the measures.
 
-Regenerate exercises with `npm run book:generate:ai -- --no-local-ai`. To regenerate exercises and export the PDF, use `npm run pdf:book`. To export existing exercises without regeneration, use `npm run pdf:book:render`.
+Regenerate the working book's exercises with `npm run book:generate:ai -- --no-local-ai`. To regenerate its exercises and export its PDF, use `npm run pdf:book -- --volume current`. To export its existing exercises without regeneration, use `npm run pdf:book:render`. Use `npm run pdf:book` for the six-volume collection described above.
 
 Run the migration, generation, and API regression checks with `npm run test:book`.

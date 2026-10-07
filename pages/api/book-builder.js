@@ -4,6 +4,8 @@ import process from "process";
 import { Buffer } from "buffer";
 import { createHash } from "crypto";
 import PDFDocument from "pdfkit";
+import { loadBook as loadStoredBook } from "../../src/lib/book-builder-storage";
+import { getBookVolume } from "../../src/lib/book-volumes";
 import SVGtoPDF from "svg-to-pdfkit";
 import QRCode from "qrcode";
 import { JSDOM } from "jsdom";
@@ -992,12 +994,17 @@ export default async function handler(req, res) {
         return;
       }
 
-      const book = await loadBook();
+      if (req.query.volume != null) {
+        try { getBookVolume(req.query.volume); }
+        catch (error) { res.status(400).json({ error: error.message }); return; }
+      }
+      const book = req.query.volume != null
+        ? await loadStoredBook({ volume: req.query.volume }) : await loadBook();
       if (req.query.format === "pdf") {
         if (req.query.scope === "book") {
           const { pdf, cacheStatus } = await renderFullBookPdf(book);
           const disposition = req.query.inline === "1" ? "inline" : "attachment";
-          sendPdfResponse(res, pdf, `${BOOK_SLUG}.pdf`, disposition, cacheStatus);
+          sendPdfResponse(res, pdf, `${book.slug}.pdf`, disposition, cacheStatus);
           return;
         }
 
@@ -1008,7 +1015,7 @@ export default async function handler(req, res) {
         sendPdfResponse(
           res,
           pdf,
-          `${BOOK_SLUG}-page-${String(pageNumber).padStart(2, "0")}.pdf`,
+          `${book.slug}-page-${String(pageNumber).padStart(2, "0")}.pdf`,
           disposition,
           cacheStatus
         );

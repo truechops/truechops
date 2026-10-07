@@ -2,6 +2,8 @@ import fs from "fs/promises";
 import path from "path";
 import process from "process";
 import { createLimiter } from "./limit-concurrency";
+import { BOOK_VOLUMES, getBookVolume } from "./book-volumes";
+import { findBookQrPage } from "./book-qr";
 import {
   BOOK_SLUG,
   createBookTableOfContents,
@@ -102,10 +104,14 @@ const readLineFile = createLimiter(32);
 
 // pageNumbers limits which pages' exercise files are read (e.g. [] for just the
 // manifest, [46] for one QR page); omitted, every page is read.
-export async function loadBook({ pageNumbers } = {}) {
+export async function loadBook({ pageNumbers, volume } = {}) {
+  const definition = volume == null ? null : getBookVolume(volume);
+  const bookRoot = definition ? path.join(process.cwd(), "data", "book-builder", definition.slug) : BOOK_ROOT;
   const readPages = Array.isArray(pageNumbers) ? new Set(pageNumbers.map(Number)) : null;
   const shouldReadPage = (pageNumber) => !readPages || readPages.has(Number(pageNumber));
-  const manifest = (await readJson(MANIFEST_PATH)) || createDefaultBook();
+  const saved = await readJson(path.join(bookRoot, "book.json"));
+  if (!saved && definition) throw new Error(`${definition.title} has not been generated. Run npm run pdf:book.`);
+  const manifest = saved || createDefaultBook();
   const hydratePage = async (page, pageIndex) => ({
     ...page,
     pageNumber: page.pageNumber || pageIndex + 1,
@@ -113,12 +119,13 @@ export async function loadBook({ pageNumbers } = {}) {
       (page.lines || []).map(async (line, lineIndex) => {
         const pageNumber = page.pageNumber || pageIndex + 1;
         const lineNumber = line.lineNumber || lineIndex + 1;
-        const lineFile = shouldReadPage(pageNumber)
-          ? await readLineFile(() => readJson(linePath(pageNumber, lineNumber)))
+        const lineFile = shouldReadPage(pageNumber) && !line.score
+          ? await readLineFile(() => readJson(path.join(bookRoot, "pages", `page-${String(pageNumber).padStart(2, "0")}`, `line-${String(lineNumber).padStart(2, "0")}.json`)))
           : null;
         return {
           ...line,
           ...(lineFile || {}),
+          ...(!shouldReadPage(pageNumber) ? { score: null } : {}),
           pageNumber,
           lineNumber,
         };
@@ -151,6 +158,22 @@ export async function loadBook({ pageNumbers } = {}) {
     ...manifest,
     pages,
   });
+}
+
+// Resolve the volume as well as its page; each volume has a distinct book key.
+// Read raw manifests first so QR lookups don't normalize every score in all books.
+export async function findStoredBookQrPage(token, { includeScores = false } = {}) {
+  for (const definition of [null, ...BOOK_VOLUMES]) {
+    const root = definition ? path.join(process.cwd(), "data", "book-builder", definition.slug) : BOOK_ROOT;
+    const manifest = await readJson(path.join(root, "qr-index.json")) || await readJson(path.join(root, "book.json"));
+    if (!manifest) continue;
+    const book = { ...manifest, pages: manifest.sections?.flatMap((section) => section.pages) || manifest.pages || [] };
+    const resolved = findBookQrPage(book, token);
+    if (!resolved) continue;
+    if (!includeScores) return { pageRef: resolved.pageRef };
+    return findBookQrPage(await loadBook({ volume: definition?.number, pageNumbers: [resolved.pageRef.page] }), token);
+  }
+  return null;
 }
 
 export async function saveBook(rawBook) {
