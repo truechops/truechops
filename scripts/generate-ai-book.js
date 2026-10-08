@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const http = require("http");
 const https = require("https");
-const { normalizeRhythmProgression, getRhythmProgressionStep, getProgressionSecondaryPool, createQuarterEighthScore } = require("../src/lib/book-rhythm-progression");
+const { normalizeRhythmProgression, normalizeRhythmIsolation, createIsolatedRhythmScore, getRhythmProgressionStep, getProgressionSecondaryPool, createQuarterEighthScore } = require("../src/lib/book-rhythm-progression");
 const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, getLineStickingSettings, getSpanPrimaryRhythms, normalizeOrnamentSegments, getLineOrnamentSegment, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, getLineSecondaryRhythms, rhythmOrnamentKey, normalizeRandomOrnaments, getLineRandomOrnaments, getNestedTupletNotation, normalizeNestedTupletPlan, getLineNestedTuplet, normalizeExerciseSteps, getLineExerciseStep, OFFBEAT_LABELS, normalizeOffbeatTupletPlan, getLineOffbeatTuplet, normalizePageOrnamentDensity, normalizeOffbeatGroups, getLineOffbeatPair } = require("../src/lib/book-structure");
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
@@ -125,6 +125,7 @@ function getBoundedNumber(value, fallback, minimum, maximum, integer = false) {
 
 function normalizePdfSettings(pdfSettings = {}) {
   return {
+    ...(pdfSettings.measuresPerExercise === 2 ? { measuresPerExercise: 2 } : {}),
     measuresPerLine: getBoundedNumber(
       pdfSettings.measuresPerLine,
       DEFAULT_PDF_SETTINGS.measuresPerLine,
@@ -164,7 +165,7 @@ function getLinesPerPage(pdfSettings) {
     Math.floor(contentHeight / (normalized.lineSpacing * pdfScale))
   );
 
-  return normalized.measuresPerLine * systemsPerPage;
+  return Math.floor(normalized.measuresPerLine * systemsPerPage / (normalized.measuresPerExercise || 1));
 }
 
 function createBlankLine(pageNumber, lineNumber) {
@@ -1190,6 +1191,9 @@ function normalizeOrnamentText(value) {
 }
 
 function getExerciseShortForm(score) {
+  if (score?.measures?.length > 1) {
+    return score.measures.map((measure) => getExerciseShortForm({ measures: [measure] })).join(" || ");
+  }
   const measure = score && score.measures && score.measures[0];
   const part = measure && Array.isArray(measure.parts)
     ? measure.parts.find((candidate) => candidate.instrument === "snare") || measure.parts[0]
@@ -1561,6 +1565,10 @@ function getNoteStartQuarters(voice) {
 
 function validatePrimaryRequirements(section, score) {
   if (!section.primaryRhythms) return;
+  if (score.measures.length > 1) {
+    score.measures.forEach((measure) => validatePrimaryRequirements(section, { ...score, measures: [measure] }));
+    return;
+  }
   const timeSig = score.measures[0].timeSig;
   if (Number(timeSig.num) !== 4 || Number(timeSig.type) !== 4) {
     throw new Error("Every exercise must use 4/4 time.");
@@ -3936,6 +3944,8 @@ function createFallbackGeneratedScore(section, samplePayload, lineIndex, attempt
     `${section.id || section.title || "section"}:fallback:${lineIndex}${retrySeed}:${section.instructions || ""}`
   );
 
+  if (section.rhythmIsolation) return createIsolatedRhythmScore(section.rhythmIsolation, random);
+
   if (options.tuplets.length || section.primaryRhythms) {
     const tupletScore = createMixedTupletFallbackGeneratedScore(section, options, random, lineIndex, attempt);
 
@@ -3980,7 +3990,7 @@ function normalizeGeneratedLine(input, section, samplePayload, index, attempt = 
   const fallbackLine = createFallbackGeneratedLine(section, samplePayload, index, attempt);
   const fallbackScore = getSampleScore(samplePayload);
   const scoreSource = input && (input.score || input.measures ? input.score || input : null);
-  const normalizedScore = scoreSource
+  const normalizedScore = scoreSource && !section.rhythmIsolation
     ? normalizeGeneratedScore(scoreSource, fallbackScore)
     : fallbackLine.score;
   const allowedTuplets = getGenerationTuplets(section, samplePayload);
@@ -4288,6 +4298,7 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         playedShareRamp: pageSource.playedShareRamp || null,
         rhythmOnly: Boolean(pageSource.rhythmOnly),
         rhythmProgression: normalizeRhythmProgression(pageSource.rhythmProgression),
+        rhythmIsolation: normalizeRhythmIsolation(pageSource.rhythmIsolation),
         title: page.title || `${section.title || `Section ${sectionIndex + 1}`} ${pageIndex + 1}`,
         sectionTitle: section.title || `Section ${sectionIndex + 1}`,
         pageCount: 1,
@@ -4635,6 +4646,7 @@ function createStoredPageGenerationSettings(pageConfig) {
     ...(pageConfig.playedShareRamp ? { playedShareRamp: pageConfig.playedShareRamp } : {}),
     ...(pageConfig.rhythmOnly ? { rhythmOnly: true } : {}),
     ...(pageConfig.rhythmProgression ? { rhythmProgression: pageConfig.rhythmProgression } : {}),
+    ...(pageConfig.rhythmIsolation ? { rhythmIsolation: pageConfig.rhythmIsolation } : {}),
     primaryRhythms: pageConfig.primaryRhythms,
     secondaryRhythms: pageConfig.secondaryRhythms,
     prompt: pageConfig.prompt || "",

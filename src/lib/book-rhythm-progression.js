@@ -19,6 +19,87 @@ const RHYTHM_DENSITIES = [
 ];
 const EXERCISES_PER_DENSITY = 44;
 const INTRODUCTORY_EXERCISES = 12;
+const ISOLATED_RHYTHM_DENSITIES = [
+  { id: "low", title: "Low density", range: [0.1, 0.25] },
+  { id: "sparse", title: "Sparse", range: [0.25, 0.45] },
+  { id: "medium", title: "Medium", range: [0.45, 0.65] },
+  { id: "dense", title: "Dense", range: [0.65, 0.9] },
+];
+
+function normalizeRhythmIsolation(value) {
+  if (!value || !RHYTHM_INCLUSION_ORDER.some((rhythm) => rhythm.id === value.subdivision)) return null;
+  if (!ISOLATED_RHYTHM_DENSITIES.some((density) => density.id === value.density)) return null;
+  return { subdivision: value.subdivision, density: value.density };
+}
+
+function createIsolatedRhythmStudies(pdfSettings) {
+  return RHYTHM_INCLUSION_ORDER.map((rhythm) => {
+    const quarters = rhythm.id === "quarters";
+    const roomy = ["sextuplets", "thirtyseconds", "septuplets", "nontuplets"].includes(rhythm.id);
+    const settings = { ...pdfSettings, measuresPerLine: roomy ? 1 : 2,
+      ...(quarters ? { measuresPerExercise: 2 } : {}) };
+    const id = `rhythm-isolation-${rhythm.id}`;
+    const pageCount = roomy ? 2 : 1;
+    return {
+      id, groupId: "isolated-subdivisions", title: rhythm.title,
+      rhythmSpan: { count: 1, unit: 4 }, density: "mixed", pdfSettings: settings,
+      primaryRhythms: normalizeRhythmPool(rhythm, false), secondaryRhythms: normalizeRhythmPool({}),
+      pages: ISOLATED_RHYTHM_DENSITIES.flatMap((density) => Array.from({ length: pageCount }, () => ({
+        subsectionId: `${id}-${density.id}`, subsectionPageCount: pageCount,
+        title: `${density.title} - ${quarters ? "two-bar quarter-note exercises" : "subdivision only"}`,
+        pdfSettings: settings,
+        generationSettings: {
+          rhythmOnly: true, ornaments: [], prompt: "", sampleJson: "{}",
+          rhythmIsolation: { subdivision: rhythm.id, density: density.id },
+          minPlayedNotes: 0, maxPlayedNotes: 0, playEveryNote: false,
+          stickingTail: null, requiredSameHandStickingRuns: [],
+        },
+        lines: [],
+      }))),
+    };
+  });
+}
+
+// Choose attacks on just one grid. Existing notation rules later join rests
+// and lengthen notes without changing those attack positions. Quarter studies
+// use two-bar phrases: only 15 non-silent one-bar quarter patterns exist.
+function createIsolatedRhythmScore(plan, random) {
+  const rhythm = RHYTHM_INCLUSION_ORDER.find((item) => item.id === plan.subdivision);
+  const density = ISOLATED_RHYTHM_DENSITIES.find((item) => item.id === plan.density);
+  const tuplet = rhythm.tuplets?.[0];
+  const duration = tuplet?.type || { quarters: 4, eighths: 8, sixteenths: 16, thirtyseconds: 32 }[rhythm.id];
+  const perBeat = tuplet?.actual || duration / 4;
+  const perMeasure = perBeat * 4;
+  const measureCount = rhythm.id === "quarters" ? 2 : 1;
+  const total = perMeasure * measureCount;
+  const minimum = Math.max(measureCount, Math.ceil(total * density.range[0]));
+  const maximum = Math.max(minimum, Math.floor(total * density.range[1]));
+  const playedCount = minimum + Math.floor(random() * (maximum - minimum + 1));
+  const positions = Array.from({ length: total }, (_, index) => index);
+  for (let index = positions.length - 1; index > 0; index -= 1) {
+    const other = Math.floor(random() * (index + 1));
+    [positions[index], positions[other]] = [positions[other], positions[index]];
+  }
+  const played = new Set(positions.slice(0, playedCount));
+  // Keep both bars active, even in the lowest-density quarter exercises.
+  for (let measure = 0; measure < measureCount; measure += 1) {
+    const start = measure * perMeasure;
+    if (![...played].some((slot) => slot >= start && slot < start + perMeasure)) {
+      played.delete([...played][0]);
+      played.add(start + Math.floor(random() * perMeasure));
+    }
+  }
+  return { parts: { snare: { enabled: true } }, measures: Array.from({ length: measureCount }, (_, measure) => ({
+    timeSig: { num: 4, type: 4 }, parts: [{ instrument: "snare", voices: [{
+      notes: Array.from({ length: perMeasure }, (_, slot) => ({
+        notes: played.has(measure * perMeasure + slot) ? ["C5"] : [], duration, velocity: 0.5,
+      })),
+      tuplets: tuplet ? Array.from({ length: 4 }, (_, beat) => ({
+        start: beat * perBeat, end: (beat + 1) * perBeat, actual: tuplet.actual, normal: tuplet.normal,
+      })) : [],
+    }] }],
+  })) };
+}
 
 function getRhythmKey(rhythm) {
   return rhythm.subdivisions?.[0] || rhythmOrnamentKey(rhythm.tuplets[0]);
@@ -125,6 +206,7 @@ function createQuarterEighthScore(density, index) {
 
 module.exports = {
   RHYTHM_INCLUSION_ORDER, RHYTHM_DENSITIES, EXERCISES_PER_DENSITY, INTRODUCTORY_EXERCISES,
+  ISOLATED_RHYTHM_DENSITIES, normalizeRhythmIsolation, createIsolatedRhythmStudies, createIsolatedRhythmScore,
   getRhythmKey, normalizeRhythmProgression, getRhythmProgressionStep,
   getProgressionSecondaryPool, createRhythmProgressionStudies,
   createQuarterEighthScore,

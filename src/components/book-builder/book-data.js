@@ -1,7 +1,7 @@
 import _ from "lodash";
 import { getEmptyMeasure } from "../../helpers/score";
 import { DEFAULT_TEMPO } from "../../consts/score";
-import { normalizeRhythmProgression } from "../../lib/book-rhythm-progression";
+import { normalizeRhythmProgression, normalizeRhythmIsolation } from "../../lib/book-rhythm-progression";
 import { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, groupSubsectionPages, normalizeSubsectionPageCount, normalizeOrnamentSegments, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, normalizeRandomOrnaments, normalizeNestedTupletPlan, normalizeExerciseSteps, normalizeOffbeatTupletPlan, normalizePageOrnamentDensity, normalizeOffbeatGroups } from "../../lib/book-structure";
 
 export { normalizeRhythmPool };
@@ -491,6 +491,7 @@ export function normalizePageGenerationSettings(value = {}, fallback = {}) {
     ...(source.playedShareRamp?.start && source.playedShareRamp?.end ? { playedShareRamp: source.playedShareRamp } : {}),
     ...(source.rhythmOnly ? { rhythmOnly: true } : {}),
     ...(normalizeRhythmProgression(source.rhythmProgression) ? { rhythmProgression: normalizeRhythmProgression(source.rhythmProgression) } : {}),
+    ...(normalizeRhythmIsolation(source.rhythmIsolation) ? { rhythmIsolation: normalizeRhythmIsolation(source.rhythmIsolation) } : {}),
     ...(Number(source.maxPlayedShare) > 0 && source.maxPlayedShare !== null
       ? { maxPlayedShare: Math.min(1, Number(source.maxPlayedShare)) }
       : {}),
@@ -548,6 +549,7 @@ export function normalizePageGenerationSettings(value = {}, fallback = {}) {
 
 export function normalizePdfSettings(pdfSettings = {}) {
   return {
+    ...(pdfSettings.measuresPerExercise === 2 ? { measuresPerExercise: 2 } : {}),
     measuresPerLine: normalizeBoundedNumber(
       pdfSettings.measuresPerLine,
       DEFAULT_PDF_SETTINGS.measuresPerLine,
@@ -593,7 +595,7 @@ export function getSystemsPerPage(pdfSettings) {
 
 export function getLinesPerPage(pdfSettings) {
   const normalizedSettings = normalizePdfSettings(pdfSettings);
-  return normalizedSettings.measuresPerLine * getSystemsPerPage(normalizedSettings);
+  return Math.floor(normalizedSettings.measuresPerLine * getSystemsPerPage(normalizedSettings) / (normalizedSettings.measuresPerExercise || 1));
 }
 
 export function getPagePdfSettings(page, bookPdfSettings = DEFAULT_PDF_SETTINGS) {

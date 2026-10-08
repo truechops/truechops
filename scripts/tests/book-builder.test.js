@@ -25,7 +25,7 @@ Module._extensions[".js"] = (module, file) => {
   if (file.includes("node_modules")) return originalLoader(module, file);
   module._compile(compile(file), file);
 };
-const { normalizeBook, getPageGenerationSettings } = require("../../src/components/book-builder/book-data");
+const { normalizeBook, getPageGenerationSettings, getLinesPerPage, normalizeTupletNoteValues } = require("../../src/components/book-builder/book-data");
 
 const pool = (subdivisions = [], tuplets = [], ornaments = []) => ({ subdivisions, tuplets, ornaments });
 // Every struck note carries a sticking (r or l).
@@ -117,7 +117,7 @@ test("rhythm-only progression follows the requested order, balances exercise cou
   ]);
   for (const number of [1, 3]) {
     const book = normalizeBook(createBookVolume(source, number));
-    const sections = book.sections.slice(0, 8);
+    const sections = book.sections.filter((section) => section.id.startsWith("rhythm-progression-"));
     assert.deepEqual(sections.map((section) => section.id), RHYTHM_INCLUSION_ORDER.slice(1).map((rhythm) => `rhythm-progression-${rhythm.id}`));
     sections.forEach((section, sectionIndex) => {
       assert.equal(section.pages.reduce((count, page) => count + page.lines.length, 0), 132);
@@ -142,7 +142,7 @@ test("rhythm-only progression follows the requested order, balances exercise cou
 test("every progression exercise is unique, unmarked, in 4/4, and contains its main and companion rhythm", () => {
   const config = generator.createGenerationConfig({}, createBookVolume(savedCurriculum(), 1));
   const seen = new Set();
-  for (const section of config.sections) {
+  for (const section of config.sections.filter((section) => section.id.startsWith("rhythm-progression-"))) {
     let exerciseCount = 0;
     const densities = new Map();
     for (const page of section.pages) {
@@ -168,6 +168,63 @@ test("every progression exercise is unique, unmarked, in 4/4, and contains its m
     assert(mean("dense") > mean("sparse"), section.title);
   }
   assert.equal(seen.size, 1056);
+});
+
+test("Book 1 opens with the isolated ladder, low densities, and two-bar quarters", () => {
+  const book = normalizeBook(createBookVolume(savedCurriculum(), 1));
+  const isolated = book.sections.slice(0, 9);
+  assert.deepEqual(isolated.map((section) => section.id), RHYTHM_INCLUSION_ORDER.map((rhythm) => `rhythm-isolation-${rhythm.id}`));
+  assert.equal(book.sections[9].id, "rhythm-progression-eighths");
+  assert.equal(isolated.reduce((total, section) => total + section.pages.length, 0), 52);
+  const config = generator.createGenerationConfig({}, book);
+  const seen = new Set();
+  const quarterPatterns = new Set();
+  for (const [sectionIndex, section] of config.sections.slice(0, 9).entries()) {
+    const rhythm = RHYTHM_INCLUSION_ORDER[sectionIndex];
+    const perBeat = rhythm.tuplets?.[0]?.actual || { quarters: 1, eighths: 2, sixteenths: 4, thirtyseconds: 8 }[rhythm.id];
+    assert.deepEqual(section.secondaryRhythms.subdivisions, []);
+    assert.deepEqual(section.secondaryRhythms.tuplets, []);
+    assert(section.pages.length >= 4);
+    assert.deepEqual([...new Set(section.pages.map((page) => page.rhythmIsolation.density))], ["low", "sparse", "medium", "dense"]);
+    const means = {};
+    for (const page of section.pages) {
+      let totalPlayed = 0;
+      const count = getLinesPerPage(page.pdfSettings);
+      for (let index = 0; index < count; index += 1) {
+        const line = generator.createUniqueGeneratedLine(null, page, page.sampleJson, index, seen);
+        // Check the notation used after loading and printing, including bar two.
+        const score = normalizeTupletNoteValues(line.score);
+        assert.equal(score.measures.length, rhythm.id === "quarters" ? 2 : 1);
+        generator.validatePrimaryRequirements(page, score);
+        let played = 0;
+        for (const measure of score.measures) {
+          const voice = measure.parts[0].voices[0];
+          assert(Math.abs(nestedVoiceQuarters(voice) - 4) < 1e-8);
+          assert(voice.notes.every((note) => !note.ornaments));
+          const starts = noteStarts(voice);
+          const attacks = voice.notes.flatMap((note, i) => note.notes.length ? [starts[i]] : []);
+          assert(attacks.length > 0);
+          assert(attacks.every((start) => Math.abs(start * perBeat - Math.round(start * perBeat)) < 1e-8));
+          assert(voice.tuplets.every((tuplet) => rhythm.tuplets?.some((allowed) => allowed.actual === tuplet.actual && allowed.normal === tuplet.normal)));
+          if (rhythm.id === "quarters") quarterPatterns.add(attacks.join(","));
+          played += attacks.length;
+        }
+        const available = perBeat * 4 * score.measures.length;
+        if (page.rhythmIsolation.density === "low") assert(played / available <= 0.25);
+        totalPlayed += played / available;
+        if (rhythm.id === "quarters") {
+          const invalid = JSON.parse(JSON.stringify(score));
+          invalid.measures[1].parts[0].voices[0].notes[0].duration *= 2;
+          assert.throws(() => generator.validatePrimaryRequirements(page, invalid), /fill exactly/);
+        }
+      }
+      (means[page.rhythmIsolation.density] ||= []).push(totalPlayed / count);
+    }
+    const averages = Object.values(means).map((values) => values.reduce((a, b) => a + b) / values.length);
+    assert(averages.every((value, index) => !index || value > averages[index - 1]), section.title);
+  }
+  assert.equal(seen.size, 748);
+  assert.equal(quarterPatterns.size, 15, "quarter phrases cover all non-silent one-bar patterns");
 });
 
 test("volume CLI validates selections and separate output destinations before generating", () => {

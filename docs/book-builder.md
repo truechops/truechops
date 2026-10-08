@@ -4,7 +4,7 @@
 
 | Book | Material |
 | --- | --- |
-| 1 | Progressive subdivision studies, starting with quarters plus eighths; no stickings or ornaments |
+| 1 | Subdivision-only studies from quarters through nontuplets, followed by progressive combinations; no stickings or ornaments |
 | 2 | All the other saved tuplet spans and their combinations, with extra rest and density permutations; no ornaments |
 | 3 | The complete beginner-to-advanced curriculum, including crazy, off-beat, nested, combination, and final mixed studies; no ornaments |
 | 4 | Book 1's scope with the current ornament curriculum |
@@ -13,9 +13,11 @@
 
 Books 1–3 have **no stickings or ornaments**, including on primary rhythms, secondary rhythms, nested notes, exercise steps, and page tails. Book 6 retains the saved curriculum and order.
 
-The foundations in books 1 and 3 use this inclusion order: **quarter, eighth, sixteenth, triplet, sextuplet, 32nd, quintuplet, septuplet, nontuplet**. The first study mixes quarters and eighths. Each subsequent study always includes its main subdivision, and draws companion rhythms only from earlier items in that list.
+The foundations in books 1 and 3 use this inclusion order: **quarter, eighth, sixteenth, triplet, sextuplet, 32nd, quintuplet, septuplet, nontuplet**. The first combination study mixes quarters and eighths. Each subsequent combination study always includes its main subdivision, and draws companion rhythms only from earlier items in that list.
 
-Every main subdivision gets **132 unique exercises**: 44 sparse, 44 medium, and 44 dense. Each density pass starts with 12 exercises that isolate the earlier rhythms one at a time. From sextuplets onward, these introductions use two small groups instead, so later subdivisions have the same exercise budget. Exercise 13 starts a pool of the first two earlier rhythms; every following exercise adds the next rhythm until all preceding rhythms are available. The remaining exercises draw from the complete earlier pool. Each exercise includes the current companion rhythm as well as the main subdivision.
+Book 1 starts with **52 pages devoted solely to individual subdivisions**, all before the combinations. Each subdivision progresses through low (10–25% of positions played), sparse (25–45%), medium (45–65%), and dense (65–90%) practice. Quarters use 44 unique two-bar exercises across four pages, covering all 15 non-silent one-bar quarter patterns. Every other subdivision gets 88 exercises across four pages, or eight roomier pages for sextuplets, 32nds, septuplets, and nontuplets. Only the selected subdivision supplies attack positions; the existing notation rules consolidate rests and note values. Two-bar exercises retain both measures in stored scores, uniqueness checks, validation, and PDF layout.
+
+Every main subdivision in the combination studies gets **132 unique exercises**: 44 sparse, 44 medium, and 44 dense. Each density pass starts with 12 exercises that isolate the earlier rhythms one at a time. From sextuplets onward, these introductions use two small groups instead, so later subdivisions have the same exercise budget. Exercise 13 starts a pool of the first two earlier rhythms; every following exercise adds the next rhythm until all preceding rhythms are available. The remaining exercises draw from the complete earlier pool. Each exercise includes the current companion rhythm as well as the main subdivision.
 
 Density stays within a controlled band for each pass (normally 45–60%, 60–75%, and 75–90% of the available note positions). The quarters/eighths introduction is selected systematically from its finite vocabulary, with separate sparse, medium, and dense sets. Most studies occupy six pages; 32nds and nontuplets use twelve roomier pages with the same 132 exercises. Quarter notes remain available as companions throughout this progression. These definitions live in `src/lib/book-rhythm-progression.js`.
 
