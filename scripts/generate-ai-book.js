@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const http = require("http");
 const https = require("https");
+const { isQuarterNoteTuplet, simplifyQuarterNoteTuplets } = require("../src/lib/book-tuplet-notation");
 const { normalizeRhythmProgression, normalizeRhythmIsolation, createIsolatedRhythmScore, getRhythmProgressionStep, getProgressionSecondaryPool, createQuarterEighthScore } = require("../src/lib/book-rhythm-progression");
 const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, getLineStickingSettings, getSpanPrimaryRhythms, normalizeOrnamentSegments, getLineOrnamentSegment, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, getLineSecondaryRhythms, rhythmOrnamentKey, normalizeRandomOrnaments, getLineRandomOrnaments, getNestedTupletNotation, normalizeNestedTupletPlan, getLineNestedTuplet, normalizeExerciseSteps, getLineExerciseStep, OFFBEAT_LABELS, normalizeOffbeatTupletPlan, getLineOffbeatTuplet, normalizePageOrnamentDensity, normalizeOffbeatGroups, getLineOffbeatPair } = require("../src/lib/book-structure");
 
@@ -576,6 +577,7 @@ function createStructuredSectionInstructions(section, samplePayload) {
       ? "Use no rests; play every rhythmic position."
       : "Rests are allowed.",
     "Never create a tuplet group made entirely of rests. Replace its full duration with the simplest equivalent ordinary rest or rests outside a tuplet.",
+    "Write a quarter-note-long tuplet with only its opening attack as a plain quarter note. It does not satisfy a required tuplet; retain a genuine group of each required kind in the measure.",
     ornaments.some((ornament) => ornament === "diddles" || ornament === "cheese")
       ? "Diddles and cheese may only be used on sixteenth notes or faster, except that eighth notes inside a tuplet may use them; never put them on regular eighth notes, dotted eighth notes, or quarter notes."
       : "",
@@ -723,9 +725,9 @@ function pushCompressedRests(target, slotCount, sourceNote) {
 }
 
 // Plain notes merge with the rests after them into longer values within a beat.
-// Quarter notes appear only on pages whose subdivision is quarters; elsewhere a
+// Ordinary quarter notes appear only on pages whose subdivision is quarters; elsewhere a
 // note is at most a dotted eighth, and one that fills a beat reads as an eighth
-// and an eighth rest.
+// and an eighth rest. Equivalent tuplets collapse to quarters after this pass.
 function getPreferLongerValueOptions(allowQuarterNotes = true) {
   return {
     groupSlots: 8,
@@ -1580,12 +1582,14 @@ function validatePrimaryRequirements(section, score) {
     ...primary.subdivisions.map((id) => ({ subdivisions: [id], tuplets: [] })),
     ...primary.tuplets.map((tuplet) => ({ subdivisions: [], tuplets: [tuplet] })),
   ];
+  const qualifies = (pool, note, index) => !isRest(note) && noteMatchesRhythmPool(pool, voice, index) &&
+    !isQuarterNoteTuplet(voice, getTupletForNote(voice.tuplets, index));
   if (section.requirePrimaryRhythms === "any" &&
-    !voice.notes.some((note, index) => !isRest(note) && noteMatchesRhythmPool(primary, voice, index))) {
+    !voice.notes.some((note, index) => qualifies(primary, note, index))) {
     throw new Error("Every exercise must contain at least one primary rhythm as played notes.");
   }
   for (const pool of section.requirePrimaryRhythms === false || section.requirePrimaryRhythms === "any" ? [] : requiredPools) {
-    if (!voice.notes.some((note, index) => !isRest(note) && noteMatchesRhythmPool(pool, voice, index))) {
+    if (!voice.notes.some((note, index) => qualifies(pool, note, index))) {
       throw new Error("Every exercise must contain each selected primary rhythm as played notes.");
     }
   }
@@ -1594,15 +1598,18 @@ function validatePrimaryRequirements(section, score) {
   if (section.rhythmProgression) {
     for (const key of section.requiredSecondaryKeys || []) {
       const required = getProgressionSecondaryPool(secondary, { keys: [key] });
-      if (!voice.notes.some((note, index) => !isRest(note) && noteMatchesRhythmPool(required, voice, index))) {
+      if (!voice.notes.some((note, index) => qualifies(required, note, index))) {
         throw new Error("The exercise must include the current companion subdivision as played notes.");
       }
     }
   }
   const subdivisions = [...getGenerationSubdivisions(section), ...(section.fillerSubdivisions || [])];
+  const allowsQuarterEquivalent = [...primary.tuplets, ...secondary.tuplets]
+    .some((tuplet) => Math.abs(tuplet.normal * 4 / tuplet.type - 1) < 1e-8);
   for (const [index, note] of voice.notes.entries()) {
     if (isRest(note)) continue;
     const inTuplet = getTupletForNote(voice.tuplets, index);
+    if (!inTuplet && allowsQuarterEquivalent && Number(note.duration) === 4 && !Number(note.dots || 0)) continue;
     if (inTuplet ? !noteMatchesRhythmPool(primary, voice, index) && !noteMatchesRhythmPool(secondary, voice, index)
       : !subdivisions.length || Number(note.duration) > getMaxSubdivisionDuration(subdivisions)) {
       throw new Error("Exercise contains a rhythm outside the selected pools.");
@@ -3304,11 +3311,11 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
             }
           );
 
-          return applyRhythmPoolOrnaments(section, {
+          return simplifyQuarterNoteTuplets(applyRhythmPoolOrnaments(section, {
             ...voice,
             tuplets: finalNotationVoice.tuplets,
             notes: stickingNotes,
-          });
+          }));
         }),
       })),
     })),
@@ -4419,6 +4426,7 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
       ? `Allowed tuplet types: ${tuplets.map(getTupletLabel).join(", ")}. Randomly combine complete groups of allowed types in the same 4/4 measure, including all required primary types. Tuplet entries use inclusive start and exclusive end indexes into voice.notes.`
       : "Do not use tuplets. Each generated voice should have an empty tuplets array.",
     "Never create a tuplet group whose notes are all rests. Replace the entire group with the simplest duration-equivalent ordinary rest or rests and omit that tuplet entry.",
+    "A quarter-note-long tuplet with only its opening attack becomes a plain quarter note, even if quarters are not in the selected pool. It cannot satisfy a required tuplet; keep a genuine group of each required kind in every measure.",
     getSectionPlayEveryNote(section)
       ? "Use no rests. Play every rhythmic position in the measure, including every note inside tuplets."
       : "Randomize played notes and rests across the whole measure. Do not favor beat four or any other beat.",

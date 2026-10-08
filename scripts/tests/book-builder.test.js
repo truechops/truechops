@@ -12,6 +12,7 @@ const { createStudySections, createSpanStudy, createQuarterNoteStudy, createOffb
 const { getLineStickingSettings, getSpanPrimaryRhythms, getNestedTupletNotation, getNestedTupletVariants, getLineExerciseStep, getLineRandomOrnaments, getLineOffbeatTuplet, getLineOffbeatPair } = require("../../src/lib/book-structure");
 const { BOOK_VOLUMES, createBookVolume, getBookVolume } = require("../../src/lib/book-volumes");
 const { RHYTHM_INCLUSION_ORDER, getRhythmKey, getRhythmProgressionStep, getProgressionSecondaryPool } = require("../../src/lib/book-rhythm-progression");
+const { isQuarterNoteTuplet, simplifyQuarterNoteTuplets } = require("../../src/lib/book-tuplet-notation");
 
 // Load the same ES modules Next uses without starting a server.
 const originalLoader = Module._extensions[".js"];
@@ -170,7 +171,7 @@ test("every progression exercise is unique, unmarked, in 4/4, and contains its m
   assert.equal(seen.size, 1056);
 });
 
-test("Book 1 opens with the isolated ladder, low densities, and two-bar quarters", () => {
+test("Book 1 opens with the isolated ladder from dense to low density, and two-bar quarters", () => {
   const book = normalizeBook(createBookVolume(savedCurriculum(), 1));
   const isolated = book.sections.slice(0, 9);
   assert.deepEqual(isolated.map((section) => section.id), RHYTHM_INCLUSION_ORDER.map((rhythm) => `rhythm-isolation-${rhythm.id}`));
@@ -185,7 +186,7 @@ test("Book 1 opens with the isolated ladder, low densities, and two-bar quarters
     assert.deepEqual(section.secondaryRhythms.subdivisions, []);
     assert.deepEqual(section.secondaryRhythms.tuplets, []);
     assert(section.pages.length >= 4);
-    assert.deepEqual([...new Set(section.pages.map((page) => page.rhythmIsolation.density))], ["low", "sparse", "medium", "dense"]);
+    assert.deepEqual([...new Set(section.pages.map((page) => page.rhythmIsolation.density))], ["dense", "medium", "sparse", "low"]);
     const means = {};
     for (const page of section.pages) {
       let totalPlayed = 0;
@@ -201,6 +202,7 @@ test("Book 1 opens with the isolated ladder, low densities, and two-bar quarters
           const voice = measure.parts[0].voices[0];
           assert(Math.abs(nestedVoiceQuarters(voice) - 4) < 1e-8);
           assert(voice.notes.every((note) => !note.ornaments));
+          assert(voice.tuplets.every((tuplet) => !isQuarterNoteTuplet(voice, tuplet)), "quarter equivalents must lose their tuplet brackets");
           const starts = noteStarts(voice);
           const attacks = voice.notes.flatMap((note, i) => note.notes.length ? [starts[i]] : []);
           assert(attacks.length > 0);
@@ -221,10 +223,68 @@ test("Book 1 opens with the isolated ladder, low densities, and two-bar quarters
       (means[page.rhythmIsolation.density] ||= []).push(totalPlayed / count);
     }
     const averages = Object.values(means).map((values) => values.reduce((a, b) => a + b) / values.length);
-    assert(averages.every((value, index) => !index || value > averages[index - 1]), section.title);
+    assert(averages.every((value, index) => !index || value < averages[index - 1]), section.title);
   }
   assert.equal(seen.size, 748);
   assert.equal(quarterPatterns.size, 15, "quarter phrases cover all non-silent one-bar patterns");
+});
+
+test("beat-long tuplets with only the opening attack print as quarters and cannot satisfy tuplet requirements", () => {
+  const note = (duration, played = false, dots = 0) => ({ duration, dots, notes: played ? ["C5"] : [], velocity: 0.5 });
+  const scoreOf = (voice) => ({ parts: { snare: { enabled: true } }, measures: [{
+    timeSig: { num: 4, type: 4 }, parts: [{ instrument: "snare", voices: [voice] }],
+  }] });
+  for (const rhythm of RHYTHM_INCLUSION_ORDER.filter((rhythm) => rhythm.tuplets)) {
+    const spec = rhythm.tuplets[0];
+    const group = (start) => ({ start, end: start + spec.actual, actual: spec.actual, normal: spec.normal });
+    const voice = {
+      notes: [
+        ...Array.from({ length: spec.actual }, (_, i) => note(spec.type, i === 0)),
+        ...Array.from({ length: spec.actual }, (_, i) => note(spec.type, i === 1)),
+        note(4), note(4),
+      ], tuplets: [group(0), group(spec.actual)],
+    };
+    const before = JSON.stringify(voice);
+    const printedScore = normalizeTupletNoteValues(scoreOf(voice));
+    const printed = printedScore.measures[0].parts[0].voices[0];
+    assert.equal(JSON.stringify(voice), before, "normalization must not mutate saved scores");
+    assert.equal(printed.notes[0].duration, 4);
+    assert.equal(printed.notes[0].dots, 0);
+    assert.equal(printed.tuplets.length, 1, "off-beat single attacks retain their tuplet");
+    assert.equal(printed.tuplets[0].start, 1);
+    assert.equal(printed.tuplets[0].actual, spec.actual);
+    assert(Math.abs(nestedVoiceQuarters(printed) - 4) < 1e-8);
+    const attacks = (v) => noteStarts(v).filter((_, index) => v.notes[index].notes.length);
+    const originalAttacks = attacks(voice);
+    const printedAttacks = attacks(printed);
+    assert.equal(printedAttacks.length, originalAttacks.length);
+    assert(printedAttacks.every((start, index) => Math.abs(start - originalAttacks[index]) < 1e-8));
+    assert.deepEqual(simplifyQuarterNoteTuplets(printed), printed);
+    const settings = { primaryRhythms: pool([], [spec]), secondaryRhythms: pool(), ornaments: [] };
+    generator.validatePrimaryRequirements(settings, printedScore);
+    const fakeVoice = {
+      notes: Array.from({ length: 4 * spec.actual }, (_, i) => note(spec.type, i % spec.actual === 0)),
+      tuplets: Array.from({ length: 4 }, (_, i) => group(i * spec.actual)),
+    };
+    const fakeScore = scoreOf(fakeVoice);
+    assert.throws(() => generator.validatePrimaryRequirements(settings, fakeScore), /primary rhythm/);
+    assert.throws(() => generator.validatePrimaryRequirements({ ...settings, requirePrimaryRhythms: "any" }, fakeScore), /primary rhythm/);
+    const plainScore = normalizeTupletNoteValues(fakeScore);
+    const plain = plainScore.measures[0].parts[0].voices[0];
+    assert.deepEqual(plain.tuplets, []);
+    assert(plain.notes.every((n) => n.duration === 4 && n.dots === 0));
+    assert.throws(() => generator.validatePrimaryRequirements(settings, plainScore), /primary rhythm/);
+  }
+  const condensed = { notes: [note(4, true, 1)], tuplets: [{ start: 0, end: 1, actual: 3, normal: 2 }] };
+  assert.equal(simplifyQuarterNoteTuplets(condensed).notes[0].duration, 4);
+  assert.equal(simplifyQuarterNoteTuplets(condensed).notes[0].dots, 0);
+  const longer = { notes: [note(4, true), note(4), note(4)], tuplets: [{ start: 0, end: 3, actual: 3, normal: 2 }] };
+  assert.deepEqual(simplifyQuarterNoteTuplets(longer), longer, "a two-beat group is not a quarter note");
+  const nested = { notes: [note(8, true), note(8), note(8), note(16, true), note(16), note(16), note(8), note(8)],
+    tuplets: [{ start: 0, end: 3, actual: 3, normal: 2 }, { start: 3, end: 8, actual: 3, normal: 2 }, { start: 3, end: 6, actual: 3, normal: 2 }] };
+  assert.deepEqual(simplifyQuarterNoteTuplets(nested).tuplets, [
+    { start: 1, end: 6, actual: 3, normal: 2 }, { start: 1, end: 4, actual: 3, normal: 2 },
+  ], "nested groups retain their structure when an earlier group collapses");
 });
 
 test("volume CLI validates selections and separate output destinations before generating", () => {
@@ -697,7 +757,7 @@ function hasPlainQuarterNotes(voice) {
     !voice.tuplets.some((tuplet) => index >= tuplet.start && index < tuplet.end));
 }
 
-test("quarter notes have one short section with stickings, accents, and flams, and appear nowhere else", () => {
+test("quarter notes have their own study and may also replace equivalent one-beat tuplets", () => {
   const pdf = { measuresPerLine: 2, lineSpacing: 130, noteSize: 100 };
   const quarters = createQuarterNoteStudy(pdf);
   assert.deepEqual(quarters.pages.map((page) => page.generationSettings.ornaments), [
@@ -716,8 +776,13 @@ test("quarter notes have one short section with stickings, accents, and flams, a
           assert(voice.notes.every((note) => !note.notes.length || Number(note.duration) === 4), "only quarter notes and rests");
           assert(voice.notes.every((note) => !/[dc]/.test(note.ornaments || "")), "no diddles or cheese");
           assert(hasStickings(voice));
-        } else {
+        } else if (![...page.primaryRhythms.tuplets, ...page.secondaryRhythms.tuplets]
+          .some((tuplet) => Math.abs(tuplet.normal * 4 / tuplet.type - 1) < 1e-8)) {
           assert(!hasPlainQuarterNotes(voice), `${section.title} has a quarter note`);
+        } else {
+          assert(voice.tuplets.every((tuplet) => !isQuarterNoteTuplet(voice, tuplet)));
+          assert(voice.notes.every((note, index) => !note.notes.length || Number(note.duration) >= 4 ||
+            voice.tuplets.some((tuplet) => index >= tuplet.start && index < tuplet.end)));
         }
       }
     }
@@ -780,7 +845,7 @@ test("off-beat tuplets start on the e, +, and a, stepping through the ornaments,
         assert(Math.abs(nestedVoiceQuarters(voice) - 4) < 1e-9);
         assert(hasStickings(voice));
         assert(voice.notes.some((note) => !note.notes.length), `${where}: sparse notes around the tuplet`);
-        assert(!hasPlainQuarterNotes(voice), `${where}: quarter notes appear only on the quarter-note pages`);
+        assert(voice.tuplets.every((tuplet) => !isQuarterNoteTuplet(voice, tuplet)), `${where}: quarter equivalents lose their brackets`);
         const step = getLineExerciseStep(page, exercise);
         const stepRudiments = step.ornaments.filter((id) => ["flams", "diddles", "cheese"].includes(id));
         voice.tuplets.forEach((tuplet) => {

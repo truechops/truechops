@@ -2,6 +2,7 @@ import _ from "lodash";
 import { getEmptyMeasure } from "../../helpers/score";
 import { DEFAULT_TEMPO } from "../../consts/score";
 import { normalizeRhythmProgression, normalizeRhythmIsolation } from "../../lib/book-rhythm-progression";
+import { simplifyQuarterNoteTuplets } from "../../lib/book-tuplet-notation";
 import { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, groupSubsectionPages, normalizeSubsectionPageCount, normalizeOrnamentSegments, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, normalizeRandomOrnaments, normalizeNestedTupletPlan, normalizeExerciseSteps, normalizeOffbeatTupletPlan, normalizePageOrnamentDensity, normalizeOffbeatGroups } from "../../lib/book-structure";
 
 export { normalizeRhythmPool };
@@ -880,6 +881,7 @@ function createOrdinaryRests(quarterUnits, sourceNote) {
 }
 
 function normalizeTupletVoiceNoteValues(voice) {
+  voice = simplifyQuarterNoteTuplets(voice);
   const notes = Array.isArray(voice?.notes) ? voice.notes : [];
   const tuplets = Array.isArray(voice?.tuplets)
     ? voice.tuplets

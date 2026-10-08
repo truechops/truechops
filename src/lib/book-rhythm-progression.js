@@ -20,10 +20,10 @@ const RHYTHM_DENSITIES = [
 const EXERCISES_PER_DENSITY = 44;
 const INTRODUCTORY_EXERCISES = 12;
 const ISOLATED_RHYTHM_DENSITIES = [
-  { id: "low", title: "Low density", range: [0.1, 0.25] },
-  { id: "sparse", title: "Sparse", range: [0.25, 0.45] },
-  { id: "medium", title: "Medium", range: [0.45, 0.65] },
   { id: "dense", title: "Dense", range: [0.65, 0.9] },
+  { id: "medium", title: "Medium", range: [0.45, 0.65] },
+  { id: "sparse", title: "Sparse", range: [0.25, 0.45] },
+  { id: "low", title: "Low density", range: [0.1, 0.25] },
 ];
 
 function normalizeRhythmIsolation(value) {
@@ -72,7 +72,10 @@ function createIsolatedRhythmScore(plan, random) {
   const perMeasure = perBeat * 4;
   const measureCount = rhythm.id === "quarters" ? 2 : 1;
   const total = perMeasure * measureCount;
-  const minimum = Math.max(measureCount, Math.ceil(total * density.range[0]));
+  // Boundary counts belong to the lower-density band. Reserve those patterns
+  // for its later pages, especially the finite two-bar quarter-note vocabulary.
+  const minimum = Math.max(measureCount, density.id === "low"
+    ? Math.ceil(total * density.range[0]) : Math.floor(total * density.range[0]) + 1);
   const maximum = Math.max(minimum, Math.floor(total * density.range[1]));
   const playedCount = minimum + Math.floor(random() * (maximum - minimum + 1));
   const positions = Array.from({ length: total }, (_, index) => index);
