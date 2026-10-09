@@ -2,6 +2,7 @@ import _ from "lodash";
 import { getEmptyMeasure } from "../../helpers/score";
 import { DEFAULT_TEMPO } from "../../consts/score";
 import { normalizeRhythmProgression, normalizeRhythmIsolation } from "../../lib/book-rhythm-progression";
+import { normalizeRhythmCombination } from "../../lib/book-rhythm-combinations";
 import { simplifyQuarterNoteTuplets } from "../../lib/book-tuplet-notation";
 import { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, groupSubsectionPages, normalizeSubsectionPageCount, normalizeOrnamentSegments, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, normalizeRandomOrnaments, normalizeNestedTupletPlan, normalizeExerciseSteps, normalizeOffbeatTupletPlan, normalizePageOrnamentDensity, normalizeOffbeatGroups } from "../../lib/book-structure";
 
@@ -493,6 +494,7 @@ export function normalizePageGenerationSettings(value = {}, fallback = {}) {
     ...(source.rhythmOnly ? { rhythmOnly: true } : {}),
     ...(normalizeRhythmProgression(source.rhythmProgression) ? { rhythmProgression: normalizeRhythmProgression(source.rhythmProgression) } : {}),
     ...(normalizeRhythmIsolation(source.rhythmIsolation) ? { rhythmIsolation: normalizeRhythmIsolation(source.rhythmIsolation) } : {}),
+    ...(normalizeRhythmCombination(source.rhythmCombination) ? { rhythmCombination: normalizeRhythmCombination(source.rhythmCombination) } : {}),
     ...(Number(source.maxPlayedShare) > 0 && source.maxPlayedShare !== null
       ? { maxPlayedShare: Math.min(1, Number(source.maxPlayedShare)) }
       : {}),

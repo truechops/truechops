@@ -12,6 +12,7 @@ const { createStudySections, createSpanStudy, createQuarterNoteStudy, createOffb
 const { getLineStickingSettings, getSpanPrimaryRhythms, getNestedTupletNotation, getNestedTupletVariants, getLineExerciseStep, getLineRandomOrnaments, getLineOffbeatTuplet, getLineOffbeatPair } = require("../../src/lib/book-structure");
 const { BOOK_VOLUMES, createBookVolume, getBookVolume } = require("../../src/lib/book-volumes");
 const { RHYTHM_INCLUSION_ORDER, getRhythmKey, getRhythmProgressionStep, getProgressionSecondaryPool } = require("../../src/lib/book-rhythm-progression");
+const { getRhythmCombinationStep } = require("../../src/lib/book-rhythm-combinations");
 const { isQuarterNoteTuplet, simplifyQuarterNoteTuplets } = require("../../src/lib/book-tuplet-notation");
 
 // Load the same ES modules Next uses without starting a server.
@@ -102,7 +103,7 @@ test("unornamented volumes clear all ornament sources and generate clean basic, 
       }
     }
     const targets = config.sections.filter((section) =>
-      ["rhythm-progression-eighths", "two-quarters-quintuplets", "offbeat-5", "nested-one-quarter-5", "random-subdivisions-one-quarter"].includes(section.id));
+      ["rhythm-combination-01", "rhythm-progression-eighths", "two-quarters-quintuplets", "offbeat-5", "nested-one-quarter-5", "random-subdivisions-one-quarter"].includes(section.id));
     for (const section of targets) {
       for (const voice of generate(section.pages[0], 12)) {
         assert(voice.notes.every((note) => !note.ornaments));
@@ -111,12 +112,12 @@ test("unornamented volumes clear all ornament sources and generate clean basic, 
   }
 });
 
-test("rhythm-only progression follows the requested order, balances exercise counts, and grows by exercise", () => {
+test("Book 3 retains its balanced progression and growing pools", () => {
   const source = savedCurriculum();
   assert.deepEqual(RHYTHM_INCLUSION_ORDER.map((rhythm) => rhythm.id), [
     "quarters", "eighths", "sixteenths", "triplets", "sextuplets", "thirtyseconds", "quintuplets", "septuplets", "nontuplets",
   ]);
-  for (const number of [1, 3]) {
+  for (const number of [3]) {
     const book = normalizeBook(createBookVolume(source, number));
     const sections = book.sections.filter((section) => section.id.startsWith("rhythm-progression-"));
     assert.deepEqual(sections.map((section) => section.id), RHYTHM_INCLUSION_ORDER.slice(1).map((rhythm) => `rhythm-progression-${rhythm.id}`));
@@ -141,7 +142,7 @@ test("rhythm-only progression follows the requested order, balances exercise cou
 });
 
 test("every progression exercise is unique, unmarked, in 4/4, and contains its main and companion rhythm", () => {
-  const config = generator.createGenerationConfig({}, createBookVolume(savedCurriculum(), 1));
+  const config = generator.createGenerationConfig({}, createBookVolume(savedCurriculum(), 3));
   const seen = new Set();
   for (const section of config.sections.filter((section) => section.id.startsWith("rhythm-progression-"))) {
     let exerciseCount = 0;
@@ -171,11 +172,121 @@ test("every progression exercise is unique, unmarked, in 4/4, and contains its m
   assert.equal(seen.size, 1056);
 });
 
+test("Book 1 uses the fourteen exact combination pools in order and preserves them when saved", () => {
+  const book = normalizeBook(createBookVolume(savedCurriculum(), 1));
+  const loaded = normalizeBook(JSON.parse(JSON.stringify(generator.createManifest(book))));
+  const sections = loaded.sections.filter((section) => section.groupId === "rhythm-combinations");
+  const expected = [
+    ["quarters", "eighths"],
+    ["quarters", "eighths", "sixteenths"],
+    ["triplets", "eighths"],
+    ["triplets", "eighths", "sixteenths"],
+    ["sextuplets", "sixteenths", "eighths"],
+    ["sextuplets", "sixteenths", "eighths", "triplets"],
+    ["sextuplets", "sixteenths", "eighths", "triplets", "thirtyseconds"],
+    ["quintuplets", "sixteenths", "eighths"],
+    ["quintuplets", "sixteenths", "triplets", "eighths"],
+    ["quintuplets", "sextuplets", "sixteenths", "triplets", "eighths"],
+    ["quintuplets", "sextuplets", "sixteenths", "triplets", "thirtyseconds"],
+    ["septuplets", "sixteenths", "triplets", "quintuplets"],
+    ["septuplets", "sixteenths", "triplets", "sextuplets", "thirtyseconds", "quintuplets"],
+    ["septuplets", "sixteenths", "triplets", "sextuplets", "thirtyseconds", "quintuplets", "nontuplets"],
+  ];
+  assert.equal(sections.length, 14);
+  const keyOf = (id) => getRhythmKey(RHYTHM_INCLUSION_ORDER.find((rhythm) => rhythm.id === id));
+  const keysOfPool = (value) => [...value.subdivisions, ...value.tuplets.map((tuplet) => `${tuplet.actual}:${tuplet.normal}:${tuplet.type}`)].sort();
+  sections.forEach((section, i) => {
+    assert.equal(section.id, `rhythm-combination-${String(i + 1).padStart(2, "0")}`);
+    const main = i === 0 ? "eighths" : i === 1 ? "sixteenths" : expected[i][0];
+    assert.deepEqual(keysOfPool(section.primaryRhythms), [keyOf(main)]);
+    const companions = expected[i].filter((id) => id !== main).map(keyOf).sort();
+    assert.deepEqual(keysOfPool(section.secondaryRhythms), companions);
+    assert.equal(section.pages.reduce((count, page) => count + page.lines.length, 0), 66);
+    assert.deepEqual([...new Set(section.pages.map((page) => page.generationSettings.rhythmCombination.density))], ["dense", "medium", "sparse"]);
+    assert.equal(new Set(section.pages.map((page) => page.subsectionId)).size, section.pages.length,
+      "each printed page must preserve its own density settings after saving");
+    const ranges = section.pages.map((page) => page.generationSettings.playedShareRamp);
+    assert.deepEqual(ranges[0].start, [0.75, 0.9]);
+    assert.deepEqual(ranges.at(-1).end, [0.15, 0.3]);
+    ranges.forEach((range, index) => {
+      assert.deepEqual(range.start, range.end, "one constant density level within a page");
+      if (index) for (const bound of [0, 1]) {
+        assert(Math.abs(ranges[index - 1].start[bound] - range.start[bound] - 0.6 / (ranges.length - 1)) < 1e-8,
+          "equal density steps between consecutive pages");
+      }
+    });
+    const companionPairs = new Set();
+    for (const page of section.pages) {
+      const plan = page.generationSettings.rhythmCombination;
+      assert.deepEqual(plan.rhythms, expected[i]);
+      assert.equal(plan.main, main);
+      const required = Array.from({ length: 22 }, (_, index) => getRhythmCombinationStep(plan, index).requiredKeys);
+      assert.deepEqual([...new Set(required.flat())].sort(), companions, "every pass covers every listed companion");
+      assert(required.every((keys) => keys.length === (companions.length <= 3 ? companions.length : 2)));
+      page.lines.forEach((_, index) => companionPairs.add(getRhythmCombinationStep(plan, index).requiredKeys.slice().sort().join(",")));
+    }
+    if (companions.length > 3) assert.equal(companionPairs.size, companions.length * (companions.length - 1) / 2,
+      "companion rotation continues across page boundaries");
+  });
+  assert.equal(loaded.pages.length, 106);
+  assert(!loaded.sections.some((section) => section.id.startsWith("rhythm-progression-")));
+});
+
+test("all 924 combination exercises retain their main rhythm, required companions, controlled densities and clean notation", () => {
+  const config = generator.createGenerationConfig({}, normalizeBook(createBookVolume(savedCurriculum(), 1)));
+  const seen = new Set();
+  for (const section of config.sections.filter((section) => section.groupId === "rhythm-combinations")) {
+    const densities = new Map();
+    const pageMeans = [];
+    let exerciseCount = 0;
+    for (const page of section.pages) {
+      const pageCounts = [];
+      for (let index = 0; index < getLinesPerPage(page.pdfSettings); index += 1) {
+        const line = generator.createUniqueGeneratedLine(null, page, page.sampleJson, index, seen);
+        const score = normalizeTupletNoteValues(line.score);
+        const voice = score.measures[0].parts[0].voices[0];
+        const step = getRhythmCombinationStep(page.rhythmCombination, index + page.subsectionLineOffset);
+        generator.validatePrimaryRequirements({ ...page, requiredSecondaryKeys: step.requiredKeys }, score);
+        assert(voice.notes.every((note) => !note.ornaments));
+        assert(voice.tuplets.every((tuplet) => !isQuarterNoteTuplet(voice, tuplet)));
+        assert(Math.abs(nestedVoiceQuarters(voice) - 4) < 1e-8);
+        const counts = densities.get(page.rhythmCombination.density) || [];
+        const played = voice.notes.filter((note) => note.notes.length).length;
+        if (page === section.pages.at(-1)) {
+          const rhythms = RHYTHM_INCLUSION_ORDER.filter((rhythm) => page.rhythmCombination.rhythms.includes(rhythm.id));
+          const perBeat = Math.max(...rhythms.map((rhythm) => rhythm.tuplets?.[0]?.actual ||
+            { quarters: 1, eighths: 2, sixteenths: 4, thirtyseconds: 8 }[rhythm.id]));
+          // The finite quarter/eighth vocabulary needs some three-attack
+          // patterns to provide 22 unique exercises; other groups use <=30%.
+          const ceiling = page.rhythmCombination.main === "eighths" ? 3
+            : Math.max(1 + step.requiredKeys.length, Math.floor(perBeat * 4 * 0.3));
+          assert(played <= ceiling, `${section.title}: the low-density pass must leave space`);
+        }
+        counts.push(played);
+        pageCounts.push(played);
+        densities.set(page.rhythmCombination.density, counts);
+        exerciseCount += 1;
+      }
+      pageMeans.push(pageCounts.reduce((a, b) => a + b) / pageCounts.length);
+    }
+    assert.equal(exerciseCount, 66);
+    const mean = (name) => densities.get(name).reduce((a, b) => a + b) / densities.get(name).length;
+    assert.deepEqual([...densities.keys()], ["dense", "medium", "sparse"]);
+    for (const counts of densities.values()) assert.equal(counts.length, 22);
+    assert(mean("dense") > mean("medium"), `${section.title}: dense must contain more attacks than medium`);
+    assert(mean("medium") > mean("sparse"), `${section.title}: medium must contain more attacks than sparse`);
+    assert(pageMeans.every((value, index) => !index || value < pageMeans[index - 1]),
+      `${section.title}: each page must be sparser than the previous page (${pageMeans.join(", ")})`);
+    assert(pageMeans.at(-1) <= pageMeans[0] * 0.5, `${section.title}: preserve the low-density ending`);
+  }
+  assert.equal(seen.size, 924);
+});
+
 test("Book 1 opens with the isolated ladder from dense to low density, and two-bar quarters", () => {
   const book = normalizeBook(createBookVolume(savedCurriculum(), 1));
   const isolated = book.sections.slice(0, 9);
   assert.deepEqual(isolated.map((section) => section.id), RHYTHM_INCLUSION_ORDER.map((rhythm) => `rhythm-isolation-${rhythm.id}`));
-  assert.equal(book.sections[9].id, "rhythm-progression-eighths");
+  assert.equal(book.sections[9].id, "rhythm-combination-01");
   assert.equal(isolated.reduce((total, section) => total + section.pages.length, 0), 52);
   const config = generator.createGenerationConfig({}, book);
   const seen = new Set();

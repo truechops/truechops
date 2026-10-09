@@ -1,6 +1,7 @@
 const { migrateBookStructure, normalizeRhythmPool } = require("./book-structure");
 const { SPAN_STUDIES } = require("./book-curriculum");
 const { createRhythmProgressionStudies, createIsolatedRhythmStudies, RHYTHM_DENSITIES } = require("./book-rhythm-progression");
+const { createBookOneCombinationStudies } = require("./book-rhythm-combinations");
 
 const BOOK_VOLUMES = [
   { number: 1, slug: "snare-drum-book-1-rhythms", title: "Book 1 - Rhythmic Variations", scope: "basic", ornaments: false },
@@ -128,7 +129,7 @@ function createBookVolume(source, value) {
   if (!volume.ornaments && volume.scope !== "spans") {
     sections = [
       ...(volume.number === 1 ? createIsolatedRhythmStudies(book.pdfSettings) : []),
-      ...createRhythmProgressionStudies(book.pdfSettings),
+      ...(volume.number === 1 ? createBookOneCombinationStudies(book.pdfSettings) : createRhythmProgressionStudies(book.pdfSettings)),
       ...sections.filter((section) => basicCount(section) == null && section.groupId !== "combinations-one-quarter"),
     ];
   }
@@ -138,7 +139,10 @@ function createBookVolume(source, value) {
     book: `${book.book || "true-chops"}-volume-${volume.number}`,
     slug: volume.slug,
     title: volume.title,
-    groups: [...(volume.number === 1 ? [{ id: "isolated-subdivisions", title: "Single-subdivision studies", rhythmSpan: { count: 1, unit: 4 } }] : []),
+    groups: [...(volume.number === 1 ? [
+      { id: "isolated-subdivisions", title: "Single-subdivision studies", rhythmSpan: { count: 1, unit: 4 } },
+      { id: "rhythm-combinations", title: "Combination exercises", rhythmSpan: { count: 1, unit: 4 } },
+    ] : []),
       ...book.groups.filter((group) => usedGroups.has(group.id))].map((group) => ({
       ...group,
       title: !volume.ornaments ? group.title.replace(/ and ornaments/gi, "") : group.title,

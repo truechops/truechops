@@ -4,7 +4,7 @@
 
 | Book | Material |
 | --- | --- |
-| 1 | Subdivision-only studies from quarters through nontuplets, followed by progressive combinations; no stickings or ornaments |
+| 1 | Subdivision-only studies from quarters through nontuplets, followed by 14 fixed combination groups; no stickings or ornaments |
 | 2 | All the other saved tuplet spans and their combinations, with extra rest and density permutations; no ornaments |
 | 3 | The complete beginner-to-advanced curriculum, including crazy, off-beat, nested, combination, and final mixed studies; no ornaments |
 | 4 | Book 1's scope with the current ornament curriculum |
@@ -13,13 +13,38 @@
 
 Books 1–3 have **no stickings or ornaments**, including on primary rhythms, secondary rhythms, nested notes, exercise steps, and page tails. Book 6 retains the saved curriculum and order.
 
-The foundations in books 1 and 3 use this inclusion order: **quarter, eighth, sixteenth, triplet, sextuplet, 32nd, quintuplet, septuplet, nontuplet**. The first combination study mixes quarters and eighths. Each subsequent combination study always includes its main subdivision, and draws companion rhythms only from earlier items in that list.
+The single-subdivision studies in Book 1 and the foundations in Book 3 use this inclusion order: **quarter, eighth, sixteenth, triplet, sextuplet, 32nd, quintuplet, septuplet, nontuplet**.
 
 Book 1 starts with **52 pages devoted solely to individual subdivisions**, all before the combinations. Each subdivision starts with dense (65–90% of positions played) practice, then progresses through medium (45–65%), sparse (25–45%), and low (10–25%) density. Quarters use 44 unique two-bar exercises across four pages, covering all 15 non-silent one-bar quarter patterns. Every other subdivision gets 88 exercises across four pages, or eight roomier pages for sextuplets, 32nds, septuplets, and nontuplets. Only the selected subdivision supplies attack positions; the existing notation rules consolidate rests and note values. Two-bar exercises retain both measures in stored scores, uniqueness checks, validation, and PDF layout.
 
-Every main subdivision in the combination studies gets **132 unique exercises**: 44 sparse, 44 medium, and 44 dense. Each density pass starts with 12 exercises that isolate the earlier rhythms one at a time. From sextuplets onward, these introductions use two small groups instead, so later subdivisions have the same exercise budget. Exercise 13 starts a pool of the first two earlier rhythms; every following exercise adds the next rhythm until all preceding rhythms are available. The remaining exercises draw from the complete earlier pool. Each exercise includes the current companion rhythm as well as the main subdivision.
+Book 1 then has the following **14 combination groups**, in this order. Each gets **66 unique exercises**, with one density level per printed page and progressively lower levels on succeeding pages. The listed pool stays fixed throughout the group; omitted subdivisions are not automatically added from earlier groups.
 
-Density stays within a controlled band for each pass (normally 45–60%, 60–75%, and 75–90% of the available note positions). The quarters/eighths introduction is selected systematically from its finite vocabulary, with separate sparse, medium, and dense sets. Most studies occupy six pages; 32nds and nontuplets use twelve roomier pages with the same 132 exercises. Quarter notes remain available as companions throughout this progression. These definitions live in `src/lib/book-rhythm-progression.js`.
+| Group | Rhythm pool | Main subdivision |
+| --- | --- | --- |
+| 1 | Quarters and eighths | Eighths |
+| 2 | Quarters, eighths and sixteenths | Sixteenths |
+| 3 | Triplets and eighths | Triplets |
+| 4 | Triplets, eighths and sixteenths | Triplets |
+| 5 | Sextuplets, sixteenths and eighths | Sextuplets |
+| 6 | Sextuplets, sixteenths, eighths and triplets | Sextuplets |
+| 7 | Sextuplets, sixteenths, eighths, triplets and 32nds | Sextuplets |
+| 8 | Quintuplets, sixteenths and eighths | Quintuplets |
+| 9 | Quintuplets, sixteenths, triplets and eighths | Quintuplets |
+| 10 | Quintuplets, sextuplets, sixteenths, triplets and eighths | Quintuplets |
+| 11 | Quintuplets, sextuplets, sixteenths, triplets and 32nds | Quintuplets |
+| 12 | Septuplets, sixteenths, triplets and quintuplets | Septuplets |
+| 13 | Septuplets, sixteenths, triplets, sextuplets, 32nds and quintuplets | Septuplets |
+| 14 | Septuplets, sixteenths, triplets, sextuplets, 32nds, quintuplets and nontuplets | Septuplets |
+
+Every measure contains its main subdivision. Groups of up to four rhythms include every listed rhythm in each measure. Larger groups rotate through all companion pairs across successive pages, while remaining beats draw from the full listed pool. This covers every listed family without squeezing five or more beat-long groups into 4/4. Sections containing 32nds or nontuplets use one exercise per row; the others use two. The combination section occupies 54 study pages, giving Book 1 **106 study pages and 1,672 exercises**, before contents pages. These definitions live in `src/lib/book-rhythm-combinations.js`.
+
+Book 3 retains the growing-pool progression. Every main subdivision gets **132 unique exercises**: 44 sparse, 44 medium, and 44 dense. Each density pass starts with 12 exercises that isolate the earlier rhythms one at a time. From sextuplets onward, these introductions use two small groups instead, so later subdivisions have the same exercise budget. Exercise 13 starts a pool of the first two earlier rhythms; every following exercise adds the next rhythm until all preceding rhythms are available. The remaining exercises draw from the complete earlier pool. Each exercise includes the current companion rhythm as well as the main subdivision.
+
+Book 1's combination density decreases in equal steps between physical pages, preserving the **75–90% opening and 15–30% ending**. Three-page sections use 75–90%, 45–60%, then 15–30%. Six-page sections use 75–90%, 63–78%, 51–66%, 39–54%, 27–42%, then 15–30%. Each page holds its target level throughout; it does not taper from top to bottom. Every physical page has its own subsection and saved settings, so reloading cannot combine adjacent levels.
+
+All combination pages reserve recognizable attacks for the required rhythms within the density budget. Using the same allocation at every level avoids an abrupt change in how rhythms are filled on the final page. Tuplet attacks may fall after the start of the group, so a single attack can still establish a genuine tuplet. Each required rhythm remains present, even when that minimum slightly exceeds the density target. The quarters/eighths introduction uses separate sets from its finite vocabulary; its final page already has the sparsest possible 22 unique one-bar combinations (two or three attacks per exercise).
+
+Book 3 retains its 45–60%, 60–75%, and 75–90% density targets. Most foundation studies occupy six pages; 32nds and nontuplets use twelve roomier pages with the same 132 exercises. Quarter notes remain available as companions throughout Book 3's progression. Those definitions live in `src/lib/book-rhythm-progression.js`.
 
 A one-beat tuplet with only its opening attack is written as a plain quarter note, with no tuplet bracket. This applies to triplets and the other one-beat tuplet families. The quarter does not count toward the required tuplet type: each measure must still contain a genuine group of that kind. The shared notation rule preserves attack positions and later tuplet indexes; nested groups and ornaments with extra attacks retain their notation.
 

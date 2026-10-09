@@ -6,6 +6,7 @@ const http = require("http");
 const https = require("https");
 const { isQuarterNoteTuplet, simplifyQuarterNoteTuplets } = require("../src/lib/book-tuplet-notation");
 const { normalizeRhythmProgression, normalizeRhythmIsolation, createIsolatedRhythmScore, getRhythmProgressionStep, getProgressionSecondaryPool, createQuarterEighthScore } = require("../src/lib/book-rhythm-progression");
+const { normalizeRhythmCombination, getRhythmCombinationStep } = require("../src/lib/book-rhythm-combinations");
 const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, getLineStickingSettings, getSpanPrimaryRhythms, normalizeOrnamentSegments, getLineOrnamentSegment, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, getLineSecondaryRhythms, rhythmOrnamentKey, normalizeRandomOrnaments, getLineRandomOrnaments, getNestedTupletNotation, normalizeNestedTupletPlan, getLineNestedTuplet, normalizeExerciseSteps, getLineExerciseStep, OFFBEAT_LABELS, normalizeOffbeatTupletPlan, getLineOffbeatTuplet, normalizePageOrnamentDensity, normalizeOffbeatGroups, getLineOffbeatPair } = require("../src/lib/book-structure");
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
@@ -1595,7 +1596,7 @@ function validatePrimaryRequirements(section, score) {
   }
   const primaryNotes = voice.notes.filter((note, index) => !isRest(note) && noteMatchesRhythmPool(primary, voice, index));
   const secondary = normalizeRhythmPool(section.secondaryRhythms);
-  if (section.rhythmProgression) {
+  if (section.rhythmProgression || section.rhythmCombination) {
     for (const key of section.requiredSecondaryKeys || []) {
       const required = getProgressionSecondaryPool(secondary, { keys: [key] });
       if (!voice.notes.some((note, index) => qualifies(required, note, index))) {
@@ -3517,6 +3518,43 @@ function blockRhythmKey(block) {
   return block.kind === "regular" ? block.id : block.kind === "tuplet" ? rhythmOrnamentKey(block.tuplet) : null;
 }
 
+// Combinations reserve one recognizable attack per required family
+// inside the density budget. An offbeat tuplet attack cannot collapse to a
+// quarter; a regular attack at the end of its beat retains its written value.
+function createCombinationPlayedSlots(layout, blockEvents, requiredKeys, shareRange, random) {
+  const candidates = new Map();
+  let eventStart = 0;
+  let slotStart = 0;
+  for (const [index, block] of layout.entries()) {
+    const key = blockRhythmKey(block);
+    const count = blockEvents[index].length;
+    const indexes = candidates.get(key) || [];
+    if (block.kind === "tuplet") {
+      for (let offset = 1; offset < count; offset += 1) indexes.push(eventStart + offset);
+    } else if (block.kind === "regular" && (slotStart + block.slotCount) % SLOTS_PER_BEAT === 0) {
+      indexes.push(eventStart);
+    }
+    candidates.set(key, indexes);
+    eventStart += count;
+    slotStart += block.slotCount;
+  }
+  const played = new Set();
+  for (const key of new Set(requiredKeys)) {
+    const indexes = candidates.get(key) || [];
+    if (!indexes.length) throw new Error(`Cannot place the required combination rhythm: ${key}`);
+    played.add(indexes[randomInteger(random, 0, indexes.length - 1)]);
+  }
+  const available = blockEvents.flat().flatMap((event, index) => event.forceRest ? [] : [index]);
+  const lower = Math.max(played.size, Math.ceil(available.length * shareRange[0]));
+  const upper = Math.max(lower, Math.floor(available.length * shareRange[1]));
+  const target = randomInteger(random, lower, upper);
+  for (const index of shuffledIndexes(available.length, random)) {
+    if (played.size >= target) break;
+    played.add(available[index]);
+  }
+  return Array.from({ length: eventStart }, (_, index) => played.has(index));
+}
+
 // requiredSecondaryBlocks are placed after the primary groups whenever they fit,
 // with their first notes struck (forcePlay).
 // primaryOffsets maps a primary group to the slots after a beat where it
@@ -3846,7 +3884,7 @@ function createMixedTupletFallbackGeneratedScore(section, options, random, lineI
       shareLimit && countLimit ? Math.min(shareLimit, countLimit) : shareLimit || countLimit,
       random
     );
-  const playedSlots = Array.from({ length: events.length }, () => false);
+  let playedSlots = Array.from({ length: events.length }, () => false);
   playableEventIndexes.forEach((eventIndex, playableIndex) => {
     playedSlots[eventIndex] = playableSlots[playableIndex];
   });
@@ -3886,6 +3924,10 @@ function createMixedTupletFallbackGeneratedScore(section, options, random, lineI
     }
     forcedStart += count;
   });
+  if (section.rhythmCombination && section.playedShareRange) {
+    playedSlots = createCombinationPlayedSlots(layout, blockEvents,
+      [...requiredBlocks.map(blockRhythmKey), ...(section.requiredSecondaryKeys || [])], section.playedShareRange, random);
+  }
   const notes = [];
   const tuplets = [];
   let eventIndex = 0;
@@ -3942,6 +3984,10 @@ function createMixedTupletFallbackGeneratedScore(section, options, random, lineI
 }
 
 function createFallbackGeneratedScore(section, samplePayload, lineIndex, attempt = 0) {
+  const combination = section.rhythmCombination;
+  if (combination?.rhythms.length === 2 && combination.rhythms.includes("quarters") && combination.rhythms.includes("eighths")) {
+    return createQuarterEighthScore(combination.density, lineIndex + (section.subsectionLineOffset || 0));
+  }
   if (section.rhythmProgression?.preceding.length === 1 && section.primaryRhythms?.subdivisions.includes("eighths")) {
     return createQuarterEighthScore(section.rhythmProgression.density, lineIndex + (section.subsectionLineOffset || 0));
   }
@@ -4118,6 +4164,8 @@ function createUniqueGeneratedLine(input, section, samplePayload, index, usedExe
       requiredSecondaryKeys: [progression.requiredKey],
     };
   }
+  const combination = getRhythmCombinationStep(section.rhythmCombination, subsectionIndex);
+  if (combination) section = { ...section, requiredSecondaryKeys: combination.requiredKeys };
   let lastError = null;
   // Pages with secondary rhythms have the variety to stay inside their measure.
   const widthLimit = section.primaryRhythms && rhythmPoolHasRhythms(normalizeRhythmPool(section.secondaryRhythms))
@@ -4306,6 +4354,7 @@ function createGenerationSectionsFromBook(book, globalRules = "") {
         rhythmOnly: Boolean(pageSource.rhythmOnly),
         rhythmProgression: normalizeRhythmProgression(pageSource.rhythmProgression),
         rhythmIsolation: normalizeRhythmIsolation(pageSource.rhythmIsolation),
+        rhythmCombination: normalizeRhythmCombination(pageSource.rhythmCombination),
         title: page.title || `${section.title || `Section ${sectionIndex + 1}`} ${pageIndex + 1}`,
         sectionTitle: section.title || `Section ${sectionIndex + 1}`,
         pageCount: 1,
@@ -4655,6 +4704,7 @@ function createStoredPageGenerationSettings(pageConfig) {
     ...(pageConfig.rhythmOnly ? { rhythmOnly: true } : {}),
     ...(pageConfig.rhythmProgression ? { rhythmProgression: pageConfig.rhythmProgression } : {}),
     ...(pageConfig.rhythmIsolation ? { rhythmIsolation: pageConfig.rhythmIsolation } : {}),
+    ...(pageConfig.rhythmCombination ? { rhythmCombination: pageConfig.rhythmCombination } : {}),
     primaryRhythms: pageConfig.primaryRhythms,
     secondaryRhythms: pageConfig.secondaryRhythms,
     prompt: pageConfig.prompt || "",
