@@ -13,7 +13,7 @@ const { getLineStickingSettings, getSpanPrimaryRhythms, getNestedTupletNotation,
 const { BOOK_VOLUMES, createBookVolume, getBookVolume } = require("../../src/lib/book-volumes");
 const { RHYTHM_INCLUSION_ORDER, getRhythmKey, getRhythmProgressionStep, getProgressionSecondaryPool } = require("../../src/lib/book-rhythm-progression");
 const { getRhythmCombinationStep } = require("../../src/lib/book-rhythm-combinations");
-const { isQuarterNoteTuplet, simplifyQuarterNoteTuplets } = require("../../src/lib/book-tuplet-notation");
+const { isQuarterNoteTuplet, simplifyQuarterNoteTuplets, isOrdinaryNoteTuplet, simplifyOrdinaryNoteTuplets, mergeTupletNoteRests } = require("../../src/lib/book-tuplet-notation");
 
 // Load the same ES modules Next uses without starting a server.
 const originalLoader = Module._extensions[".js"];
@@ -248,7 +248,11 @@ test("all 924 combination exercises retain their main rhythm, required companion
         const step = getRhythmCombinationStep(page.rhythmCombination, index + page.subsectionLineOffset);
         generator.validatePrimaryRequirements({ ...page, requiredSecondaryKeys: step.requiredKeys }, score);
         assert(voice.notes.every((note) => !note.ornaments));
-        assert(voice.tuplets.every((tuplet) => !isQuarterNoteTuplet(voice, tuplet)));
+        assert(voice.tuplets.every((tuplet) => !isOrdinaryNoteTuplet(voice, tuplet)));
+        for (const tuplet of voice.tuplets) {
+          const notes = voice.notes.slice(tuplet.start, tuplet.end);
+          assert.deepEqual(mergeTupletNoteRests(notes), notes, "printed tuplets use their largest available values");
+        }
         assert(Math.abs(nestedVoiceQuarters(voice) - 4) < 1e-8);
         const counts = densities.get(page.rhythmCombination.density) || [];
         const played = voice.notes.filter((note) => note.notes.length).length;
@@ -313,7 +317,7 @@ test("Book 1 opens with the isolated ladder from dense to low density, and two-b
           const voice = measure.parts[0].voices[0];
           assert(Math.abs(nestedVoiceQuarters(voice) - 4) < 1e-8);
           assert(voice.notes.every((note) => !note.ornaments));
-          assert(voice.tuplets.every((tuplet) => !isQuarterNoteTuplet(voice, tuplet)), "quarter equivalents must lose their tuplet brackets");
+          assert(voice.tuplets.every((tuplet) => !isOrdinaryNoteTuplet(voice, tuplet)), "ordinary equivalents must lose their tuplet brackets");
           const starts = noteStarts(voice);
           const attacks = voice.notes.flatMap((note, i) => note.notes.length ? [starts[i]] : []);
           assert(attacks.length > 0);
@@ -396,6 +400,60 @@ test("beat-long tuplets with only the opening attack print as quarters and canno
   assert.deepEqual(simplifyQuarterNoteTuplets(nested).tuplets, [
     { start: 1, end: 6, actual: 3, normal: 2 }, { start: 1, end: 4, actual: 3, normal: 2 },
   ], "nested groups retain their structure when an earlier group collapses");
+});
+
+test("equivalent sextuplets print as eighths and nontuplets use dotted and longer values without moving attacks", () => {
+  const note = (duration, played = false, dots = 0) => ({ duration, dots, notes: played ? ["C5"] : [], velocity: 0.5 });
+  const scoreOf = (voice) => ({ parts: { snare: { enabled: true } }, measures: [{
+    timeSig: { num: 4, type: 4 }, parts: [{ instrument: "snare", voices: [voice] }],
+  }] });
+  const eighths = [note(16, true), note(8), note(16, true), note(8)];
+  const nontuplet = [note(32), note(16, true), note(32), note(32, true), note(8)];
+  const genuine = Array.from({ length: 6 }, (_, i) => note(16, [0, 1, 5].includes(i)));
+  const voice = { notes: [...eighths, ...nontuplet, ...genuine, note(4)], tuplets: [
+    { start: 0, end: 4, actual: 6, normal: 4 },
+    { start: 4, end: 9, actual: 9, normal: 8 },
+    { start: 9, end: 15, actual: 6, normal: 4 },
+  ] };
+  const before = JSON.stringify(voice);
+  const printed = normalizeTupletNoteValues(scoreOf(voice));
+  const result = printed.measures[0].parts[0].voices[0];
+  assert.equal(JSON.stringify(voice), before);
+  assert.deepEqual(result.notes.slice(0, 2), [note(8, true), note(8, true)]);
+  assert.deepEqual(result.notes.slice(2, 6), [note(32), note(16, true, 1), note(8, true), note(32)]);
+  assert.deepEqual(result.tuplets, [
+    { start: 2, end: 6, actual: 9, normal: 8 },
+    { start: 6, end: 9, actual: 6, normal: 4 },
+  ]);
+  assert(Math.abs(nestedVoiceQuarters(result) - 4) < 1e-8);
+  const attacks = (v) => noteStarts(v).filter((_, i) => v.notes[i].notes.length);
+  const previousAttacks = attacks(voice);
+  assert.equal(attacks(result).length, previousAttacks.length);
+  assert(attacks(result).every((position, i) => Math.abs(position - previousAttacks[i]) < 1e-8));
+  assert.deepEqual(normalizeTupletNoteValues(printed), printed);
+  assert.deepEqual(simplifyOrdinaryNoteTuplets(result), result);
+  const required = { primaryRhythms: pool([], [{ actual: 6, normal: 4, type: 16 }]),
+    secondaryRhythms: pool([], [{ actual: 9, normal: 8, type: 32 }]), ornaments: [] };
+  generator.validatePrimaryRequirements(required, printed);
+
+  const fake = { notes: [...eighths, ...eighths, ...eighths, ...eighths],
+    tuplets: Array.from({ length: 4 }, (_, i) => ({ start: i * 4, end: i * 4 + 4, actual: 6, normal: 4 })) };
+  assert(fake.tuplets.every((tuplet) => isOrdinaryNoteTuplet(fake, tuplet)));
+  assert.throws(() => generator.validatePrimaryRequirements(required, scoreOf(fake)), /primary rhythm/);
+  assert.throws(() => generator.validatePrimaryRequirements(required, normalizeTupletNoteValues(scoreOf(fake))), /primary rhythm/);
+  const secondaryRequired = { ...required, primaryRhythms: pool(["eighths"]),
+    secondaryRhythms: required.primaryRhythms, rhythmCombination: {}, requiredSecondaryKeys: ["6:4:16"] };
+  assert.throws(() => generator.validatePrimaryRequirements(secondaryRequired,
+    normalizeTupletNoteValues(scoreOf(fake))), /companion subdivision/);
+
+  const offbeat = { notes: Array.from({ length: 6 }, (_, i) => note(16, [1, 4].includes(i))),
+    tuplets: [{ start: 0, end: 6, actual: 6, normal: 4 }] };
+  assert.deepEqual(simplifyOrdinaryNoteTuplets(offbeat), offbeat, "off-grid sextuplet attacks keep their ratio");
+  const accented = { notes: eighths.map((n) => n.notes.length ? { ...n, ornaments: "af" } : n), tuplets: [fake.tuplets[0]] };
+  assert(simplifyOrdinaryNoteTuplets(accented).notes.every((n) => n.ornaments === "af"));
+  const diddled = { notes: eighths.map((n) => n.notes.length ? { ...n, ornaments: "d" } : n), tuplets: [fake.tuplets[0]] };
+  assert.deepEqual(simplifyOrdinaryNoteTuplets(diddled), diddled, "extra attacks preserve their tuplet timing");
+  assert.deepEqual(mergeTupletNoteRests(diddled.notes), diddled.notes);
 });
 
 test("volume CLI validates selections and separate output destinations before generating", () => {

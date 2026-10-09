@@ -3,7 +3,7 @@ import { getEmptyMeasure } from "../../helpers/score";
 import { DEFAULT_TEMPO } from "../../consts/score";
 import { normalizeRhythmProgression, normalizeRhythmIsolation } from "../../lib/book-rhythm-progression";
 import { normalizeRhythmCombination } from "../../lib/book-rhythm-combinations";
-import { simplifyQuarterNoteTuplets } from "../../lib/book-tuplet-notation";
+import { simplifyOrdinaryNoteTuplets, mergeTupletNoteRests } from "../../lib/book-tuplet-notation";
 import { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, groupSubsectionPages, normalizeSubsectionPageCount, normalizeOrnamentSegments, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, normalizeRandomOrnaments, normalizeNestedTupletPlan, normalizeExerciseSteps, normalizeOffbeatTupletPlan, normalizePageOrnamentDensity, normalizeOffbeatGroups } from "../../lib/book-structure";
 
 export { normalizeRhythmPool };
@@ -803,40 +803,6 @@ export function createContinuousPageScore(pageLines = []) {
   };
 }
 
-function isUndottedSixteenth(note) {
-  return Number(note?.duration) === 16 && Number(note?.dots || 0) === 0;
-}
-
-function combineTupletSixteenthNoteRests(notes) {
-  const combined = [];
-
-  for (let index = 0; index < notes.length; index += 1) {
-    const note = notes[index];
-    const nextNote = notes[index + 1];
-    const isPlayedNote = Array.isArray(note?.notes) && note.notes.length > 0;
-    const isFollowingRest = Array.isArray(nextNote?.notes) && nextNote.notes.length === 0;
-
-    if (
-      isPlayedNote &&
-      isFollowingRest &&
-      isUndottedSixteenth(note) &&
-      isUndottedSixteenth(nextNote)
-    ) {
-      combined.push({
-        ...note,
-        duration: 8,
-        dots: 0,
-      });
-      index += 1;
-      continue;
-    }
-
-    combined.push({ ...note });
-  }
-
-  return combined;
-}
-
 const ORDINARY_REST_VALUES = [
   { duration: 1, dots: 0, quarterUnits: 4 },
   { duration: 2, dots: 1, quarterUnits: 3 },
@@ -883,7 +849,7 @@ function createOrdinaryRests(quarterUnits, sourceNote) {
 }
 
 function normalizeTupletVoiceNoteValues(voice) {
-  voice = simplifyQuarterNoteTuplets(voice);
+  voice = simplifyOrdinaryNoteTuplets(voice);
   const notes = Array.isArray(voice?.notes) ? voice.notes : [];
   const tuplets = Array.isArray(voice?.tuplets)
     ? voice.tuplets
@@ -941,7 +907,7 @@ function normalizeTupletVoiceNoteValues(voice) {
 
     const tupletStart = nextNotes.length;
     nextNotes.push(
-      ...combineTupletSixteenthNoteRests(tupletNotes)
+      ...mergeTupletNoteRests(tupletNotes)
     );
     nextTuplets.push({
       ...tuplet,

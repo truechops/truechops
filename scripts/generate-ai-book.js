@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const http = require("http");
 const https = require("https");
-const { isQuarterNoteTuplet, simplifyQuarterNoteTuplets } = require("../src/lib/book-tuplet-notation");
+const { isOrdinaryNoteTuplet, simplifyOrdinaryNoteTuplets, mergeTupletNoteRests } = require("../src/lib/book-tuplet-notation");
 const { normalizeRhythmProgression, normalizeRhythmIsolation, createIsolatedRhythmScore, getRhythmProgressionStep, getProgressionSecondaryPool, createQuarterEighthScore } = require("../src/lib/book-rhythm-progression");
 const { normalizeRhythmCombination, getRhythmCombinationStep } = require("../src/lib/book-rhythm-combinations");
 const { BOOK_STRUCTURE_VERSION, migrateBookStructure, normalizeRhythmPool, createStructureTableOfContents, normalizeRhythmSpan, normalizeStickingTail, getLineStickingSettings, getSpanPrimaryRhythms, normalizeOrnamentSegments, getLineOrnamentSegment, normalizeSecondaryRhythmRows, normalizeSecondaryRhythmPhases, getLineSecondaryRhythms, rhythmOrnamentKey, normalizeRandomOrnaments, getLineRandomOrnaments, getNestedTupletNotation, normalizeNestedTupletPlan, getLineNestedTuplet, normalizeExerciseSteps, getLineExerciseStep, OFFBEAT_LABELS, normalizeOffbeatTupletPlan, getLineOffbeatTuplet, normalizePageOrnamentDensity, normalizeOffbeatGroups, getLineOffbeatPair } = require("../src/lib/book-structure");
@@ -852,23 +852,6 @@ function preferLongerValuesInGroup(notes, maxNoteSlots = 0) {
   return simplified;
 }
 
-// In 32nd-note tuplets, a 32nd note followed by a 32nd rest reads as one sixteenth.
-function mergeThirtySecondNoteRests(notes) {
-  const merged = [];
-  for (let index = 0; index < notes.length; index += 1) {
-    const note = notes[index];
-    const next = notes[index + 1];
-    const plainThirtySecond = (candidate) => Number(candidate?.duration) === 32 && !Number(candidate?.dots || 0);
-    if (!isRest(note) && plainThirtySecond(note) && next && isRest(next) && plainThirtySecond(next)) {
-      merged.push({ ...note, duration: 16 });
-      index += 1;
-      continue;
-    }
-    merged.push({ ...note });
-  }
-  return merged;
-}
-
 function mergeRestRuns(notes) {
   const merged = [];
   let index = 0;
@@ -931,12 +914,11 @@ function preferLongerValues(notes, options = {}) {
   return groupSlots ? mergeBeatRests(simplified, startSlot) : simplified;
 }
 
-function preferLongerValuesInTupletVoice(voice, configuredTuplets = [], longerValueOptions = getPreferLongerValueOptions()) {
+function preferLongerValuesInTupletVoice(voice, longerValueOptions = getPreferLongerValueOptions()) {
   const notes = Array.isArray(voice && voice.notes) ? voice.notes : [];
   // Hosts sort before the groups nested inside them.
   const tuplets = normalizeVoiceTuplets(voice && voice.tuplets, notes)
     .sort((left, right) => left.start - right.start || (right.end - right.start) - (left.end - left.start));
-  const normalizedConfiguredTuplets = normalizeTupletConfigs(configuredTuplets);
 
   if (!tuplets.length) {
     return {
@@ -1005,24 +987,9 @@ function preferLongerValuesInTupletVoice(voice, configuredTuplets = [], longerVa
     }
 
     const tupletStart = nextNotes.length;
-    const configuredTuplet = normalizedConfiguredTuplets.find((candidate) =>
-      Number(candidate.actual) === Number(tuplet.actual) &&
-      Number(candidate.normal) === Number(tuplet.normal) &&
-      Math.abs(candidate.type - getVoiceTupletType(voice, tuplet)) < 0.001
-    );
-    const preserveConfiguredSubdivision = Number(configuredTuplet?.type) >= 16;
-
-    // Eighth-note tuplets may use longer equivalent values for readability,
-    // but sixteenth-note and faster tuplets keep their configured note type on
-    // played notes so an unselected regular subdivision never appears in the
-    // group. Their consecutive rests still merge into the largest rest.
-    nextNotes.push(
-      ...(preserveConfiguredSubdivision
-        ? mergeRestRuns(Number(configuredTuplet?.type) === 32
-          ? mergeThirtySecondNoteRests(tupletNotes)
-          : tupletNotes.map((note) => ({ ...note })))
-        : preferLongerValues(tupletNotes))
-    );
+    // The ratio defines the subdivision; longer written values preserve its
+    // attack grid and make rests after notes easier to read.
+    nextNotes.push(...mergeTupletNoteRests(tupletNotes));
     const tupletEnd = nextNotes.length;
 
     if (tupletEnd > tupletStart) {
@@ -1584,7 +1551,7 @@ function validatePrimaryRequirements(section, score) {
     ...primary.tuplets.map((tuplet) => ({ subdivisions: [], tuplets: [tuplet] })),
   ];
   const qualifies = (pool, note, index) => !isRest(note) && noteMatchesRhythmPool(pool, voice, index) &&
-    !isQuarterNoteTuplet(voice, getTupletForNote(voice.tuplets, index));
+    !isOrdinaryNoteTuplet(voice, getTupletForNote(voice.tuplets, index));
   if (section.requirePrimaryRhythms === "any" &&
     !voice.notes.some((note, index) => qualifies(primary, note, index))) {
     throw new Error("Every exercise must contain at least one primary rhythm as played notes.");
@@ -1607,10 +1574,13 @@ function validatePrimaryRequirements(section, score) {
   const subdivisions = [...getGenerationSubdivisions(section), ...(section.fillerSubdivisions || [])];
   const allowsQuarterEquivalent = [...primary.tuplets, ...secondary.tuplets]
     .some((tuplet) => Math.abs(tuplet.normal * 4 / tuplet.type - 1) < 1e-8);
+  const allowsEighthEquivalent = [...primary.tuplets, ...secondary.tuplets]
+    .some((tuplet) => Number(tuplet.actual) === 6 && Number(tuplet.normal) === 4 && Number(tuplet.type) === 16);
   for (const [index, note] of voice.notes.entries()) {
     if (isRest(note)) continue;
     const inTuplet = getTupletForNote(voice.tuplets, index);
     if (!inTuplet && allowsQuarterEquivalent && Number(note.duration) === 4 && !Number(note.dots || 0)) continue;
+    if (!inTuplet && allowsEighthEquivalent && Number(note.duration) === 8 && !Number(note.dots || 0)) continue;
     if (inTuplet ? !noteMatchesRhythmPool(primary, voice, index) && !noteMatchesRhythmPool(secondary, voice, index)
       : !subdivisions.length || Number(note.duration) > getMaxSubdivisionDuration(subdivisions)) {
       throw new Error("Exercise contains a rhythm outside the selected pools.");
@@ -3210,7 +3180,7 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
             ? preferLongerValuesInTupletVoice({
                 ...voice,
                 notes: cleanedNotes,
-              }, configuredTuplets, getPreferLongerValueOptions(sectionAllowsQuarterNotes(section)))
+              }, getPreferLongerValueOptions(sectionAllowsQuarterNotes(section)))
             : {
                 notes: preferLongerValues(cleanedNotes, getPreferLongerValueOptions(sectionAllowsQuarterNotes(section))),
                 tuplets: [],
@@ -3248,7 +3218,7 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
             ? preferLongerValuesInTupletVoice({
                 ...notationVoice,
                 notes: cappedNotes,
-              }, configuredTuplets, getPreferLongerValueOptions(sectionAllowsQuarterNotes(section)))
+              }, getPreferLongerValueOptions(sectionAllowsQuarterNotes(section)))
             : {
                 notes: preferLongerValues(cappedNotes, getPreferLongerValueOptions(sectionAllowsQuarterNotes(section))),
                 tuplets: [],
@@ -3312,7 +3282,7 @@ function finalizeGeneratedScore(section, score, lineIndex = 0, generationSalt = 
             }
           );
 
-          return simplifyQuarterNoteTuplets(applyRhythmPoolOrnaments(section, {
+          return simplifyOrdinaryNoteTuplets(applyRhythmPoolOrnaments(section, {
             ...voice,
             tuplets: finalNotationVoice.tuplets,
             notes: stickingNotes,
@@ -4476,6 +4446,7 @@ function createAiPrompt(config, section, samplePayload, count, offset, linesPerP
       : "Do not use tuplets. Each generated voice should have an empty tuplets array.",
     "Never create a tuplet group whose notes are all rests. Replace the entire group with the simplest duration-equivalent ordinary rest or rests and omit that tuplet entry.",
     "A quarter-note-long tuplet with only its opening attack becomes a plain quarter note, even if quarters are not in the selected pool. It cannot satisfy a required tuplet; keep a genuine group of each required kind in every measure.",
+    "A beat-long sextuplet played only on the beat and its midpoint is written as ordinary eighth notes and cannot satisfy a required sextuplet. Use the longest available note values inside tuplets: a sixteenth plus a following thirty-second rest becomes a dotted sixteenth. Preserve attack times and group boundaries.",
     getSectionPlayEveryNote(section)
       ? "Use no rests. Play every rhythmic position in the measure, including every note inside tuplets."
       : "Randomize played notes and rests across the whole measure. Do not favor beat four or any other beat.",
