@@ -60,6 +60,10 @@ export function update(toneJsData, repeat, startStop) {
 
 }
 
+export function clearPlayback() {
+  if (part) { part.dispose(); part = null; }
+}
+
 export async function start() {
   await Tone.start();
   Tone.Transport.start();

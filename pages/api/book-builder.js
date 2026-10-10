@@ -36,6 +36,7 @@ import {
   normalizePdfSettings,
 } from "../../src/components/book-builder/book-data";
 import { getBookPageQrUrl } from "../../src/lib/book-qr";
+import { getSessionUser } from "../../src/lib/auth/session";
 import { drawBookTableOfContents } from "../../src/lib/book-toc";
 
 const BOOK_ROOT = path.join(process.cwd(), "data", "book-builder", BOOK_SLUG);
@@ -981,6 +982,17 @@ async function renderFullBookPdf(book) {
 
 export default async function handler(req, res) {
   try {
+    // The public QR flow reads one token-addressed page. The authoring API must
+    // not expose entire books (and verification answers) on a production site.
+    if (process.env.NODE_ENV === "production") {
+      const authors = (process.env.BOOK_BUILDER_USER_IDS || "").split(",").map((id) => id.trim()).filter(Boolean);
+      const user = getSessionUser(req);
+      if (!user?.id || !authors.includes(user.id)) {
+        setNoStoreHeaders(res);
+        res.status(403).json({ error: "Book author access required." });
+        return;
+      }
+    }
     if (req.method === "GET") {
       if (req.query.format === "pdf" && req.query.sample) {
         const { pdf, cacheStatus } = await renderSamplePdf(req.query.sample);

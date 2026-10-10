@@ -32,7 +32,13 @@ export default async function handler(req, res) {
 
     res.status(200).json({
       pageRef: resolved.pageRef,
-      page: resolved.page,
+      bookTitle: resolved.bookTitle,
+      page: {
+        pageNumber: resolved.page.pageNumber,
+        title: resolved.page.title,
+        sectionTitle: resolved.page.sectionTitle,
+        lines: resolved.page.lines.map(({ lineNumber, score, tempo }) => ({ lineNumber, score, tempo })),
+      },
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

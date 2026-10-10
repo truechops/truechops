@@ -73,13 +73,14 @@ function verifySignedToken(token) {
     return null;
   }
 
-  const [body, signature] = token.split(".");
-  if (!body || !signature || !safeEqual(signature, sign(body))) {
+  const [body, signature, extra] = token.split(".");
+  if (!body || !signature || extra || !safeEqual(signature, sign(body))) {
     return null;
   }
 
-  const payload = JSON.parse(fromBase64Url(body));
-  if (payload.expiresAt && payload.expiresAt < Date.now()) {
+  let payload;
+  try { payload = JSON.parse(fromBase64Url(body)); } catch { return null; }
+  if (!payload || typeof payload !== "object" || !Number.isFinite(payload.expiresAt) || payload.expiresAt <= Date.now()) {
     return null;
   }
 
@@ -158,6 +159,19 @@ export function getSessionUser(req) {
   const cookies = parseCookies(req);
   const payload = verifySignedToken(cookies[SESSION_COOKIE]);
   return payload?.user || null;
+}
+
+// Only the QR entry route issues this short-lived, page-specific capability.
+// Saved practice sets never contain it. A URL visit cannot prove a camera scan.
+export function createBookScanCookie(token) {
+  return serializeCookie("tc_book_scan", createSignedToken({
+    purpose: "book-practice", token, expiresAt: Date.now() + 2 * 60 * 60 * 1000,
+  }), { maxAge: 2 * 60 * 60 });
+}
+
+export function hasBookScan(req, token) {
+  const payload = verifySignedToken(parseCookies(req).tc_book_scan);
+  return Boolean(token && payload?.purpose === "book-practice" && payload.token === token);
 }
 
 export function createOAuthCookies(state, returnTo) {

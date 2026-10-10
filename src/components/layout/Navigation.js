@@ -105,6 +105,9 @@ export default function Navigation() {
             </>
           )}
           <Divider />
+          <ListItem onClick={navigationHandler.bind(null, "/account/books")} button key="Books">
+            <ListItemText primary="My Books & Saved Practice" />
+          </ListItem>
           <ListItem
             onClick={navigationHandler.bind(null, "/about")}
             button

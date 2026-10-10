@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { scoreActions } from "../../store/score";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import { useLazyQuery, useReactiveVar } from "@apollo/client";
 import { GET_ALL_USER_SAVED_RHYTHMS_QUERY } from "../../consts/gql/graphql";
 import { userRhythmsVar } from "../../graphql/cache";
@@ -101,6 +102,7 @@ export default function Main() {
       <section style={{ 
         textAlign: "center"
        }}>
+        <p><Link href="/account/books">My books &amp; saved book practice</Link></p>
         {userRhythms.length > 0 && (
           <List>
             {userRhythms.map((rhythm, rhythmIndex) => (

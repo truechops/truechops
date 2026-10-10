@@ -1,7 +1,7 @@
 import dynamic from "next/dynamic";
 
 const DynamicPracticePage = dynamic(
-  () => import("../src/components/book-builder/PagePractice"),
+  () => import("../src/components/book-builder/BookPractice"),
   { ssr: false }
 );
 

@@ -171,9 +171,29 @@ export async function findStoredBookQrPage(token, { includeScores = false } = {}
     const resolved = findBookQrPage(book, token);
     if (!resolved) continue;
     if (!includeScores) return { pageRef: resolved.pageRef };
-    return findBookQrPage(await loadBook({ volume: definition?.number, pageNumbers: [resolved.pageRef.page] }), token);
+    const loaded = await loadBook({ volume: definition?.number, pageNumbers: [resolved.pageRef.page] });
+    return { ...findBookQrPage(loaded, token), bookTitle: loaded.title };
   }
   return null;
+}
+
+// Resolve a catalog identity, never a caller-supplied filesystem path.
+export async function loadPracticeBook(bookKey, pageNumbers = []) {
+  for (const definition of [null, ...BOOK_VOLUMES]) {
+    const root = definition ? path.join(process.cwd(), "data", "book-builder", definition.slug) : BOOK_ROOT;
+    const manifest = await readJson(path.join(root, "qr-index.json")) || await readJson(path.join(root, "book.json"));
+    if (manifest?.book === bookKey) return loadBook({ volume: definition?.number, pageNumbers });
+  }
+  return null;
+}
+
+export async function getPracticeBookCatalog() {
+  const entries = await Promise.all(BOOK_VOLUMES.map(async (definition) => {
+    const root = path.join(process.cwd(), "data", "book-builder", definition.slug);
+    const manifest = await readJson(path.join(root, "qr-index.json")) || await readJson(path.join(root, "book.json"));
+    return manifest ? { book: manifest.book, edition: manifest.edition, title: definition.title } : null;
+  }));
+  return entries.filter(Boolean);
 }
 
 export async function saveBook(rawBook) {

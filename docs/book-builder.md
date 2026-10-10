@@ -204,9 +204,27 @@ The book ends with one three-page section per span category (`createFinalStudies
 The same generator makes new exercises on the website from an **exercise configuration**: subdivision, the span it is spread over, secondary rhythms, density (every note or sparse, with an optional share of fully played groups), ornaments, and tempo (`src/lib/exercise-config.js`).
 
 - **Composer:** the **Generate** tab picks a configuration (edit it with **Edit settings**) and **Add measure** appends one generated measure to the score.
-- **Book QR pages:** besides **Choose rhythms**, the **Generate exercises** tab lists the page's own configuration and your saved ones. Edit one, save it, and build a score of 1–16 measures.
+- **Book QR pages:** **Page rhythms** keeps the printed exercises on a dedicated practice page, with selection, playback, tempo, looping, metronome, sticking/ornament buttons, and restore. **More like this** creates 1–32 exercises using the saved page's complete rules, including two-bar phrases, density ramps, and ordered tuplet plans. Add the whole batch to the practice page (up to 64 rhythms).
 - Saved configurations belong to the signed-in user (`exerciseConfigs` in MongoDB, `/api/exercise-configs`); signed-out visitors keep them in the browser. `/api/exercise-generator` returns the measures.
 
 Regenerate the working book's exercises with `npm run book:generate:ai -- --no-local-ai`. To regenerate its exercises and export its PDF, use `npm run pdf:book -- --volume current`. To export its existing exercises without regeneration, use `npm run pdf:book:render`. Use `npm run pdf:book` for the six-volume collection described above.
 
 Run the migration, generation, and API regression checks with `npm run test:book`.
+
+## Book accounts and purchase verification
+
+`/account/books` contains book verification and saved practice sets. Google sign-in uses the existing signed account session. To verify an edition, the user chooses the notation at three random locations on three distinct printed study pages. Each question has four distinct notation choices, identified by opaque random IDs. Use the printed page number beside the QR code, not the PDF viewer's page index; rhythm numbers count exercises from the top, left to right (a two-bar phrase is one exercise).
+
+Verification answers stay on the server. Checks expire in 10 minutes, are consumed atomically on submission, and are bound to the account, book, edition, and content version. All three answers must match. Each account can start five checks per hour across all books. Successful verification persists for that book edition in `bookOwnership`; it does not unlock the other volumes. This establishes access to the book's contents, not an independently confirmed payment transaction.
+
+Only verified accounts can call `/api/book-practice/generate`. It loads the page recipe from the published book on the server and accepts only a QR token and count, never a client-supplied recipe. Generation is limited to six batches per minute per account. The generic composer generator remains separate and rejects book-page references. The public page endpoint returns only notation and display information, not generation settings.
+
+Visiting `/q/[token]` issues a signed, HttpOnly, SameSite cookie valid for two hours and for that page only. Saved sets contain notation and tempo, with no generation settings or QR capability, and open in practice-only mode. The user must return through the printed QR route to start another generation session. A website cannot distinguish scanning a static QR from opening a copied or bookmarked QR URL; the account entitlement remains mandatory in either case.
+
+`/api/book-practice/sets` stores up to 100 sets per account in `bookPracticeSets`. Reads, saves, and deletes use the signed session's user ID. Saving validates notation, measure timing, and size, and whitelists stored fields. `bookVerificationChallenges` and `bookPracticeLimits` use expiry indexes created on first access. API responses are private and uncached; cross-origin mutations are rejected.
+
+Deployment requires the existing Google OAuth settings, `AUTH_SECRET`, and `MONGODB_URI`/`MONGODB_DB`, plus the generated `data/book-builder/` manifests and score files for the published editions. Keep those editions consistent with the printed PDFs. In production, `/api/book-builder` is restricted to account IDs listed in the comma-separated `BOOK_BUILDER_USER_IDS` environment variable; an empty list denies author access. Local development and the filesystem-based generation/PDF scripts continue to work as before. MongoDB must allow the application to create the two TTL indexes.
+
+Run the practice access, verification, account isolation, notation, and generation checks with `npm run test:book-practice`.
+
+With a local server and published Book 2 data available, run `node scripts/tests/book-practice.browser.js http://127.0.0.1:3102` for desktop/mobile UI checks. It exercises real QR delivery and playback, and intercepts account API responses with test fixtures for verification, generation, saving, and reopening; it does not contact production accounts or MongoDB.
