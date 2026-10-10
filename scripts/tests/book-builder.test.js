@@ -13,6 +13,7 @@ const { getLineStickingSettings, getSpanPrimaryRhythms, getNestedTupletNotation,
 const { BOOK_VOLUMES, createBookVolume, getBookVolume } = require("../../src/lib/book-volumes");
 const { RHYTHM_INCLUSION_ORDER, getRhythmKey, getRhythmProgressionStep, getProgressionSecondaryPool } = require("../../src/lib/book-rhythm-progression");
 const { getRhythmCombinationStep } = require("../../src/lib/book-rhythm-combinations");
+const { SPAN_COMPANION_ORDER, getSpanStudyPhase, getSpanStudyPrimaryPool, getSpanStudyCompanionKeys, getSpanStudySecondaryPool } = require("../../src/lib/book-span-rhythm-studies");
 const { isQuarterNoteTuplet, simplifyQuarterNoteTuplets, isOrdinaryNoteTuplet, simplifyOrdinaryNoteTuplets, mergeTupletNoteRests } = require("../../src/lib/book-tuplet-notation");
 
 // Load the same ES modules Next uses without starting a server.
@@ -71,7 +72,7 @@ test("basic volumes progress from quarters through nontuplets; span volumes excl
       for (const section of book.sections.filter((section) => section.groupId === study.groupId)) {
         const previous = source.sections.find((candidate) => candidate.id === section.id);
         const exercises = (pages) => pages.reduce((count, page) => count + 11 * page.pdfSettings.measuresPerLine, 0);
-        assert.equal(exercises(section.pages) - exercises(previous.pages), 44);
+        if (number === 5) assert.equal(exercises(section.pages) - exercises(previous.pages), 44);
         assert(section.pages.some((page) => page.generationSettings.playedShareRamp));
       }
     }
@@ -80,6 +81,197 @@ test("basic volumes progress from quarters through nontuplets; span volumes excl
     const book = createBookVolume(source, number);
     for (const prefix of ["offbeat", "nested", "random-subdivisions"]) assert(book.groups.some((group) => group.id.startsWith(prefix)));
     assert(book.sections.some((section) => /crazy/i.test(section.title)));
+  }
+});
+
+test("Book 2 preserves span order and shares three combination pages for each span longer than three beats", () => {
+  const source = savedCurriculum();
+  const spans = new Set(SPAN_STUDIES.map((span) => span.groupId));
+  const expected = source.sections.filter((section) => spans.has(section.groupId.replace(/^combinations-/, "")));
+  const book = normalizeBook(createBookVolume(source, 2));
+  const loaded = normalizeBook(JSON.parse(JSON.stringify(generator.createManifest(book))));
+  const expectedIds = [...new Set(expected.map((section) => section.groupId.startsWith("combinations-") &&
+    section.rhythmSpan.count * 4 / section.rhythmSpan.unit > 3 ? `${section.groupId}-ordered` : section.id))];
+  assert.deepEqual(loaded.sections.map((section) => section.id), expectedIds);
+  assert.equal(loaded.sections.length, 105);
+  assert.equal(loaded.pages.length, 133);
+  loaded.sections.forEach((section, index) => {
+    const combinations = section.groupId.startsWith("combinations-");
+    assert.equal(combinations, index >= 61, "all focused studies come before the combinations");
+    const spanBeats = section.rhythmSpan.count * 4 / section.rhythmSpan.unit;
+    const grouped = combinations && spanBeats > 3;
+    const original = expected.filter((candidate) => grouped ? candidate.groupId === section.groupId : candidate.id === section.id);
+    assert.deepEqual(section.rhythmSpan, original[0].rhythmSpan);
+    const expectedPrimary = grouped ? pool([], original.flatMap((candidate) =>
+      getSpanPrimaryRhythms(candidate.primaryRhythms, candidate.rhythmSpan).tuplets)) : original[0].primaryRhythms;
+    assert.deepEqual(section.primaryRhythms.tuplets, expectedPrimary.tuplets);
+    assert.deepEqual(section.primaryRhythms.subdivisions, expectedPrimary.subdivisions);
+    for (const key of ["subdivisions", "tuplets"]) {
+      assert.deepEqual(section.secondaryRhythms[key], combinations ? original[0].secondaryRhythms[key]
+        : key === "subdivisions" ? ["quarters", "eighths", "sixteenths"] : []);
+    }
+    const pageCount = !combinations ? 1 : grouped ? 3 : spanBeats <= 2 ? 2 : 1;
+    assert.equal(section.pages.length, pageCount, `${section.id}: page budget follows the tuplet's actual span`);
+    assert.equal(section.pages.reduce((n, page) => n + page.lines.length, 0),
+      pageCount * getLinesPerPage(section.pdfSettings));
+    assert.equal(new Set(section.pages.map((page) => page.subsectionId)).size, section.pages.length);
+    const ranges = section.pages.map((page) => page.generationSettings.playedShareRamp);
+    if (!grouped) {
+      assert.deepEqual(ranges[0].start, combinations && pageCount === 1 ? [0.45, 0.6] : [0.75, 0.9]);
+      assert.deepEqual(ranges.at(-1).end, combinations && pageCount === 1 ? [0.45, 0.6] : [0.15, 0.3]);
+    }
+    let offset = 0;
+    section.pages.forEach((page, pageIndex) => {
+      assert.deepEqual(page.generationSettings.spanRhythmStudy, {
+        mode: combinations ? "combinations" : "focused", exerciseOffset: offset,
+        exerciseCount: pageCount * getLinesPerPage(section.pdfSettings),
+        measures: !grouped && getSpanPrimaryRhythms(section.primaryRhythms, section.rhythmSpan).tuplets[0].actual === 3 &&
+          getSpanPrimaryRhythms(section.primaryRhythms, section.rhythmSpan).tuplets[0].type === 16 ? 2 : 1,
+        ...(grouped ? { cyclePrimary: true } : {}),
+      });
+      offset += page.lines.length;
+      if (combinations && !grouped) assert.deepEqual(ranges[pageIndex].start, ranges[pageIndex].end);
+      if (pageIndex && !grouped) assert(ranges[pageIndex].start.every((value, bound) =>
+        Math.abs(ranges[pageIndex - 1].start[bound] - value - 0.6 / (ranges.length - 1)) < 0.0001));
+    });
+  });
+});
+
+test("all Book 2 exercises preserve timing, genuine primary tuplets, companion coverage and decreasing page densities", () => {
+  const config = generator.createGenerationConfig({}, normalizeBook(createBookVolume(savedCurriculum(), 2)));
+  const seen = new Set();
+  const connectors = new Set();
+  let sparseGroups = 0, sparseOpenings = 0;
+  for (const section of config.sections) {
+    const pageMeans = [];
+    const companions = new Set();
+    const familyDensities = new Map();
+    for (const page of section.pages) {
+      const counts = [];
+      const primary = getSpanPrimaryRhythms(page.primaryRhythms, page.rhythmSpan).tuplets[0];
+      for (let index = 0; index < getLinesPerPage(page.pdfSettings); index += 1) {
+        const line = generator.createUniqueGeneratedLine(null, page, page.sampleJson, index, seen);
+        const score = normalizeTupletNoteValues(line.score);
+        const phase = getSpanStudyPhase(page, index + page.subsectionLineOffset);
+        const requiredSecondaryKeys = getSpanStudyCompanionKeys(page, index + page.subsectionLineOffset);
+        requiredSecondaryKeys.forEach((key) => companions.add(key));
+        generator.validatePrimaryRequirements({ ...page,
+          primaryRhythms: getSpanStudyPrimaryPool(page, index + page.subsectionLineOffset),
+          secondaryRhythms: getSpanStudySecondaryPool(page, index + page.subsectionLineOffset), requiredSecondaryKeys }, score);
+        assert.equal(score.measures.length, page.spanRhythmStudy.measures);
+        let played = 0;
+        for (const measure of score.measures) {
+          const voice = measure.parts[0].voices[0];
+          assert(Math.abs(nestedVoiceQuarters(voice) - 4) < 1e-8);
+          assert(voice.notes.every((note) => !note.ornaments));
+          assert(voice.tuplets.every((tuplet) => !isOrdinaryNoteTuplet(voice, tuplet)));
+          for (const tuplet of voice.tuplets) {
+            const notes = voice.notes.slice(tuplet.start, tuplet.end);
+            assert.deepEqual(mergeTupletNoteRests(notes), notes, "tuplets use the largest available values");
+            if (page.spanRhythmStudy.mode === "focused") {
+              assert.equal(tuplet.actual, primary.actual);
+              assert.equal(tuplet.normal, primary.normal);
+            }
+            if (page.spanRhythmStudy.cyclePrimary) {
+              const current = getSpanStudyPrimaryPool(page, index + page.subsectionLineOffset).tuplets[0];
+              const smallestValue = current.actual === 3 && current.type === 16 ? 32 : Math.max(8, current.type);
+              assert(notes.every((note) => note.duration <= smallestValue), "long-span combinations keep simple host-note values");
+            }
+          }
+          if (page.spanRhythmStudy.mode === "focused") {
+            assert.equal(voice.tuplets.length, Math.floor(4 / (primary.normal * 4 / primary.type)), "fit the maximum number of audible groups in every bar");
+            voice.notes.forEach((note, i) => {
+              if (voice.tuplets.some((tuplet) => i >= tuplet.start && i < tuplet.end)) return;
+              if (note.notes.length) {
+                connectors.add(note.duration);
+                assert(note.duration <= (phase.progress < 0.35 ? 8 : 16), "ordinary connectors introduce sixteenths gradually");
+              }
+            });
+            if (phase.progress >= 0.65) for (const tuplet of voice.tuplets) {
+              sparseGroups++;
+              if (voice.notes[tuplet.start].notes.length) sparseOpenings++;
+            }
+          }
+          played += voice.notes.filter((note) => note.notes.length).length;
+        }
+        counts.push(played / score.measures.length);
+        if (page.spanRhythmStudy.cyclePrimary) {
+          const family = familyDensities.get(phase.familyIndex) || [[], [], []];
+          family[phase.density].push(played / score.measures.length);
+          familyDensities.set(phase.familyIndex, family);
+        }
+      }
+      if (page.spanRhythmStudy.mode === "focused") {
+        const n = Math.floor(counts.length / 3);
+        const early = counts.slice(0, n).reduce((a,b) => a+b) / n;
+        const middle = counts.slice(n, -n).reduce((a,b) => a+b) / (counts.length - n * 2);
+        const late = counts.slice(-n).reduce((a,b) => a+b) / n;
+        assert(early > middle && middle > late,
+          `${section.title}: density falls down the page (${counts.join(",")})`);
+      }
+      pageMeans.push(counts.reduce((a, b) => a + b) / counts.length);
+    }
+    if (!section.pages[0].spanRhythmStudy.cyclePrimary) {
+    assert(pageMeans.every((value, index) => !index || value < pageMeans[index - 1]),
+      `${section.title}: each page must be sparser than the previous page (${pageMeans.join(", ")})`);
+    if (pageMeans.length > 1) assert(pageMeans.at(-1) <= pageMeans[0] * 0.5, `${section.title}: the last page leaves ample space`);
+    }
+    for (const [family, densities] of familyDensities) {
+      const means = densities.map((values) => values.reduce((a,b)=>a+b) / values.length);
+      assert(means[0] > means[1] && means[1] > means[2], `${section.title} family ${family}: high, medium, low (${means})`);
+    }
+    const primary = getSpanPrimaryRhythms(section.primaryRhythms, section.rhythmSpan).tuplets[0];
+    if (section.groupId.startsWith("combinations-") && Math.ceil(primary.normal * 4 / primary.type) < 4) {
+      const expected = [...section.secondaryRhythms.subdivisions,
+        ...section.secondaryRhythms.tuplets.map((tuplet) => `${tuplet.actual}:${tuplet.normal}:${tuplet.type}`)];
+      assert.deepEqual([...companions].sort(), expected.sort(), "every fitting companion is required across the pages");
+    }
+  }
+  assert.equal(seen.size, 2827);
+  for (const duration of [4, 8, 16]) assert(connectors.has(duration));
+  assert(sparseOpenings / sparseGroups >= 0.2, "sparse attacks also land on the opening of groups");
+});
+
+test("Book 2 long-span combinations finish each tuplet type in order across three pages", () => {
+  const config = generator.createGenerationConfig({}, normalizeBook(createBookVolume(savedCurriculum(), 2)));
+  const groups = config.sections.filter((section) => section.pages[0].spanRhythmStudy?.cyclePrimary);
+  assert.deepEqual(groups.map((section) => section.groupId), [
+    "combinations-seven-eighths", "combinations-four-quarters", "combinations-thirteen-sixteenths", "combinations-fifteen-sixteenths",
+  ]);
+  for (const section of groups) {
+    assert.equal(section.pages.length, 3);
+    const expected = section.primaryRhythms.tuplets;
+    const counts = new Map(expected.map((tuplet) => [tuplet.actual, 0]));
+    let exerciseIndex = 0;
+    for (const page of section.pages) {
+      for (let index = 0; index < getLinesPerPage(page.pdfSettings); index += 1) {
+        const primary = getSpanStudyPrimaryPool(page, index).tuplets;
+        assert.deepEqual(primary, [expected[Math.floor(exerciseIndex * expected.length / 66)]]);
+        counts.set(primary[0].actual, counts.get(primary[0].actual) + 1);
+        exerciseIndex += 1;
+      }
+    }
+    assert.equal(exerciseIndex, 66);
+    assert(Math.max(...counts.values()) - Math.min(...counts.values()) <= 1);
+  }
+});
+
+test("Book 2 combinations cycle only their current secondary from three through nine, continuing across pages", () => {
+  assert.deepEqual(SPAN_COMPANION_ORDER, ["3:2:8", "sixteenths", "5:4:16", "6:4:16", "7:4:16", "thirtyseconds", "9:8:32"]);
+  const config = generator.createGenerationConfig({}, normalizeBook(createBookVolume(savedCurriculum(), 2)));
+  for (const section of config.sections.filter((section) => section.groupId.startsWith("combinations-"))) {
+    let exerciseIndex = 0;
+    for (const page of section.pages) {
+      const primary = getSpanPrimaryRhythms(page.primaryRhythms, page.rhythmSpan).tuplets[0];
+      const hasRoom = Math.ceil(primary.normal * 4 / primary.type) < 4;
+      for (let index = 0; index < getLinesPerPage(page.pdfSettings); index += 1) {
+        const expected = hasRoom ? [SPAN_COMPANION_ORDER[exerciseIndex % 7]] : [];
+        assert.deepEqual(getSpanStudyCompanionKeys(page, index), expected);
+        const pool = getSpanStudySecondaryPool(page, index);
+        assert.deepEqual([...pool.subdivisions, ...pool.tuplets.map((tuplet) => `${tuplet.actual}:${tuplet.normal}:${tuplet.type}`)], expected);
+        exerciseIndex += 1;
+      }
+    }
   }
 });
 

@@ -2,6 +2,7 @@ const { migrateBookStructure, normalizeRhythmPool } = require("./book-structure"
 const { SPAN_STUDIES } = require("./book-curriculum");
 const { createRhythmProgressionStudies, createIsolatedRhythmStudies, RHYTHM_DENSITIES } = require("./book-rhythm-progression");
 const { createBookOneCombinationStudies } = require("./book-rhythm-combinations");
+const { createBookTwoStudies } = require("./book-span-rhythm-studies");
 
 const BOOK_VOLUMES = [
   { number: 1, slug: "snare-drum-book-1-rhythms", title: "Book 1 - Rhythmic Variations", scope: "basic", ornaments: false },
@@ -112,7 +113,7 @@ function createBookVolume(source, value) {
   }
 
   sections = sections.map((section) => {
-    if (volume.scope === "spans" && spanIds.has(section.groupId)) section.pages = expandSpanPages(section);
+    if (volume.number === 5 && spanIds.has(section.groupId)) section.pages = expandSpanPages(section);
     if (!volume.ornaments) {
       section = {
         ...section,
@@ -126,6 +127,7 @@ function createBookVolume(source, value) {
     }
     return { ...section, pages: section.pages.map((page) => ({ ...page, lines: [] })) };
   });
+  if (volume.number === 2) sections = createBookTwoStudies(sections);
   if (!volume.ornaments && volume.scope !== "spans") {
     sections = [
       ...(volume.number === 1 ? createIsolatedRhythmStudies(book.pdfSettings) : []),
