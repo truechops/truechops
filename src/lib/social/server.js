@@ -174,8 +174,10 @@ export function socialHandler({ service = productionSocialService, session = get
       const user = session(req), method = req.method;
       if (method !== "GET") { checkOrigin(req); requireUser(user); }
       if (area === "library" || area === "profile") requireUser(user);
-      if (req.body != null && (typeof req.body !== "object" || Array.isArray(req.body))) fail(400,"Invalid request.");
-      const api = await service(), body = req.body || {};
+      // Next parses bodyless requests without a JSON content type as an empty string.
+      const body = req.body == null || req.body === "" ? {} : req.body;
+      if (typeof body !== "object" || Array.isArray(body)) fail(400,"Invalid request.");
+      const api = await service();
       let result;
       if (area === "search") result = await api.search(user,req.query);
       if (area === "profile") result = method === "GET" ? await api.myProfile(user) : await api.saveProfile(user,body);

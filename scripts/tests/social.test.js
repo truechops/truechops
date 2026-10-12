@@ -1,7 +1,9 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 const fs = require("node:fs");
+const http = require("node:http");
 const Module = require("node:module");
+const { apiResolver } = require("next/dist/server/api-utils/node/api-resolver");
 const babel = require("@babel/core");
 const originalLoader = Module._extensions[".js"];
 Module._extensions[".js"] = (module,file) => {
@@ -13,6 +15,7 @@ const { normalizeProfile, normalizeMetadata, normalizeMutations, validateScore, 
 const { searchPipeline } = require("../../src/lib/social/search");
 const { legacyQueries, legacyMutations } = require("../../src/lib/social/legacy");
 const { createSessionCookie } = require("../../src/lib/auth/session");
+const { config: socialApiConfig } = require("../../pages/api/social/[...route]");
 const defaultScore = require("../../src/consts/default-score").default;
 const clone = (v) => JSON.parse(JSON.stringify(v));
 function equal(a,b) { return String(a) === String(b); }
@@ -83,6 +86,33 @@ async function fixture() {
 }
 const rejects=(promise,status)=>assert.rejects(promise,(error)=>error.status===status);
 const response=()=>({ statusCode:200, headers:{}, setHeader(k,v){this.headers[k]=v;},status(n){this.statusCode=n;return this;},json(value){this.body=value;return this;} });
+
+async function httpApi(t, service) {
+  const handler = socialHandler({ service });
+  // Exercise Next's body/cookie parsing over HTTP, not hand-built request objects.
+  const server = http.createServer((req,res) => {
+    const url = new URL(req.url,"http://localhost");
+    const query = { ...Object.fromEntries(url.searchParams), route: url.pathname.split("/").slice(3) };
+    void apiResolver(req,res,query,{ default: handler, config: socialApiConfig },{},false,false,"/api/social/[...route]");
+  });
+  t.after(() => new Promise((resolve,reject) => {
+    server.close((error) => error ? reject(error) : resolve());
+    server.closeAllConnections();
+  }));
+  await new Promise((resolve,reject) => {
+    server.once("error",reject);
+    server.listen(0,"127.0.0.1",resolve);
+  });
+  return async (path,{ user = owner, headers = {}, ...options } = {}) => {
+    const res = await fetch(`http://127.0.0.1:${server.address().port}/api/social/${path}`, {
+      ...options, signal: AbortSignal.timeout(5000),
+      headers: { ...(user ? { cookie: createSessionCookie(user).split(";")[0] } : {}), ...headers },
+    });
+    const text = await res.text();
+    return { status: res.status, headers: res.headers,
+      body: res.headers.get("content-type")?.includes("application/json") ? JSON.parse(text) : text };
+  };
+}
 
 test("profiles are explicit, unique, account-bound and never expose auth fields",async()=>{
   const {db,api}=await fixture();
@@ -174,6 +204,79 @@ test("HTTP API verifies signed sessions and rejects CSRF and unsupported methods
   res=response();await handler({method:"POST",query:{route:["search"]},headers:{}},res);
   assert.equal(res.statusCode,405);assert.equal(res.headers.Allow,"GET");
 });
+test("Next HTTP requests without bodies can load profiles, libraries, searches and rhythms",async(t)=>{
+  const {api,publicRhythm}=await fixture();
+  const request=await httpApi(t,async()=>api);
+  const reads=[
+    ["profile",owner,(body)=>assert.equal(body.profile.handle,profile.handle)],
+    ["library?tab=created&page=1",owner,(body)=>assert.equal(body.items.length,2)],
+    ["library?tab=saved&page=1",owner,(body)=>assert.deepEqual(body.items,[])],
+    ["search?q=&type=rhythms&instrument=&difficulty=&page=1",null,(body)=>assert.equal(body.items[0].id,publicRhythm.id)],
+    ["search?q=triplet&type=rhythms",null,(body)=>assert.equal(body.items[0].id,publicRhythm.id)],
+    ["search?q=pulse&type=users",null,(body)=>assert.equal(body.items[0].handle,profile.handle)],
+    [`profiles/${profile.handle}`,null,(body)=>assert.equal(body.profile.handle,profile.handle)],
+    [`rhythms/${publicRhythm.id}`,null,(body)=>assert.equal(body.rhythm.id,publicRhythm.id)],
+  ];
+  for (const [path,user,check] of reads) await t.test(path,async()=>{
+    const res=await request(path,{user});
+    assert.equal(res.status,200,JSON.stringify(res.body));
+    assert.equal(res.headers.get("cache-control"),"private, no-store");
+    check(res.body);
+  });
+});
+
+test("Next HTTP requests can save, unsave and delete rhythms without sending a body",async(t)=>{
+  const {api,db,privateRhythm,publicRhythm}=await fixture();
+  const request=await httpApi(t,async()=>api);
+  await t.test("save",async()=>{
+    const res=await request(`rhythms/${publicRhythm.id}/save`,{method:"PUT",user:visitor});
+    assert.equal(res.status,200,JSON.stringify(res.body));
+    assert.equal(res.body.saved,true);
+    assert.equal(db.collection("rhythmSaves").rows.length,1);
+  });
+  // Seed independently so unsaving is tested even when the save request fails.
+  await api.bookmark(visitor,publicRhythm.id,true);
+  await t.test("unsave",async()=>{
+    const res=await request(`rhythms/${publicRhythm.id}/save`,{method:"DELETE",user:visitor});
+    assert.equal(res.status,200,JSON.stringify(res.body));
+    assert.equal(res.body.saved,false);
+    assert.equal(db.collection("rhythmSaves").rows.length,0);
+  });
+  await t.test("delete",async()=>{
+    const res=await request(`rhythms/${privateRhythm.id}`,{method:"DELETE"});
+    assert.equal(res.status,200,JSON.stringify(res.body));
+    assert.equal(res.body.removed,true);
+    await rejects(api.getRhythm(owner,privateRhythm.id),404);
+  });
+});
+
+test("Next HTTP parsing still enforces authentication, origin and JSON payload validation",async(t)=>{
+  const {api,privateRhythm}=await fixture();
+  let connects=0;
+  const request=await httpApi(t,async()=>{connects++;return api;});
+  assert.equal((await request("profile",{user:null})).status,401);
+  assert.equal((await request("library",{user:null})).status,401);
+  assert.equal((await request(`rhythms/${privateRhythm.id}`,{method:"DELETE",user:null})).status,401);
+  assert.equal((await request(`rhythms/${privateRhythm.id}`,{method:"DELETE",headers:{origin:"https://elsewhere.test"}})).status,403);
+  for (const [path,method] of [["profile","PUT"],["rhythms","POST"],[`rhythms/${privateRhythm.id}`,"PATCH"]]) {
+    for (const body of ["[]",'"not an object"',"42","false","{"]) {
+      const res=await request(path,{method,headers:{"Content-Type":"application/json"},body});
+      assert.equal(res.status,400,`${method} ${path}: ${body}`);
+    }
+  }
+  assert.equal((await request("profile",{method:"PUT",body:"not JSON"})).status,400);
+  assert.equal(connects,0,"invalid requests must be rejected before connecting to storage");
+  const saved=await request("profile",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({...profile,bio:"Updated over HTTP"})});
+  assert.equal(saved.status,200);
+  assert.equal(saved.body.profile.bio,"Updated over HTTP");
+  const created=await request("rhythms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(composition)});
+  assert.equal(created.status,201);
+  assert.equal(created.body.rhythm.name,composition.name);
+  const updated=await request(`rhythms/${created.body.rhythm.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:"Renamed over HTTP"})});
+  assert.equal(updated.status,200);
+  assert.equal(updated.body.rhythm.name,"Renamed over HTTP");
+});
+
 test("legacy GraphQL cannot read or mutate private rhythms belonging to another user",async()=>{
   const {db,privateRhythm,publicRhythm}=await fixture();
   const context={db,currentUser:visitor,req:{headers:{host:"localhost"}}};
