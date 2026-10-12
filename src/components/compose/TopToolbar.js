@@ -8,7 +8,6 @@ import { connect, useSelector, useDispatch } from "react-redux";
 import { getToneJs, scoreActions } from "../../store/score";
 import Dialog from "../ui/Dialog";
 import TextField from "@mui/material/TextField";
-import { RHYTHM_TYPES } from "../../consts/db";
 import ReactGA from "react-ga";
 
 import { copyToClipboard } from "../../helpers/browser";
@@ -19,7 +18,8 @@ import { score } from '../../consts/score';
 import { FaUndo, FaRedo, FaPlay, FaStop, FaSave, FaLink, FaPlus, FaTimes, FaDownload } from "react-icons/fa";
 import { FiCopy } from "react-icons/fi";
 import { GiMetronome } from "react-icons/gi";
-import useRhythmMutations from "../../graphql/rhythm/useRhythmMutations";
+import RhythmDialog from "../social/RhythmDialog";
+import Link from "next/link";
 import useLinkMutations from "../../graphql/link/useLinkMutations";
 import MetronomePopover from "./popovers/MetronomePopover";
 import addComposeEventListeners from "./event-listeners";
@@ -49,7 +49,7 @@ export function TopToolbar(props) {
   const clearScore = props.clearScore;
   const prevRepeatRef = useRef();
   const [sheetOpen, setSheetOpen] = useState(false);
-  const { addRhythm: addRhythmMutation } = useRhythmMutations();
+  const [savedNotice, setSavedNotice] = useState(false);
   const { getRhythmLink } = useLinkMutations();
 
   const dispatch = useDispatch();
@@ -79,7 +79,6 @@ export function TopToolbar(props) {
   const [rhythmLink, setRhythmLink] = useState("");
 
   const [metronomeAnchorEl, setMetronomeAnchorEl] = useState(null);
-  const [errorAddingRhythm, setErrorAddingRhythm] = useState(false);
   const [errorAddingLink, setErrorAddingLink] = useState(false);
 
   const numParts = useSelector(state => Object.keys(state.score.present.score.parts)
@@ -161,24 +160,6 @@ export function TopToolbar(props) {
     } else {
       setAddLinkModalOpen(true);
     }
-  }
-
-  async function addRhythm() {
-    const addedRhythm = await addRhythmMutation(
-      rhythmToSaveName,
-      RHYTHM_TYPES.saved,
-      numParts === 1 ? saveMutations : false
-    );
-    if (!addedRhythm) {
-      setErrorAddingRhythm(true);
-      ReactGA.event({
-        category: "exception",
-        action: "save rhythm",
-      });
-    }
-
-    setSaveRhythmModalOpen(false);
-    setRhythmToSaveName("");
   }
 
   async function addLink() {
@@ -283,11 +264,6 @@ export function TopToolbar(props) {
       message: "Unable to generate link. Please try again later.",
       isOpen: errorAddingLink,
     },
-    {
-      onOk: () => setErrorAddingRhythm(false),
-      message: "Unable to save rhythm. Please try again later.",
-      isOpen: errorAddingRhythm,
-    },
   ].map((props) => (
     <Dialog
       key={Math.random().toString()}
@@ -332,13 +308,12 @@ export function TopToolbar(props) {
           <FaPlus size={iconSize} />
         </IconButton>
       </div>
-      <Dialog
-        isOpen={saveRhythmModalOpen}
-        message={rhythmNameTextField}
-        onOk={addRhythm}
-        onCancel={() => setSaveRhythmModalOpen(false)}
-        okDisabled={rhythmToSaveEmpty}
-      />
+      {saveRhythmModalOpen && <RhythmDialog
+        composition={{ ...scoreData, mutations: numParts === 1 ? scoreData.mutations : [] }}
+        onClose={() => setSaveRhythmModalOpen(false)}
+        onSaved={() => { setSaveRhythmModalOpen(false); setSavedNotice(true); }}
+      />}
+      {savedNotice && <p role="status" style={{ textAlign: "center", fontSize: 13 }}>Saved to your profile. <Link href="/profile">View your rhythms</Link> <button onClick={() => setSavedNotice(false)} aria-label="Dismiss saved message">Dismiss</button></p>}
 
       <Dialog
         isOpen={addLinkModalOpen}

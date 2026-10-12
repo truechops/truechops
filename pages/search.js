@@ -1,3 +1,1 @@
-export default function search() {
-    return <>Search</>
-}
+export { default } from "./discover";

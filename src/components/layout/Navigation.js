@@ -57,6 +57,12 @@ export default function Navigation() {
       >
         <Divider />
         <List>
+          <ListItem onClick={navigationHandler.bind(null, "/discover")} button key="Community">
+            <ListItemText primary="Community — Rhythms & People" />
+          </ListItem>
+          <ListItem onClick={navigationHandler.bind(null, "/profile")} button key="Profile">
+            <ListItemText primary="My Profile & Rhythms" />
+          </ListItem>
           {/* <ListItem
           onClick={navigationHandler.bind(null, "/discover")}
           button

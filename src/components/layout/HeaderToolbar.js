@@ -59,12 +59,10 @@ export default function Header() {
       router.push("/rudiments");
     } else if (newValue === 3 && router.pathname != '/byos') {
       router.push("/byos")
-    } else if (newValue === 4 && router.pathname != '/library') {
-      if (!currentUser) {
-        router.push("/login");
-      } else {
-        router.push("/library");
-      }
+    } else if (newValue === 4 && router.pathname != '/profile') {
+      router.push("/profile");
+    } else if (newValue === 5 && router.pathname != '/discover') {
+      router.push("/discover");
     }
   };
 
@@ -75,8 +73,10 @@ export default function Header() {
     selectedArea = 2;
   } else if(router.pathname === '/byos') {
     selectedArea = 3;
-  } else if(router.pathname === '/library' || router.pathname == '/login') {
+  } else if(['/library','/profile','/u/[handle]','/login'].includes(router.pathname)) {
     selectedArea = 4;
+  } else if(['/discover','/search','/rhythms/[id]'].includes(router.pathname)) {
+    selectedArea = 5;
   }
 
   const { setNavOpen } = appActions;
@@ -124,7 +124,8 @@ export default function Header() {
             <Tab style={{ minWidth: 50, color: 'white' }} key={"header-score"} label="SCORE" {...a11yProps(1)} />
             <Tab style={{ minWidth: 50, color: 'white' }} key={"header-rudiments"} label="RUDIMENTS" {...a11yProps(2)} />
             <Tab style={{ minWidth: 50, color: 'white' }} key={"header-byos"} label="BYOS" {...a11yProps(3)} />
-            <Tab edge="end" style={{ minWidth: 50, color: 'white' }} key={"header-saved"} icon={<FaUser />}  {...a11yProps(4)} />
+            <Tab style={{ minWidth: 50, color: 'white' }} key="header-profile" aria-label="My profile and rhythms" icon={<FaUser />} {...a11yProps(4)} />
+            <Tab style={{ minWidth: 50, color: 'white' }} key="header-community" label="COMMUNITY" {...a11yProps(5)} />
           </Tabs>
           <div className="right"></div>
         </Toolbar>

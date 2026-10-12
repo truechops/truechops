@@ -1,25 +1,10 @@
 import { startServerAndCreateNextHandler } from "@as-integrations/next";
 import { ApolloServer } from "@apollo/server";
-import { NextRequest } from "next/server";
 import { gql } from "graphql-tag";
-import { ConnectionClosedEvent, MongoClient, ObjectId } from 'mongodb'
-import { GraphQLScalarType, Kind } from 'graphql';
-
-import Rhythms from "../../src/graphql/data-sources/Rhythms";
-import Links from "../../src/graphql/data-sources/Links";
-
-const client = new MongoClient('mongodb+srv://jared:admin@cluster0.9ibeh.mongodb.net/drumtoolz')
-
-client.connect()
-
-function getLinkKey(length = 9) {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
+import { ObjectId } from "mongodb";
+import { GraphQLScalarType, Kind } from "graphql";
+import { getMongoDb, getSessionUser } from "../../src/lib/auth/session";
+import { legacyQueries, legacyMutations } from "../../src/lib/social/legacy";
 
 const typeDefs = gql`
   input RhythmScorePartInsertInput {
@@ -793,231 +778,10 @@ input RhythmScoreMeasurePartUpdateInput {
 `;
 
 const resolvers = {
-    Query: {
-      getLinkRhythmById: async (parent, { input }, { dataSources }) => {
-        // Find the link by _id
-        const link = await dataSources.links.findOne({ _id: input });
-        if (!link) {
-          throw new Error("Link not found.");
-        }
-        
-        // Find the rhythm using the link's value
-        const rhythm = await dataSources.rhythms.getRhythm(link.value);
-        if (!rhythm) {
-          throw new Error("Rhythm not found for this link.");
-        }
-        return rhythm;
-      },
-      getRhythmById: async (parent, { input }, { dataSources }) => {
-        const result = await dataSources.rhythms.findOneById(input);
-        return result;
-      },
-      link: async (parent, { query }, { dataSources }) => {
-        try {
-          const result = dataSources.links.findOne(query);
-          return result;
-        } catch (error) {
-          console.error("Query: link - Error:", error);
-          throw error;
-        }
-      },
-      links: async (parent, { sortBy, query, limit }, { dataSources }) => {
-        return dataSources.links.findMany({ sortBy, query, limit });
-      },
-      rhythm: async (parent, { query }, { dataSources }) => {
-        try {
-          const result = await dataSources.rhythms.findOne(query);
-          return result;
-        } catch (error) {
-          console.error("Query: rhythm - Error:", error);
-          throw error;
-        }
-      },
-      // rhythms: async (parent, { query, limit, sortBy }, { dataSources }) => {
-      //   console.log("Query: rhythms - query:", query, "limit:", limit, "sortBy:", sortBy);
-      //   try {
-      //     const result = await dataSources.rhythms.findMany({ query, limit, sortBy });
-      //     console.log("Query: rhythms - Result:", result);
-      //     return result;
-      //   } catch (error) {
-      //     console.error("Query: rhythms - Error:", error);
-      //     throw error;
-      //   }
-      // }
-      rhythms: async (_, { query }, { dataSources }) => {
-        return dataSources.rhythms.getAll(query);
-      },
-    },
-    Mutation: {
-      deleteManyLinks: async (parent, { query }, { dataSources }) => {
-        try {
-          const result = await dataSources.links.deleteMany(query);
-          return result;
-        } catch (error) {
-          console.error("Mutation: deleteManyLinks - Error:", error);
-          throw error;
-        }
-      },
-      deleteManyRhythms: async (parent, { query }, { dataSources }) => {
-        try {
-          const result = await dataSources.rhythms.deleteMany(query);
-          return result;
-        } catch (error) {
-          console.error("Mutation: deleteManyRhythms - Error:", error);
-          throw error;
-        }
-      },
-      deleteOneLink: async (parent, { query }, { dataSources }) => {
-        try {
-          const result = await dataSources.links.deleteOne(query);
-          return result;
-        } catch (error) {
-          console.error("Mutation: deleteOneLink - Error:", error);
-          throw error;
-        }
-      },
-      deleteOneRhythm: async (parent, { query }, { dataSources }) => {
-        try {
-          const result = await dataSources.rhythms.deleteOne(query);
-          return result;
-        } catch (error) {
-          console.error("Mutation: deleteOneRhythm - Error:", error);
-          throw error;
-        }
-      },
-      getRhythmLink: async (parent, { input }, { dataSources, currentUser }) => {
-        // Optionally: verify currentUser
-        // if (!currentUser) throw new Error("Not authenticated!");
-
-        // Insert rhythm
-        const rhythmData = {
-          ...input,
-          _id: input._id || new ObjectId(),
-          // _userId: currentUser?._id, // if you want to set by session user
-        };
-        await dataSources.rhythms.insertOne(rhythmData);
-
-        // Insert link
-        const linkKey = getLinkKey();
-        await dataSources.links.insertOne({
-          _id: linkKey,
-          type: "rhythm",
-          value: rhythmData._id.toString(),
-        });
-
-        // Return the link key
-        return linkKey;
-      },
-      insertManyLinks: async (parent, { data }, { dataSources }) => {
-        try {
-          const result = await dataSources.links.insertMany(data);
-          return result;
-        } catch (error) {
-          console.error("Mutation: insertManyLinks - Error:", error);
-          throw error;
-        }
-      },
-      insertManyRhythms: async (parent, { data }, { dataSources }) => {
-        try {
-          const result = await dataSources.rhythms.insertMany(data);
-          return result;
-        } catch (error) {
-          console.error("Mutation: insertManyRhythms - Error:", error);
-          throw error;
-        }
-      },
-      insertOneLink: async (parent, { data }, { dataSources }) => {
-        try {
-          const result = await dataSources.links.insertOne(data);
-          return result;
-        } catch (error) {
-          console.error("Mutation: insertOneLink - Error:", error);
-          throw error;
-        }
-      },
-      insertOneRhythm: async (parent, { data }, { dataSources }) => {
-        try {
-          const result = await dataSources.rhythms.insertOne(data);
-          return result;
-        } catch (error) {
-          console.error("Mutation: insertOneRhythm - Error:", error);
-          throw error;
-        }
-      },
-      replaceOneLink: async (parent, { query, data }, { dataSources }) => {
-        try {
-          const result = await dataSources.links.replaceOne(query, data);
-          return result;
-        } catch (error) {
-          console.error("Mutation: replaceOneLink - Error:", error);
-          throw error;
-        }
-      },
-      replaceOneRhythm: async (parent, { query, data }, { dataSources }) => {
-        try {
-          const result = await dataSources.rhythms.replaceOne(query, data);
-          return result;
-        } catch (error) {
-          console.error("Mutation: replaceOneRhythm - Error:", error);
-          throw error;
-        }
-      },
-      updateManyLinks: async (parent, { query, set }, { dataSources }) => {
-        try {
-          const result = await dataSources.links.updateMany(query, set);
-          return result;
-        } catch (error) {
-          console.error("Mutation: updateManyLinks - Error:", error);
-          throw error;
-        }
-      },
-      updateManyRhythms: async (parent, { query, set }, { dataSources }) => {
-        try {
-          const result = await dataSources.rhythms.updateMany(query, set);
-          return result;
-        } catch (error) {
-          console.error("Mutation: updateManyRhythms - Error:", error);
-          throw error;
-        }
-      },
-      updateOneLink: async (parent, { query, set }, { dataSources }) => {
-        try {
-          const result = await dataSources.links.updateOne(query, set);
-          return result;
-        } catch (error) {
-          console.error("Mutation: updateOneLink - Error:", error);
-          throw error;
-        }
-      },
-      updateOneRhythm: async (parent, { query, set }, { dataSources }) => {
-        try {
-          const result = await dataSources.rhythms.updateOne(query, set);
-          return result;
-        } catch (error) {
-          console.error("Mutation: updateOneRhythm - Error:", error);
-          throw error;
-        }
-      },
-      upsertOneLink: async (parent, { data, query }, { dataSources }) => {
-        try {
-          const result = await dataSources.links.upsertOne(query, data);
-          return result;
-        } catch (error) {
-          console.error("Mutation: upsertOneLink - Error:", error);
-          throw error;
-        }
-      },
-      upsertOneRhythm: async (parent, { data, query }, { dataSources }) => {
-        try {
-          const result = await dataSources.rhythms.upsertOne(query, data);
-          return result;
-        } catch (error) {
-          console.error("Mutation: upsertOneRhythm - Error:", error);
-          throw error;
-        }
-      },
-    },
+    Query: legacyQueries,
+    Mutation: legacyMutations,
     Rhythm: {
+      _userId: (parent, _, { currentUser }) => parent._userId === currentUser?.id ? parent._userId : "",
       _id: (parent) => {
         return parent._id.toString();
       },
@@ -1197,30 +961,11 @@ const server = new ApolloServer({
     resolvers,
 });
 
-// Typescript: req has the type NextRequest
+const nextHandler = startServerAndCreateNextHandler(server, {
+  context: async (req) => ({ db: await getMongoDb(), currentUser: getSessionUser(req), req }),
+});
+export const config = { api: { bodyParser: { sizeLimit: "256kb" } } };
 export default async function handler(req, res) {
-  try {
-    await startServerAndCreateNextHandler(server, {
-      context: async (a, b) => { 
-        try {
-          await client.connect(); // Ensure client.connect() is awaited
-          const db = client.db('drumtoolz');
-          console.log(db.databaseName)
-          const token = req.headers.token;
-          return {
-              dataSources: {
-                  rhythms: new Rhythms({ modelOrCollection: db.collection('rhythms') }),
-                  links: new Links({ modelOrCollection: db.collection('links') }),
-              },
-              token,
-          };
-      } catch (error) {
-          console.error('Error connecting to MongoDB:', error);
-          throw error; // Re-throw the error to prevent GraphQL execution
-      }
-      },
-    })(req, res);
-  } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
-  }
+  res.setHeader("Cache-Control", "private, no-store");
+  return nextHandler(req, res);
 }

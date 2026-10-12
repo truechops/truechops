@@ -1,16 +1,16 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { drawScore, initialize } from "../../lib/vexflow";
 
-export default function RhythmPreview({ score }) {
+export default function RhythmPreview({ score, minWidth = 480 }) {
   const id = `practice-score-${useId().replace(/:/g, "")}`;
   const root = useRef(null);
   const [width, setWidth] = useState(680);
   const [error, setError] = useState(false);
   useEffect(() => {
-    const observer = new ResizeObserver(([entry]) => setWidth(Math.max(480, Math.floor(entry.contentRect.width) - 50)));
+    const observer = new ResizeObserver(([entry]) => setWidth(Math.max(minWidth, Math.floor(entry.contentRect.width) - 50)));
     observer.observe(root.current);
     return () => observer.disconnect();
-  }, []);
+  }, [minWidth]);
   useEffect(() => {
     const container = document.getElementById(id);
     if (!container || !score) return;
