@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const { spawnSync } = require("child_process");
+const { packageBookData } = require("./package-book-data");
 const fs = require("fs");
 const path = require("path");
 const { BOOK_VOLUMES, getBookVolume, createBookVolume } = require("../src/lib/book-volumes");
@@ -94,6 +95,7 @@ Book 6 preserves the current book's curriculum, ornament settings and order.`);
       runScript("generate-ai-book.js", ["--no-local-ai", "--book", sourcePath, "--output-root", root, ...(volume ? ["--compact"] : [])]);
     }
     runScript("generate-book-pdf.js", ["--book-root", root, "--output", output, ...options.renderArgs]);
+    if (volume && !pageSuffix) packageBookData(volume.number, PROJECT_ROOT);
   }
   if (!options.dryRun && options.volume !== "current" && !options.renderArgs.includes("page")) {
     const manifestPath = path.join(options.outputDir, "collection.json");

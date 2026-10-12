@@ -711,6 +711,84 @@ test("stored volume QR lookup resolves inline scores without requiring individua
   }
 });
 
+test("published snapshots resolve printed QR codes and account books on a clean deployment", async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "truechops-published-test-"));
+  try {
+    fs.cpSync(path.resolve(__dirname, "../../data/published-books"), path.join(directory, "data", "published-books"), { recursive: true });
+    assert.equal(fs.existsSync(path.join(directory, "data", "book-builder")), false);
+    const file = path.resolve(__dirname, "../../src/lib/book-builder-storage.js");
+    const localRequire = Module.createRequire(file);
+    const storage = { exports: {} };
+    vm.runInThisContext(Module.wrap(compile(file)))(storage.exports,
+      (name) => name === "process" ? { ...process, cwd: () => directory } : localRequire(name),
+      storage, file, path.dirname(file));
+    const { getBookPageQrPath } = require("../../src/lib/book-qr");
+    const { gunzipSync } = require("node:zlib");
+    const catalog = await storage.exports.getPracticeBookCatalog();
+    assert.equal(catalog.length, 6);
+    for (const volume of BOOK_VOLUMES) {
+      const archive = path.join(directory, "data", "published-books", volume.slug, "book.json.gz");
+      const printed = JSON.parse(gunzipSync(fs.readFileSync(archive)));
+      // The PDF renderer uses the same notation normalization as the server.
+      const pages = normalizeBook(printed).pages;
+      assert(catalog.some((entry) => entry.book === printed.book && entry.edition === printed.edition));
+      for (const page of [pages[0], pages.at(-1)]) {
+        const token = getBookPageQrPath(page.pageNumber, printed).split("/").at(-1);
+        const reference = await storage.exports.findStoredBookQrPage(token);
+        assert.equal(reference.pageRef.book, printed.book);
+        assert.equal(reference.pageRef.page, page.pageNumber);
+        const resolved = await storage.exports.findStoredBookQrPage(token, { includeScores: true });
+        assert.deepEqual(resolved.page.lines.map((line) => line.score), page.lines.map((line) => line.score));
+        assert.deepEqual(resolved.page.generationSettings, page.generationSettings);
+      }
+      const book = await storage.exports.loadPracticeBook(printed.book, [pages[0].pageNumber]);
+      assert.equal(book.pages.length, pages.length);
+      assert.deepEqual(book.pages[0].lines[0].score, pages[0].lines[0].score);
+      assert.equal(book.pages.at(-1).lines[0].score, null);
+    }
+    assert.equal(await storage.exports.findStoredBookQrPage("unknown-token"), null);
+    assert.equal(await storage.exports.loadPracticeBook("unknown-book"), null);
+  } finally {
+    assert(path.resolve(directory).startsWith(path.resolve(os.tmpdir()) + path.sep));
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("packaging preserves exact printed data and rejects incomplete volumes", () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "truechops-package-test-"));
+  try {
+    const { packageBookData } = require("../package-book-data");
+    const { gunzipSync } = require("node:zlib");
+    const volume = BOOK_VOLUMES[0];
+    const root = path.join(directory, "data", "book-builder", volume.slug);
+    fs.mkdirSync(root, { recursive: true });
+    const config = pageConfig(pool(["sixteenths"]), pool());
+    const score = generator.createUniqueGeneratedLine(null, config, config.sampleJson, 0, new Set()).score;
+    const book = normalizeBook({ ...legacyBook(), book: "true-chops-volume-1", slug: volume.slug });
+    book.pages.forEach((page) => page.lines.forEach((line) => { line.score = score; }));
+    const { pages, ...stored } = book;
+    const bytes = Buffer.from(JSON.stringify(stored));
+    fs.writeFileSync(path.join(root, "book.json"), bytes);
+    packageBookData(1, directory);
+    const destination = path.join(directory, "data", "published-books", volume.slug);
+    const archive = fs.readFileSync(path.join(destination, "book.json.gz"));
+    assert.deepEqual(gunzipSync(archive), bytes);
+    const index = JSON.parse(fs.readFileSync(path.join(destination, "qr-index.json")));
+    assert.equal(index.book, book.book);
+    assert.equal(index.contentVersion, book.contentVersion);
+    assert.deepEqual(index.pages, pages.map(({ pageNumber, title }) => ({ pageNumber, title })));
+    packageBookData(1, directory);
+    assert.deepEqual(fs.readFileSync(path.join(destination, "book.json.gz")), archive);
+    stored.sections[0].pages[0].lines[0].score = null;
+    fs.writeFileSync(path.join(root, "book.json"), JSON.stringify(stored));
+    assert.throws(() => packageBookData(1, directory), /inline exercise scores/);
+    assert.deepEqual(fs.readFileSync(path.join(destination, "book.json.gz")), archive);
+  } finally {
+    assert(path.resolve(directory).startsWith(path.resolve(os.tmpdir()) + path.sep));
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 function legacyBook() {
   return { sections: [
     { id: "plain", title: "Sixteenths", subdivisions: ["sixteenths"], ornaments: [], pages: [{ pageNumber: 1, title: "Page 1", lines: [] }] },

@@ -54,6 +54,7 @@
     "pdf:book:render": "node scripts/generate-book-pdf.js",
     "pdf:book:page": "node scripts/generate-book-pdf.js --scope page",
     "pdf:fill-book": "node scripts/fill-book-pages.js",
+    "book:package": "node scripts/package-book-data.js",
     "book:generate:ai": "node scripts/generate-ai-book.js",
     "test:book": "node --test scripts/tests/book-builder.test.js",
     "test:book-practice": "node --test scripts/tests/book-practice.test.js",

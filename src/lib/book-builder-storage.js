@@ -1,6 +1,8 @@
 import fs from "fs/promises";
 import path from "path";
 import process from "process";
+import { gunzip } from "zlib";
+import { promisify } from "util";
 import { createLimiter } from "./limit-concurrency";
 import { BOOK_VOLUMES, getBookVolume } from "./book-volumes";
 import { findBookQrPage } from "./book-qr";
@@ -13,6 +15,8 @@ import {
 
 const BOOK_ROOT = path.join(process.cwd(), "data", "book-builder", BOOK_SLUG);
 const MANIFEST_PATH = path.join(BOOK_ROOT, "book.json");
+const PUBLISHED_ROOT = path.join(process.cwd(), "data", "published-books");
+const decompress = promisify(gunzip);
 
 function pageDir(pageNumber) {
   return path.join(BOOK_ROOT, "pages", `page-${String(pageNumber).padStart(2, "0")}`);
@@ -33,6 +37,26 @@ async function readJson(filePath) {
 
     throw error;
   }
+}
+
+// Generated working files are ignored by Git; published snapshots travel with
+// the deployment and preserve the exercises and QR identities already printed.
+async function readPublishedBook(definition) {
+  if (!definition) return null;
+  try {
+    const bytes = await fs.readFile(path.join(PUBLISHED_ROOT, definition.slug, "book.json.gz"));
+    return JSON.parse((await decompress(bytes)).toString("utf8"));
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+async function readBookIndex(definition) {
+  const root = definition ? path.join(process.cwd(), "data", "book-builder", definition.slug) : BOOK_ROOT;
+  return await readJson(path.join(root, "qr-index.json"))
+    || await readJson(path.join(root, "book.json"))
+    || (definition ? await readJson(path.join(PUBLISHED_ROOT, definition.slug, "qr-index.json")) : null);
 }
 
 function createManifest(book) {
@@ -109,7 +133,7 @@ export async function loadBook({ pageNumbers, volume } = {}) {
   const bookRoot = definition ? path.join(process.cwd(), "data", "book-builder", definition.slug) : BOOK_ROOT;
   const readPages = Array.isArray(pageNumbers) ? new Set(pageNumbers.map(Number)) : null;
   const shouldReadPage = (pageNumber) => !readPages || readPages.has(Number(pageNumber));
-  const saved = await readJson(path.join(bookRoot, "book.json"));
+  const saved = await readJson(path.join(bookRoot, "book.json")) || await readPublishedBook(definition);
   if (!saved && definition) throw new Error(`${definition.title} has not been generated. Run npm run pdf:book.`);
   const manifest = saved || createDefaultBook();
   const hydratePage = async (page, pageIndex) => ({
@@ -164,8 +188,7 @@ export async function loadBook({ pageNumbers, volume } = {}) {
 // Read raw manifests first so QR lookups don't normalize every score in all books.
 export async function findStoredBookQrPage(token, { includeScores = false } = {}) {
   for (const definition of [null, ...BOOK_VOLUMES]) {
-    const root = definition ? path.join(process.cwd(), "data", "book-builder", definition.slug) : BOOK_ROOT;
-    const manifest = await readJson(path.join(root, "qr-index.json")) || await readJson(path.join(root, "book.json"));
+    const manifest = await readBookIndex(definition);
     if (!manifest) continue;
     const book = { ...manifest, pages: manifest.sections?.flatMap((section) => section.pages) || manifest.pages || [] };
     const resolved = findBookQrPage(book, token);
@@ -180,8 +203,7 @@ export async function findStoredBookQrPage(token, { includeScores = false } = {}
 // Resolve a catalog identity, never a caller-supplied filesystem path.
 export async function loadPracticeBook(bookKey, pageNumbers = []) {
   for (const definition of [null, ...BOOK_VOLUMES]) {
-    const root = definition ? path.join(process.cwd(), "data", "book-builder", definition.slug) : BOOK_ROOT;
-    const manifest = await readJson(path.join(root, "qr-index.json")) || await readJson(path.join(root, "book.json"));
+    const manifest = await readBookIndex(definition);
     if (manifest?.book === bookKey) return loadBook({ volume: definition?.number, pageNumbers });
   }
   return null;
@@ -189,8 +211,7 @@ export async function loadPracticeBook(bookKey, pageNumbers = []) {
 
 export async function getPracticeBookCatalog() {
   const entries = await Promise.all(BOOK_VOLUMES.map(async (definition) => {
-    const root = path.join(process.cwd(), "data", "book-builder", definition.slug);
-    const manifest = await readJson(path.join(root, "qr-index.json")) || await readJson(path.join(root, "book.json"));
+    const manifest = await readBookIndex(definition);
     return manifest ? { book: manifest.book, edition: manifest.edition, title: definition.title } : null;
   }));
   return entries.filter(Boolean);
