@@ -21,7 +21,11 @@ Current desired changes:
 
 ## Community and MongoDB Search
 
-The community starts at `/discover` (also `/search`). `/profile` and `/library`
+The community feed starts at `/discover`. Its search bar opens `/search`, with
+live MongoDB Search results in All, Rhythms and People tabs. Search text, filters
+and category are reflected in the URL; changing categories preserves the query.
+All shows both result types, with independent loading and retry states.
+`/profile` and `/library`
 show the signed-in account's creations and privately saved community rhythms.
 Public profiles use `/u/:handle`; individual rhythms use `/rhythms/:id`.
 Use the composer's Save button to save privately or publish. Publishing requires
@@ -67,5 +71,5 @@ node node_modules/next/dist/bin/next build
 node scripts/tests/social.browser.js http://127.0.0.1:3104
 ```
 
-Browser screenshots are generated under `book-output/social-preview/` and use
+Browser screenshots are generated under `book-output/community-search-preview/` and use
 explicit test fixtures, not real community members or production seed records.

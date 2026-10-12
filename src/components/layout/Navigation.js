@@ -9,6 +9,7 @@ import Drawer from "@mui/material/Drawer";
 import List from "@mui/material/List";
 import Divider from "@mui/material/Divider";
 import ListItem from "@mui/material/ListItem";
+import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
 
 export default function Navigation() {
@@ -55,6 +56,11 @@ export default function Navigation() {
         open={sideNavOpen}
         onClose={() => dispatch(setNavOpen(false))}
       >
+        <List aria-label="Practice tools">
+          {[['Score','/'],['Drills','/exercises'],['Rudiments','/rudiments'],['BYOS','/byos']].map(([label,url]) =>
+            <ListItem disablePadding key={label}><ListItemButton onClick={() => navigationHandler(url)}><ListItemText primary={label} /></ListItemButton></ListItem>
+          )}
+        </List>
         <Divider />
         <List>
           <ListItem onClick={navigationHandler.bind(null, "/discover")} button key="Community">

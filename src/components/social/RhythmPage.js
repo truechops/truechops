@@ -26,7 +26,7 @@ export default function RhythmPage() {
       {rhythm.visibility === "private" && <p className={styles.hint}>Private rhythm. Only you can view this page.</p>}
       {rhythm.description && <p className={styles.description}>{rhythm.description}</p>}
       <div className={styles.detailNotation} role="img" aria-label={`Complete notation for ${rhythm.name}`}><RhythmPreview score={rhythm.score} minWidth={260} /></div>
-      <div className={styles.tags}>{rhythm.tags.map((tag) => <Link key={tag} href={{ pathname: "/discover", query: { q: tag } }}>#{tag}</Link>)}</div>
+      <div className={styles.tags}>{rhythm.tags.map((tag) => <Link key={tag} href={{ pathname: "/search", query: { q: tag } }}>#{tag}</Link>)}</div>
       <RhythmActions key={`${user?.id}-${rhythm.id}-${rhythm.saved}`} rhythm={rhythm} full onEdit={() => setEditing(true)} />
       {rhythm.visibility === "public" && <button className={styles.share} onClick={share}>Copy rhythm link</button>}
       <p className={styles.hint}>Practice opens the complete rhythm in the composer, ready to play and develop.</p>

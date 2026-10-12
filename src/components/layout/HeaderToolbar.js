@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
 import { appActions } from "../../store/app";
 import Dialog from "../ui/Dialog";
@@ -28,6 +29,16 @@ const useStyles = makeStyles((theme) => ({
   tabs: {
     width: '100px',
   },
+  communityTabs: {
+    '@media (max-width:600px)': { display: 'none' },
+  },
+  communityMobileTitle: {
+    display: 'none',
+    '@media (max-width:600px)': {
+      display: 'block', fontSize: 13, fontWeight: 600, letterSpacing: '.3px',
+      textDecoration: 'none', color: 'inherit',
+    },
+  },
   drawerHeader: {
     display: "flex",
     alignItems: "center",
@@ -46,6 +57,7 @@ const useStyles = makeStyles((theme) => ({
 export default function Header() {
   const classes = useStyles();
   const router = useRouter();
+  const communityPage = ['/discover','/search','/profile','/library','/u/[handle]','/rhythms/[id]'].includes(router.pathname);
   const theme = useTheme();
   const loaded = useSelector((state) => state.app.loaded);
   const currentUser = useSelector((state) => state.realm.currentUser);
@@ -95,8 +107,9 @@ export default function Header() {
     <>
       <CssBaseline />
       <AppBar position="fixed" style={{
-        backgroundColor: 'black',
-        color: 'white'
+        backgroundColor: communityPage ? '#fcfaf9' : 'black',
+        color: communityPage ? '#29252a' : 'white',
+        ...(communityPage ? { boxShadow: 'none', borderBottom: '1px solid #eee8e7' } : {})
         }}>
         <Toolbar
           style={{
@@ -112,7 +125,10 @@ export default function Header() {
             <GiHamburgerMenu />
           </IconButton>
 
+          {communityPage && <Link href="/discover" className={classes.communityMobileTitle}>TrueChops</Link>}
           <Tabs
+            className={communityPage ? classes.communityTabs : undefined}
+            TabIndicatorProps={communityPage ? { style: { backgroundColor: '#aa3e4b', height: 2 } } : undefined}
             value={selectedArea}
             textColor="secondary"
             onChange={onAreaSelected}
@@ -120,12 +136,12 @@ export default function Header() {
             scrollButtons={"auto"}
             edge="center"
           >
-            <Tab style={{ minWidth: 50, color: 'white'}} key={"header-exercises"} label="DRILLS" {...a11yProps(0)} />
-            <Tab style={{ minWidth: 50, color: 'white' }} key={"header-score"} label="SCORE" {...a11yProps(1)} />
-            <Tab style={{ minWidth: 50, color: 'white' }} key={"header-rudiments"} label="RUDIMENTS" {...a11yProps(2)} />
-            <Tab style={{ minWidth: 50, color: 'white' }} key={"header-byos"} label="BYOS" {...a11yProps(3)} />
-            <Tab style={{ minWidth: 50, color: 'white' }} key="header-profile" aria-label="My profile and rhythms" icon={<FaUser />} {...a11yProps(4)} />
-            <Tab style={{ minWidth: 50, color: 'white' }} key="header-community" label="COMMUNITY" {...a11yProps(5)} />
+            <Tab style={{ minWidth: 50, color: 'inherit'}} key={"header-exercises"} label="DRILLS" {...a11yProps(0)} />
+            <Tab style={{ minWidth: 50, color: 'inherit' }} key={"header-score"} label="SCORE" {...a11yProps(1)} />
+            <Tab style={{ minWidth: 50, color: 'inherit' }} key={"header-rudiments"} label="RUDIMENTS" {...a11yProps(2)} />
+            <Tab style={{ minWidth: 50, color: 'inherit' }} key={"header-byos"} label="BYOS" {...a11yProps(3)} />
+            <Tab style={{ minWidth: 50, color: 'inherit' }} key="header-profile" aria-label="My profile and rhythms" icon={<FaUser />} {...a11yProps(4)} />
+            <Tab style={{ minWidth: 50, color: 'inherit' }} key="header-community" label="COMMUNITY" {...a11yProps(5)} />
           </Tabs>
           <div className="right"></div>
         </Toolbar>

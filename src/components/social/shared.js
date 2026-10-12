@@ -11,7 +11,7 @@ export function useAccount() {
   const loaded = useSelector((state) => state.realm.sessionLoaded);
   return { user, loaded };
 }
-export function useResource(path, accountKey = "") {
+export function useResource(path, accountKey = "", { keepPreviousData = false } = {}) {
   const [revision,setRevision] = useState(0);
   const key = `${path}|${accountKey}|${revision}`;
   const [result,setResult] = useState({});
@@ -19,21 +19,27 @@ export function useResource(path, accountKey = "") {
     if (!path) return;
     const abort = new AbortController();
     socialRequest(path,{ signal: abort.signal }).then((data) => {
-      if (!abort.signal.aborted) setResult({ key, data });
-    }).catch((error) => { if (!abort.signal.aborted) setResult({ key, error: error.message }); });
+      if (!abort.signal.aborted) setResult({ key, accountKey, data });
+    }).catch((error) => { if (!abort.signal.aborted) setResult({ key, accountKey, error: error.message }); });
     return () => abort.abort();
   },[path,key]);
-  return { data: result.key === key ? result.data : null, error: result.key === key ? result.error : "", refresh: () => setRevision((n) => n+1) };
+  return {
+    data: result.key === key || (path && keepPreviousData && result.accountKey === accountKey) ? result.data : null,
+    pending: Boolean(path && result.key !== key),
+    error: result.key === key ? result.error : "",
+    refresh: () => setRevision((n) => n+1),
+    update: (change) => setResult((current) => current.key === key && current.data ? { ...current, data: change(current.data) } : current),
+  };
 }
-export function Shell({ title, children, active = "discover" }) {
+export function Shell({ title, children, active = "discover", navigation = true }) {
   const dispatch = useDispatch();
   useEffect(() => { dispatch(appActions.setPageLoaded()); },[dispatch]);
   return <main className={styles.page}>
     <Head><title>{title} | TrueChops</title><meta name="description" content="Find your next rhythm. Explore the TrueChops community, meet drummers, and build your practice collection." /></Head>
-    <nav className={styles.subnav} aria-label="Community"><Link href="/discover" className={styles.wordmark}>TRUECHOPS <span>/ COMMUNITY</span></Link>
+    {navigation && <nav className={styles.subnav} aria-label="Community"><Link href="/discover" className={styles.wordmark}>Community</Link>
       <div><Link href="/discover" aria-current={active === "discover" ? "page" : undefined}>Discover</Link>
         <Link href="/profile" aria-current={active === "profile" ? "page" : undefined}>My profile &amp; rhythms</Link></div>
-    </nav>{children}
+    </nav>}{children}
   </main>;
 }
 export function SignIn({ returnTo = "/profile", children = "Sign in with Google" }) {
