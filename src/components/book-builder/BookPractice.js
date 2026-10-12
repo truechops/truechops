@@ -8,6 +8,7 @@ import { modifyPracticeScore } from "../../lib/book-practice-score";
 import RhythmPreview from "./RhythmPreview";
 import PracticePlayer from "./PracticePlayer";
 import { practiceRequest } from "./practice-api";
+import useBookAccess from "./useBookAccess";
 import styles from "./practice.module.css";
 
 export default function BookPractice() {
@@ -25,11 +26,10 @@ export default function BookPractice() {
   const [tempo, setTempo] = useState(80);
   const [count, setCount] = useState(8);
   const [generated, setGenerated] = useState([]);
-  const [access, setAccess] = useState(null);
+  const { access, error: accessError, refreshing, refresh: refreshAccess } = useBookAccess(token && !savedId ? user?.id : null, token);
   const [busy, setBusy] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [accessError, setAccessError] = useState("");
   const [notice, setNotice] = useState("");
   const [name, setName] = useState("");
   const [saved, setSaved] = useState(null);
@@ -62,16 +62,6 @@ export default function BookPractice() {
       .finally(() => { if (!abort.signal.aborted) setLoading(false); });
     return () => abort.abort();
   }, [router.isReady, sessionLoaded, token, savedId, user]);
-
-  useEffect(() => {
-    setAccess(null); setAccessError("");
-    if (!user || !token || savedId) return;
-    const abort = new AbortController();
-    practiceRequest(`book-practice/access?token=${encodeURIComponent(token)}`, "GET", null, abort.signal)
-      .then((result) => { if (!abort.signal.aborted) setAccess(result); })
-      .catch((accessFailure) => { if (!abort.signal.aborted) setAccessError(accessFailure.message); });
-    return () => abort.abort();
-  }, [user, token, savedId]);
 
   const selectedLines = useMemo(() => selected.map((id) => lines.find((line) => line.id === id)).filter(Boolean), [selected, lines]);
   const score = useMemo(() => createContinuousPageScore(selectedLines), [selectedLines]);
@@ -178,12 +168,14 @@ export default function BookPractice() {
         <div className={styles.panel}>
           <h2>A fresh set, the same focus</h2>
           <p>New rhythms follow this page’s subdivisions, density, and ornament rules. Choose how many, then add them to your practice page.</p>
+          {user && <p className={styles.muted}>Signed in as {user.email || user.name}. <a href={signIn}>Switch account</a></p>}
+          {access?.verified && <p><span className={styles.badge}>Book verified</span> Saved to your account across devices.</p>}
+          {user && <p><button disabled={refreshing || Boolean(busy)} onClick={refreshAccess}>{refreshing ? "Checking verification..." : "Refresh book verification"}</button></p>}
           {!user ? <p><a href={signIn}>Sign in</a> and verify your book to generate more rhythms.</p> :
             accessError ? <p role="alert" className={styles.error}>{accessError}</p> :
             !access ? <p role="status">Checking book access…</p> :
             !access.verified ? <p><Link href={verifyUrl}>Verify this book in your account</Link> by matching three rhythms from the printed pages.</p> :
-            !access.scanActive ? <p>Scan this page’s QR code in your book again to start a new practice session.</p> : <>
-              <p><span className={styles.badge}>Book verified</span></p>
+            !access.scanActive ? <p>Your book is already verified. Scan this page’s QR code on this device to start a new practice session.</p> : <>
               <div className={styles.row}><label className={styles.field}>Number of rhythms <input aria-label="Number of rhythms" type="number" min="1" max="32" value={count}
                 onChange={(event) => setCount(event.target.value === "" ? "" : Number(event.target.value))} /></label>
                 <button className={styles.primary} disabled={Boolean(busy) || !Number.isInteger(count) || count < 1 || count > 32} onClick={generate}>{busy === "generate" ? "Creating rhythms…" : "Generate rhythms"}</button></div>

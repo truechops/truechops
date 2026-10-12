@@ -114,6 +114,39 @@ test("verification solutions are private; failures consume checks and successes 
   assert.equal((await api.status("owner", "other-token")).verified, false);
 });
 
+test("verification is shared by separate signed-in devices even without an active QR scan", async () => {
+  const { db, api } = setup();
+  const handler = practiceHandler("access", { service: async () => api });
+  const phoneCookie = `${createSessionCookie({ id: "owner", name: "Phone session" }).split(";")[0]}; ${createBookScanCookie("page-token").split(";")[0]}`;
+  const laptopCookie = createSessionCookie({ id: "owner", name: "Laptop session" }).split(";")[0];
+  const phone = { method: "POST", headers: { host: "localhost", cookie: phoneCookie }, query: {}, body: { book: fixture.book } };
+  let res = response(); await handler(phone, res); assert.equal(res.statusCode, 200);
+  const challenge = [...db.collection("bookVerificationChallenges").documents.values()][0];
+  phone.method = "PUT";
+  phone.body = { book: fixture.book, challengeId: challenge.id, answers: challenge.answers };
+  res = response(); await handler(phone, res); assert.equal(res.statusCode, 200); assert.equal(res.body.verified, true);
+  const laptop = { method: "GET", headers: { host: "localhost", cookie: laptopCookie }, query: { token: "page-token" } };
+  res = response(); await handler(laptop, res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.verified, true);
+  assert.equal(res.body.scanActive, false);
+  assert.equal(res.body.verifiedBooks[0].book, fixture.book);
+  laptop.query = {};
+  res = response(); await handler(laptop, res);
+  assert.equal(res.body.verifiedBooks.length, 1, "the account library requires no scan or page token");
+  const realNow = Date.now;
+  try {
+    Date.now = () => realNow() + 3 * 60 * 60 * 1000;
+    phone.method = "GET"; phone.query = { token: "page-token" };
+    res = response(); await handler(phone, res);
+    assert.equal(res.body.verified, true, "book verification survives an expired QR session");
+    assert.equal(res.body.scanActive, false);
+  } finally { Date.now = realNow; }
+  laptop.headers.cookie = createSessionCookie({ id: "different-account" }).split(";")[0];
+  res = response(); await handler(laptop, res);
+  assert.deepEqual(res.body.verifiedBooks, []);
+});
+
 test("expired checks, replaced checks, concurrent answers and guessing limits are enforced", async () => {
   const { db, api, advance } = setup();
   const first = await api.startVerification("owner", fixture.book);

@@ -16,6 +16,8 @@ const { createBookChallenge, challengeMatches, generateBookPractice } = require(
 const { validatePracticeLines } = require("../../src/lib/book-practice-score");
 const { getBookPageQrToken, getBookPageIdentity } = require("../../src/lib/book-qr");
 const origin = process.argv[2] || "http://127.0.0.1:3102";
+const artifactRoot = `book-output/practice-check-${Date.now()}`;
+fs.mkdirSync(artifactRoot, { recursive: true });
 const rawBook = JSON.parse(fs.readFileSync("data/book-builder/snare-drum-book-2-tuplets/book.json"));
 const book = { ...rawBook, pages: rawBook.sections.flatMap((section) => section.pages) };
 const token = getBookPageQrToken(getBookPageIdentity(5, book));
@@ -29,10 +31,10 @@ async function clickText(page, text) {
 }
 
 (async () => {
-  const browser = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--disable-setuid-sandbox"], timeout: 20000 });
+  const browser = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--disable-setuid-sandbox"], timeout: 20000, protocolTimeout: 30000 });
+  const errors = [];
   try {
     const page = await browser.newPage();
-    const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
     await page.setViewport({ width: 1280, height: 900 });
     await page.goto(`${origin}/q/${token}`, { waitUntil: "domcontentloaded", timeout: 60000 });
@@ -40,7 +42,7 @@ async function clickText(page, text) {
     assert(page.url().includes(`/book?token=${token}`));
     assert((await page.cookies()).some((cookie) => cookie.name === "tc_book_scan" && cookie.httpOnly));
     await page.waitForSelector("main .vf-stavenote");
-    await page.screenshot({ path: "book-output/book-practice-desktop.png" });
+    await page.screenshot({ path: `${artifactRoot}/book-practice-desktop.png` });
     await clickText(page, "Clear selection");
     await page.click('button[aria-label="Rhythm 1"]');
     assert((await page.$eval("main", (element) => element.innerText)).includes("1 of 22 rhythms selected"));
@@ -53,7 +55,7 @@ async function clickText(page, text) {
     assert((await page.$eval("#panel-generate", (element) => element.innerText)).includes("Sign in"));
     await page.setViewport({ width: 390, height: 844 });
     await page.click("#tab-rhythms");
-    await page.screenshot({ path: "book-output/book-practice-mobile.png" });
+    await page.screenshot({ path: `${artifactRoot}/book-practice-mobile.png` });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "no horizontal page overflow");
 
     let verified = false;
@@ -61,13 +63,13 @@ async function clickText(page, text) {
     let generationCalls = 0;
     const bookIdentity = { book: book.book, edition: book.edition, title: book.title };
     await page.setRequestInterception(true);
-    page.on("request", async (request) => {
+    const mockAccount = (scanActive) => async (request) => {
       const url = new URL(request.url());
       const respond = (payload, status = 200) => request.respond({ status, contentType: "application/json", body: JSON.stringify(payload) });
       const body = request.postData() ? JSON.parse(request.postData()) : {};
-      if (url.pathname === "/api/auth/me") return respond({ user: { id: "browser-test", name: "Practice tester" } });
+      if (url.pathname === "/api/auth/me") return respond({ user: { id: "browser-test", name: "Practice tester", email: "practice@example.com" } });
       if (url.pathname === "/api/book-practice/access") {
-        if (request.method() === "GET") return respond({ books: [bookIdentity], verifiedBooks: verified ? [bookIdentity] : [], verified, scanActive: true });
+        if (request.method() === "GET") return respond({ books: [{ book: "true-chops-volume-1", edition: 1, title: "Book 1 - Rhythms" }, bookIdentity], verifiedBooks: verified ? [bookIdentity] : [], verified, scanActive });
         if (request.method() === "POST") { const publicChallenge = { ...challenge }; delete publicChallenge.answers; return respond({ challenge: publicChallenge }); }
         verified = challengeMatches(challenge, body.answers);
         return respond(verified ? { verified: true } : { error: "Incorrect answers" }, verified ? 200 : 400);
@@ -84,7 +86,28 @@ async function clickText(page, text) {
         return respond(url.searchParams.has("id") ? { set: saved } : { sets: saved ? [saved] : [] });
       }
       return request.continue();
-    });
+    };
+    page.on("request", mockAccount(true));
+    // A second device has the same account, but no QR cookie. Leave its pages
+    // open before verification, then return to them after the phone verifies.
+    const laptopContext = await browser.createIncognitoBrowserContext();
+    const laptop = await laptopContext.newPage();
+    const library = await laptopContext.newPage();
+    for (const tab of [laptop, library]) {
+      tab.on("pageerror", (error) => errors.push(error.message));
+      await tab.setRequestInterception(true);
+      tab.on("request", mockAccount(false));
+    }
+    await laptop.bringToFront();
+    await laptop.goto(`${origin}/book?token=${token}`, { waitUntil: "domcontentloaded" });
+    await laptop.waitForSelector("#tab-generate"); await laptop.click("#tab-generate");
+    await laptop.waitForSelector('a[href^="/account/books?book="]');
+    assert(!(await laptop.cookies()).some((cookie) => cookie.name === "tc_book_scan"));
+    await library.bringToFront();
+    await library.goto(`${origin}/account/books`, { waitUntil: "domcontentloaded" });
+    await library.waitForSelector("main select");
+    assert.equal(await library.$('section[aria-label="Verified books"]'), null);
+    await page.bringToFront();
     await page.setViewport({ width: 1280, height: 900 });
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.waitForSelector("#tab-generate"); await page.click("#tab-generate");
@@ -94,11 +117,30 @@ async function clickText(page, text) {
     await clickText(page, "Start three rhythm matches");
     await page.waitForSelector('input[type="radio"]');
     assert.equal((await page.$$('input[type="radio"]')).length, 12);
-    await page.screenshot({ path: "book-output/book-practice-verification.png", fullPage: true });
+    await page.screenshot({ path: `${artifactRoot}/book-practice-verification.png`, fullPage: true });
     for (const answer of challenge.answers) await page.click(`input[value="${answer.optionId}"]`);
     await clickText(page, "Verify my book");
     await page.waitForFunction(() => document.querySelector("main")?.innerText.includes("Your book is verified"));
     assert(verified);
+    await laptop.bringToFront();
+    await laptop.evaluate(() => window.dispatchEvent(new Event("focus")));
+    await laptop.waitForFunction(() => document.querySelector("#panel-generate")?.innerText.includes("Book verified"));
+    const laptopStatus = await laptop.$eval("#panel-generate", (element) => element.innerText);
+    assert(laptopStatus.includes("practice@example.com"));
+    assert(laptopStatus.includes("on this device"));
+    assert.equal(await laptop.$('a[href^="/account/books?book="]'), null);
+    assert.equal(await laptop.$('input[aria-label="Number of rhythms"]'), null);
+    await clickText(laptop, "Refresh book verification");
+    await library.bringToFront();
+    await library.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+    await library.waitForSelector('section[aria-label="Verified books"]');
+    assert((await library.$eval('section[aria-label="Verified books"]', (element) => element.innerText)).includes(book.title));
+    await library.reload({ waitUntil: "domcontentloaded" });
+    await library.waitForFunction((bookKey) => document.querySelector("main select")?.value === bookKey, {}, book.book);
+    await page.bringToFront();
+    await page.waitForFunction(() => [...document.querySelectorAll("main button")].some((button) => button.textContent === "Refresh book verification" && !button.disabled));
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    await page.waitForFunction(() => window.scrollY === 0);
     await page.click(`a[href="/book?token=${token}"]`);
     await page.waitForSelector("#tab-generate"); await page.click("#tab-generate");
     await page.waitForSelector('input[aria-label="Number of rhythms"]');
@@ -118,6 +160,12 @@ async function clickText(page, text) {
     assert.equal(generationCalls, 1);
     assert(!JSON.stringify(saved).includes(token));
     assert(!errors.length, errors.join("\n"));
-    console.log("Browser checks passed: QR redirect, mobile layout, notation, modification, playback, sign-in gate, three account matches, generation, add all, save, and practice-only reopening.");
+    console.log("Browser checks passed: QR redirect, mobile layout, notation, modification, playback, sign-in gate, three account matches, cross-device verification refresh, verified library, generation, add all, save, and practice-only reopening.");
+  } catch (error) {
+    console.error("Browser errors:", errors);
+    for (const tab of await browser.pages()) {
+      console.error("Page:", tab.url(), await tab.$eval("main", (element) => element.innerText.slice(0, 1500)).catch(() => "No main content"));
+    }
+    throw error;
   } finally { await browser.close(); }
 })().catch((error) => { console.error(error); process.exitCode = 1; });
