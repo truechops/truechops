@@ -12,6 +12,9 @@ import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import IconButton from "@mui/material/IconButton";
 import { FaUser } from "react-icons/fa";
+import { FiSearch } from "react-icons/fi";
+import { communityRoutes } from "./community-layout";
+import communityStyles from "./community.module.css";
 
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
@@ -57,7 +60,7 @@ const useStyles = makeStyles((theme) => ({
 export default function Header() {
   const classes = useStyles();
   const router = useRouter();
-  const communityPage = ['/discover','/search','/profile','/library','/u/[handle]','/rhythms/[id]'].includes(router.pathname);
+  const communityPage = communityRoutes.includes(router.pathname);
   const theme = useTheme();
   const loaded = useSelector((state) => state.app.loaded);
   const currentUser = useSelector((state) => state.realm.currentUser);
@@ -107,7 +110,7 @@ export default function Header() {
     <>
       <CssBaseline />
       <AppBar position="fixed" style={{
-        backgroundColor: communityPage ? '#fcfaf9' : 'black',
+        backgroundColor: communityPage ? '#ffffff' : 'black',
         color: communityPage ? '#29252a' : 'white',
         ...(communityPage ? { boxShadow: 'none', borderBottom: '1px solid #eee8e7' } : {})
         }}>
@@ -118,6 +121,7 @@ export default function Header() {
         >
           <IconButton
             color="inherit"
+            className={communityPage ? communityStyles.menuButton : undefined}
             aria-label="open drawer"
             onClick={() => dispatch(setNavOpen(true))}
             edge="start"
@@ -125,10 +129,10 @@ export default function Header() {
             <GiHamburgerMenu />
           </IconButton>
 
-          {communityPage && <Link href="/discover" className={classes.communityMobileTitle}>TrueChops</Link>}
+          {communityPage && <Link href="/discover" className={communityStyles.brand}><span className={communityStyles.brandMark} aria-hidden="true" /><span>True<span>Chops</span></span></Link>}
           <Tabs
             className={communityPage ? classes.communityTabs : undefined}
-            TabIndicatorProps={communityPage ? { style: { backgroundColor: '#aa3e4b', height: 2 } } : undefined}
+            TabIndicatorProps={communityPage ? { style: { backgroundColor: '#b71836', height: 2 } } : undefined}
             value={selectedArea}
             textColor="secondary"
             onChange={onAreaSelected}
@@ -143,7 +147,10 @@ export default function Header() {
             <Tab style={{ minWidth: 50, color: 'inherit' }} key="header-profile" aria-label="My profile and rhythms" icon={<FaUser />} {...a11yProps(4)} />
             <Tab style={{ minWidth: 50, color: 'inherit' }} key="header-community" label="COMMUNITY" {...a11yProps(5)} />
           </Tabs>
-          <div className="right"></div>
+          <div className={communityPage ? communityStyles.headerActions : "right"}>{communityPage && <>
+            <Link href="/search" aria-label="Search rhythms and people"><FiSearch aria-hidden="true" /></Link>
+            <Link href="/profile" aria-label="My profile" className={communityStyles.accountIcon}>{currentUser?.name?.slice(0,1).toUpperCase() || <FaUser aria-hidden="true" />}</Link>
+          </>}</div>
         </Toolbar>
         
       </AppBar>

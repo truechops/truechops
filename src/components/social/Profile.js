@@ -5,7 +5,7 @@ import { FiArrowUpRight, FiLock } from "react-icons/fi";
 import { INSTRUMENTS } from "../../lib/social/config";
 import { socialRequest } from "./api";
 import RhythmCard from "./RhythmCard";
-import RhythmDialog from "./RhythmDialog";
+import { useRhythmModal } from "./RhythmPost";
 import { Shell, Avatar, SignIn, Status, Empty, Pagination, useAccount, useResource } from "./shared";
 import styles from "./social.module.css";
 
@@ -37,10 +37,11 @@ export default function Profile({ publicView = false }) {
   const enabled = router.isReady && loaded;
   const profileResource = useResource(enabled && (publicView ? handle : user) ? publicView ? `profiles/${encodeURIComponent(handle)}?page=${page}` : "profile" : null,user?.id);
   const library = useResource(enabled && user && !publicView ? `library?tab=${tab}&page=${page}` : null,user?.id);
-  const [editingProfile,setEditingProfile] = useState(false), [editingRhythm,setEditingRhythm] = useState(null), [notice,setNotice] = useState("");
-  useEffect(() => { setEditingProfile(false); setEditingRhythm(null); setNotice(""); },[user?.id,handle]);
+  const [editingProfile,setEditingProfile] = useState(false), [notice,setNotice] = useState("");
+  useEffect(() => { setEditingProfile(false); setNotice(""); },[user?.id,handle]);
   const profile = profileResource.data?.profile;
   const result = publicView ? profileResource : library;
+  const modal = useRhythmModal(result.refresh);
   function navigate(changes) { router.push({ pathname: router.pathname, query: { ...router.query, page: 1, ...changes } },undefined,{ shallow: true, scroll: false }); }
   return <Shell title={publicView ? profile?.displayName || "Musician profile" : "My profile & rhythms"} active="profile">
     {!loaded ? <Status loading /> : !publicView && !user ? <section className={styles.signInPanel}><p className={styles.eyebrow}>YOUR PRACTICE, ALL IN ONE PLACE</p><h1>A home for your rhythms.</h1><p>Save what inspires you, publish your own ideas, and return to your collection on any device.</p><SignIn /><Link href="/discover">Explore the community first <FiArrowUpRight aria-hidden="true" /></Link></section> : <>
@@ -54,10 +55,10 @@ export default function Profile({ publicView = false }) {
       <div className={styles.collectionHeader}><div>{publicView ? <h2>Published rhythms</h2> : <><h2>Your rhythm collection</h2><p><FiLock aria-hidden="true" /> Saved rhythms and private compositions are visible only to you.</p></>}</div>{!publicView && <Link href="/" className={styles.primary}>Create a rhythm <FiArrowUpRight aria-hidden="true" /></Link>}</div>
       {!publicView && <div className={styles.tabs} aria-label="Your rhythms"><button aria-pressed={tab === "created"} onClick={() => navigate({ tab: "created" })}>My creations</button><button aria-pressed={tab === "saved"} onClick={() => navigate({ tab: "saved" })}>Saved from the community</button></div>}
       {!publicView && <Status error={result.error} loading={!result.data && !result.error} retry={result.refresh} />}
-      {result.data && <><div className={styles.grid}>{result.data.items.map((rhythm) => <RhythmCard key={`${user?.id}-${rhythm.id}`} rhythm={rhythm} onEdit={setEditingRhythm} onSaved={!publicView && tab === "saved" ? result.refresh : undefined} />)}</div>
+      {result.data && <><div className={styles.grid}>{result.data.items.map((rhythm) => <RhythmCard key={`${user?.id}-${rhythm.id}`} rhythm={rhythm} onOpen={modal.open} />)}</div>
         {!result.data.items.length && <Empty title={publicView ? "The next idea is still taking shape." : tab === "saved" ? "Keep a rhythm for later." : "Start your collection."}>{publicView ? "Published rhythms will appear here." : tab === "saved" ? <><Link href="/discover">Explore the community</Link> and save a rhythm to practice later.</> : <>Open the <Link href="/">composer</Link> and save your first rhythm. Existing saved compositions also appear here.</>}</Empty>}
         <Pagination page={page} hasMore={result.data.hasMore} onChange={(next) => navigate({ page: next })} /></>}
-      {editingRhythm && <RhythmDialog rhythm={editingRhythm} onClose={() => setEditingRhythm(null)} onSaved={(saved) => { setEditingRhythm(null); result.refresh(); setNotice(saved ? "Rhythm updated." : "Rhythm deleted."); }} />}
+      {modal.element}
     </>}
   </Shell>;
 }

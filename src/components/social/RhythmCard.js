@@ -26,25 +26,24 @@ export function RhythmActions({ rhythm, onSaved, onEdit, full = false, compact =
     } catch (failure) { setError(failure.message); } finally { setBusy(""); }
   }
   return <div className={styles.actionArea}><div className={styles.actions}>
-    <button className={styles.practiceButton} onClick={practice} disabled={Boolean(busy)}>{busy === "practice" ? "Opening..." : "Practice"}<FiArrowUpRight aria-hidden="true" /></button>
+    <button className={styles.practiceButton} onClick={practice} disabled={Boolean(busy)}>{busy === "practice" ? "Opening..." : "Open in score"}<FiArrowUpRight aria-hidden="true" /></button>
     {rhythm.isOwner ? <button onClick={onEdit} disabled={Boolean(busy)}>Edit details</button> : user ?
       <button onClick={save} disabled={Boolean(busy)} aria-pressed={saved} className={`${saved ? styles.saved : ""} ${compact ? styles.iconAction : ""}`} title={saved ? "Remove from saved rhythms" : "Save rhythm"}>{saved ? <FiCheck aria-hidden="true" /> : <FiBookmark aria-hidden="true" />}<span className={compact ? styles.srOnly : undefined}>{busy === "save" ? "Saving..." : saved ? "Saved" : "Save rhythm"}</span></button>
       : <a className={compact ? styles.iconAction : undefined} href={`/api/auth/google?returnTo=${encodeURIComponent(router.asPath)}`} title="Sign in to save"><FiBookmark aria-hidden="true" /><span className={compact ? styles.srOnly : undefined}>Sign in to save</span></a>}
   </div>{error && <p role="alert" className={styles.inlineError}>{error}</p>}</div>;
 }
-export default function RhythmCard({ rhythm, onEdit, onSaved, compact = false }) {
-  const previewScore = useMemo(() => compact ? { ...rhythm.score, measures: rhythm.score.measures.slice(0,1) } : rhythm.score,[compact,rhythm.score]);
-  return <article className={`${styles.rhythmCard} ${compact ? styles.compactCard : ""}`}>
-    <div className={styles.cardHeading}><span className={styles.eyebrow}>{rhythm.instruments.join(" / ") || "Rhythm"}</span>
-      {rhythm.visibility === "private" && <span className={styles.private}><FiLock aria-hidden="true" />Private</span>}
-      {rhythm.difficulty && <span className={styles.difficulty}>{rhythm.difficulty}</span>}</div>
-    <h2><Link href={`/rhythms/${rhythm.id}`}>{rhythm.name}</Link></h2>
-    <div className={styles.byline}>{rhythm.creator ? <Link href={`/u/${rhythm.creator.handle}`}><Avatar profile={rhythm.creator} />{rhythm.creator.displayName}</Link> : <span>Your composition</span>}
-      <span>{rhythm.tempo} BPM <span aria-hidden="true">/</span> {rhythm.measureCount} {rhythm.measureCount === 1 ? "bar" : "bars"}</span></div>
-    <div className={styles.notation} role="img" aria-label={`Notation preview of ${rhythm.name}, first ${compact ? "measure" : `${Math.min(2,rhythm.measureCount)} measures`}`}><RhythmPreview score={previewScore} minWidth={260} /></div>
-    {!compact && rhythm.description && <p className={styles.cardDescription}>{rhythm.description}</p>}
-    {!compact && <div className={styles.tags}>{rhythm.tags.map((tag) => <Link key={tag} href={{ pathname: "/search", query: { q: tag } }}>#{tag}</Link>)}</div>}
-    <RhythmActions key={`${rhythm.id}-${rhythm.saved}`} rhythm={rhythm} onEdit={() => onEdit?.(rhythm)} onSaved={onSaved} compact={compact} />
+export default function RhythmCard({ rhythm, onOpen }) {
+  const previewScore = useMemo(() => ({ ...rhythm.score, measures: rhythm.score.measures.slice(0,1) }),[rhythm.score]);
+  return <article className={styles.exerciseCard}>
+    <Link href={`/rhythms/${rhythm.id}`} onClick={onOpen ? (event) => onOpen(event,rhythm) : undefined} className={styles.exerciseLink} aria-label={`Open ${rhythm.name}`}>
+      <div className={styles.exercisePreview} role="img" aria-label={`First measure of ${rhythm.name}`}><RhythmPreview score={previewScore} minWidth={260} fit /></div>
+      <div className={styles.exerciseCaption}><h2>{rhythm.name}</h2>
+        <div className={styles.exerciseBadges}><span data-instrument>{rhythm.instruments.map((name) => name === "drumset" ? "Drum set" : name).join(" / ")}</span>
+          {rhythm.difficulty && <span data-level={rhythm.difficulty}>{rhythm.difficulty}</span>}<span>{rhythm.tempo} BPM</span>
+          {rhythm.visibility === "private" && <span><FiLock aria-hidden="true" /> Private</span>}
+        </div>
+      </div>
+    </Link>
   </article>;
 }
 export function PersonCard({ profile, compact = false }) {

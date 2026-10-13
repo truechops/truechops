@@ -4,6 +4,7 @@ import { getMongoDb, getSessionUser } from "../auth/session";
 import { SocialError, fail, string, normalizeProfile, normalizeMetadata, validateScore, normalizeMutations, searchOptions } from "./validation";
 import { publicRhythmFilter, searchPipeline } from "./search";
 import { SEARCH_INDEXES } from "./config";
+import { createEngagementService } from "./engagement";
 
 export function idFilter(id) {
   const value = string(id, 80, "rhythm ID", true);
@@ -44,7 +45,9 @@ export function createSocialService(db, { now = () => new Date(), ensureSearch =
   async function requireProfile(userId, visibility) {
     if (visibility === "public" && !await profiles.findOne({ userId })) fail(409, "Create your public profile before publishing a rhythm.");
   }
+  const engagement = createEngagementService(db,{ readable, publicProfile, now });
   return {
+    ...engagement,
     async search(user, query) {
       const options = searchOptions(query);
       if (options.q) await ensureSearch(options.type);
@@ -116,6 +119,7 @@ export function createSocialService(db, { now = () => new Date(), ensureSearch =
       const result = await rhythms.deleteOne({ ...idFilter(id), _userId: userId, type: "saved" });
       if (!result.deletedCount) fail(404,"Rhythm not found in your library.");
       await saves.deleteMany({ rhythmId: String(id) });
+      await engagement.removeEngagement(String(id));
       return { removed: true };
     },
     async bookmark(user,id,save) {
@@ -141,6 +145,9 @@ export async function productionSocialService() {
     db.collection("profiles").createIndex({ userId: 1 }, { unique: true }),
     db.collection("profiles").createIndex({ handle: 1 }, { unique: true }),
     db.collection("rhythmSaves").createIndex({ userId: 1, createdAt: -1 }),
+    db.collection("rhythmLikes").createIndex({ rhythmId: 1, userId: 1 },{ unique: true }),
+    db.collection("rhythmComments").createIndex({ rhythmId: 1, createdAt: -1, _id: -1 }),
+    db.collection("rhythmComments").createIndex({ userId: 1, createdAt: -1 }),
     db.collection("rhythms").createIndex({ _userId: 1, type: 1, date: -1 }),
     db.collection("rhythms").createIndex({ visibility: 1, type: 1, updatedAt: -1 }),
   ]).catch((error) => { indexesReady = null; throw error; });
@@ -163,11 +170,12 @@ export function checkOrigin(req) {
 export function socialHandler({ service = productionSocialService, session = getSessionUser } = {}) {
   return async (req,res) => {
     res.setHeader("Cache-Control","private, no-store");
-    const route = req.query.route || [], [area,id,action] = route;
+    const route = req.query.route || [], [area,id,action,commentId] = route;
     const allowed = route.length === 1 ? { search: ["GET"], profile: ["GET","PUT"], library: ["GET"], rhythms: ["POST"] }[area]
       : route.length === 2 && area === "profiles" ? ["GET"]
       : route.length === 2 && area === "rhythms" ? ["GET","PATCH","DELETE"]
-      : route.length === 3 && area === "rhythms" && action === "save" ? ["PUT","DELETE"] : null;
+      : route.length === 3 && area === "rhythms" ? { save: ["PUT","DELETE"], like: ["PUT","DELETE"], comments: ["GET","POST"], engagement: ["GET"] }[action]
+      : route.length === 4 && area === "rhythms" && action === "comments" ? ["DELETE"] : null;
     if (!allowed) return res.status(404).json({ error: "Page not found." });
     if (!allowed.includes(req.method)) { res.setHeader("Allow",allowed.join(", ")); return res.status(405).json({ error: "Method not allowed." }); }
     try {
@@ -185,6 +193,10 @@ export function socialHandler({ service = productionSocialService, session = get
       if (area === "library") result = await api.library(user,req.query);
       if (area === "rhythms") {
         if (action === "save") result = await api.bookmark(user,id,method === "PUT");
+        else if (action === "like") result = await api.like(user,id,method === "PUT");
+        else if (action === "engagement") result = await api.engagement(user,id);
+        else if (action === "comments") result = method === "GET" ? await api.comments(user,id,req.query)
+          : method === "POST" ? await api.addComment(user,id,body) : await api.removeComment(user,id,commentId);
         else if (method === "GET") result = await api.getRhythm(user,id);
         else if (method === "POST") result = await api.createRhythm(user,body);
         else if (method === "PATCH") result = await api.updateRhythm(user,id,body);

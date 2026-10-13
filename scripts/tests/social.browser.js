@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const puppeteer = require("puppeteer");
 const origin = process.argv[2] || "http://127.0.0.1:3104";
-const folder = "book-output/community-search-preview";
+const folder = "book-output/community-practice-preview";
 fs.mkdirSync(folder,{recursive:true});
 const note=(duration,hit=true)=>({duration,notes:hit?["C5"]:[],dots:0,ornaments:"",velocity:.5});
 const score={parts:{snare:{enabled:true}},measures:[
@@ -13,7 +13,7 @@ const score={parts:{snare:{enabled:true}},measures:[
 ]};
 const creator={id:"profile-one",handle:"maya_pulse",displayName:"Maya Rivers",bio:"Finding the groove between the notes. Snare studies, odd meters, and a little space to breathe.",instruments:["snare","drumset"],joinedAt:"2026-10-01"};
 const people=[creator,...[["Theo Park","theo_park"],["Jules Moreno","jules_plays"],["Sam Brooks","sam_brooks"]].map(([displayName,handle],i)=>({...creator,id:`person-${i}`,displayName,handle}))];
-let myProfile=null, signedIn=false, saved=new Set(), requests=[];
+let myProfile=null, signedIn=false, saved=new Set(), requests=[], likes=new Set(), comments=[];
 const rhythms=["The space between","Five against the pulse","An eighth-note conversation","Make room for the backbeat"].map((name,i)=>({id:`rhythm-${i}`,name,description:["Keep the pulse steady. Let the spaces speak.","A shifting pattern that keeps coming home.","Start slowly, then make the two bars feel like one phrase.","Listen to the distance between each entrance."][i],tags:[["syncopation","space"],["coordination","quintuplets"],["eighths","groove"],["backbeat","independence"]][i],instruments:["snare"],difficulty:["intermediate","advanced","beginner","intermediate"][i],visibility:"public",tempo:[90,70,80,100][i],measureCount:2,score,mutations:[],creator,isOwner:false,saved:false}));
 const mine={...rhythms[0],id:"mine",name:"My private practice",visibility:"private",isOwner:true,creator:null};
 const decorate=(r)=>({...r,saved:saved.has(r.id)});
@@ -50,8 +50,8 @@ async function field(page,label,value) {
       if(url.pathname==="/api/auth/me") return send({user:signedIn?{id:"reader",name:"Alex Carter",email:"alex@example.test"}:null});
       if(!url.pathname.startsWith("/api/social/")) return req.continue();
       const path=url.pathname.slice("/api/social/".length), method=req.method();
-      requests.push({path,method,query:url.search});
       const body=req.postData()?JSON.parse(req.postData()):{};
+      requests.push({path,method,query:url.search,body});
       if(typeof body.tags==="string") body.tags=body.tags.split(",").map((tag)=>tag.trim()).filter(Boolean);
       if(path==="search") {
         const query=url.searchParams.get("q"), users=url.searchParams.get("type")==="users";
@@ -72,15 +72,38 @@ async function field(page,label,value) {
       if(path.endsWith("/save")) {const id=path.split("/")[1];if(method==="PUT")saved.add(id);else saved.delete(id);return send({saved:saved.has(id)});}
       if(path==="rhythms"&&method==="POST")return send({rhythm:{...body,id:"created",isOwner:true}},201);
       if(path==="rhythms/mine"&&method==="PATCH") {Object.assign(mine,body);return send({rhythm:mine});}
+      if(path.startsWith("rhythms/")) {
+        const [,id,action,commentId]=path.split("/");
+        const summary=()=>({likeCount:likes.has(id)?1:0,liked:likes.has(id),commentCount:comments.filter((c)=>c.rhythmId===id).length});
+        if(action==="engagement")return send(summary());
+        if(action==="like") { if(method==="PUT")likes.add(id);else likes.delete(id);return send(summary()); }
+        if(action==="comments") {
+          if(method==="POST") {const comment={id:`comment-${Date.now()}`,rhythmId:id,text:body.text.trim(),author:myProfile||{...creator,displayName:"Alex Carter"},canDelete:true,createdAt:new Date().toISOString()};comments.unshift(comment);return send({comment,...summary()},201);}
+          if(method==="DELETE") {comments=comments.filter((c)=>c.id!==commentId);return send({removed:true,...summary()});}
+          return send({items:comments.filter((c)=>c.rhythmId===id),page:1,hasMore:false});
+        }
+      }
       if(path.startsWith("rhythms/"))return send({rhythm:decorate(rhythms.find((r)=>r.id===path.split("/")[1])||mine)});
       return send({error:"Unexpected fixture route"},404);
     });
     await page.goto(`${origin}/discover`,{waitUntil:"networkidle0"});
     await page.waitForSelector("main .vf-stavenote");
-    assert((await page.$eval("main",el=>el.innerText)).includes("Sign in to save"));
+    assert(!(await page.$eval("main article",el=>el.innerText)).includes("Maya Rivers"),"Feed cards contain only the exercise");
+    assert.equal(await page.$("main article button"),null,"Card social actions appear only after opening");
     assert.equal(await page.$("#community-search"),null,"Discover shows a feed, not an active search form");
     assert(!(await page.$eval("main",el=>el.innerText)).includes("Good rhythms"));
+    assert(await page.$$eval("main article svg",nodes=>nodes.every(el=>el.getBoundingClientRect().width<=el.closest("article").getBoundingClientRect().width)),"Card notation fits its preview");
     await page.screenshot({path:`${folder}/discover-desktop.png`,fullPage:true});
+    await page.click("main a[href='/rhythms/rhythm-0']");
+    await page.waitForSelector("[role=dialog] #rhythm-post-title");
+    assert((await page.$eval("[role=dialog]",el=>el.innerText)).includes("Sign in to save"));
+    assert((await page.$eval("[role=dialog]",el=>el.innerText)).includes("Maya Rivers"));
+    await page.waitForFunction(()=>getComputedStyle(document.querySelector(".MuiDialog-container")).opacity==="1");
+    await page.screenshot({path:`${folder}/exercise-desktop.png`,fullPage:true});
+    await page.keyboard.press("Escape");
+    await page.waitForFunction(()=>!document.querySelector("[role=dialog]"));
+    assert(!new URL(page.url()).searchParams.has("rhythm"));
+    assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute("href")),"/rhythms/rhythm-0","Closing returns keyboard focus to the card");
     await page.click("main a[href='/search']");
     await page.waitForFunction(()=>location.pathname==="/search" && document.activeElement?.id==="community-search");
     await page.type("#community-search","triplets");
@@ -130,13 +153,37 @@ async function field(page,label,value) {
     await page.screenshot({path:`${folder}/public-profile.png`,fullPage:true});
     signedIn=true;
     await page.goto(`${origin}/search`,{waitUntil:"networkidle0"});
-    await clickText(page,"Save rhythm");await page.waitForFunction(()=>Array.from(document.querySelectorAll("main button")).some((el)=>el.textContent==="Saved"));
+    await page.click("main a[href='/rhythms/rhythm-0']");
+    await page.waitForSelector("[role=dialog] #rhythm-post-title");
+    await clickText(page,"Save rhythm");await page.waitForFunction(()=>Array.from(document.querySelectorAll("[role=dialog] button")).some((el)=>el.textContent==="Saved"));
     assert(saved.has("rhythm-0"));
+    await page.waitForSelector("button[aria-label='Like rhythm']:not([disabled])");
+    await page.click("button[aria-label='Like rhythm']");
+    await page.waitForSelector("button[aria-label='Unlike rhythm']");
+    await page.type("#new-comment","Working on this at 60 BPM. <script>safe text</script>");
+    await clickText(page,"Post");
+    await page.waitForSelector("button[aria-label='Delete comment']");
+    assert.equal(comments.length,1);
+    assert((await page.$eval("[role=dialog]",el=>el.innerText)).includes("<script>safe text</script>"));
+    await page.waitForFunction(()=>getComputedStyle(document.querySelector(".MuiDialog-container")).opacity==="1");
+    await page.screenshot({path:`${folder}/exercise-conversation.png`,fullPage:true});
+    await page.click("button[aria-label='Delete comment']");
+    await page.waitForFunction(()=>!document.querySelector("button[aria-label='Delete comment']"));
+    assert.equal(comments.length,0);
+    await page.click("button[aria-label='Close rhythm']");
+    await page.waitForFunction(()=>!document.querySelector("[role=dialog]"));
     await clickText(page,"People");
     await page.waitForFunction(()=>document.getElementById("tab-users")?.getAttribute("aria-selected")==="true");
     await clickText(page,"Rhythms");
     await page.waitForSelector("section[aria-label='Rhythms'] .vf-stavenote");
-    assert(await page.$eval("section[aria-label='Rhythms'] article",el=>el.textContent.includes("Saved")),"Saved state must survive category switches");
+    await page.click("main a[href='/rhythms/rhythm-0']");
+    await page.waitForSelector("button[aria-label='Unlike rhythm']");
+    assert((await page.$eval("[role=dialog]",el=>el.innerText)).includes("Saved"),"Saved state must survive category switches");
+    await page.reload({waitUntil:"networkidle0"});
+    await page.waitForSelector("[role=dialog] #rhythm-post-title");
+    await page.click("button[aria-label='Close rhythm']");
+    await page.waitForFunction(()=>!document.querySelector("[role=dialog]"));
+    assert.equal(new URL(page.url()).searchParams.get("type"),"rhythms","Closing a reloaded modal preserves search context");
     await page.goto(`${origin}/profile`,{waitUntil:"networkidle0"});
     await clickText(page,"Create public profile");
     await field(page,"Handle","alex_beats");await field(page,"Bio","Working on the quiet notes.");
@@ -147,19 +194,30 @@ async function field(page,label,value) {
     assert((await page.$eval("main",el=>el.innerText)).includes("The space between"));
     await page.screenshot({path:`${folder}/my-profile.png`,fullPage:true});
     await clickText(page,"My creations");await page.waitForFunction(()=>document.querySelector("main")?.innerText.includes("My private practice"));
-    await clickText(page,"Edit details");await page.waitForSelector("[role=dialog]");
+    await page.click("main a[href='/rhythms/mine']");
+    await page.waitForSelector("[role=dialog] #rhythm-post-title");
+    assert.equal(await page.$("#new-comment"),null,"Private rhythms have no public conversation");
+    await clickText(page,"Edit details");await page.waitForSelector("#rhythm-dialog-title");
     await field(page,"Title","My updated practice");await field(page,"Visibility","public");await clickText(page,"Save & publish");
-    await page.waitForFunction(()=>!document.querySelector("[role=dialog]"));assert.equal(mine.visibility,"public");
+    await page.waitForFunction(()=>!document.querySelector("#rhythm-dialog-title"));assert.equal(mine.visibility,"public");
+    await page.waitForFunction(()=>document.querySelector("#rhythm-post-title")?.textContent==="My updated practice");
     await page.goto(`${origin}/rhythms/rhythm-0`,{waitUntil:"networkidle0"});
-    await clickText(page,"Practice");await page.waitForFunction(()=>location.pathname==="/");
+    await clickText(page,"Open in score");await page.waitForFunction(()=>location.pathname==="/");
     await page.waitForSelector("button[aria-label='save']");await page.click("button[aria-label='save']");
     await page.waitForSelector("[role=dialog]");await field(page,"Title","Saved from the composer");await clickText(page,"Save privately");
     await page.waitForFunction(()=>document.body.innerText.includes("Saved to your profile."));
-    assert(requests.some((r)=>r.path==="rhythms"&&r.method==="POST"));
+    assert(requests.some((r)=>r.path==="rhythms"&&r.method==="POST"&&r.body.visibility==="private"),"Composer saves are private by default");
     await page.setViewport({width:390,height:844});
     await page.goto(`${origin}/discover`,{waitUntil:"networkidle0"});await page.waitForSelector("main .vf-stavenote");
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),"Mobile page must not overflow horizontally");
     await page.screenshot({path:`${folder}/discover-mobile.png`,fullPage:true});
+    await page.click("main a[href='/rhythms/rhythm-0']");
+    await page.waitForSelector("[role=dialog] #new-comment");
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),"Mobile dialog must fit the screen");
+    await page.waitForFunction(()=>getComputedStyle(document.querySelector(".MuiDialog-container")).opacity==="1");
+    await page.screenshot({path:`${folder}/exercise-mobile.png`,fullPage:true});
+    await page.click("button[aria-label='Close rhythm']");
+    await page.waitForFunction(()=>!document.querySelector("[role=dialog]"));
     await page.click("button[aria-label='open drawer']");
     await page.waitForSelector("[aria-label='Practice tools']");
     assert((await page.$eval("[aria-label='Practice tools']",el=>el.innerText)).includes("Score"),"Practice navigation remains available on phones");
@@ -195,7 +253,14 @@ async function field(page,label,value) {
     await page.goto(`${origin}/discover?q=triplets`,{waitUntil:"networkidle0"});
     await page.waitForFunction(()=>location.pathname==="/search" && location.search.includes("q=triplets"));
     assert.deepEqual(errors,[]);
-    console.log("Passed: feed, live combined search, tabs, keyboard/back navigation, filters, deep links, empty/error states, account saves, profiles, publishing, composer practice, and mobile layouts.");
+    console.log("Passed: feed, live combined search, tabs, keyboard/back navigation, filters, deep links, empty/error states, account saves, comments, likes, modal deep links and focus, profiles, publishing, private composer saves, and mobile layouts.");
     console.log(`Screenshots: ${folder}`);
+  } catch(error) {
+    console.error("Runtime errors:",errors);
+    for(const tab of await browser.pages()) {
+      console.error("Page:",tab.url(),await tab.$eval("body",el=>el.innerText.slice(-3500)).catch(()=>"No body"));
+      if(tab.url().startsWith(origin))await tab.screenshot({path:`${folder}/failure.png`,fullPage:true});
+    }
+    throw error;
   } finally {await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

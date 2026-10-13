@@ -2,7 +2,6 @@ import crypto from "crypto";
 import { getMongoDb, getSessionUser, hasBookScan } from "./auth/session";
 import { findStoredBookQrPage, loadPracticeBook, getPracticeBookCatalog } from "./book-builder-storage";
 import { validatePracticeLines } from "./book-practice-score";
-import { createGenerationConfig, createUniqueGeneratedLine } from "../../scripts/generate-ai-book";
 
 export class PracticeError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -54,41 +53,10 @@ export function challengeMatches(challenge, answers) {
     challenge.answers.every((expected) => answers.some((answer) => answer.questionId === expected.questionId && answer.optionId === expected.optionId));
 }
 
-export function generateBookPractice(book, pageNumber, count) {
-  const sourceSection = book.sections.find((section) => section.pages.some((page) => page.pageNumber === pageNumber));
-  if (!sourceSection) fail(404, "Book page not found.");
-  const pageIndex = sourceSection.pages.findIndex((page) => page.pageNumber === pageNumber);
-  // Keep all subsection pages so ordered plans and density offsets are exact.
-  const generation = createGenerationConfig({}, { ...book, sections: [sourceSection] });
-  const config = generation.sections[0].pages[pageIndex];
-  const seeded = { ...config, id: `${config.id}-${crypto.randomUUID()}` };
-  const sourcePage = sourceSection.pages[pageIndex];
-  const period = sourcePage.lines.length;
-  const finiteQuarterEighths = (config.rhythmCombination?.rhythms.length === 2 &&
-    config.rhythmCombination.rhythms.includes("quarters") && config.rhythmCombination.rhythms.includes("eighths")) ||
-    (config.rhythmProgression?.preceding.length === 1 && config.primaryRhythms?.subdivisions.includes("eighths"));
-  const finiteOrder = finiteQuarterEighths ? shuffle(Array.from({ length: period }, (_, index) => index)) : null;
-  const used = new Set();
-  const lines = [];
-  for (let i = 0; i < count; i++) {
-    if (finiteOrder && i >= finiteOrder.length) break;
-    const index = finiteOrder ? finiteOrder[i] : count <= period ? Math.floor(i * (period - 1) / Math.max(1, count - 1)) : i % period;
-    try {
-      const result = createUniqueGeneratedLine(null, seeded, config.sampleJson, index, used);
-      lines.push({ lineNumber: i + 1, score: result.score });
-    } catch (error) {
-      // Small quarter-note vocabularies can run out of distinct exercises.
-      if (lines.length && /unique/i.test(error.message)) break;
-      throw error;
-    }
-  }
-  return { lines, ...(lines.length < count ? { notice: `Created ${lines.length} distinct rhythms; this page has a small rhythm pool.` } : {}) };
-}
-
 // Dependencies are injectable for account-isolation and concurrency tests;
 // production always uses signed sessions, MongoDB, and published book files.
 export function createPracticeService({ db, loadBook = loadPracticeBook, resolve = findStoredBookQrPage,
-  catalog = getPracticeBookCatalog, generate = generateBookPractice, now = () => new Date() }) {
+  catalog = getPracticeBookCatalog, now = () => new Date() }) {
   const ownership = db.collection("bookOwnership");
   const challenges = db.collection("bookVerificationChallenges");
   const sets = db.collection("bookPracticeSets");
@@ -151,16 +119,6 @@ export function createPracticeService({ db, loadBook = loadPracticeBook, resolve
       }, { upsert: true });
       return { verified: true };
     },
-    async generate(userId, token, count, scanAllowed) {
-      if (!scanAllowed) fail(403, "Scan this page's QR code again to generate more rhythms.");
-      if (!Number.isInteger(count) || count < 1 || count > 32) fail(400, "Choose between 1 and 32 rhythms.");
-      const resolved = await resolve(token);
-      if (!resolved) fail(404, "Book page not found.");
-      if (!await verified(userId, resolved.pageRef)) fail(403, "Verify this book in your account before generating rhythms.");
-      await limit(userId, "generate", 6, 60 * 1000);
-      const book = await loadBook(resolved.pageRef.book, [resolved.pageRef.page]);
-      return generate(book, resolved.pageRef.page, count);
-    },
     async save(userId, value) {
       let lines;
       try { lines = validatePracticeLines(value?.lines); } catch (error) { fail(400, error.message); }
@@ -206,9 +164,10 @@ export function practiceHandler(route, dependencies = {}) {
   const session = dependencies.session || getSessionUser;
   const scan = dependencies.scan || hasBookScan;
   const service = dependencies.service || productionService;
-  const allowed = { access: ["GET", "POST", "PUT"], generate: ["POST"], sets: ["GET", "POST", "DELETE"] }[route];
+  const allowed = { access: ["GET", "POST", "PUT"], sets: ["GET", "POST", "DELETE"] }[route];
   return async (req, res) => {
     res.setHeader("Cache-Control", "private, no-store");
+    if (!allowed) return res.status(404).json({ error: "Page not found." });
     if (!allowed.includes(req.method)) {
       res.setHeader("Allow", allowed);
       return res.status(405).json({ error: "Method not allowed." });
@@ -228,7 +187,6 @@ export function practiceHandler(route, dependencies = {}) {
         if (req.method === "POST") result = await api.startVerification(user.id, body.book);
         if (req.method === "PUT") result = await api.finishVerification(user.id, body.book, body.challengeId, body.answers);
       }
-      if (route === "generate") result = await api.generate(user.id, body.token, body.count, scan(req, body.token));
       if (route === "sets") {
         if (req.method === "GET") result = req.query.id ? await api.get(user.id, req.query.id) : await api.list(user.id);
         if (req.method === "POST") result = await api.save(user.id, body);

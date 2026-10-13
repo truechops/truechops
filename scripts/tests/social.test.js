@@ -24,6 +24,7 @@ function matches(row,query) {
     if (key === "$or") return value.some((q) => matches(row,q));
     if (key === "$and") return value.every((q) => matches(row,q));
     if (value && typeof value === "object" && "$in" in value) return value.$in.some((v) => equal(row[key],v));
+    if (value && typeof value === "object" && "$gte" in value) return new Date(row[key]) >= new Date(value.$gte);
     return Array.isArray(row[key]) ? row[key].includes(value) : equal(row[key],value);
   });
 }
@@ -42,6 +43,7 @@ function database() {
         rows,traces,
         async findOne(q) { const row=rows.find((r)=>matches(r,q));return row ? clone(row) : null; },
         find(q={}) { return cursor(rows.filter((r)=>matches(r,q))); },
+        async countDocuments(q={}) { return rows.filter((r)=>matches(r,q)).length; },
         async insertOne(row) { rows.push(clone(row));return { insertedId: row._id }; },
         async updateOne(q,update,{upsert}={}) {
           let index=rows.findIndex((r)=>matches(r,q));
@@ -275,6 +277,80 @@ test("Next HTTP parsing still enforces authentication, origin and JSON payload v
   const updated=await request(`rhythms/${created.body.rhythm.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:"Renamed over HTTP"})});
   assert.equal(updated.status,200);
   assert.equal(updated.body.rhythm.name,"Renamed over HTTP");
+});
+
+test("likes persist per account, are idempotent, and require a published rhythm",async()=>{
+  const {api,db,privateRhythm,publicRhythm}=await fixture();
+  assert.equal(privateRhythm.visibility,"private");
+  await rejects(api.like(null,publicRhythm.id,true),401);
+  await rejects(api.like(visitor,privateRhythm.id,true),404);
+  await Promise.all(Array.from({length:4},()=>api.like(visitor,publicRhythm.id,true)));
+  assert.equal(db.collection("rhythmLikes").rows.length,1);
+  assert.deepEqual(await api.engagement(visitor,publicRhythm.id),{liked:true,likeCount:1,commentCount:0});
+  assert.equal((await api.engagement(owner,publicRhythm.id)).liked,false);
+  await api.like(owner,publicRhythm.id,true);
+  await api.like(visitor,publicRhythm.id,false);
+  assert.equal((await api.engagement(null,publicRhythm.id)).likeCount,1);
+  await api.updateRhythm(owner,publicRhythm.id,{visibility:"private"});
+  await rejects(api.engagement(visitor,publicRhythm.id),404);
+  await rejects(api.comments(visitor,publicRhythm.id),404);
+  await rejects(api.like(visitor,publicRhythm.id,false),404);
+});
+
+test("comments use public identities, validate text, and enforce authorship and rhythm-owner moderation",async()=>{
+  const {api,publicRhythm,privateRhythm}=await fixture();
+  await rejects(api.addComment(null,publicRhythm.id,{text:"Hello"}),401);
+  await rejects(api.addComment(visitor,publicRhythm.id,{text:"Hello"}),409);
+  await api.saveProfile(visitor,{...profile,handle:"another_drummer",displayName:"Another drummer"});
+  const saved=await api.addComment(visitor,publicRhythm.id,{text:"  Start slowly, then add accents.  ",userId:owner.id});
+  assert.equal(saved.comment.text,"Start slowly, then add accents.");
+  const visible=await api.comments(null,publicRhythm.id);
+  assert.equal(visible.items[0].author.handle,"another_drummer");
+  assert.equal(visible.items[0].canDelete,false);
+  assert(!JSON.stringify(visible).includes(visitor.id));
+  assert(!JSON.stringify(visible).includes("email"));
+  assert.equal((await api.comments(owner,publicRhythm.id)).items[0].canDelete,true);
+  for (const text of [" ","x".repeat(1001),{$ne:null}]) await rejects(api.addComment(visitor,publicRhythm.id,{text}),400);
+  await rejects(api.comments(visitor,publicRhythm.id,{page:{$ne:0}}),400);
+  await rejects(api.removeComment({id:"other"},publicRhythm.id,saved.comment.id),404);
+  await rejects(api.removeComment(owner,privateRhythm.id,saved.comment.id),404);
+  await api.removeComment(owner,publicRhythm.id,saved.comment.id);
+  assert.equal((await api.engagement(null,publicRhythm.id)).commentCount,0);
+  const own=await api.addComment(visitor,publicRhythm.id,{text:"My comment"});
+  await api.removeComment(visitor,publicRhythm.id,own.comment.id);
+  assert.equal((await api.comments(null,publicRhythm.id)).items.length,0);
+});
+
+test("comment pagination, posting limits and rhythm deletion clean up engagement",async()=>{
+  const {api,db,publicRhythm}=await fixture();
+  for(let i=0;i<10;i++) await api.addComment(owner,publicRhythm.id,{text:`Practice note ${i}`});
+  await rejects(api.addComment(owner,publicRhythm.id,{text:"Too many"}),429);
+  db.collection("rhythmComments").rows.forEach((row)=>{row.createdAt="2020-01-01";});
+  await api.addComment(owner,publicRhythm.id,{text:"A new day"});
+  for(let i=0;i<15;i++) db.collection("rhythmComments").rows.push({_id:`older-${i}`,rhythmId:publicRhythm.id,userId:owner.id,text:`Older ${i}`,createdAt:"2019-01-01"});
+  const first=await api.comments(null,publicRhythm.id),second=await api.comments(null,publicRhythm.id,{page:2});
+  assert.equal(first.items.length,20);assert.equal(first.hasMore,true);
+  assert.equal(second.items.length,6);assert.equal(second.hasMore,false);
+  assert(!second.items.some((row)=>first.items.some((other)=>row.id===other.id)));
+  await api.like(visitor,publicRhythm.id,true);
+  await api.removeRhythm(owner,publicRhythm.id);
+  assert.equal(db.collection("rhythmComments").rows.length,0);
+  assert.equal(db.collection("rhythmLikes").rows.length,0);
+});
+
+test("engagement routes work through Next HTTP parsing and enforce signed sessions and origin",async(t)=>{
+  const {api,publicRhythm}=await fixture();
+  const request=await httpApi(t,async()=>api),path=`rhythms/${publicRhythm.id}`;
+  assert.equal((await request(`${path}/like`,{method:"PUT",user:null})).status,401);
+  assert.equal((await request(`${path}/like`,{method:"PUT",headers:{origin:"https://elsewhere.test"}})).status,403);
+  assert.equal((await request(`${path}/like`,{method:"PUT"})).body.liked,true);
+  assert.equal((await request(`${path}/engagement`,{user:null})).body.likeCount,1);
+  const added=await request(`${path}/comments`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:"Keep the pulse steady."})});
+  assert.equal(added.status,201);
+  assert.equal((await request(`${path}/comments`,{user:null})).body.items.length,1);
+  assert.equal((await request(`${path}/comments/${added.body.comment.id}`,{method:"DELETE",user:visitor})).status,404);
+  assert.equal((await request(`${path}/comments/${added.body.comment.id}`,{method:"DELETE"})).status,200);
+  assert.equal((await request(`${path}/like`,{method:"DELETE"})).body.liked,false);
 });
 
 test("legacy GraphQL cannot read or mutate private rhythms belonging to another user",async()=>{

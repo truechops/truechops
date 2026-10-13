@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { FiSearch, FiArrowLeft, FiArrowRight, FiPlus, FiUser, FiX } from "react-icons/fi";
+import { FiSearch, FiArrowLeft, FiArrowRight, FiPlus, FiX } from "react-icons/fi";
 import { INSTRUMENTS, DIFFICULTIES } from "../../lib/social/config";
 import RhythmCard, { PersonCard } from "./RhythmCard";
-import RhythmDialog from "./RhythmDialog";
+import { useRhythmModal } from "./RhythmPost";
 import { Shell, Status, Empty, Pagination, useAccount, useResource } from "./shared";
 import styles from "./social.module.css";
 
@@ -18,7 +18,7 @@ export default function Discover() {
   const type = searching && ["rhythms", "users"].includes(router.query.type) ? router.query.type : "all";
   const instrument = scalar(router.query.instrument), difficulty = scalar(router.query.difficulty);
   const page = Number(router.query.page) || 1;
-  const [input,setInput] = useState(q), [editing,setEditing] = useState(null), [composing,setComposing] = useState(false);
+  const [input,setInput] = useState(q), [composing,setComposing] = useState(false);
   const searchInput = useRef(null), timer = useRef(null);
   const ready = router.isReady && loaded;
 
@@ -29,7 +29,6 @@ export default function Discover() {
     }
   },[router.isReady, searching, q, router.query.type]);
   useEffect(() => { setInput(q); },[q]);
-  useEffect(() => { setEditing(null); },[user?.id]);
   useEffect(() => {
     if (searching && router.isReady) searchInput.current?.focus();
   },[searching, router.isReady]);
@@ -54,6 +53,7 @@ export default function Discover() {
   const peopleParams = new URLSearchParams({ q, type: "users", instrument, page: String(type === "users" ? page : 1) });
   const rhythms = useResource(ready ? `search?${rhythmParams}` : null,user?.id,{ keepPreviousData: true });
   const people = useResource(ready && searching ? `search?${peopleParams}` : null,user?.id,{ keepPreviousData: true });
+  const modal = useRhythmModal(rhythms.refresh);
   const typing = searching && input.trim() !== q;
   const showPeople = searching && type !== "rhythms";
   const showRhythms = !searching || type !== "users";
@@ -77,16 +77,15 @@ export default function Discover() {
         <input ref={searchInput} id="community-search" value={input} maxLength={100} onChange={(event) => setInput(event.target.value)}
           onCompositionStart={() => setComposing(true)} onCompositionEnd={() => setComposing(false)}
           onKeyDown={(event) => { if (event.key === "Escape") { clearTimeout(timer.current); router.push(returnHref); } }}
-          placeholder="Search rhythms and people" type="search" autoComplete="off" autoCapitalize="none" spellCheck="false" />
+          placeholder="Search rhythms, creators, or tags" type="search" autoComplete="off" autoCapitalize="none" spellCheck="false" />
         {input && <button type="button" onClick={clearSearch} className={styles.clearSearch} aria-label="Clear search"><FiX aria-hidden="true" /></button>}
       </form>
       <Link href={returnHref} className={styles.cancelSearch}>Cancel</Link>
     </header> : <header className={styles.exploreHeader}>
-      <h1>Community<span className={styles.communityDot} aria-hidden="true" /></h1>
-      <Link href={{ pathname: "/search", query: feedFilters }} className={styles.searchLauncher}><FiSearch aria-hidden="true" /><span>Search rhythms and people</span></Link>
+      <div className={styles.exploreIntro}><h1>Explore the Community</h1><p>Find your next exercise. Make it part of your practice.</p></div>
+      <Link href={{ pathname: "/search", query: feedFilters }} className={styles.searchLauncher}><FiSearch aria-hidden="true" /><span>Search rhythms, creators, or tags...</span></Link>
       <div className={styles.exploreActions}>
-        <Link href="/" className={styles.createLink}><FiPlus aria-hidden="true" /><span>Create</span></Link>
-        <Link href="/profile" className={styles.iconLink} aria-label="My profile and saved rhythms"><FiUser aria-hidden="true" /></Link>
+        <Link href="/" className={styles.createLink}><FiPlus aria-hidden="true" /><span>Create Rhythm</span></Link>
       </div>
     </header>}
 
@@ -99,16 +98,20 @@ export default function Discover() {
             if (next < 0) return;
             event.preventDefault(); changeCategory(categories[next][0]); document.getElementById(`tab-${categories[next][0]}`)?.focus();
           }}>{label}</button>)}
-      </div> : <p className={styles.feedLabel}>Latest rhythms</p>}
+      </div> : <div className={styles.instrumentTabs} role="group" aria-label="Instrument filters">
+        {[["","All Instruments"],...INSTRUMENTS.map((value) => [value,value === "drumset" ? "Drum Set" : value.charAt(0).toUpperCase()+value.slice(1)])].map(([value,label]) =>
+          <button key={value} aria-pressed={instrument === value} onClick={() => navigate({ instrument:value })}>{label}</button>)}
+      </div>}
       <div className={styles.filters}>
-        <label><span className={styles.srOnly}>Instrument</span><select aria-label="Instrument" value={instrument} onChange={(event) => navigate({ instrument: event.target.value, q: input.trim() })}>
+        {searching && <label><span className={styles.srOnly}>Instrument</span><select aria-label="Instrument" value={instrument} onChange={(event) => navigate({ instrument: event.target.value, q: input.trim() })}>
           <option value="">All instruments</option>{INSTRUMENTS.map((value) => <option key={value}>{value}</option>)}
-        </select></label>
+        </select></label>}
         {showRhythms && <label><span className={styles.srOnly}>Difficulty</span><select aria-label="Difficulty" value={difficulty} onChange={(event) => navigate({ difficulty: event.target.value, q: input.trim() })}>
           <option value="">All levels</option>{DIFFICULTIES.map((value) => <option key={value}>{value}</option>)}
         </select></label>}
         {(instrument || difficulty && showRhythms) && <button className={styles.resetFilters} onClick={() => navigate({ instrument: "", difficulty: "", q: input.trim() })}>Reset</button>}
       </div>
+      {!searching && <div className={styles.feedViews}><span>Latest</span><Link href="/search?type=users">People</Link></div>}
     </div>
 
     {searching && <h1 className={styles.srOnly}>{q ? `Search results for ${q}` : "Search rhythms and people"}</h1>}
@@ -128,8 +131,7 @@ export default function Discover() {
           {searching && <div className={styles.sectionHeading}><h2>Rhythms</h2>{type === "all" && rhythms.data?.hasMore && <button onClick={() => changeCategory("rhythms")}>See all <FiArrowRight aria-hidden="true" /></button>}</div>}
           <Status error={rhythms.error} loading={!rhythms.data && !rhythms.error} retry={rhythms.refresh} />
           {rhythms.data && <>
-            <div className={styles.exploreGrid}>{rhythms.data.items.map((rhythm) => <RhythmCard key={`${user?.id}-${rhythm.id}`} rhythm={rhythm} compact onEdit={setEditing}
-              onSaved={(saved) => rhythms.update((data) => ({ ...data, items: data.items.map((item) => item.id === rhythm.id ? { ...item,saved } : item) }))} />)}</div>
+            <div className={styles.exploreGrid}>{rhythms.data.items.map((rhythm) => <RhythmCard key={`${user?.id}-${rhythm.id}`} rhythm={rhythm} onOpen={modal.open} />)}</div>
             {!rhythms.data.items.length && <Empty title={q || instrument || difficulty ? "No rhythms found" : "No rhythms yet"}>
               {q || instrument || difficulty ? "Try a different search or reset your filters." : <>Create a rhythm and publish it from <Link href="/profile">your profile</Link>.</>}
             </Empty>}
@@ -137,6 +139,6 @@ export default function Discover() {
           </>}
         </section>}
     </div>
-    {editing && <RhythmDialog rhythm={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); rhythms.refresh(); }} />}
+    {modal.element}
   </Shell>;
 }

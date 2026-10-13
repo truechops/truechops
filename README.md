@@ -28,6 +28,10 @@ All shows both result types, with independent loading and retry states.
 `/profile` and `/library`
 show the signed-in account's creations and privately saved community rhythms.
 Public profiles use `/u/:handle`; individual rhythms use `/rhythms/:id`.
+Feed cards show only exercise content. Opening a card uses a shareable `?rhythm=`
+modal over the feed; Escape/Back restores the feed and keyboard focus. The modal
+contains the full notation, creator, practice notes, comments, likes, and library
+save controls. Its Open in score action copies the score and tempo into the editor.
 Use the composer's Save button to save privately or publish. Publishing requires
 an explicitly created public profile. Existing saved scores remain private.
 
@@ -36,6 +40,18 @@ The APIs reuse the Google session cookie and account ID. Public profiles live in
 `rhythmSaves`. Saved rhythms reference their original: unpublishing or deleting
 a rhythm also removes it from other users' visible collections. Book ownership
 and saved book practice remain accessible through the profile's books link.
+Likes live in `rhythmLikes` (one per account/rhythm); comments live in
+`rhythmComments`. Public comments require a public profile and are limited to
+1,000 characters and ten posts per minute. Comment authors and rhythm owners can
+delete comments. All engagement reads check rhythm visibility; deleting a rhythm
+also deletes its comments and likes. These ordinary indexes are created on first
+API use and need no new MongoDB Search index.
+
+Book QR pages retain selection, playback, and saved practice. Open in score sends
+selected exercises to the existing editor for dynamic variations and private
+saving or publishing. The book-specific generator has been removed; its legacy
+API returns HTTP 410 with guidance to open exercises in Score. Existing QR codes
+and account verification continue to work.
 
 Configure `MONGODB_URI`, `MONGODB_DB` (defaults to `drumtoolz`) and `AUTH_SECRET`
 in `.env.local` or deployment secrets. Do not commit connection credentials.
@@ -69,7 +85,8 @@ npm run test:book-practice
 node node_modules/next/dist/bin/next build
 # With a local Next server running (browser API fixtures; no database writes):
 node scripts/tests/social.browser.js http://127.0.0.1:3104
+node scripts/tests/book-practice.browser.js http://127.0.0.1:3104
 ```
 
-Browser screenshots are generated under `book-output/community-search-preview/` and use
+Browser screenshots are generated under `book-output/community-practice-preview/` and use
 explicit test fixtures, not real community members or production seed records.

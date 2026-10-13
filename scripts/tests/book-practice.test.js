@@ -1,7 +1,6 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 const fs = require("node:fs");
-const path = require("node:path");
 const Module = require("node:module");
 const babel = require("@babel/core");
 const originalLoader = Module._extensions[".js"];
@@ -11,11 +10,10 @@ Module._extensions[".js"] = (module, file) => {
     presets: [["@babel/preset-env", { targets: { node: "current" } }]], babelrc: false, configFile: false,
   }).code, file);
 };
-const { createPracticeService, createBookChallenge, challengeMatches, practiceHandler, generateBookPractice } = require("../../src/lib/book-practice-server");
+const { createPracticeService, createBookChallenge, challengeMatches, practiceHandler } = require("../../src/lib/book-practice-server");
 const { createSessionCookie, createBookScanCookie, hasBookScan } = require("../../src/lib/auth/session");
 const { validatePracticeLines, modifyPracticeScore, practicePlayback } = require("../../src/lib/book-practice-score");
-const { normalizeBook } = require("../../src/components/book-builder/book-data");
-const { createBookVolume } = require("../../src/lib/book-volumes");
+const retiredBookGenerator = require("../../pages/api/book-practice/generate").default;
 const genericGenerator = require("../../pages/api/exercise-generator").default;
 const copy = (value) => structuredClone(value);
 const score = (mask) => ({ parts: { snare: { enabled: true } }, measures: [{ timeSig: { num: 4, type: 4 },
@@ -162,17 +160,15 @@ test("expired checks, replaced checks, concurrent answers and guessing limits ar
   await rejectsStatus(api.startVerification("other", "other-book"), 429);
 });
 
-test("generation requires both verification and page scan; limits run before generator calls", async () => {
-  const { api, verify, calls } = setup();
-  await rejectsStatus(api.generate("owner", "page-token", 8, true), 403);
-  await verify();
-  await rejectsStatus(api.generate("owner", "page-token", 8, false), 403);
-  await rejectsStatus(api.generate("owner", "other-token", 8, true), 403);
-  for (const count of [0, -1, 33, 2.5, "8", NaN]) await rejectsStatus(api.generate("owner", "page-token", count, true), 400);
-  assert.equal(calls(), 0);
-  for (let i = 0; i < 6; i++) assert.equal((await api.generate("owner", "page-token", 3, true)).lines.length, 3);
-  await rejectsStatus(api.generate("owner", "page-token", 3, true), 429);
-  assert.equal(calls(), 6);
+test("book generation is retired and sends clients to the score without database access", async () => {
+  const { api } = setup();
+  assert.equal(api.generate,undefined);
+  for (const method of ["GET","POST"]) {
+    const res=response();
+    await retiredBookGenerator({method,headers:{},body:{token:"page-token",count:8}},res);
+    assert.equal(res.statusCode,410);
+    assert(res.body.error.includes("Open in score"));
+  }
 });
 
 test("saved sets preserve notation and tempo, strip generation rights, and enforce account isolation", async () => {
@@ -201,14 +197,14 @@ test("QR grants are signed, expire, are page-specific, and cannot replace accoun
   finally { Date.now = realNow; }
   const { api, verify } = setup();
   await verify();
-  const handler = practiceHandler("generate", { service: async () => api });
-  const req = { method: "POST", headers: { host: "localhost", cookie }, query: {}, body: { token: "page-token", count: 2 } };
+  const handler = practiceHandler("sets", { service: async () => api });
+  const req = { method: "POST", headers: { host: "localhost", cookie }, query: {}, body: { name:"Saved practice",tempo:80,lines:[{score:score(7)}] } };
   let res = response(); await handler(req, res); assert.equal(res.statusCode, 401);
   req.headers.cookie += `; ${createSessionCookie({ id: "owner" }).split(";")[0]}`;
   res = response(); await handler(req, res); assert.equal(res.statusCode, 200);
   req.headers.origin = "https://another-site.example";
   res = response(); await handler(req, res); assert.equal(res.statusCode, 403);
-  req.method = "GET";
+  req.method = "PATCH";
   res = response(); await handler(req, res); assert.equal(res.statusCode, 405);
 });
 
@@ -235,24 +231,4 @@ test("modification buttons leave timing intact; playback includes rests, dots, n
   assert.equal(audio.initialGrace.length, 1);
   assert(audio.events.every((event) => event.time < audio.duration));
   assert(Math.abs(audio.events[3].time - 1 / 3) < 1e-8);
-});
-
-test("practice generator retains Book 1/2 page rules, phrase length, and no ornaments", () => {
-  const source = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../../data/book-builder/snare-drum-book/book.json")));
-  for (const [volume, indices] of [[1, [0, 52, 105]], [2, [0, 4, 60, 61, 130, 132]]]) {
-    const book = normalizeBook(createBookVolume(source, volume));
-    for (const index of indices) {
-      const printed = book.sections.flatMap((section) => section.pages)[index];
-      const first = generateBookPractice(book, printed.pageNumber, 4);
-      assert.equal(first.lines.length, 4);
-      validatePracticeLines(first.lines);
-      const expectedMeasures = printed.pdfSettings.measuresPerExercise || 1;
-      for (const line of first.lines) {
-        assert.equal(line.score.measures.length, expectedMeasures);
-        for (const measure of line.score.measures) for (const note of measure.parts[0].voices[0].notes) assert(!note.ornaments);
-      }
-      const second = generateBookPractice(book, printed.pageNumber, 4);
-      assert.notDeepEqual(first.lines, second.lines, `Book ${volume}, page ${printed.pageNumber}: fresh random seed`);
-    }
-  }
 });

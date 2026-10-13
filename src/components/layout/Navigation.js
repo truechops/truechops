@@ -1,135 +1,48 @@
 import { useRouter } from "next/router";
+import Link from "next/link";
 import { useSelector, useDispatch } from "react-redux";
 import { appActions } from "../../store/app";
 import { logout } from "../../store/realm-app";
-
-import React from "react";
-import { makeStyles } from "@mui/styles";
 import Drawer from "@mui/material/Drawer";
 import List from "@mui/material/List";
 import Divider from "@mui/material/Divider";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
+import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { FiMusic, FiActivity, FiLayers, FiGrid, FiUsers, FiUser, FiLogIn, FiUserPlus, FiLogOut, FiBookOpen, FiInfo } from "react-icons/fi";
+import { communityRoutes } from "./community-layout";
+import styles from "./community.module.css";
 
 export default function Navigation() {
-  const drawerWidth = 256;
-
-  const useStyles = makeStyles((theme) => ({
-    drawer: {
-      width: drawerWidth,
-    },
-    drawerPaper: {
-      width: drawerWidth,
-    },
-    drawerIcon: {
-      marginRight: theme.spacing(2.5),
-    },
-  }));
-  const classes = useStyles();
-  const router = useRouter();
+  const router = useRouter(), dispatch = useDispatch();
   const currentUser = useSelector((state) => state.realm.currentUser);
   const sideNavOpen = useSelector((state) => state.app.sideNavOpen);
-  const { setNavOpen } = appActions;
-  const dispatch = useDispatch();
-
-  const navigationHandler = (url) => {
-    router.push(url);
-    dispatch(setNavOpen(false));
-  };
-
-  const logoutHandler = () => {
-    dispatch(logout());
-    router.push("/");
-  };
-
-  const iconSize = 24;
-
-  return (
-    <>
-      <Drawer
-        className={classes.drawer}
-        classes={{
-          paper: classes.drawerPaper,
-        }}
-        anchor="left"
-        open={sideNavOpen}
-        onClose={() => dispatch(setNavOpen(false))}
-      >
-        <List aria-label="Practice tools">
-          {[['Score','/'],['Drills','/exercises'],['Rudiments','/rudiments'],['BYOS','/byos']].map(([label,url]) =>
-            <ListItem disablePadding key={label}><ListItemButton onClick={() => navigationHandler(url)}><ListItemText primary={label} /></ListItemButton></ListItem>
-          )}
-        </List>
+  const desktop = useMediaQuery("(min-width:1100px)");
+  const permanent = desktop && communityRoutes.includes(router.pathname);
+  const close = () => dispatch(appActions.setNavOpen(false));
+  function item(label,url,Icon) {
+    const selected = router.pathname === url || url === "/discover" && ["/search","/rhythms/[id]"].includes(router.pathname) || url === "/profile" && ["/library","/u/[handle]"].includes(router.pathname);
+    return <ListItem disablePadding key={label}><ListItemButton component={Link} href={url} onClick={close} selected={selected} aria-current={selected ? "page" : undefined}>
+      <ListItemIcon><Icon aria-hidden="true" /></ListItemIcon><ListItemText primary={label} />
+    </ListItemButton></ListItem>;
+  }
+  return <Drawer variant={permanent ? "permanent" : "temporary"} open={permanent || sideNavOpen} onClose={close}
+    classes={{ paper: `${styles.sidebar} ${permanent ? styles.permanent : ""}` }}>
+    <nav aria-label="Site navigation">
+      <List aria-label="Practice tools">
+        {item("Score","/",FiMusic)}{item("Drills","/exercises",FiActivity)}{item("Rudiments","/rudiments",FiLayers)}{item("BYOS","/byos",FiGrid)}
+      </List>
+      <Divider />
+      <List>{item("Community — Rhythms & People","/discover",FiUsers)}{item("My Profile & Rhythms","/profile",FiUser)}</List>
+      <Divider />
+      <List>
+        {!currentUser ? <>{item("Sign Up","/signup",FiUserPlus)}{item("Log In","/login",FiLogIn)}</> :
+          <ListItem disablePadding><ListItemButton onClick={() => { dispatch(logout()); close(); router.push("/"); }}><ListItemIcon><FiLogOut aria-hidden="true" /></ListItemIcon><ListItemText primary="Log Out" /></ListItemButton></ListItem>}
         <Divider />
-        <List>
-          <ListItem onClick={navigationHandler.bind(null, "/discover")} button key="Community">
-            <ListItemText primary="Community — Rhythms & People" />
-          </ListItem>
-          <ListItem onClick={navigationHandler.bind(null, "/profile")} button key="Profile">
-            <ListItemText primary="My Profile & Rhythms" />
-          </ListItem>
-          {/* <ListItem
-          onClick={navigationHandler.bind(null, "/discover")}
-          button
-          key="discover"
-        >
-          <FaUsers className={classes.drawerIcon} size={iconSize} />
-          <ListItemText primary="discover" />
-        </ListItem> */}
-
-          {/* <ListItem button key="mods" onClick={navigationHandler.bind(null, "/mods")}>
-          <FaTools className={classes.drawerIcon} size={iconSize} />
-          <ListItemText primary="mods" />
-        </ListItem> */}
-
-          {/* <ListItem button key="search" onClick={navigationHandler.bind(null, "/search")}>
-          <FaSearch className={classes.drawerIcon} size={iconSize} />
-          <ListItemText primary="search" />
-        </ListItem> */}
-        </List>
-
-        <Divider />
-        <List>
-          {!currentUser && (
-            <>
-              <ListItem
-                onClick={navigationHandler.bind(null, "/signup")}
-                button
-                key="Sign Up"
-              >
-                <ListItemText primary="Sign Up" />
-              </ListItem>
-              <ListItem
-                onClick={navigationHandler.bind(null, "/login")}
-                button
-                key="Log In"
-              >
-                <ListItemText primary="Log In" />
-              </ListItem>
-            </>
-          )}
-          {currentUser && (
-            <>
-              <ListItem onClick={logoutHandler} button key="Log Out">
-                <ListItemText primary="Log Out" />
-              </ListItem>
-            </>
-          )}
-          <Divider />
-          <ListItem onClick={navigationHandler.bind(null, "/account/books")} button key="Books">
-            <ListItemText primary="My Books & Saved Practice" />
-          </ListItem>
-          <ListItem
-            onClick={navigationHandler.bind(null, "/about")}
-            button
-            key="About"
-          >
-            <ListItemText primary="About" />
-          </ListItem>
-        </List>
-      </Drawer>
-
-    </>
-  );
+        {item("My Books & Saved Practice","/account/books",FiBookOpen)}{item("About","/about",FiInfo)}
+      </List>
+    </nav>
+  </Drawer>;
 }

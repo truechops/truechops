@@ -12,7 +12,7 @@ Module._extensions[".js"] = (module, file) => {
     presets: [["@babel/preset-env", { targets: { node: "current" } }]], babelrc: false, configFile: false,
   }).code, file);
 };
-const { createBookChallenge, challengeMatches, generateBookPractice } = require("../../src/lib/book-practice-server");
+const { createBookChallenge, challengeMatches } = require("../../src/lib/book-practice-server");
 const { validatePracticeLines } = require("../../src/lib/book-practice-score");
 const { getBookPageQrToken, getBookPageIdentity } = require("../../src/lib/book-qr");
 const origin = process.argv[2] || "http://127.0.0.1:3102";
@@ -22,11 +22,11 @@ const rawBook = JSON.parse(fs.readFileSync("data/book-builder/snare-drum-book-2-
 const book = { ...rawBook, pages: rawBook.sections.flatMap((section) => section.pages) };
 const token = getBookPageQrToken(getBookPageIdentity(5, book));
 const challenge = createBookChallenge(book);
-const fresh = generateBookPractice(book, 5, 4);
+
 
 async function clickText(page, text) {
   const buttons = await page.$$("main button");
-  for (const button of buttons) if (await button.evaluate((element, label) => element.textContent === label, text)) { await button.click(); return; }
+  for (const button of buttons) if (await button.evaluate((element, label) => element.textContent === label, text)) { await button.evaluate(el=>el.scrollIntoView({block:"center"})); await button.click(); return; }
   throw new Error(`Button not found: ${text}`);
 }
 
@@ -38,7 +38,7 @@ async function clickText(page, text) {
     page.on("pageerror", (error) => errors.push(error.message));
     await page.setViewport({ width: 1280, height: 900 });
     await page.goto(`${origin}/q/${token}`, { waitUntil: "domcontentloaded", timeout: 60000 });
-    await page.waitForSelector("#tab-rhythms", { timeout: 30000 });
+    await page.waitForSelector("#panel-rhythms", { timeout: 30000 });
     assert(page.url().includes(`/book?token=${token}`));
     assert((await page.cookies()).some((cookie) => cookie.name === "tc_book_scan" && cookie.httpOnly));
     await page.waitForSelector("main .vf-stavenote");
@@ -51,10 +51,15 @@ async function clickText(page, text) {
     await page.waitForFunction(() => [...document.querySelectorAll("main button")].some((button) => button.textContent === "Stop"));
     await clickText(page, "Stop");
     await clickText(page, "Restore");
-    await page.click("#tab-generate");
-    assert((await page.$eval("#panel-generate", (element) => element.innerText)).includes("Sign in"));
+    assert.equal(await page.$("#tab-generate"),null);
+    assert.equal(await page.$('input[aria-label="Number of rhythms"]'),null);
+    await clickText(page,"Open in score");
+    await page.waitForFunction(()=>location.pathname==="/");
+    await page.waitForSelector(".vf-stavenote");
+    await page.goBack({waitUntil:"domcontentloaded"});
+    await page.waitForSelector("#panel-rhythms");
     await page.setViewport({ width: 390, height: 844 });
-    await page.click("#tab-rhythms");
+
     await page.screenshot({ path: `${artifactRoot}/book-practice-mobile.png` });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "no horizontal page overflow");
 
@@ -74,10 +79,7 @@ async function clickText(page, text) {
         verified = challengeMatches(challenge, body.answers);
         return respond(verified ? { verified: true } : { error: "Incorrect answers" }, verified ? 200 : 400);
       }
-      if (url.pathname === "/api/book-practice/generate") {
-        assert.equal(body.token, token); assert.equal(body.count, 4); assert(verified);
-        generationCalls++; return respond(fresh);
-      }
+      if (url.pathname === "/api/book-practice/generate") generationCalls++;
       if (url.pathname === "/api/book-practice/sets") {
         if (request.method() === "POST") {
           saved = { _id: "browser-saved", name: body.name, tempo: body.tempo, lines: validatePracticeLines(body.lines), createdAt: new Date().toISOString() };
@@ -99,9 +101,8 @@ async function clickText(page, text) {
       tab.on("request", mockAccount(false));
     }
     await laptop.bringToFront();
-    await laptop.goto(`${origin}/book?token=${token}`, { waitUntil: "domcontentloaded" });
-    await laptop.waitForSelector("#tab-generate"); await laptop.click("#tab-generate");
-    await laptop.waitForSelector('a[href^="/account/books?book="]');
+    await laptop.goto(`${origin}/account/books?book=${book.book}`, { waitUntil: "domcontentloaded" });
+    await laptop.waitForSelector("main select");
     assert(!(await laptop.cookies()).some((cookie) => cookie.name === "tc_book_scan"));
     await library.bringToFront();
     await library.goto(`${origin}/account/books`, { waitUntil: "domcontentloaded" });
@@ -109,10 +110,7 @@ async function clickText(page, text) {
     assert.equal(await library.$('section[aria-label="Verified books"]'), null);
     await page.bringToFront();
     await page.setViewport({ width: 1280, height: 900 });
-    await page.reload({ waitUntil: "domcontentloaded" });
-    await page.waitForSelector("#tab-generate"); await page.click("#tab-generate");
-    await page.waitForSelector('a[href^="/account/books?book="]');
-    await page.click('a[href^="/account/books?book="]');
+    await page.goto(`${origin}/account/books?book=${book.book}&returnTo=${encodeURIComponent(`/book?token=${token}`)}`, { waitUntil: "domcontentloaded" });
     await page.waitForSelector("main select");
     await clickText(page, "Start three rhythm matches");
     await page.waitForSelector('input[type="radio"]');
@@ -124,12 +122,8 @@ async function clickText(page, text) {
     assert(verified);
     await laptop.bringToFront();
     await laptop.evaluate(() => window.dispatchEvent(new Event("focus")));
-    await laptop.waitForFunction(() => document.querySelector("#panel-generate")?.innerText.includes("Book verified"));
-    const laptopStatus = await laptop.$eval("#panel-generate", (element) => element.innerText);
-    assert(laptopStatus.includes("practice@example.com"));
-    assert(laptopStatus.includes("on this device"));
-    assert.equal(await laptop.$('a[href^="/account/books?book="]'), null);
-    assert.equal(await laptop.$('input[aria-label="Number of rhythms"]'), null);
+    await laptop.waitForSelector('section[aria-label="Verified books"]');
+    assert((await laptop.$eval('section[aria-label="Verified books"]',el=>el.innerText)).includes(book.title));
     await clickText(laptop, "Refresh book verification");
     await library.bringToFront();
     await library.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
@@ -142,25 +136,27 @@ async function clickText(page, text) {
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
     await page.waitForFunction(() => window.scrollY === 0);
     await page.click(`a[href="/book?token=${token}"]`);
-    await page.waitForSelector("#tab-generate"); await page.click("#tab-generate");
-    await page.waitForSelector('input[aria-label="Number of rhythms"]');
-    await page.$eval('input[aria-label="Number of rhythms"]', (input) => { input.value = ""; });
-    await page.type('input[aria-label="Number of rhythms"]', "4");
-    await clickText(page, "Generate rhythms");
-    await page.waitForFunction(() => document.querySelector("main")?.innerText.includes("Add all 4 rhythms"));
-    await clickText(page, "Add all 4 rhythms to practice");
     await page.waitForSelector("#panel-rhythms");
-    assert((await page.$eval("main", (element) => element.innerText)).includes("26 of 26 rhythms selected"));
+    await clickText(page,"Clear selection");
+    await page.click('button[aria-label="Rhythm 1"]');
     await clickText(page, "Save selected rhythms");
     await page.waitForSelector('a[href="/book?set=browser-saved"]');
-    assert.equal(saved.lines.length, 26);
+    assert.equal(saved.lines.length, 1);
     await page.click('a[href="/book?set=browser-saved"]');
-    await page.waitForFunction(() => document.querySelector("main")?.innerText.includes("These are your saved rhythms"));
+    await page.waitForFunction(() => document.querySelector("main")?.innerText.includes("1 of 1 rhythms selected"));
     assert.equal(await page.$("#tab-generate"), null);
-    assert.equal(generationCalls, 1);
+    assert.equal(generationCalls, 0,"Book pages must never request generated exercises");
+    await clickText(page,"Open in score");
+    await page.waitForFunction(()=>location.pathname==="/");
+    await page.waitForSelector("button[aria-label='save']");
+    await page.click("button[aria-label='save']");
+    await page.waitForSelector("#rhythm-dialog-title");
+    assert.equal(await page.$eval("[role=dialog] select",el=>el.parentElement.parentElement.querySelectorAll("select")[1].value),"private");
+    assert.equal(await page.$eval("[role=dialog] input",el=>el.value),saved.name,"The saved book practice name is carried to Score");
+    assert.equal(await page.evaluate(async()=> (await fetch('/api/book-practice/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})).status),410);
     assert(!JSON.stringify(saved).includes(token));
     assert(!errors.length, errors.join("\n"));
-    console.log("Browser checks passed: QR redirect, mobile layout, notation, modification, playback, sign-in gate, three account matches, cross-device verification refresh, verified library, generation, add all, save, and practice-only reopening.");
+    console.log("Browser checks passed: QR redirect, mobile layout, notation, modification, playback, three account matches, cross-device verification refresh, saved practice, score transfer, private defaults, and retired generation endpoint.");
   } catch (error) {
     console.error("Browser errors:", errors);
     for (const tab of await browser.pages()) {

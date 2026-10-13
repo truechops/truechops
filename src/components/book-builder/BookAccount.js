@@ -54,7 +54,7 @@ export default function BookAccount() {
       await practiceRequest("book-practice/access", "PUT", { book: challenge.book.book, challengeId: challenge.id,
         answers: Object.entries(answers).map(([questionId, optionId]) => ({ questionId, optionId })) });
       await refreshAccess();
-      setChallenge(null); setNotice("Your book is verified. You can now generate rhythms from its QR pages.");
+      setChallenge(null); setNotice("Your book is verified on your account.");
     } catch (failure) { setError(failure.message); setChallenge(null); }
     finally { setBusy(false); }
   }
@@ -81,7 +81,7 @@ export default function BookAccount() {
       {access.verifiedBooks.length > 0 && <section className={styles.panel} aria-label="Verified books">
         <h2>Your verified books</h2>
         <ul>{access.verifiedBooks.map((entry) => <li key={`${entry.book}:${entry.edition}`}>{entry.title} <span className={styles.badge}>Verified</span></li>)}</ul>
-        <p className={styles.muted}>These books are verified on every device signed in to this account. Each device starts its own practice session from a book QR code.</p>
+        <p className={styles.muted}>These books are verified on every device signed in to this account. Scan a book QR code to open its exercises, then send them to the score to practice.</p>
       </section>}
       <section className={styles.panel}>
         <h2>Verify a book</h2>
@@ -108,7 +108,7 @@ export default function BookAccount() {
       </section>}
       <section style={{ marginTop: 36 }}>
         <h2>Saved practice</h2>
-        <p className={styles.muted}>Reopen your saved rhythms here. To generate more of a type, scan its QR code in your book again.</p>
+        <p className={styles.muted}>Reopen your saved rhythms here. Open them in the score to play and create dynamic variations.</p>
         {!sets.length && <p>No saved sets yet. Save selected rhythms from a book practice page.</p>}
         <div className={styles.list}>{sets.map((entry) => <div className={`${styles.panel} ${styles.row} ${styles.spread}`} key={entry._id}>
           <div><Link href={`/book?set=${entry._id}`}>{entry.name}</Link><p className={styles.muted}>{entry.tempo} BPM · {new Date(entry.createdAt).toLocaleDateString()}</p></div>
