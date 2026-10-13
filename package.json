@@ -42,6 +42,7 @@
     "social-login-buttons": "^0.0.4",
     "styled-components": "^5.3.0",
     "tone": "^15.0.4",
+    "tus-js-client": "^4.3.1",
     "validator": "^13.6.0",
     "vexflow": "4.1.0",
     "yarn": "^1.22.10"
@@ -59,6 +60,7 @@
     "test:book": "node --test scripts/tests/book-builder.test.js",
     "test:book-practice": "node --test scripts/tests/book-practice.test.js",
     "test:social": "node --test scripts/tests/social.test.js",
+    "media:cleanup": "node scripts/cleanup-rhythm-media.js",
     "search:setup": "node scripts/setup-social-search.js",
     "pdf:hybrid-rudiments": "node scripts/generate-hybrid-rudiments-pdf.js",
     "pdf:hybrid-rudiments:musescore": "node scripts/generate-hybrid-rudiments-pdf.js --renderer musescore",

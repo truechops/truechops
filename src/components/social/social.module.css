@@ -237,6 +237,30 @@
 .exerciseLink { display:block; height:100%; }
 .exercisePreview { background:linear-gradient(125deg,#fcf1f3,#faf7f6); height:155px; padding:0 6px; overflow:hidden; display:flex; align-items:center; }
 .exercisePreview>div { mix-blend-mode:multiply; }
+.exercisePreview { position:relative; }
+.exercisePreview>div { width:100%; }
+.videoPreview>img { width:100%; height:100%; object-fit:cover; }
+.exercisePreview.videoPreview { padding:0; }
+.mediaBadge { position:absolute; right:12px; top:12px; border-radius:50%; width:30px; height:30px; background:#ffffffed; color:#28222a; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 8px #0002; }
+.mediaFields { border:1px solid #ece2e6; border-radius:10px; padding:16px; margin:0; min-width:0; }
+.mediaFields legend { font-size:14px; font-weight:650; padding:0 6px; }
+.mediaFields legend span { font-weight:400; color:#78717d; font-size:12px; }
+.mediaFields>p { font-size:12px; color:#78717d; margin:0 0 16px; }
+.mediaField+.mediaField { margin-top:18px; padding-top:16px; border-top:1px solid #ece2e6; }
+.mediaField input { font-size:12px; }
+.mediaField>div { display:flex; align-items:center; gap:12px; justify-content:space-between; margin-top:10px; font-size:12px; }
+.mediaField>div span { min-width:0; overflow-wrap:anywhere; }
+.form .mediaField button { flex-shrink:0; font-size:11px; padding:7px 10px; }
+.uploadProgress { display:flex; flex-wrap:wrap; align-items:center; gap:12px; font-size:12px; }
+.uploadProgress progress { width:100%; accent-color:#b71836; }
+.mediaTabs { display:flex; gap:8px; margin:20px 0; }
+.post .mediaTabs button { padding:8px 14px; font-size:12px; background:transparent; border:1px solid #eadde2; border-radius:20px; }
+.post .mediaTabs [aria-pressed=true] { background:#b71836; border-color:#b71836; color:#fff; }
+.recordingPlayer { width:100%; margin:auto 0; }
+.recordingPlayer iframe { display:block; width:100%; aspect-ratio:16/9; border:0; border-radius:10px; background:#211c24; }
+.recordingPlayer.audioPlayer iframe { aspect-ratio:auto; height:190px; }
+.recordingPlayer>div,.recordingPlayer>p { padding:30px 16px; font-size:13px; }
+@media(max-width:700px) { .postScore:has(.recordingPlayer) { max-height:none; } }
 .exercisePreview svg { max-height:155px; }
 .exerciseCaption { padding:11px 12px 14px; }
 .exerciseCaption h2 { margin:0 0 9px; font-size:15px; font-weight:650; line-height:1.3; overflow-wrap:anywhere; color:var(--ink); }

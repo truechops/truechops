@@ -90,3 +90,94 @@ node scripts/tests/book-practice.browser.js http://127.0.0.1:3104
 
 Browser screenshots are generated under `book-output/community-practice-preview/` and use
 explicit test fixtures, not real community members or production seed records.
+
+## Bunny Stream recordings
+
+Rhythms can have one video demonstration and one audio recording. Add or replace
+files in the composer's Save dialog or a rhythm's Edit details dialog. New rhythms
+with files are first saved as private drafts. Only after successful uploads does
+the final save apply the selected visibility. Failed uploads can be retried in
+the same dialog without creating another draft or uploading completed files again.
+
+Video cards show Bunny thumbnails in the community; opening one displays the
+Bunny player with Audio and Notation alternatives when available. Playback starts
+on interaction, not while scrolling the feed. Files encode asynchronously; the
+notation remains usable during processing. Existing book-to-Score and save flows
+continue to work without media.
+
+### Create and configure a library
+
+1. In your Bunny dashboard, create a **Stream video library** dedicated to
+   TrueChops. Both video and supported audio files use this library.
+2. From the library's **API** page, copy its library ID and API key. Add them as
+   `BUNNY_STREAM_LIBRARY_ID` and `BUNNY_STREAM_API_KEY` in `.env.local` and in your
+   deployment's environment settings. Use the library key, not your account key.
+3. Copy the library's CDN hostname, such as `vz-example.b-cdn.net`, into
+   `BUNNY_STREAM_CDN_HOSTNAME`. Enter only the hostname, without `https://` or a path.
+4. On the library's **Security** page, enable **Embed View Token Authentication**
+   and **CDN Token Authentication**. Copy the **Token authentication key** into
+   `BUNNY_STREAM_TOKEN_KEY`. It is distinct from the library API key. Leave Token
+   IP Validation disabled: playback URLs are not bound to an IP address.
+5. Set Allowed Domains to your actual application hosts, including
+   `truechops.com` and `www.truechops.com`. Add `localhost` / `127.0.0.1` when testing
+   locally. Do not include a scheme or path. Keep MP4 fallback and exposed original
+   files disabled. These settings and both token-authentication switches protect
+   direct access to private recordings, not just their pages in TrueChops.
+6. Set `BUNNY_STREAM_WEBHOOK_SECRET` to the library's **Read-Only API key**. Set the
+   library's webhook URL to `https://www.truechops.com/api/media/bunny-webhook` (or
+   your deployed application's hostname). Bunny must be able to reach this URL.
+   The endpoint verifies Bunny's HMAC signature over the raw body, then fetches
+   the current recording state to handle duplicate/out-of-order callbacks.
+7. Redeploy/restart after setting the environment variables. Upload a small private
+   video and MP3, wait for processing, check playback in your own account, and
+   check that another account cannot open the rhythm. Publish it and verify the
+   video card appears in Discover. Unpublish it and confirm new playback requests
+   are denied. Also verify an unsigned Bunny embed/CDN URL cannot play the file.
+
+The blank server settings are also listed in `.env.example`. **Do not prefix any
+key with `NEXT_PUBLIC_` or put keys in client code.** Until configured, ordinary
+rhythm saving still works; media uploads return a helpful configuration message.
+
+Provider references: [TUS uploads](https://bunny.net/docs/stream/tus-resumable-uploads),
+[supported formats](https://bunny.net/docs/stream/video-specification),
+[embed signing](https://bunny.net/docs/stream/token-authentication),
+[CDN signing](https://bunny.net/docs/cdn/security/token-authentication/advanced),
+[security settings](https://bunny.net/docs/stream/security-options), and
+[signed webhooks](https://bunny.net/docs/stream/webhooks).
+
+### Uploads, privacy, and maintenance
+
+- MP4/MOV/WebM video: up to 500 MB. MP3/WAV/OGG audio: up to 100 MB. These are
+  application admission limits; Bunny validates the contents while encoding.
+  Presigned TUS credentials are scoped to an asset, not cryptographically bound
+  to the declared file size. Monitor library usage in Bunny for billing limits.
+- Signed-in owners alone can start, resume, attach, replace, or remove recordings.
+  Clients cannot attach arbitrary Bunny IDs or supply playback URLs. Files travel
+  directly to Bunny using `tus-js-client`, bypassing the deployment's request-body
+  limit; the API returns an asset-specific signature valid for one hour.
+- `rhythmMedia` stores upload ownership and processing state; `rhythmMediaLimits`
+  enforces ten new upload attempts per account per hour, even when files are
+  removed. Ordinary indexes and an expiry index for the rate-limit buckets are
+  created automatically. No additional MongoDB Search index is needed.
+- Playback authorization always checks the current rhythm's visibility. Embed
+  URLs expire after one hour and thumbnails after ten minutes. Previously issued
+  signed URLs remain usable until their expiry, including after unpublishing.
+- Removing/replacing media or deleting a rhythm requests deletion from Bunny.
+  Failed provider deletions remain queued. Abandoned, unattached uploads older
+  than 24 hours can be cleaned up with the maintenance command below. Attached
+  recordings and notation are preserved. Configure regular execution in your
+  existing operations tooling; this change does not create a scheduled job.
+
+```sh
+# Requires explicitly configured MONGODB_URI / MONGODB_DB; defaults to a dry run.
+npm run media:cleanup
+# Delete abandoned assets and retry queued provider deletions:
+npm run media:cleanup -- --apply
+# Local protocol/UI check using intercepted Bunny responses (no paid uploads):
+node scripts/tests/media.browser.js http://127.0.0.1:3104
+```
+
+The browser check exercises the real TUS client against fixtures: file validation,
+upload retries, private drafts, publishing, video previews, audio/video players,
+notation switching, and removal. A live upload/playback check still requires your
+Bunny library and its security/webhook settings.

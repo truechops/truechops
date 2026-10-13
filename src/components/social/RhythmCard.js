@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useDispatch } from "react-redux";
-import { FiBookmark, FiCheck, FiArrowUpRight, FiLock } from "react-icons/fi";
+import { FiBookmark, FiCheck, FiArrowUpRight, FiLock, FiPlay, FiHeadphones } from "react-icons/fi";
 import { scoreActions } from "../../store/score";
 import RhythmPreview from "../book-builder/RhythmPreview";
 import { socialRequest } from "./api";
@@ -33,10 +33,19 @@ export function RhythmActions({ rhythm, onSaved, onEdit, full = false, compact =
   </div>{error && <p role="alert" className={styles.inlineError}>{error}</p>}</div>;
 }
 export default function RhythmCard({ rhythm, onOpen }) {
+  const video = rhythm.media?.find((item) => item.kind === "video" && item.status === "ready");
+  const audio = rhythm.media?.some((item) => item.kind === "audio" && item.status === "ready");
+  const [thumbnailFailed,setThumbnailFailed] = useState(false);
+  useEffect(() => setThumbnailFailed(false),[video?.thumbnailUrl]);
   const previewScore = useMemo(() => ({ ...rhythm.score, measures: rhythm.score.measures.slice(0,1) }),[rhythm.score]);
   return <article className={styles.exerciseCard}>
     <Link href={`/rhythms/${rhythm.id}`} onClick={onOpen ? (event) => onOpen(event,rhythm) : undefined} className={styles.exerciseLink} aria-label={`Open ${rhythm.name}`}>
-      <div className={styles.exercisePreview} role="img" aria-label={`First measure of ${rhythm.name}`}><RhythmPreview score={previewScore} minWidth={260} fit /></div>
+      <div className={`${styles.exercisePreview} ${video ? styles.videoPreview : ""}`}>
+        {video?.thumbnailUrl && !thumbnailFailed ? <img src={video.thumbnailUrl} alt={`Video demonstration of ${rhythm.name}`} loading="lazy" onError={() => setThumbnailFailed(true)} /> :
+          <div role="img" aria-label={`First measure of ${rhythm.name}`}><RhythmPreview score={previewScore} minWidth={260} fit /></div>}
+        {video ? <span className={styles.mediaBadge}><FiPlay aria-hidden="true" /><span className={styles.srOnly}>Video</span></span> :
+          audio && <span className={styles.mediaBadge}><FiHeadphones aria-hidden="true" /><span className={styles.srOnly}>Audio recording</span></span>}
+      </div>
       <div className={styles.exerciseCaption}><h2>{rhythm.name}</h2>
         <div className={styles.exerciseBadges}><span data-instrument>{rhythm.instruments.map((name) => name === "drumset" ? "Drum set" : name).join(" / ")}</span>
           {rhythm.difficulty && <span data-level={rhythm.difficulty}>{rhythm.difficulty}</span>}<span>{rhythm.tempo} BPM</span>

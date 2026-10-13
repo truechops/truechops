@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 const fs = require("node:fs");
 const http = require("node:http");
+const crypto = require("node:crypto");
 const Module = require("node:module");
 const { apiResolver } = require("next/dist/server/api-utils/node/api-resolver");
 const babel = require("@babel/core");
@@ -14,18 +15,24 @@ const { createSocialService, socialHandler, canRead } = require("../../src/lib/s
 const { normalizeProfile, normalizeMetadata, normalizeMutations, validateScore, searchOptions } = require("../../src/lib/social/validation");
 const { searchPipeline } = require("../../src/lib/social/search");
 const { legacyQueries, legacyMutations } = require("../../src/lib/social/legacy");
+const { bunnyConfig, createBunnyClient, uploadCredentials, embedUrl, thumbnailUrl, verifyBunnyWebhook } = require("../../src/lib/social/bunny");
+const { webhookHandler, config:webhookConfig } = require("../../pages/api/media/bunny-webhook");
 const { createSessionCookie } = require("../../src/lib/auth/session");
 const { config: socialApiConfig } = require("../../pages/api/social/[...route]");
 const defaultScore = require("../../src/consts/default-score").default;
 const clone = (v) => JSON.parse(JSON.stringify(v));
+const at = (row,key) => key.split(".").reduce((value,part)=>value?.[part],row);
+function assign(row,key,value) { const parts=key.split(".");const last=parts.pop();let parent=row;for(const part of parts)parent=parent[part]||(parent[part]={});parent[last]=value; }
+function unset(row,key) { const parts=key.split(".");const last=parts.pop();const parent=parts.reduce((value,part)=>value?.[part],row);if(parent)delete parent[last]; }
 function equal(a,b) { return String(a) === String(b); }
 function matches(row,query) {
   return Object.entries(query).every(([key,value]) => {
     if (key === "$or") return value.some((q) => matches(row,q));
     if (key === "$and") return value.every((q) => matches(row,q));
-    if (value && typeof value === "object" && "$in" in value) return value.$in.some((v) => equal(row[key],v));
-    if (value && typeof value === "object" && "$gte" in value) return new Date(row[key]) >= new Date(value.$gte);
-    return Array.isArray(row[key]) ? row[key].includes(value) : equal(row[key],value);
+    if (value && typeof value === "object" && "$in" in value) return value.$in.some((v) => equal(at(row,key),v));
+    if (value && typeof value === "object" && "$gte" in value) return new Date(at(row,key)) >= new Date(value.$gte);
+    if (value && typeof value === "object" && "$lt" in value) return at(row,key) < value.$lt;
+    return Array.isArray(row[key]) ? row[key].includes(value) : equal(at(row,key),value);
   });
 }
 function cursor(rows) {
@@ -47,7 +54,11 @@ function database() {
         async insertOne(row) { rows.push(clone(row));return { insertedId: row._id }; },
         async updateOne(q,update,{upsert}={}) {
           let index=rows.findIndex((r)=>matches(r,q));
-          const next={ ...(index<0 ? { ...q,...update.$setOnInsert } : rows[index]),...update.$set };
+          const next=clone(index<0 ? { ...Object.fromEntries(Object.entries(q).filter(([,v])=>typeof v!=="object")),...update.$setOnInsert } : rows[index]);
+          for(const [key,value] of Object.entries(update.$set||{}))assign(next,key,value);
+          for(const [key,value] of Object.entries(update.$inc||{}))assign(next,key,(at(next,key)||0)+value);
+          for(const key of Object.keys(update.$unset||{}))unset(next,key);
+          if(index<0&&upsert&&rows.some((row)=>row._id===next._id)){const error=new Error("duplicate");error.code=11000;throw error;}
           if (name === "profiles" && rows.some((row,i)=>i!==index && (row.handle===next.handle || row.userId===next.userId))) { const error=new Error("duplicate");error.code=11000;throw error; }
           if(index<0) { if(upsert) rows.push(clone(next));return { matchedCount:0 }; }
           rows[index]=clone(next);return { matchedCount:1 };
@@ -79,8 +90,8 @@ function database() {
 const owner={ id:"google:owner",name:"A drummer",email:"private@example.com" }, visitor={id:"google:visitor"};
 const profile={handle:"pulse_maker",displayName:"Pulse Maker",bio:"Triplets and space",instruments:["snare"]};
 const composition={name:"Triplet conversation",score:defaultScore.score,tempo:90};
-async function fixture() {
-  const db=database(), api=createSocialService(db);
+async function fixture(options) {
+  const db=database(), api=createSocialService(db,options);
   await api.saveProfile(owner,profile);
   const privateRhythm=(await api.createRhythm(owner,composition)).rhythm;
   const publicRhythm=(await api.createRhythm(owner,{...composition,name:"Public rhythm",visibility:"public",tags:["triplets"]})).rhythm;
@@ -88,6 +99,15 @@ async function fixture() {
 }
 const rejects=(promise,status)=>assert.rejects(promise,(error)=>error.status===status);
 const response=()=>({ statusCode:200, headers:{}, setHeader(k,v){this.headers[k]=v;},status(n){this.statusCode=n;return this;},json(value){this.body=value;return this;} });
+
+function mediaProvider() {
+  const config={libraryId:"123",apiKey:"test-library-secret",tokenKey:"test-token-secret",hostname:"test.b-cdn.net"};
+  const videos=new Map(), deleted=[];
+  const bunny={config:()=>config, async create() {const guid=crypto.randomUUID();const row={guid,videoLibraryId:123,status:0,storageSize:0,length:30};videos.set(guid,row);return row;},
+    async get(id){return videos.get(id);}, async remove(id){deleted.push(id);videos.delete(id);},
+    credentials:(id,now)=>uploadCredentials(config,id,now),embed:(id,now)=>embedUrl(config,id,now),thumbnail:(id,file,now)=>thumbnailUrl(config,id,file,now)};
+  return {bunny,videos,deleted,config};
+}
 
 async function httpApi(t, service) {
   const handler = socialHandler({ service });
@@ -361,4 +381,151 @@ test("legacy GraphQL cannot read or mutate private rhythms belonging to another 
   assert.equal(await legacyMutations.deleteOneRhythm(null,{query:{_id:privateRhythm.id}},context),null);
   assert.throws(()=>legacyMutations.updateManyRhythms(),/profile/);
   assert.equal((await legacyQueries.getRhythmById(null,{input:publicRhythm.id},context))._id,publicRhythm.id);
+});
+
+const videoFile={kind:"video",name:"practice.mp4",size:1024};
+const audioFile={kind:"audio",name:"practice.mp3",size:512};
+
+test("media uploads require ownership, validate files and never accept another account's media IDs",async()=>{
+  const provider=mediaProvider(),{api,db,privateRhythm,publicRhythm}=await fixture({bunny:provider.bunny});
+  await rejects(api.startMedia(null,publicRhythm.id,videoFile),401);
+  await rejects(api.startMedia(visitor,publicRhythm.id,videoFile),404);
+  await rejects(api.startMedia(owner,privateRhythm.id,{...videoFile,name:"bad.html"}),400);
+  await rejects(api.startMedia(owner,privateRhythm.id,{...videoFile,size:501*1024*1024}),400);
+  const started=await api.startMedia(owner,privateRhythm.id,videoFile);
+  assert(!JSON.stringify(started).includes(provider.config.apiKey));
+  assert.equal(started.upload.headers.LibraryId,"123");
+  await rejects(api.completeMedia(visitor,privateRhythm.id,started.media.id),404);
+  await rejects(api.completeMedia(owner,publicRhythm.id,started.media.id),404);
+  await rejects(api.mediaPlayback(null,privateRhythm.id,started.media.id),404);
+  await api.updateRhythm(owner,publicRhythm.id,{mediaIds:{video:started.media.id},media:[started.media]});
+  assert.deepEqual((await api.getRhythm(null,publicRhythm.id)).rhythm.media,[]);
+  assert.equal(db.collection("rhythmMedia").rows[0].userId,owner.id);
+});
+
+test("verified completion attaches audio and video; playback and thumbnails follow rhythm privacy",async()=>{
+  const provider=mediaProvider(),{api,privateRhythm}=await fixture({bunny:provider.bunny});
+  for(const file of [videoFile,audioFile]) {
+    const start=await api.startMedia(owner,privateRhythm.id,file);
+    await rejects(api.completeMedia(owner,privateRhythm.id,start.media.id),409);
+    provider.videos.get(start.upload.headers.VideoId).status=2;
+    assert.equal((await api.completeMedia(owner,privateRhythm.id,start.media.id)).media.status,"processing");
+    provider.videos.get(start.upload.headers.VideoId).status=3;
+    await api.syncMediaWebhook(123,start.upload.headers.VideoId);
+  }
+  const own=(await api.getRhythm(owner,privateRhythm.id)).rhythm;
+  assert.equal(own.media.length,2);
+  assert(own.media.every((m)=>m.status==="ready"));
+  assert(own.media.find((m)=>m.kind==="video").thumbnailUrl.includes("token=HS256-"));
+  assert(!JSON.stringify(own.media).includes("test-token-secret"));
+  assert(!JSON.stringify(own.media).includes(owner.id));
+  await rejects(api.mediaPlayback(visitor,privateRhythm.id,own.media[0].id),404);
+  await api.updateRhythm(owner,privateRhythm.id,{visibility:"public"});
+  assert((await api.mediaPlayback(null,privateRhythm.id,own.media[0].id)).embedUrl.includes("autoplay=false"));
+  await api.updateRhythm(owner,privateRhythm.id,{visibility:"private"});
+  await rejects(api.mediaPlayback(null,privateRhythm.id,own.media[0].id),404);
+});
+
+test("replacing and deleting recordings removes Bunny assets; failed deletions remain queued for cleanup",async()=>{
+  const provider=mediaProvider(),{api,db,privateRhythm}=await fixture({bunny:provider.bunny});
+  const first=await api.startMedia(owner,privateRhythm.id,videoFile);
+  provider.videos.get(first.upload.headers.VideoId).status=3;
+  await api.completeMedia(owner,privateRhythm.id,first.media.id);
+  const second=await api.startMedia(owner,privateRhythm.id,videoFile);
+  // Creating another upload doesn't remove the current video.
+  assert.equal((await api.getRhythm(owner,privateRhythm.id)).rhythm.media[0].id,first.media.id);
+  provider.videos.get(second.upload.headers.VideoId).status=3;
+  await api.completeMedia(owner,privateRhythm.id,second.media.id);
+  assert(provider.deleted.includes(first.upload.headers.VideoId));
+  const remove=provider.bunny.remove;provider.bunny.remove=async()=>{throw new Error("offline");};
+  await api.removeMedia(owner,privateRhythm.id,second.media.id);
+  assert.deepEqual((await api.getRhythm(owner,privateRhythm.id)).rhythm.media,[]);
+  assert.equal(db.collection("rhythmMedia").rows[0].status,"deleting");
+  await rejects(api.completeMedia(owner,privateRhythm.id,second.media.id),404);
+  provider.bunny.remove=remove;
+  await api.cleanupMedia();
+  assert.equal(db.collection("rhythmMedia").rows.length,0);
+  const audio=await api.startMedia(owner,privateRhythm.id,audioFile);
+  await api.removeRhythm(owner,privateRhythm.id);
+  assert(provider.deleted.includes(audio.upload.headers.VideoId));
+});
+
+test("media cleanup preserves attached and recent uploads, and dry runs never delete assets",async()=>{
+  let time=new Date("2026-10-12T00:00:00Z");
+  const provider=mediaProvider(),{api,db,privateRhythm}=await fixture({bunny:provider.bunny,now:()=>time});
+  const attached=await api.startMedia(owner,privateRhythm.id,videoFile);
+  provider.videos.get(attached.upload.headers.VideoId).status=3;
+  await api.completeMedia(owner,privateRhythm.id,attached.media.id);
+  const abandoned=await api.startMedia(owner,privateRhythm.id,audioFile);
+  time=new Date("2026-10-14T00:00:00Z");
+  const recent=await api.startMedia(owner,privateRhythm.id,audioFile);
+  assert.deepEqual(await api.cleanupMedia({dryRun:true}),{processed:1});
+  assert.equal(provider.deleted.length,0);
+  assert.equal(db.collection("rhythmMedia").rows.length,3);
+  assert.deepEqual(await api.cleanupMedia(),{processed:1});
+  assert.deepEqual(provider.deleted,[abandoned.upload.headers.VideoId]);
+  assert.deepEqual(db.collection("rhythmMedia").rows.map((row)=>row._id).sort(),[attached.media.id,recent.media.id].sort());
+  assert.equal((await api.getRhythm(owner,privateRhythm.id)).rhythm.media[0].id,attached.media.id);
+});
+
+test("media rate limits survive removal and concurrent calls; unsupported encodings stay unavailable",async()=>{
+  const provider=mediaProvider(),{api,privateRhythm}=await fixture({bunny:provider.bunny});
+  const started=await api.startMedia(owner,privateRhythm.id,videoFile);
+  provider.videos.get(started.upload.headers.VideoId).status=5;
+  await rejects(api.completeMedia(owner,privateRhythm.id,started.media.id),422);
+  await api.removeMedia(owner,privateRhythm.id,started.media.id);
+  const results=await Promise.allSettled(Array.from({length:12},()=>api.startMedia(owner,privateRhythm.id,audioFile)));
+  assert.equal(results.filter((result)=>result.status==="fulfilled").length,9);
+  assert(results.filter((result)=>result.status==="rejected").every((result)=>result.reason.status===429));
+});
+
+test("Bunny signatures match the upload, embed and CDN contracts, without exposing signing keys",async()=>{
+  const {config}=mediaProvider(),id="11111111-2222-3333-4444-555555555555",now=new Date("2026-10-12T00:00:00Z");
+  const credentials=uploadCredentials(config,id,now),expiration=String(now.getTime()/1000+3600);
+  assert.equal(credentials.headers.AuthorizationSignature,crypto.createHash("sha256").update(`123test-library-secret${expiration}${id}`).digest("hex"));
+  const url=new URL(embedUrl(config,id,now));
+  assert.equal(url.searchParams.get("token"),crypto.createHash("sha256").update(`test-token-secret${id}${expiration}`).digest("hex"));
+  const thumb=new URL(thumbnailUrl(config,id,"../../bad.png",now));
+  assert.equal(thumb.pathname,`/${id}/thumbnail.jpg`);
+  assert.equal(thumb.searchParams.get("token"),"HS256-"+crypto.createHmac("sha256",config.tokenKey).update(`${thumb.pathname}${thumb.searchParams.get("expires")}`).digest("base64url"));
+  assert.throws(()=>bunnyConfig({}),(error)=>error.status===503);
+  const calls=[];
+  const client=createBunnyClient({config:()=>config,request:async(url,options)=>{calls.push({url,options});return {ok:true,status:200,json:async()=>({guid:id})};}});
+  await client.create("Practice");await client.get(id);await client.remove(id);
+  assert.equal(calls[0].url,"https://video.bunnycdn.com/library/123/videos");
+  assert.equal(calls[0].options.headers.AccessKey,config.apiKey);
+  assert.equal(calls[2].options.method,"DELETE");
+});
+
+test("media HTTP routes enforce session/origin and return processing then authorized playback",async(t)=>{
+  const provider=mediaProvider(),{api,privateRhythm}=await fixture({bunny:provider.bunny});
+  const request=await httpApi(t,async()=>api),base=`rhythms/${privateRhythm.id}/media`;
+  assert.equal((await request(base,{method:"POST",user:null,headers:{"Content-Type":"application/json"},body:JSON.stringify(videoFile)})).status,401);
+  assert.equal((await request(base,{method:"POST",headers:{origin:"https://evil.test","Content-Type":"application/json"},body:JSON.stringify(videoFile)})).status,403);
+  const start=await request(base,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(videoFile)});
+  assert.equal(start.status,201);
+  provider.videos.get(start.body.upload.headers.VideoId).status=3;
+  const path=`${base}/${start.body.media.id}`;
+  assert.equal((await request(`${path}/complete`,{method:"POST"})).status,201);
+  assert.equal((await request(`${path}/playback`,{user:null})).status,404);
+  assert.equal((await request(`${path}/playback`)).status,200);
+  assert.equal((await request(path,{method:"DELETE"})).status,200);
+});
+
+test("webhook raw-body signatures reject tampering before opening the database",async(t)=>{
+  const secret="read-only-test-key",raw=JSON.stringify({VideoLibraryId:123,VideoGuid:"11111111-2222-3333-4444-555555555555",Status:3});
+  const headers={"x-bunnystream-signature-version":"v1","x-bunnystream-signature-algorithm":"hmac-sha256","x-bunnystream-signature":crypto.createHmac("sha256",secret).update(raw).digest("hex")};
+  assert(verifyBunnyWebhook(Buffer.from(raw),headers,secret));
+  assert(!verifyBunnyWebhook(Buffer.from(raw+" "),headers,secret));
+  assert(!verifyBunnyWebhook(Buffer.from(raw),{...headers,"x-bunnystream-signature-version":"v2"},secret));
+  let calls=0;
+  const handler=webhookHandler({secret:()=>secret,service:async()=>{calls++;return {syncMediaWebhook:async(library,id)=>{assert.equal(library,123);assert.equal(id,"11111111-2222-3333-4444-555555555555");}};}});
+  const server=http.createServer((req,res)=>void apiResolver(req,res,{}, {default:handler,config:webhookConfig},{},false,false,"/api/media/bunny-webhook"));
+  await new Promise((resolve)=>server.listen(0,"127.0.0.1",resolve));
+  t.after(()=>new Promise((resolve)=>{server.close(resolve);server.closeAllConnections();}));
+  const url=`http://127.0.0.1:${server.address().port}`;
+  assert.equal((await fetch(url,{method:"POST",headers,body:raw+" "})).status,401);
+  assert.equal(calls,0);
+  assert.equal((await fetch(url,{method:"POST",headers,body:raw})).status,200);
+  assert.equal(calls,1);
 });

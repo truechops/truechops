@@ -5,6 +5,7 @@ import { SocialError, fail, string, normalizeProfile, normalizeMetadata, validat
 import { publicRhythmFilter, searchPipeline } from "./search";
 import { SEARCH_INDEXES } from "./config";
 import { createEngagementService } from "./engagement";
+import { createMediaService } from "./media";
 
 export function idFilter(id) {
   const value = string(id, 80, "rhythm ID", true);
@@ -21,13 +22,14 @@ export function publicProfile(profile) {
 const pageResult = (rows, page, limit) => ({ items: rows.slice(0,limit), page, hasMore: rows.length > limit && page < 100 });
 export function requireUser(user) { if (!user?.id) fail(401, "Sign in to save rhythms or manage your profile."); return user.id; }
 
-export function createSocialService(db, { now = () => new Date(), ensureSearch = async () => {} } = {}) {
+export function createSocialService(db, { now = () => new Date(), ensureSearch = async () => {}, bunny } = {}) {
   const profiles = db.collection("profiles"), rhythms = db.collection("rhythms"), saves = db.collection("rhythmSaves");
   async function cards(rows, userId, full = false) {
     if (!rows.length) return [];
     const creators = await profiles.find({ userId: { $in: [...new Set(rows.map((r) => r._userId))] } }).toArray();
     const saved = userId ? await saves.find({ userId, rhythmId: { $in: rows.map((r) => String(r._id)) } }).toArray() : [];
-    return rows.map((r) => ({ id: String(r._id), name: r.name, description: r.description || "", tags: r.tags || [],
+    const recordings = await media.mediaCards(rows);
+    return rows.map((r) => ({ media:recordings.get(String(r._id)) || [], id: String(r._id), name: r.name, description: r.description || "", tags: r.tags || [],
       instruments: r.instruments || Object.keys(r.score?.parts || {}).filter((key) => r.score.parts[key]), difficulty: r.difficulty || "",
       visibility: r.visibility === "public" ? "public" : "private", tempo: r.tempo || 90, createdAt: r.date,
       measureCount: r.score?.measures?.length || 0,
@@ -46,8 +48,10 @@ export function createSocialService(db, { now = () => new Date(), ensureSearch =
     if (visibility === "public" && !await profiles.findOne({ userId })) fail(409, "Create your public profile before publishing a rhythm.");
   }
   const engagement = createEngagementService(db,{ readable, publicProfile, now });
+  const media = createMediaService(db,{ readable, now, bunny });
   return {
     ...engagement,
+    ...media,
     async search(user, query) {
       const options = searchOptions(query);
       if (options.q) await ensureSearch(options.type);
@@ -116,10 +120,13 @@ export function createSocialService(db, { now = () => new Date(), ensureSearch =
     },
     async removeRhythm(user,id) {
       const userId = requireUser(user);
-      const result = await rhythms.deleteOne({ ...idFilter(id), _userId: userId, type: "saved" });
+      const row = await rhythms.findOne({ ...idFilter(id), _userId:userId, type:"saved" });
+      if (!row) fail(404,"Rhythm not found in your library.");
+      const result = await rhythms.deleteOne({ _id:row._id, _userId:userId });
       if (!result.deletedCount) fail(404,"Rhythm not found in your library.");
-      await saves.deleteMany({ rhythmId: String(id) });
-      await engagement.removeEngagement(String(id));
+      await saves.deleteMany({ rhythmId: String(row._id) });
+      await engagement.removeEngagement(String(row._id));
+      await media.removeAllMedia(String(row._id));
       return { removed: true };
     },
     async bookmark(user,id,save) {
@@ -145,6 +152,10 @@ export async function productionSocialService() {
     db.collection("profiles").createIndex({ userId: 1 }, { unique: true }),
     db.collection("profiles").createIndex({ handle: 1 }, { unique: true }),
     db.collection("rhythmSaves").createIndex({ userId: 1, createdAt: -1 }),
+    db.collection("rhythmMedia").createIndex({ libraryId:1, videoId:1 },{ unique:true }),
+    db.collection("rhythmMedia").createIndex({ rhythmId:1 }),
+    db.collection("rhythmMedia").createIndex({ createdAt:1 }),
+    db.collection("rhythmMediaLimits").createIndex({ expiresAt:1 },{ expireAfterSeconds:0 }),
     db.collection("rhythmLikes").createIndex({ rhythmId: 1, userId: 1 },{ unique: true }),
     db.collection("rhythmComments").createIndex({ rhythmId: 1, createdAt: -1, _id: -1 }),
     db.collection("rhythmComments").createIndex({ userId: 1, createdAt: -1 }),
@@ -170,12 +181,14 @@ export function checkOrigin(req) {
 export function socialHandler({ service = productionSocialService, session = getSessionUser } = {}) {
   return async (req,res) => {
     res.setHeader("Cache-Control","private, no-store");
-    const route = req.query.route || [], [area,id,action,commentId] = route;
+    const route = req.query.route || [], [area,id,action,commentId,mediaAction] = route;
     const allowed = route.length === 1 ? { search: ["GET"], profile: ["GET","PUT"], library: ["GET"], rhythms: ["POST"] }[area]
       : route.length === 2 && area === "profiles" ? ["GET"]
       : route.length === 2 && area === "rhythms" ? ["GET","PATCH","DELETE"]
-      : route.length === 3 && area === "rhythms" ? { save: ["PUT","DELETE"], like: ["PUT","DELETE"], comments: ["GET","POST"], engagement: ["GET"] }[action]
-      : route.length === 4 && area === "rhythms" && action === "comments" ? ["DELETE"] : null;
+      : route.length === 3 && area === "rhythms" ? { save: ["PUT","DELETE"], like: ["PUT","DELETE"], comments: ["GET","POST"], engagement: ["GET"], media: ["POST"] }[action]
+      : route.length === 4 && area === "rhythms" && action === "comments" ? ["DELETE"]
+      : route.length === 4 && area === "rhythms" && action === "media" ? ["GET","DELETE"]
+      : route.length === 5 && area === "rhythms" && action === "media" ? { complete:["POST"], playback:["GET"] }[mediaAction] : null;
     if (!allowed) return res.status(404).json({ error: "Page not found." });
     if (!allowed.includes(req.method)) { res.setHeader("Allow",allowed.join(", ")); return res.status(405).json({ error: "Method not allowed." }); }
     try {
@@ -192,7 +205,11 @@ export function socialHandler({ service = productionSocialService, session = get
       if (area === "profiles") result = await api.profile(user,id,req.query);
       if (area === "library") result = await api.library(user,req.query);
       if (area === "rhythms") {
-        if (action === "save") result = await api.bookmark(user,id,method === "PUT");
+        if (action === "media") result = mediaAction === "playback" ? await api.mediaPlayback(user,id,commentId)
+          : mediaAction === "complete" ? await api.completeMedia(user,id,commentId)
+          : method === "GET" ? await api.mediaStatus(user,id,commentId)
+          : method === "DELETE" ? await api.removeMedia(user,id,commentId) : await api.startMedia(user,id,body);
+        else if (action === "save") result = await api.bookmark(user,id,method === "PUT");
         else if (action === "like") result = await api.like(user,id,method === "PUT");
         else if (action === "engagement") result = await api.engagement(user,id);
         else if (action === "comments") result = method === "GET" ? await api.comments(user,id,req.query)

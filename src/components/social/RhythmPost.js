@@ -5,6 +5,7 @@ import Dialog from "@mui/material/Dialog";
 import { FiHeart, FiMessageCircle, FiX, FiTrash2, FiShare2 } from "react-icons/fi";
 import RhythmPreview from "../book-builder/RhythmPreview";
 import RhythmDialog from "./RhythmDialog";
+import RhythmMedia, { useMediaStatus } from "./RhythmMedia";
 import { RhythmActions } from "./RhythmCard";
 import { Avatar, Status, useAccount, useResource } from "./shared";
 import { socialRequest } from "./api";
@@ -44,6 +45,13 @@ export default function RhythmPost({ id, onClose, onChanged }) {
     setText(""); setError(""); setNotice(""); setBusy(""); setEditing(false); setCommentPage(1);
     return () => { revision.current++; };
   },[user?.id,id]);
+  const [view,setView] = useState(null);
+  const recordings = rhythm?.media || [];
+  const available = recordings.filter((item) => item.status === "ready");
+  const selectedView = view === "notation" || available.some((item) => item.kind === view) ? view : null;
+  const activeView = selectedView || (available.some((item) => item.kind === "video") ? "video" : available[0]?.kind) || "notation";
+  const activeMedia = available.find((item) => item.kind === activeView);
+  useMediaStatus(rhythm,resource.refresh);
   const signIn = `/api/auth/google?returnTo=${encodeURIComponent(router.asPath)}`;
   async function mutate(action,run) {
     const current = revision.current;
@@ -74,7 +82,13 @@ export default function RhythmPost({ id, onClose, onChanged }) {
     {rhythm && <>
       <section className={styles.postScore} aria-label="Exercise notation">
         <div className={styles.postScoreHeading}><span>{rhythm.instruments.join(" / ")}</span><span>{rhythm.measureCount} {rhythm.measureCount === 1 ? "bar" : "bars"} · {rhythm.tempo} BPM</span></div>
-        <div className={styles.postNotation}><RhythmPreview score={rhythm.score} minWidth={260} /></div>
+        {!!available.length && <div className={styles.mediaTabs} role="group" aria-label="Exercise content">
+          {[...available.map((item) => item.kind),"notation"].map((kind) => <button key={kind} aria-pressed={activeView === kind} onClick={() => setView(kind)}>{kind.charAt(0).toUpperCase()+kind.slice(1)}</button>)}
+        </div>}
+        {activeMedia ? <RhythmMedia key={activeMedia.id} rhythmId={rhythm.id} media={activeMedia} /> :
+          <div className={styles.postNotation}><RhythmPreview score={rhythm.score} minWidth={260} /></div>}
+        {recordings.some((item) => ["uploading","processing"].includes(item.status)) && <p role="status">Your recording is processing. It will appear here when ready.</p>}
+        {recordings.some((item) => item.status === "failed") && <p role="status">A recording couldn't be processed.{rhythm.isOwner && " Choose a new file in Edit details."}</p>}
         <p>Open in score to play, change the tempo, or create dynamic variations.</p>
       </section>
       <section className={styles.postConversation} aria-label="Rhythm details and conversation">
