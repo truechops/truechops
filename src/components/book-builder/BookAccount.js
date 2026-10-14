@@ -66,7 +66,7 @@ export default function BookAccount() {
   }
   const verified = access?.verifiedBooks.some((entry) => entry.book === book && entry.edition === access.books.find((candidate) => candidate.book === book)?.edition);
   return <main className={styles.page}>
-    <header className={styles.header}><span className={styles.eyebrow}>Your account</span><h1>Books &amp; saved practice</h1>
+    <header className={styles.header}><Link href="/profile" className={styles.eyebrow}>Back to profile</Link><h1>Books &amp; saved practice</h1>
       <p>Verify your book once. Verification is saved to your account and works on every device.</p>
       {user && <p className={styles.muted}>Signed in as {user.email || user.name}. <a href={`/api/auth/google?returnTo=${encodeURIComponent(router.asPath)}`}>Switch account</a></p>}
       {returnTo && <Link href={returnTo}>Return to your practice page</Link>}

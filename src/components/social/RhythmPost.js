@@ -22,7 +22,8 @@ export function useRhythmModal(onChanged) {
   }
   function close() {
     if (opened.current) { router.back(); return; }
-    const { rhythm, ...query } = router.query;
+    const query = { ...router.query };
+    delete query.rhythm;
     router.replace({ pathname: router.pathname, query },undefined,{ shallow: true, scroll: false });
   }
   return { open, element: <Dialog open={Boolean(id)} onClose={close} maxWidth={false} className={styles.socialDialog}
@@ -45,12 +46,10 @@ export default function RhythmPost({ id, onClose, onChanged }) {
     setText(""); setError(""); setNotice(""); setBusy(""); setEditing(false); setCommentPage(1);
     return () => { revision.current++; };
   },[user?.id,id]);
-  const [view,setView] = useState(null);
   const recordings = rhythm?.media || [];
-  const available = recordings.filter((item) => item.status === "ready");
-  const selectedView = view === "notation" || available.some((item) => item.kind === view) ? view : null;
-  const activeView = selectedView || (available.some((item) => item.kind === "video") ? "video" : available[0]?.kind) || "notation";
-  const activeMedia = available.find((item) => item.kind === activeView);
+  const video = recordings.find((item) => item.status === "ready" && item.kind === "video");
+  const audio = recordings.find((item) => item.status === "ready" && item.kind === "audio");
+  const primaryRecording = video || audio;
   useMediaStatus(rhythm,resource.refresh);
   const signIn = `/api/auth/google?returnTo=${encodeURIComponent(router.asPath)}`;
   async function mutate(action,run) {
@@ -80,21 +79,19 @@ export default function RhythmPost({ id, onClose, onChanged }) {
     {onClose && <button className={styles.closePost} onClick={onClose} aria-label="Close rhythm"><FiX aria-hidden="true" /></button>}
     <Status error={resource.error} loading={!rhythm && !resource.error} retry={resource.refresh} />
     {rhythm && <>
-      <section className={styles.postScore} aria-label="Exercise notation">
-        <div className={styles.postScoreHeading}><span>{rhythm.instruments.join(" / ")}</span><span>{rhythm.measureCount} {rhythm.measureCount === 1 ? "bar" : "bars"} · {rhythm.tempo} BPM</span></div>
-        {!!available.length && <div className={styles.mediaTabs} role="group" aria-label="Exercise content">
-          {[...available.map((item) => item.kind),"notation"].map((kind) => <button key={kind} aria-pressed={activeView === kind} onClick={() => setView(kind)}>{kind.charAt(0).toUpperCase()+kind.slice(1)}</button>)}
-        </div>}
-        {activeMedia ? <RhythmMedia key={activeMedia.id} rhythmId={rhythm.id} media={activeMedia} /> :
-          <div className={styles.postNotation}><RhythmPreview score={rhythm.score} minWidth={260} /></div>}
+      <section className={styles.postScore} aria-label="Exercise content">
+        <div className={styles.postScoreHeading}><span>{rhythm.instruments.join(" / ")}</span><span>{rhythm.tempo} BPM</span></div>
+        {primaryRecording && <RhythmMedia key={primaryRecording.id} rhythmId={rhythm.id} media={primaryRecording} />}
+        <div className={styles.postNotation} aria-label="Exercise notation"><RhythmPreview score={rhythm.score} minWidth={260} /></div>
+        {video && audio && <RhythmMedia key={audio.id} rhythmId={rhythm.id} media={audio} />}
         {recordings.some((item) => ["uploading","processing"].includes(item.status)) && <p role="status">Your recording is processing. It will appear here when ready.</p>}
-        {recordings.some((item) => item.status === "failed") && <p role="status">A recording couldn't be processed.{rhythm.isOwner && " Choose a new file in Edit details."}</p>}
+        {recordings.some((item) => item.status === "failed") && <p role="status">A recording couldn&apos;t be processed.{rhythm.isOwner && " Choose a new file in Edit details."}</p>}
         <p>Open in score to play, change the tempo, or create dynamic variations.</p>
       </section>
       <section className={styles.postConversation} aria-label="Rhythm details and conversation">
         <header className={styles.postIdentity}>{rhythm.creator ? <Link href={`/u/${rhythm.creator.handle}`}><Avatar profile={rhythm.creator} /><span><strong>{rhythm.creator.displayName}</strong><small>@{rhythm.creator.handle}</small></span></Link> : <span>Your private composition</span>}</header>
         <div className={styles.postDescription}><h1 id="rhythm-post-title">{rhythm.name}</h1>
-          <div className={styles.postBadges}><span>{rhythm.difficulty}</span><span>{isPublic ? "Public exercise" : "Private · only you"}</span></div>
+          <div className={styles.postBadges}><span>{isPublic ? "Public exercise" : "Private · only you"}</span></div>
           {rhythm.description && <p>{rhythm.description}</p>}
           {!!rhythm.tags.length && <div className={styles.tags}>{rhythm.tags.map((tag) => <Link key={tag} href={{ pathname:"/search", query:{q:tag} }}>#{tag}</Link>)}</div>}
         </div>

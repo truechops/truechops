@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import Head from "next/head";
-import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
 import { appActions } from "../../store/app";
 import { socialRequest } from "./api";
@@ -31,15 +30,12 @@ export function useResource(path, accountKey = "", { keepPreviousData = false } 
     update: (change) => setResult((current) => current.key === key && current.data ? { ...current, data: change(current.data) } : current),
   };
 }
-export function Shell({ title, children, active = "discover", navigation = true }) {
+export function Shell({ title, children, className = "" }) {
   const dispatch = useDispatch();
   useEffect(() => { dispatch(appActions.setPageLoaded()); },[dispatch]);
-  return <main className={styles.page}>
+  return <main className={`${styles.page} ${className}`}>
     <Head><title>{title} | TrueChops</title><meta name="description" content="Find your next rhythm. Explore the TrueChops community, meet drummers, and build your practice collection." /></Head>
-    {navigation && <nav className={styles.subnav} aria-label="Community"><Link href="/discover" className={styles.wordmark}>Community</Link>
-      <div><Link href="/discover" aria-current={active === "discover" ? "page" : undefined}>Discover</Link>
-        <Link href="/profile" aria-current={active === "profile" ? "page" : undefined}>My profile &amp; rhythms</Link></div>
-    </nav>}{children}
+    {children}
   </main>;
 }
 export function SignIn({ returnTo = "/profile", children = "Sign in with Google" }) {

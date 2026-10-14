@@ -19,7 +19,8 @@ function getSvgConfig(windowWidth) {
 const useTabStyles = makeStyles((theme) => ({
   root: {
     justifyContent: "center",
-    width: "100%",
+    width: "calc(100% - var(--site-sidebar-width))",
+    right: 0,
     position: "fixed",
     background: "#fafafa",
     bottom: 0,

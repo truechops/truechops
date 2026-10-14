@@ -151,7 +151,7 @@ async function clickText(page, text) {
     await page.waitForSelector("button[aria-label='save']");
     await page.click("button[aria-label='save']");
     await page.waitForSelector("#rhythm-dialog-title");
-    assert.equal(await page.$eval("[role=dialog] select",el=>el.parentElement.parentElement.querySelectorAll("select")[1].value),"private");
+    assert.equal(await page.$eval("[role=dialog] select",el=>el.value),"private");
     assert.equal(await page.$eval("[role=dialog] input",el=>el.value),saved.name,"The saved book practice name is carried to Score");
     assert.equal(await page.evaluate(async()=> (await fetch('/api/book-practice/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})).status),410);
     assert(!JSON.stringify(saved).includes(token));

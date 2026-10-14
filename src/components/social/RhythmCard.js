@@ -48,8 +48,8 @@ export default function RhythmCard({ rhythm, onOpen }) {
       </div>
       <div className={styles.exerciseCaption}><h2>{rhythm.name}</h2>
         <div className={styles.exerciseBadges}><span data-instrument>{rhythm.instruments.map((name) => name === "drumset" ? "Drum set" : name).join(" / ")}</span>
-          {rhythm.difficulty && <span data-level={rhythm.difficulty}>{rhythm.difficulty}</span>}<span>{rhythm.tempo} BPM</span>
           {rhythm.visibility === "private" && <span><FiLock aria-hidden="true" /> Private</span>}
+          <span className={styles.exerciseTempo}>{rhythm.tempo} BPM</span>
         </div>
       </div>
     </Link>

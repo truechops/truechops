@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { FiSearch, FiArrowLeft, FiArrowRight, FiPlus, FiX } from "react-icons/fi";
-import { INSTRUMENTS, DIFFICULTIES } from "../../lib/social/config";
+import { INSTRUMENTS } from "../../lib/social/config";
 import RhythmCard, { PersonCard } from "./RhythmCard";
 import { useRhythmModal } from "./RhythmPost";
 import { Shell, Status, Empty, Pagination, useAccount, useResource } from "./shared";
@@ -16,7 +16,7 @@ export default function Discover() {
   const searching = router.pathname === "/search";
   const q = scalar(router.query.q);
   const type = searching && ["rhythms", "users"].includes(router.query.type) ? router.query.type : "all";
-  const instrument = scalar(router.query.instrument), difficulty = scalar(router.query.difficulty);
+  const instrument = scalar(router.query.instrument);
   const page = Number(router.query.page) || 1;
   const [input,setInput] = useState(q), [composing,setComposing] = useState(false);
   const searchInput = useRef(null), timer = useRef(null);
@@ -35,12 +35,12 @@ export default function Discover() {
 
   const navigate = useCallback((changes, replace = false) => {
     clearTimeout(timer.current);
-    const query = { q, type: searching ? type : "", instrument, difficulty, page: 1, ...changes };
+    const query = { q, type: searching ? type : "", instrument, page: 1, ...changes };
     Object.keys(query).forEach((key) => {
       if (!query[key] || key === "type" && query[key] === "all" || key === "page" && query[key] === 1) delete query[key];
     });
     return router[replace ? "replace" : "push"]({ pathname: searching ? "/search" : "/discover", query },undefined,{ shallow: true, scroll: false });
-  },[router, searching, q, type, instrument, difficulty]);
+  },[router, searching, q, type, instrument]);
 
   useEffect(() => {
     if (!searching || !router.isReady || composing || input.trim() === q) return;
@@ -49,7 +49,7 @@ export default function Discover() {
   },[input, q, composing, searching, router.isReady, navigate]);
 
   // Fetch both categories together. Switching tabs reuses the current results.
-  const rhythmParams = new URLSearchParams({ q: searching ? q : "", type: "rhythms", instrument, difficulty, page: String(!searching || type === "rhythms" ? page : 1) });
+  const rhythmParams = new URLSearchParams({ q: searching ? q : "", type: "rhythms", instrument, page: String(!searching || type === "rhythms" ? page : 1) });
   const peopleParams = new URLSearchParams({ q, type: "users", instrument, page: String(type === "users" ? page : 1) });
   const rhythms = useResource(ready ? `search?${rhythmParams}` : null,user?.id,{ keepPreviousData: true });
   const people = useResource(ready && searching ? `search?${peopleParams}` : null,user?.id,{ keepPreviousData: true });
@@ -58,7 +58,7 @@ export default function Discover() {
   const showPeople = searching && type !== "rhythms";
   const showRhythms = !searching || type !== "users";
   const pending = typing || showPeople && people.pending || showRhythms && rhythms.pending;
-  const feedFilters = { ...(instrument ? { instrument } : {}), ...(difficulty ? { difficulty } : {}) };
+  const feedFilters = { ...(instrument ? { instrument } : {}) };
   const returnHref = { pathname: "/discover", query: feedFilters };
   const changeCategory = (next) => navigate({ type: next, q: input.trim() });
 
@@ -68,7 +68,7 @@ export default function Discover() {
     searchInput.current?.focus();
   }
 
-  return <Shell title={searching ? "Search rhythms and people" : "Community"} navigation={false}>
+  return <Shell title={searching ? "Search rhythms and people" : "Community"}>
     {searching ? <header className={styles.searchHeader}>
       <Link href={returnHref} className={styles.iconLink} aria-label="Back to community"><FiArrowLeft aria-hidden="true" /></Link>
       <form role="search" className={styles.searchForm} onSubmit={(event) => { event.preventDefault(); navigate({ q: input.trim() },true); }}>
@@ -106,10 +106,7 @@ export default function Discover() {
         {searching && <label><span className={styles.srOnly}>Instrument</span><select aria-label="Instrument" value={instrument} onChange={(event) => navigate({ instrument: event.target.value, q: input.trim() })}>
           <option value="">All instruments</option>{INSTRUMENTS.map((value) => <option key={value}>{value}</option>)}
         </select></label>}
-        {showRhythms && <label><span className={styles.srOnly}>Difficulty</span><select aria-label="Difficulty" value={difficulty} onChange={(event) => navigate({ difficulty: event.target.value, q: input.trim() })}>
-          <option value="">All levels</option>{DIFFICULTIES.map((value) => <option key={value}>{value}</option>)}
-        </select></label>}
-        {(instrument || difficulty && showRhythms) && <button className={styles.resetFilters} onClick={() => navigate({ instrument: "", difficulty: "", q: input.trim() })}>Reset</button>}
+        {instrument && <button className={styles.resetFilters} onClick={() => navigate({ instrument: "", q: input.trim() })}>Reset</button>}
       </div>
       {!searching && <div className={styles.feedViews}><span>Latest</span><Link href="/search?type=users">People</Link></div>}
     </div>
@@ -132,8 +129,8 @@ export default function Discover() {
           <Status error={rhythms.error} loading={!rhythms.data && !rhythms.error} retry={rhythms.refresh} />
           {rhythms.data && <>
             <div className={styles.exploreGrid}>{rhythms.data.items.map((rhythm) => <RhythmCard key={`${user?.id}-${rhythm.id}`} rhythm={rhythm} onOpen={modal.open} />)}</div>
-            {!rhythms.data.items.length && <Empty title={q || instrument || difficulty ? "No rhythms found" : "No rhythms yet"}>
-              {q || instrument || difficulty ? "Try a different search or reset your filters." : <>Create a rhythm and publish it from <Link href="/profile">your profile</Link>.</>}
+            {!rhythms.data.items.length && <Empty title={q || instrument ? "No rhythms found" : "No rhythms yet"}>
+              {q || instrument ? "Try a different search or reset your filters." : <>Create a rhythm and publish it from <Link href="/profile">your profile</Link>.</>}
             </Empty>}
             {(!searching || type === "rhythms") && <Pagination page={page} hasMore={rhythms.data.hasMore} onChange={(next) => navigate({ page: next })} />}
           </>}

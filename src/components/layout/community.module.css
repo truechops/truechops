@@ -1,20 +1,29 @@
-.sidebar { width:240px; box-sizing:border-box; border-right:1px solid #eee9eb; background:#fff; color:#242129; padding:20px 14px; }
-.sidebar.permanent { top:64px; height:calc(100% - 64px); }
-.sidebar.sidebar :global(.MuiList-root) { padding:8px 0; }
-.sidebar.sidebar :global(.MuiListItemButton-root) { padding:13px 12px; margin:4px 0; border-radius:10px; min-height:48px; }
-.sidebar.sidebar :global(.MuiListItemText-primary) { font-size:13px; font-weight:500; }
-.sidebar.sidebar :global(.MuiListItemIcon-root) { color:inherit; min-width:32px; font-size:21px; }
+.appContent { margin-left:var(--site-sidebar-width); min-width:0; padding-top:56px; }
+.sidebar.sidebar { width:244px; box-sizing:border-box; border-right:1px solid #eee9eb; background:#fff; color:#242129; padding:18px 14px; overflow-x:hidden; }
+.sidebarTop { display:flex; align-items:center; min-height:44px; margin:0 0 22px; }
+.sidebar.sidebar :global(.MuiList-root) { padding:4px 0; }
+.sidebar.sidebar :global(.MuiListItemButton-root) { padding:12px 14px; margin:4px 0; border-radius:10px; min-height:48px; white-space:nowrap; }
+.sidebar.sidebar :global(.MuiListItemText-root) { margin-left:14px; }
+.sidebar.sidebar :global(.MuiListItemText-primary) { font-size:14px; font-weight:500; }
+.sidebar.sidebar :global(.MuiListItemIcon-root) { color:inherit; min-width:24px; font-size:23px; }
 .sidebar.sidebar :global(.Mui-selected), .sidebar.sidebar :global(.Mui-selected:hover) { background:#fceff2; color:#b71836; }
 .sidebar.sidebar :global(.Mui-selected .MuiListItemText-primary) { font-weight:700; }
-.sidebar.sidebar :global(.MuiDivider-root) { border-color:#eee9eb; margin:12px 0; }
-.brand { display:flex; align-items:center; gap:10px; color:#15131a; text-decoration:none; font-weight:800; font-size:25px; letter-spacing:-1px; }
-.brand>span>span { color:#b71836; }
-.brandMark { display:block; position:relative; width:36px; height:36px; border-radius:50%; background:linear-gradient(140deg,#d22d49,#a10928); }
-.brandMark:before, .brandMark:after { content:""; position:absolute; width:2px; height:23px; background:#fff; border-radius:2px; left:17px; top:6px; transform:rotate(17deg); }
+.sidebar.sidebar :global(.MuiDivider-root) { border-color:#eee9eb; margin:16px 0; }
+.sidebar a:focus-visible,.sidebar button:focus-visible,.menuButton:focus-visible { outline:2px solid #b71836; outline-offset:2px; }
+.brand { display:flex; align-items:center; gap:14px; padding-left:8px; color:#15131a; text-decoration:none; font-weight:800; font-size:23px; letter-spacing:-1px; white-space:nowrap; }
+.brandName>span { color:#b71836; }
+.brandMark { display:block; position:relative; flex-shrink:0; width:36px; height:36px; border-radius:50%; background:linear-gradient(140deg,#d22d49,#a10928); }
+.brandMark:before,.brandMark:after { content:""; position:absolute; width:2px; height:23px; background:#fff; border-radius:2px; left:17px; top:6px; transform:rotate(17deg); }
 .brandMark:after { transform:rotate(-17deg); }
-.headerActions { display:flex; align-items:center; gap:22px; }
-.headerActions>a { display:flex; justify-content:center; align-items:center; width:34px; height:34px; color:#242129; text-decoration:none; font-size:23px; }
-.headerActions .accountIcon { border-radius:50%; background:#f7e8eb; color:#b71836; font-size:15px; font-weight:700; }
-@media(min-width:1100px) { .menuButton.menuButton { display:none; } .brand { width:215px; flex-shrink:0; } }
-@media(max-width:1099px) { .brand { font-size:20px; margin-right:auto; margin-left:12px; } .brandMark { width:30px; height:30px; } .brandMark:before,.brandMark:after { left:14px; top:5px; height:20px; } .headerActions { gap:6px; } }
-@media(min-width:601px) and (max-width:1099px) { .brand>span:last-child { display:none; } }
+.menuButton,.closeMenu { display:flex; align-items:center; justify-content:center; border:0; border-radius:10px; background:#fff; color:#242129; cursor:pointer; font-size:23px; width:40px; height:40px; }
+.menuButton { position:fixed; left:12px; top:8px; z-index:1100; box-shadow:0 1px 8px #24212912; }
+.closeMenu { margin-left:auto; flex-shrink:0; }
+@media(min-width:1100px) {
+  .appContent { padding-top:0; }
+  .menuButton { display:none; }
+  .sidebar.permanent { width:80px; transition:width .2s ease,box-shadow .2s ease; }
+  .sidebar.permanent :global(.MuiListItemText-root),.permanent .brandName { opacity:0; transition:opacity .15s ease; }
+  .sidebar.permanent:hover,.sidebar.permanent:has(:focus-visible) { width:244px; box-shadow:8px 0 24px #2421290a; }
+  .sidebar.permanent:hover :global(.MuiListItemText-root),.sidebar.permanent:has(:focus-visible) :global(.MuiListItemText-root),.permanent:hover .brandName,.permanent:has(:focus-visible) .brandName { opacity:1; }
+}
+@media(prefers-reduced-motion:reduce) { .sidebar.permanent,.sidebar.permanent :global(.MuiListItemText-root),.permanent .brandName { transition:none; } }

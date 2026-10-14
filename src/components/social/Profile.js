@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { FiArrowUpRight, FiLock } from "react-icons/fi";
+import { FiArrowUpRight, FiLock, FiGrid, FiBookmark, FiBookOpen, FiPlus } from "react-icons/fi";
 import { INSTRUMENTS } from "../../lib/social/config";
 import { socialRequest } from "./api";
 import RhythmCard from "./RhythmCard";
@@ -43,19 +43,37 @@ export default function Profile({ publicView = false }) {
   const result = publicView ? profileResource : library;
   const modal = useRhythmModal(result.refresh);
   function navigate(changes) { router.push({ pathname: router.pathname, query: { ...router.query, page: 1, ...changes } },undefined,{ shallow: true, scroll: false }); }
-  return <Shell title={publicView ? profile?.displayName || "Musician profile" : "My profile & rhythms"} active="profile">
+  return <Shell title={publicView ? profile?.displayName || "Musician profile" : "Profile"} className={styles.profilePage}>
     {!loaded ? <Status loading /> : !publicView && !user ? <section className={styles.signInPanel}><p className={styles.eyebrow}>YOUR PRACTICE, ALL IN ONE PLACE</p><h1>A home for your rhythms.</h1><p>Save what inspires you, publish your own ideas, and return to your collection on any device.</p><SignIn /><Link href="/discover">Explore the community first <FiArrowUpRight aria-hidden="true" /></Link></section> : <>
       <Status error={profileResource.error} loading={!profileResource.data && !profileResource.error} retry={profileResource.refresh} />
-      {profileResource.data && <header className={styles.profileHero}><Avatar large profile={profile || { displayName: user?.name }} /><div><p className={styles.eyebrow}>{profile ? `@${profile.handle}` : "YOUR PRACTICE SPACE"}</p><h1>{profile?.displayName || "Make yourself at home."}</h1><p>{profile?.bio || (publicView ? "A little more practice. A few new ideas." : "Keep the rhythms you love. Share the ones you create.")}</p><div className={styles.tags}>{profile?.instruments.map((instrument) => <span key={instrument}>{instrument}</span>)}</div></div>
-        {!publicView && <div className={styles.profileButtons}><button onClick={() => setEditingProfile((value) => !value)}>{profile ? "Edit profile" : "Create public profile"}</button>{profile && <Link href={`/u/${profile.handle}`}>View public profile <FiArrowUpRight aria-hidden="true" /></Link>}<Link href="/account/books">My books &amp; saved book practice</Link></div>}
-        {publicView && profileResource.data.isOwner && <Link href="/profile" className={styles.primary}>Manage my profile</Link>}
+      {profileResource.data && <header className={styles.profileHero}>
+        <Avatar large profile={profile || { displayName: user?.name }} />
+        <div className={styles.profileInfo}>
+          <div className={styles.profileName}><h1>{profile?.handle || user?.name || "Your profile"}</h1>
+            {!publicView && profile && <Link href={`/u/${profile.handle}`} aria-label="View public profile" title="View public profile"><FiArrowUpRight aria-hidden="true" /></Link>}
+          </div>
+          {profile && <p className={styles.profileDisplayName}>{profile.displayName}</p>}
+          {!!profile?.instruments?.length && <p className={styles.profileInstruments}>{profile.instruments.map((instrument) => instrument === "drumset" ? "Drum set" : instrument).join(" · ")}</p>}
+          {(profile?.bio || !publicView && !profile) && <p className={styles.profileBio}>{profile?.bio || "Make this space yours. Create a public profile to share your rhythms."}</p>}
+        </div>
+        {!publicView && <div className={styles.profileButtons}>
+          <button onClick={() => setEditingProfile((value) => !value)} aria-expanded={editingProfile}>{profile ? "Edit profile" : "Create public profile"}</button>
+          <Link href="/"><FiPlus aria-hidden="true" /> Create rhythm</Link>
+        </div>}
+        {publicView && profileResource.data.isOwner && <div className={styles.profileButtons}><Link href="/profile">Edit profile</Link><Link href="/"><FiPlus aria-hidden="true" /> Create rhythm</Link></div>}
       </header>}
       {!publicView && editingProfile && <ProfileEditor key={`${user.id}-${profile?.id || "new"}`} profile={profile} user={user} onCancel={() => setEditingProfile(false)} onSaved={() => { profileResource.refresh(); setEditingProfile(false); setNotice("Your public profile is saved."); }} />}
       {notice && <p role="status" className={styles.notice}>{notice}</p>}
-      <div className={styles.collectionHeader}><div>{publicView ? <h2>Published rhythms</h2> : <><h2>Your rhythm collection</h2><p><FiLock aria-hidden="true" /> Saved rhythms and private compositions are visible only to you.</p></>}</div>{!publicView && <Link href="/" className={styles.primary}>Create a rhythm <FiArrowUpRight aria-hidden="true" /></Link>}</div>
-      {!publicView && <div className={styles.tabs} aria-label="Your rhythms"><button aria-pressed={tab === "created"} onClick={() => navigate({ tab: "created" })}>My creations</button><button aria-pressed={tab === "saved"} onClick={() => navigate({ tab: "saved" })}>Saved from the community</button></div>}
+      {publicView ? <div className={styles.profileCollectionHeading}><FiGrid aria-hidden="true" /><h2>Rhythms</h2></div> : <>
+        <div className={styles.profileTabs} aria-label="Your collection">
+          <button aria-pressed={tab === "created"} onClick={() => navigate({ tab: "created" })}><FiGrid aria-hidden="true" /> Rhythms</button>
+          <button aria-pressed={tab === "saved"} onClick={() => navigate({ tab: "saved" })}><FiBookmark aria-hidden="true" /> Saved</button>
+          <Link href="/account/books"><FiBookOpen aria-hidden="true" /> Books &amp; saved practice</Link>
+        </div>
+        {tab === "saved" && <p className={styles.collectionPrivacy}><FiLock aria-hidden="true" /> Only you can see your saved rhythms.</p>}
+      </>}
       {!publicView && <Status error={result.error} loading={!result.data && !result.error} retry={result.refresh} />}
-      {result.data && <><div className={styles.grid}>{result.data.items.map((rhythm) => <RhythmCard key={`${user?.id}-${rhythm.id}`} rhythm={rhythm} onOpen={modal.open} />)}</div>
+      {result.data && <><div className={styles.profileGrid}>{result.data.items.map((rhythm) => <RhythmCard key={`${user?.id}-${rhythm.id}`} rhythm={rhythm} onOpen={modal.open} />)}</div>
         {!result.data.items.length && <Empty title={publicView ? "The next idea is still taking shape." : tab === "saved" ? "Keep a rhythm for later." : "Start your collection."}>{publicView ? "Published rhythms will appear here." : tab === "saved" ? <><Link href="/discover">Explore the community</Link> and save a rhythm to practice later.</> : <>Open the <Link href="/">composer</Link> and save your first rhythm. Existing saved compositions also appear here.</>}</Empty>}
         <Pagination page={page} hasMore={result.data.hasMore} onChange={(next) => navigate({ page: next })} /></>}
       {modal.element}

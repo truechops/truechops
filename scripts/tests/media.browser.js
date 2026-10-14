@@ -108,8 +108,11 @@ async function field(page,label,value) {
     await page.waitForSelector("iframe[title^='Video demonstration:']");
     await page.waitForFunction(()=>getComputedStyle(document.querySelector(".MuiDialog-container")).opacity==="1");
     await page.screenshot({path:`${folder}/video-modal.png`});
-    await button(page,"Audio");await page.waitForSelector("iframe[title^='Audio recording:']");
-    await button(page,"Notation");await page.waitForSelector("[role=dialog] .vf-stavenote");
+    await page.waitForSelector("iframe[title^='Audio recording:']");
+    await page.waitForSelector("[role=dialog] .vf-stavenote");
+    assert.equal(await page.$("[role=dialog] [role=group][aria-label='Exercise content']"),null,"Recordings and notation share a single view");
+    assert(await page.evaluate(()=>document.querySelector("[aria-label='Exercise notation']").getBoundingClientRect().top>=document.querySelector("iframe[title^='Video demonstration:']").getBoundingClientRect().bottom),"Notation appears below the video");
+    assert(!(await page.$eval("[aria-label='Exercise content']",el=>el.innerText)).match(/\b\d+ bars?\b/i),"Bar counts are hidden");
     await button(page,"Edit details");await page.waitForSelector("#rhythm-dialog-title");
     await button(page,"Remove video");await button(page,"Save & publish");
     await page.waitForFunction(()=>!document.querySelector("#rhythm-dialog-title"));
@@ -124,7 +127,7 @@ async function field(page,label,value) {
     await page.waitForFunction(()=>getComputedStyle(document.querySelector(".MuiDialog-container")).opacity==="1");
     await page.screenshot({path:`${folder}/audio-mobile.png`});
     assert.deepEqual(errors,[]);
-    console.log("Passed: file validation, direct TUS uploads, private draft on failure, retry without duplicate uploads, video feed, video/audio playback, notation switching, removal, and mobile layout.");
+    console.log("Passed: file validation, direct TUS uploads, private draft on failure, retry without duplicate uploads, video feed, video/audio playback with notation, removal, and mobile layout.");
   } catch(error) {
     console.error("Runtime errors:",errors);
     for(const page of await browser.pages())if(page.url().startsWith(origin)) {

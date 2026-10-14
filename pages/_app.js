@@ -13,6 +13,7 @@ import { ToneContextProvider } from "../src/store/tone-context";
 import ReactGA from "react-ga";
 import ErrorBoundary from "../src/components/error/ErrorBoundary";
 import '../styles/App.css'
+import layoutStyles from '../src/components/layout/community.module.css';
 
 function AuthSessionLoader({ children }) {
   const dispatch = useDispatch();
@@ -57,7 +58,7 @@ export default function MyApp(props) {
                 <CssBaseline />
                 <HeaderToolbar />
                 <Navigation />
-                <Component {...pageProps} />
+                <div className={layoutStyles.appContent}><Component {...pageProps} /></div>
                 {/* <Footer /> */}
               </ThemeProvider>
             </ToneContextProvider>
