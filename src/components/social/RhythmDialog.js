@@ -10,7 +10,7 @@ import styles from "./social.module.css";
 
 export default function RhythmDialog({ rhythm, composition, onClose, onSaved }) {
   const source = rhythm || composition || {};
-  const [values,setValues] = useState({ name: source.name || "", description: source.description || "", tags: (source.tags || []).join(", "), visibility: source.visibility || "private" });
+  const [values,setValues] = useState({ name: source.name || "", tags: (source.tags || []).join(", "), visibility: source.visibility || "private" });
   const [busy,setBusy] = useState(false), [error,setError] = useState("");
   const [saveMutations,setSaveMutations] = useState(false), [confirmDelete,setConfirmDelete] = useState(false);
   const [attached,setAttached] = useState(source.media || []);
@@ -68,7 +68,6 @@ export default function RhythmDialog({ rhythm, composition, onClose, onSaved }) 
     <DialogTitle id="rhythm-dialog-title">{rhythm ? "Edit your rhythm" : "Save to your profile"}</DialogTitle>
     <DialogContent><form onSubmit={submit} className={styles.form}>
       <label>Title<input required maxLength={100} autoFocus value={values.name} onChange={update("name")} placeholder="Give this rhythm a name" /></label>
-      <label>Practice notes<textarea maxLength={1000} rows={3} value={values.description} onChange={update("description")} placeholder="What should a drummer listen for or work on?" /></label>
       <label>Visibility<select value={values.visibility} onChange={update("visibility")}><option value="private">Private — only you</option><option value="public">Public — community &amp; profile</option></select></label>
       <label>Tags<input value={values.tags} onChange={update("tags")} maxLength={198} placeholder="triplets, coordination, jazz" /><small>Separate up to eight tags with commas.</small></label>
       {values.visibility === "public" ? <p className={styles.hint}>Anyone can find and save this rhythm. You need a <Link href="/profile" target="_blank" rel="noreferrer">public profile</Link> to publish.</p> : <p className={styles.hint}>Only you can see this rhythm in your profile. It stays saved to your account across devices.</p>}

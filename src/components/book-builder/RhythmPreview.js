@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { drawScore, initialize } from "../../lib/vexflow";
 
-export default function RhythmPreview({ score, minWidth = 480, fit = false }) {
+export default function RhythmPreview({ score, minWidth = 480, fit = false, compact = false, maxHeight }) {
   const id = `practice-score-${useId().replace(/:/g, "")}`;
   const root = useRef(null);
   const [width, setWidth] = useState(680);
@@ -23,16 +23,22 @@ export default function RhythmPreview({ score, minWidth = 480, fit = false }) {
       }, {});
       if (fit) {
         const svg = container.querySelector("svg");
-        svg.setAttribute("viewBox",`0 0 ${svg.getAttribute("width")} ${svg.getAttribute("height")}`);
+        if (compact) {
+          const bounds = svg.getBBox(), padding = 10;
+          svg.setAttribute("viewBox",`${bounds.x-padding} ${bounds.y-padding} ${bounds.width+padding*2} ${bounds.height+padding*2}`);
+          svg.setAttribute("width",bounds.width+padding*2);
+          svg.setAttribute("height",bounds.height+padding*2);
+        } else svg.setAttribute("viewBox",`0 0 ${svg.getAttribute("width")} ${svg.getAttribute("height")}`);
         svg.style.width = "100%";
         svg.style.height = "auto";
+        if (maxHeight) svg.style.maxHeight = maxHeight;
         svg.style.display = "block";
       }
       setError(false);
     } catch { setError(true); }
     return () => { container.innerHTML = ""; };
-  }, [score, width, id, fit]);
-  return <div ref={root} style={{ overflowX: "auto", width: "100%", minWidth: 0 }}>
+  }, [score, width, id, fit, compact, maxHeight]);
+  return <div ref={root} style={{ overflowX: fit ? "visible" : "auto", width: "100%", minWidth: 0 }}>
     <div id={id} aria-hidden="true" style={{ pointerEvents: "none" }} />
     {error && <span>Unable to display this rhythm.</span>}
   </div>;

@@ -35,7 +35,7 @@ lives in the left sidebar; smaller screens open it with the menu button.
 Public profiles use `/u/:handle`; individual rhythms use `/rhythms/:id`.
 Feed cards show only exercise content. Opening a card uses a shareable `?rhythm=`
 modal over the feed; Escape/Back restores the feed and keyboard focus. The modal
-contains the full notation, creator, practice notes, comments, likes, and library
+contains the full notation, creator, comments, likes, and library
 save controls. Its Open in score action copies the score and tempo into the editor.
 Use the composer's Save button to save privately or publish. Publishing requires
 an explicitly created public profile. Existing saved scores remain private.
@@ -104,10 +104,13 @@ with files are first saved as private drafts. Only after successful uploads does
 the final save apply the selected visibility. Failed uploads can be retried in
 the same dialog without creating another draft or uploading completed files again.
 
-Video cards show Bunny thumbnails in the community and tempo in the lower right;
+Video cards show Bunny thumbnails with notation directly beneath them in the
+community and tempo in the lower right;
 levels are hidden from cards, filters, and editing. Opening a card displays its
 Bunny recordings and full notation together, with notation below the video and
-no content tabs or bar-count label. Playback starts
+no content tabs, practice-notes section, or bar-count label. The details layout
+reserves space for notation beneath the player; comments scroll separately.
+Playback starts
 on interaction, not while scrolling the feed. Files encode asynchronously; the
 notation remains usable during processing. Existing book-to-Score and save flows
 continue to work without media.

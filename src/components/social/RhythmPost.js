@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import Dialog from "@mui/material/Dialog";
-import { FiHeart, FiMessageCircle, FiX, FiTrash2, FiShare2 } from "react-icons/fi";
+import { FiHeart, FiMessageCircle, FiX, FiTrash2, FiSend, FiLock } from "react-icons/fi";
 import RhythmPreview from "../book-builder/RhythmPreview";
 import RhythmDialog from "./RhythmDialog";
 import RhythmMedia, { useMediaStatus } from "./RhythmMedia";
@@ -80,53 +80,61 @@ export default function RhythmPost({ id, onClose, onChanged }) {
     <Status error={resource.error} loading={!rhythm && !resource.error} retry={resource.refresh} />
     {rhythm && <>
       <section className={styles.postScore} aria-label="Exercise content">
-        <div className={styles.postScoreHeading}><span>{rhythm.instruments.join(" / ")}</span><span>{rhythm.tempo} BPM</span></div>
-        {primaryRecording && <RhythmMedia key={primaryRecording.id} rhythmId={rhythm.id} media={primaryRecording} />}
-        <div className={styles.postNotation} aria-label="Exercise notation"><RhythmPreview score={rhythm.score} minWidth={260} /></div>
-        {video && audio && <RhythmMedia key={audio.id} rhythmId={rhythm.id} media={audio} />}
+        {primaryRecording && <div className={styles.postVideo}><RhythmMedia key={primaryRecording.id} rhythmId={rhythm.id} media={primaryRecording} /></div>}
+        <div className={`${styles.postNotation} ${!primaryRecording ? styles.notationOnly : ""}`} role="img" aria-label="Exercise notation"><RhythmPreview score={rhythm.score} minWidth={260} fit compact maxHeight={primaryRecording ? "min(210px, 28dvh)" : "min(560px, 65dvh)"} /></div>
+        {video && audio && <details className={styles.additionalRecording}><summary>Audio recording</summary><RhythmMedia key={audio.id} rhythmId={rhythm.id} media={audio} /></details>}
         {recordings.some((item) => ["uploading","processing"].includes(item.status)) && <p role="status">Your recording is processing. It will appear here when ready.</p>}
         {recordings.some((item) => item.status === "failed") && <p role="status">A recording couldn&apos;t be processed.{rhythm.isOwner && " Choose a new file in Edit details."}</p>}
-        <p>Open in score to play, change the tempo, or create dynamic variations.</p>
       </section>
       <section className={styles.postConversation} aria-label="Rhythm details and conversation">
-        <header className={styles.postIdentity}>{rhythm.creator ? <Link href={`/u/${rhythm.creator.handle}`}><Avatar profile={rhythm.creator} /><span><strong>{rhythm.creator.displayName}</strong><small>@{rhythm.creator.handle}</small></span></Link> : <span>Your private composition</span>}</header>
-        <div className={styles.postDescription}><h1 id="rhythm-post-title">{rhythm.name}</h1>
-          <div className={styles.postBadges}><span>{isPublic ? "Public exercise" : "Private · only you"}</span></div>
-          {rhythm.description && <p>{rhythm.description}</p>}
-          {!!rhythm.tags.length && <div className={styles.tags}>{rhythm.tags.map((tag) => <Link key={tag} href={{ pathname:"/discover", query:{q:tag} }}>#{tag}</Link>)}</div>}
+        <header className={styles.postIdentity}>
+          {rhythm.creator ? <Link href={`/u/${rhythm.creator.handle}`}><Avatar profile={rhythm.creator} /><span><strong>{rhythm.creator.displayName}</strong><small>@{rhythm.creator.handle}</small></span></Link> : <span>Your private composition</span>}
+          {rhythm.isOwner && <button onClick={() => setEditing(true)}>Edit details</button>}
+        </header>
+        <div className={styles.postSummary}>
+          <div><h1 id="rhythm-post-title">{rhythm.name}</h1>
+            <div className={styles.postBadges}><span data-instrument>{rhythm.instruments.map((instrument) => instrument === "drumset" ? "Drum set" : instrument).join(" / ")}</span><span>{rhythm.tempo} BPM</span>{!isPublic && <span><FiLock aria-hidden="true" /> Private</span>}</div>
+          </div>
+          <RhythmActions rhythm={rhythm} full />
         </div>
-        {isPublic && <div className={styles.postComments}>
-          <h2>Practice notes &amp; comments</h2>
-          <Status error={comments.error} loading={!comments.data && !comments.error} retry={comments.refresh} />
-          {comments.data?.items.map((entry) => <article className={styles.comment} key={entry.id}>
-            <Avatar profile={entry.author} /><div>{entry.author ? <Link href={`/u/${entry.author.handle}`}><strong>{entry.author.displayName}</strong></Link> : <strong>Community member</strong>}
-              <p>{entry.text}</p><time dateTime={entry.createdAt}>{new Date(entry.createdAt).toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})}</time></div>
-            {entry.canDelete && <button disabled={Boolean(busy)} onClick={() => removeComment(entry.id)} aria-label="Delete comment"><FiTrash2 aria-hidden="true" /></button>}
-          </article>)}
-          {comments.data && !comments.data.items.length && <p className={styles.commentEmpty}>What are you working on with this exercise?</p>}
-          {(commentPage > 1 || comments.data?.hasMore) && <div className={styles.commentPages}>
-            <button disabled={commentPage <= 1} onClick={() => setCommentPage((value) => value-1)}>Newer</button><span>Page {commentPage}</span>
-            <button disabled={!comments.data?.hasMore} onClick={() => setCommentPage((value) => value+1)}>Older</button>
-          </div>}
-        </div>}
+        {isPublic ? <section className={styles.postComments} aria-labelledby="rhythm-comments-title">
+          <h2 id="rhythm-comments-title">Comments{engagement.data && ` (${engagement.data.commentCount})`}</h2>
+          <div className={styles.commentList}>
+            <Status error={comments.error} loading={!comments.data && !comments.error} retry={comments.refresh} />
+            {comments.data?.items.map((entry) => <article className={styles.comment} key={entry.id}>
+              <Avatar profile={entry.author} /><div>
+                <div className={styles.commentByline}>{entry.author ? <Link href={`/u/${entry.author.handle}`}><strong>{entry.author.handle || entry.author.displayName}</strong></Link> : <strong>Community member</strong>}
+                  <time dateTime={entry.createdAt} title={new Date(entry.createdAt).toLocaleString()}>{new Date(entry.createdAt).toLocaleDateString(undefined,{month:"short",day:"numeric"})}</time>
+                </div><p>{entry.text}</p>
+              </div>
+              {entry.canDelete && <button disabled={Boolean(busy)} onClick={() => removeComment(entry.id)} aria-label="Delete comment"><FiTrash2 aria-hidden="true" /></button>}
+            </article>)}
+            {comments.data && !comments.data.items.length && <p className={styles.commentEmpty}>Be the first to comment.</p>}
+            {(commentPage > 1 || comments.data?.hasMore) && <div className={styles.commentPages}>
+              <button disabled={commentPage <= 1} onClick={() => setCommentPage((value) => value-1)}>Newer</button><span>Page {commentPage}</span>
+              <button disabled={!comments.data?.hasMore} onClick={() => setCommentPage((value) => value+1)}>Older</button>
+            </div>}
+          </div>
+        </section> : <p className={styles.privatePost}><FiLock aria-hidden="true" /> Only you can see this rhythm.</p>}
+        {isPublic && (user ? <form className={styles.commentForm} onSubmit={comment}>
+          <Avatar profile={{ displayName:user.name }} />
+          <label className={styles.srOnly} htmlFor="new-comment">Add a comment</label>
+          <div><textarea ref={input} id="new-comment" rows={1} maxLength={1000} value={text} onChange={(event) => setText(event.target.value)} placeholder="Add a comment..." required />
+            <button disabled={!text.trim() || Boolean(busy)}>{busy === "comment" ? "Posting..." : "Post"}</button></div>
+        </form> : <p className={styles.commentSignIn}><a href={signIn}>Sign in</a> to like, comment, and save rhythms.</p>)}
         <div className={styles.postControls}>
           {isPublic && <><Status error={engagement.error} retry={engagement.refresh} />
             <div className={styles.socialActions}>
               {user ? <button aria-label={engagement.data?.liked ? "Unlike rhythm" : "Like rhythm"} aria-pressed={Boolean(engagement.data?.liked)} disabled={Boolean(busy) || !engagement.data} onClick={like}><FiHeart aria-hidden="true" /></button> : <a href={signIn} aria-label="Sign in to like"><FiHeart aria-hidden="true" /></a>}
-              <span>{engagement.data ? `${engagement.data.likeCount} ${engagement.data.likeCount === 1 ? "like" : "likes"}` : ""}</span>
+              <span aria-label={`${engagement.data?.likeCount || 0} likes`}>{engagement.data?.likeCount ?? ""}</span>
               <button aria-label="Write a comment" onClick={() => input.current?.focus()} disabled={!user}><FiMessageCircle aria-hidden="true" /></button>
               <span>{engagement.data?.commentCount ?? ""}</span>
-              <button className={styles.sharePost} onClick={share} disabled={Boolean(busy)} aria-label="Copy rhythm link"><FiShare2 aria-hidden="true" /></button>
+              <button className={styles.sharePost} onClick={share} disabled={Boolean(busy)} aria-label="Copy rhythm link"><FiSend aria-hidden="true" /></button>
+              <RhythmActions key={`${user?.id}-${rhythm.id}-${rhythm.saved}`} rhythm={rhythm} action="save" onSaved={onChanged} />
             </div></>}
-          <RhythmActions key={`${user?.id}-${rhythm.id}-${rhythm.saved}`} rhythm={rhythm} full onEdit={() => setEditing(true)} onSaved={onChanged} />
           {notice && <p role="status" className={styles.hint}>{notice}</p>}
           {error && <p role="alert" className={styles.inlineError}>{error}{error.includes("public profile") && <> <Link href="/profile">Set up your profile</Link></>}</p>}
         </div>
-        {isPublic && (user ? <form className={styles.commentForm} onSubmit={comment}>
-          <label className={styles.srOnly} htmlFor="new-comment">Add a comment</label>
-          <textarea ref={input} id="new-comment" rows={2} maxLength={1000} value={text} onChange={(event) => setText(event.target.value)} placeholder="Add a practice note…" required />
-          <button disabled={!text.trim() || Boolean(busy)}>{busy === "comment" ? "Posting…" : "Post"}</button>
-        </form> : <p className={styles.commentSignIn}><a href={signIn}>Sign in</a> to like, comment, and save exercises.</p>)}
       </section>
     </>}
     {editing && <RhythmDialog rhythm={rhythm} onClose={() => setEditing(false)} onSaved={(saved) => {

@@ -56,7 +56,7 @@ export default function Discover() {
     searchInput.current?.focus();
   }
 
-  return <Shell title="Search rhythms and people">
+  return <Shell title="Search rhythms and people" className={styles.discoverPage}>
     <h1 className={styles.srOnly}>{q ? `Search results for ${q}` : "Search rhythms and people"}</h1>
     <header className={styles.searchHeader}>
       <form role="search" className={styles.searchForm} onSubmit={(event) => { event.preventDefault(); navigate({ q: input.trim() },true); }}>
@@ -93,7 +93,7 @@ export default function Discover() {
           <div className={styles.sectionHeading}><h2>People</h2>{type === "all" && people.data?.items.length > 0 && <button onClick={() => changeCategory("users")} aria-label="See all people">See all</button>}</div>
           <Status error={people.error} loading={!people.data && !people.error} retry={people.refresh} />
           {people.data && <>
-            <div className={styles.peopleGrid}>{people.data.items.slice(0,type === "all" ? 3 : undefined).map((person) => <PersonCard key={person.id} profile={person} compact />)}</div>
+            <div className={`${styles.peopleGrid} ${type === "all" ? styles.peoplePreviewGrid : ""}`}>{people.data.items.slice(0,type === "all" ? 3 : undefined).map((person) => <PersonCard key={person.id} profile={person} compact />)}</div>
             {!people.data.items.length && <p className={styles.noPeople}>{q ? "No people found. Try a name or @handle." : "Public profiles will appear here."}</p>}
             {type === "users" && <Pagination page={page} hasMore={people.data.hasMore} onChange={(next) => navigate({ page: next })} />}
           </>}

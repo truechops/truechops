@@ -116,6 +116,8 @@ async function field(page,label,value) {
     await page.waitForSelector("[role=dialog] #rhythm-post-title");
     assert((await page.$eval("[role=dialog]",el=>el.innerText)).includes("Sign in to save"));
     assert((await page.$eval("[role=dialog]",el=>el.innerText)).includes("Maya Rivers"));
+    assert(!(await page.$eval("[role=dialog]",el=>el.innerText)).includes("Practice notes"));
+    assert(!(await page.$eval("[role=dialog]",el=>el.innerText)).includes(rhythms[0].description));
     await page.waitForFunction(()=>getComputedStyle(document.querySelector(".MuiDialog-container")).opacity==="1");
     await page.screenshot({path:`${folder}/exercise-desktop.png`,fullPage:true});
     await page.keyboard.press("Escape");
