@@ -11,7 +11,7 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import useMediaQuery from "@mui/material/useMediaQuery";
-import { FiMusic, FiActivity, FiLayers, FiGrid, FiSearch, FiUser, FiLogIn, FiUserPlus, FiLogOut, FiInfo, FiMenu, FiX } from "react-icons/fi";
+import { FiMusic, FiActivity, FiLayers, FiGrid, FiSearch, FiUser, FiLogIn, FiUserPlus, FiLogOut, FiMenu, FiX } from "react-icons/fi";
 import styles from "./community.module.css";
 
 export default function Navigation() {
@@ -44,7 +44,6 @@ export default function Navigation() {
       <List>
         {!currentUser ? <>{item("Sign Up","/signup",FiUserPlus)}{item("Log In","/login",FiLogIn)}</> :
           <ListItem disablePadding><ListItemButton aria-label="Log Out" onClick={() => { dispatch(logout()); close(); router.push("/"); }}><ListItemIcon><FiLogOut aria-hidden="true" /></ListItemIcon><ListItemText primary="Log Out" /></ListItemButton></ListItem>}
-        {item("About","/about",FiInfo)}
       </List>
     </nav>
   </Drawer></>;

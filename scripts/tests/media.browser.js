@@ -51,7 +51,7 @@ async function field(page,label,value) {
       const route=url.pathname.slice(12),body=req.postData()?JSON.parse(req.postData()):{};
       requests.push({route,method,body});
       if(route==="rhythms"&&method==="POST") {creates++;rhythm={...body,id:"with-media",media:[]};return send({rhythm:decorate()},201);}
-      if(route==="search")return send({items:rhythm?.visibility==="public"?[decorate()]:[],hasMore:false,page:1});
+      if(route==="search")return send({items:rhythm?.visibility==="public"?[url.searchParams.get("type")==="users"?profile:decorate()]:[],hasMore:false,page:1});
       if(route==="profile")return send({profile});
       if(route==="library")return send({items:rhythm?[decorate()]:[],hasMore:false,page:1});
       if(route.endsWith("/engagement"))return send({likeCount:0,commentCount:0,liked:false});

@@ -22,8 +22,10 @@ Current desired changes:
 ## Community and MongoDB Search
 
 The icon sidebar expands on hover or keyboard focus. Search opens the community
-feed at `/discover`. Its search bar opens `/search`, with
-live MongoDB Search results in All, Rhythms and People tabs. Search text, filters
+page at `/discover`, with live search, a compact All / Rhythms / People control,
+and instrument filters below. The default All view shows People and Rhythms
+together, even before searching. Old `/search` links redirect here and retain
+their query, filters, and open rhythm. Search text, filters
 and category are reflected in the URL; changing categories preserves the query.
 All shows both result types, with independent loading and retry states.
 `/profile` and `/library`

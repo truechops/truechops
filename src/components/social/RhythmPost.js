@@ -93,7 +93,7 @@ export default function RhythmPost({ id, onClose, onChanged }) {
         <div className={styles.postDescription}><h1 id="rhythm-post-title">{rhythm.name}</h1>
           <div className={styles.postBadges}><span>{isPublic ? "Public exercise" : "Private · only you"}</span></div>
           {rhythm.description && <p>{rhythm.description}</p>}
-          {!!rhythm.tags.length && <div className={styles.tags}>{rhythm.tags.map((tag) => <Link key={tag} href={{ pathname:"/search", query:{q:tag} }}>#{tag}</Link>)}</div>}
+          {!!rhythm.tags.length && <div className={styles.tags}>{rhythm.tags.map((tag) => <Link key={tag} href={{ pathname:"/discover", query:{q:tag} }}>#{tag}</Link>)}</div>}
         </div>
         {isPublic && <div className={styles.postComments}>
           <h2>Practice notes &amp; comments</h2>
