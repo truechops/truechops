@@ -77,6 +77,7 @@ async function field(page,label,value) {
         const [,id,action,commentId]=path.split("/");
         const summary=()=>({likeCount:likes.has(id)?1:0,liked:likes.has(id),commentCount:comments.filter((c)=>c.rhythmId===id).length});
         if(action==="engagement")return send(summary());
+        if(action==="similar")return send({items:[],hasMore:false,page:1});
         if(action==="like") { if(method==="PUT")likes.add(id);else likes.delete(id);return send(summary()); }
         if(action==="comments") {
           if(method==="POST") {const comment={id:`comment-${Date.now()}`,rhythmId:id,text:body.text.trim(),author:myProfile||{...creator,displayName:"Alex Carter"},canDelete:true,createdAt:new Date().toISOString()};comments.unshift(comment);return send({comment,...summary()},201);}
@@ -114,7 +115,7 @@ async function field(page,label,value) {
     await page.screenshot({path:`${folder}/discover-desktop.png`,fullPage:true});
     await page.click("main a[href='/rhythms/rhythm-0']");
     await page.waitForSelector("[role=dialog] #rhythm-post-title");
-    assert((await page.$eval("[role=dialog]",el=>el.innerText)).includes("Sign in to save"));
+    assert(await page.$("[role=dialog] a[aria-label='Sign in to save']"));
     assert((await page.$eval("[role=dialog]",el=>el.innerText)).includes("Maya Rivers"));
     assert(!(await page.$eval("[role=dialog]",el=>el.innerText)).includes("Practice notes"));
     assert(!(await page.$eval("[role=dialog]",el=>el.innerText)).includes(rhythms[0].description));
@@ -175,12 +176,14 @@ async function field(page,label,value) {
     await page.goto(`${origin}/search`,{waitUntil:"networkidle0"});
     await page.click("main a[href='/rhythms/rhythm-0']");
     await page.waitForSelector("[role=dialog] #rhythm-post-title");
-    await clickText(page,"Save rhythm");await page.waitForFunction(()=>Array.from(document.querySelectorAll("[role=dialog] button")).some((el)=>el.textContent==="Saved"));
+    await page.click("button[aria-label='Save rhythm']");await page.waitForSelector("button[aria-label='Unsave rhythm']");
     assert(saved.has("rhythm-0"));
     await page.waitForSelector("button[aria-label='Like rhythm']:not([disabled])");
     await page.click("button[aria-label='Like rhythm']");
     await page.waitForSelector("button[aria-label='Unlike rhythm']");
-    await page.type("#new-comment","Working on this at 60 BPM. <script>safe text</script>");
+    await page.click("button[aria-label='Comments']");
+    await page.waitForSelector("textarea[placeholder='Add a comment...']");
+    await page.type("textarea[placeholder='Add a comment...']","Working on this at 60 BPM. <script>safe text</script>");
     await clickText(page,"Post");
     await page.waitForSelector("button[aria-label='Delete comment']");
     assert.equal(comments.length,1);
@@ -218,7 +221,7 @@ async function field(page,label,value) {
     await clickText(page,"Rhythms");await page.waitForFunction(()=>document.querySelector("main")?.innerText.includes("My private practice"));
     await page.click("main a[href='/rhythms/mine']");
     await page.waitForSelector("[role=dialog] #rhythm-post-title");
-    assert.equal(await page.$("#new-comment"),null,"Private rhythms have no public conversation");
+    assert.equal(await page.$("button[aria-label='Comments']"),null,"Private rhythms have no public conversation");
     await clickText(page,"Edit details");await page.waitForSelector("#rhythm-dialog-title");
     await field(page,"Title","My updated practice");await field(page,"Visibility","public");await clickText(page,"Save & publish");
     await page.waitForFunction(()=>!document.querySelector("#rhythm-dialog-title"));assert.equal(mine.visibility,"public");
@@ -241,7 +244,9 @@ async function field(page,label,value) {
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),"Mobile page must not overflow horizontally");
     await page.screenshot({path:`${folder}/discover-mobile.png`,fullPage:true});
     await page.click("main a[href='/rhythms/rhythm-0']");
-    await page.waitForSelector("[role=dialog] #new-comment");
+    await page.waitForSelector("[role=dialog] #rhythm-post-title");
+    await page.click("button[aria-label='Comments']");
+    await page.waitForSelector("[role=dialog] textarea[placeholder='Add a comment...']");
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),"Mobile dialog must fit the screen");
     await page.waitForFunction(()=>getComputedStyle(document.querySelector(".MuiDialog-container")).opacity==="1");
     await page.screenshot({path:`${folder}/exercise-mobile.png`,fullPage:true});

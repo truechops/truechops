@@ -7,12 +7,28 @@ Module._extensions[".js"] = (module,file) => {
   module._compile(babel.transformSync(fs.readFileSync(file,"utf8"),{presets:[["@babel/preset-env",{targets:{node:"current"}}]],babelrc:false,configFile:false}).code,file);
 };
 const { shuffleMeasure, canShuffleMeasure, insertCopiedMeasure } = require("../../src/services/measure-editing");
+const { rhythmVariations } = require("../../src/services/rhythm-variations");
 const copy = (value) => structuredClone(value);
 const measure = () => ({timeSig:{num:2,type:4},parts:[{instrument:"snare",voices:[{
   notes:["ra","ld","rc","lf","r","l","ra",""].map((ornaments,i)=>({notes:i===7?[]:["C5"],duration:16,dots:0,ornaments,velocity:.5})),
   tuplets:[{start:0,end:3,actual:3,normal:2}]
 }]}]});
 const letters = {stickings:"rl",accents:"a",diddles:"d",cheese:"c",flams:"f"};
+
+test("variation previews are unique, change one measure, and leave the original intact",()=>{
+  const score={parts:{snare:{enabled:true}},measures:[measure(),measure()]}, before=copy(score);
+  for(const category of Object.keys(letters)) {
+    const rows=rhythmVariations(score,category,8,()=>.999);
+    assert(rows.length>0 && rows.length<=8);
+    assert.equal(new Set(rows.map(row=>JSON.stringify(row.score))).size,rows.length);
+    for(const row of rows) {
+      assert.notDeepEqual(row.score,score);
+      assert.deepEqual(row.score.measures[1-row.measureIndex],score.measures[1-row.measureIndex]);
+    }
+  }
+  assert.deepEqual(score,before);
+  assert.deepEqual(rhythmVariations(score,"unknown"),[]);
+});
 
 for (const [category,target] of Object.entries(letters)) test(`${category}: shuffle preserves timing, rests, other markings, and counts`,()=>{
   const before=measure(), frozen=copy(before);

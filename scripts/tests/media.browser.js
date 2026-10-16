@@ -55,6 +55,7 @@ async function field(page,label,value) {
       if(route==="profile")return send({profile});
       if(route==="library")return send({items:rhythm?[decorate()]:[],hasMore:false,page:1});
       if(route.endsWith("/engagement"))return send({likeCount:0,commentCount:0,liked:false});
+      if(route.endsWith("/similar"))return send({items:[],hasMore:false,page:1});
       if(route.endsWith("/comments"))return send({items:[],hasMore:false,page:1});
       const [,id,action,mediaId,mediaAction]=route.split("/");
       if(action==="media") {
@@ -122,7 +123,9 @@ async function field(page,label,value) {
     const notationFits=()=>{const score=document.querySelector('[aria-label="Exercise notation"]'),box=score.getBoundingClientRect(),video=document.querySelector('iframe[title^="Video demonstration:"]').getBoundingClientRect();return box.top>=video.bottom && box.bottom<=innerHeight && score.scrollWidth<=score.clientWidth+1 && document.querySelector('[role=dialog]').scrollTop===0;};
     assert(await page.evaluate(notationFits),"Full notation is visible below the player on a laptop without scrolling");
     assert(!(await page.$eval("[role=dialog]",el=>el.innerText)).includes("Legacy practice notes"),"Existing practice notes are not shown");
-    assert.equal(await page.$eval("#new-comment",el=>el.placeholder),"Add a comment...");
+    await page.click("button[aria-label='Comments']");
+    await page.waitForSelector("textarea[placeholder='Add a comment...']");
+    await page.click("button[aria-label='Close side panel']");
     await page.screenshot({path:`${folder}/video-modal.png`});
     await page.setViewport({width:1280,height:600});
     await page.waitForFunction(notationFits);

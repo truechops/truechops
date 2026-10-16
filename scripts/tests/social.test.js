@@ -29,7 +29,7 @@ function matches(row,query) {
   return Object.entries(query).every(([key,value]) => {
     if (key === "$or") return value.some((q) => matches(row,q));
     if (key === "$and") return value.every((q) => matches(row,q));
-    if (value && typeof value === "object" && "$in" in value) return value.$in.some((v) => equal(at(row,key),v));
+    if (value && typeof value === "object" && "$in" in value) return value.$in.some((v) => (Array.isArray(at(row,key)) ? at(row,key) : [at(row,key)]).some((item) => equal(item,v)));
     if (value && typeof value === "object" && "$gte" in value) return new Date(at(row,key)) >= new Date(value.$gte);
     if (value && typeof value === "object" && "$lt" in value) return at(row,key) < value.$lt;
     return Array.isArray(row[key]) ? row[key].includes(value) : equal(at(row,key),value);
@@ -160,6 +160,22 @@ test("private scores stay private across detail, profile, search and another acc
   assert(!JSON.stringify(await api.search(visitor,{q:"rhythm"})).includes(owner.id));
   assert.equal((await api.getRhythm(owner,privateRhythm.id)).rhythm.score.measures.length,composition.score.measures.length);
 });
+test("similar rhythms rank matching public scores, paginate without repeats, and respect privacy",async()=>{
+  const {api,db,publicRhythm,privateRhythm}=await fixture();
+  const close=(await api.createRhythm(owner,{...composition,name:"Similar triplets",visibility:"public",tags:["triplets"],tempo:92})).rhythm;
+  for(let index=0;index<10;index++) await api.createRhythm(owner,{...composition,name:`Different ${index}`,visibility:"public",tempo:180});
+  db.collection("rhythms").rows.push({_id:"other-instrument",_userId:owner.id,type:"saved",visibility:"public",instruments:["tenors"],score:composition.score});
+  const first=await api.similarRhythms(visitor,publicRhythm.id,{}), second=await api.similarRhythms(null,publicRhythm.id,{page:2});
+  assert.equal(first.items[0].id,close.id);
+  assert.equal(first.items.length,8); assert(first.hasMore); assert.equal(second.items.length,3); assert(!second.hasMore);
+  assert.equal(new Set([...first.items,...second.items].map(item=>item.id)).size,11);
+  for(const row of [...first.items,...second.items]) {assert.equal(row.visibility,"public");assert(![publicRhythm.id,privateRhythm.id,"other-instrument"].includes(row.id));}
+  await rejects(api.similarRhythms(visitor,privateRhythm.id,{}),404);
+  await rejects(api.similarRhythms(null,privateRhythm.id,{}),404);
+  await api.updateRhythm(owner,close.id,{visibility:"private"});
+  assert(!(await api.similarRhythms(visitor,publicRhythm.id,{})).items.some(row=>row.id===close.id));
+});
+
 test("saves are idempotent, scoped to the account, and disappear when a rhythm becomes private",async()=>{
   const {db,api,publicRhythm}=await fixture();
   await Promise.all(Array.from({length:4},()=>api.bookmark(visitor,publicRhythm.id,true)));
@@ -238,6 +254,7 @@ test("Next HTTP requests without bodies can load profiles, libraries, searches a
     ["search?q=pulse&type=users",null,(body)=>assert.equal(body.items[0].handle,profile.handle)],
     [`profiles/${profile.handle}`,null,(body)=>assert.equal(body.profile.handle,profile.handle)],
     [`rhythms/${publicRhythm.id}`,null,(body)=>assert.equal(body.rhythm.id,publicRhythm.id)],
+    [`rhythms/${publicRhythm.id}/similar`,null,(body)=>assert.deepEqual(body.items,[])],
   ];
   for (const [path,user,check] of reads) await t.test(path,async()=>{
     const res=await request(path,{user});

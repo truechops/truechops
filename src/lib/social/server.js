@@ -101,6 +101,19 @@ export function createSocialService(db, { now = () => new Date(), ensureSearch =
       return { ...result, items: await cards(result.items,userId) };
     },
     async getRhythm(user,id) { return { rhythm: (await cards([await readable(id,user?.id)],user?.id,true))[0] }; },
+    async similarRhythms(user,id,query) {
+      const source = await readable(id,user?.id), { page } = searchOptions(query), limit = 8;
+      const instruments = source.instruments || Object.keys(source.score?.parts || {}).filter((key) => source.score.parts[key]);
+      // Bound the candidate pool; visibility is checked in the database, never in a search index.
+      const candidates = await rhythms.find(publicRhythmFilter({ instruments: { $in: instruments } })).sort({ updatedAt:-1, _id:-1 }).limit(200).toArray();
+      const meter = (row) => row.score?.measures?.map((measure) => `${measure.timeSig.num}/${measure.timeSig.type}`).join(",");
+      const sourceMeter = meter(source), tags = new Set(source.tags || []);
+      const similarity = (row) => (row.tags || []).filter((tag) => tags.has(tag)).length * 4
+        + (meter(row) === sourceMeter ? 3 : 0) + Math.max(0, 3 - Math.abs((row.tempo || 90) - (source.tempo || 90)) / 20);
+      const ranked = candidates.filter((row) => String(row._id) !== String(source._id)).sort((a,b) => similarity(b)-similarity(a) || String(a._id).localeCompare(String(b._id)));
+      const result = pageResult(ranked.slice((page-1)*limit,page*limit+1),page,limit);
+      return { ...result, items: await cards(result.items,user?.id) };
+    },
     async createRhythm(user,body) {
       const userId = requireUser(user), data = normalizeMetadata(body), notation = validateScore(body.score), mutations = normalizeMutations(body.mutations);
       await requireProfile(userId,data.visibility);
@@ -185,7 +198,7 @@ export function socialHandler({ service = productionSocialService, session = get
     const allowed = route.length === 1 ? { search: ["GET"], profile: ["GET","PUT"], library: ["GET"], rhythms: ["POST"] }[area]
       : route.length === 2 && area === "profiles" ? ["GET"]
       : route.length === 2 && area === "rhythms" ? ["GET","PATCH","DELETE"]
-      : route.length === 3 && area === "rhythms" ? { save: ["PUT","DELETE"], like: ["PUT","DELETE"], comments: ["GET","POST"], engagement: ["GET"], media: ["POST"] }[action]
+      : route.length === 3 && area === "rhythms" ? { save: ["PUT","DELETE"], like: ["PUT","DELETE"], comments: ["GET","POST"], engagement: ["GET"], similar: ["GET"], media: ["POST"] }[action]
       : route.length === 4 && area === "rhythms" && action === "comments" ? ["DELETE"]
       : route.length === 4 && area === "rhythms" && action === "media" ? ["GET","DELETE"]
       : route.length === 5 && area === "rhythms" && action === "media" ? { complete:["POST"], playback:["GET"] }[mediaAction] : null;
@@ -212,6 +225,7 @@ export function socialHandler({ service = productionSocialService, session = get
         else if (action === "save") result = await api.bookmark(user,id,method === "PUT");
         else if (action === "like") result = await api.like(user,id,method === "PUT");
         else if (action === "engagement") result = await api.engagement(user,id);
+        else if (action === "similar") result = await api.similarRhythms(user,id,req.query);
         else if (action === "comments") result = method === "GET" ? await api.comments(user,id,req.query)
           : method === "POST" ? await api.addComment(user,id,body) : await api.removeComment(user,id,commentId);
         else if (method === "GET") result = await api.getRhythm(user,id);

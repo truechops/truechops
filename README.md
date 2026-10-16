@@ -34,9 +34,18 @@ The profile has Rhythms and Saved tabs, plus Books & saved practice. Navigation
 lives in the left sidebar; smaller screens open it with the menu button.
 Public profiles use `/u/:handle`; individual rhythms use `/rhythms/:id`.
 Feed cards show only exercise content. Opening a card uses a shareable `?rhythm=`
-modal over the feed; Escape/Back restores the feed and keyboard focus. The modal
-contains the full notation, creator, comments, likes, and library
-save controls. Its Open in score action copies the score and tempo into the editor.
+immersive viewer over the feed; Escape/Back restores the feed and keyboard focus.
+The viewer places creator and rhythm metadata at the top left, video and notation
+in the center, and comments, variations, and save controls on the right. Comments
+and variations open an independently scrolling side panel; Escape closes that
+panel first. Variations shuffle one measure's stickings, accents, diddles, cheese,
+or flams, preserving timing and other markings. Preview or play a variation, save
+it privately to your profile, or open it in Score. Categories without different
+markings show an empty state instead of inventing variations.
+Scroll the viewer vertically for similar public rhythms, matched by instrument
+and ranked by tags, meter, and tempo among the latest 200 candidates. Offscreen
+players are removed to stop playback. Its Open in score action copies the current
+notation and tempo into the editor. Direct `/rhythms/:id` links use the same viewer.
 Use the composer's Save button to save privately or publish. Publishing requires
 an explicitly created public profile. Existing saved scores remain private.
 
@@ -118,7 +127,7 @@ community and tempo in the lower right;
 levels are hidden from cards, filters, and editing. Opening a card displays its
 Bunny recordings and full notation together, with notation below the video and
 no content tabs, practice-notes section, or bar-count label. The details layout
-reserves space for notation beneath the player; comments scroll separately.
+reserves space for notation beneath the player; comments and variations scroll separately.
 Playback starts
 on interaction, not while scrolling the feed. Files encode asynchronously; the
 notation remains usable during processing. Existing book-to-Score and save flows
@@ -194,9 +203,10 @@ npm run media:cleanup
 npm run media:cleanup -- --apply
 # Local protocol/UI check using intercepted Bunny responses (no paid uploads):
 node scripts/tests/media.browser.js http://127.0.0.1:3104
+node scripts/tests/immersive.browser.js http://127.0.0.1:3104
 ```
 
 The browser check exercises the real TUS client against fixtures: file validation,
 upload retries, private drafts, publishing, video previews, audio/video players,
-notation switching, and removal. A live upload/playback check still requires your
+notation, immersive panels, similar rhythms, and removal. A live upload/playback check still requires your
 Bunny library and its security/webhook settings.
