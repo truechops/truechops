@@ -12,7 +12,6 @@ Module._extensions[".js"] = (module, file) => {
     presets: [["@babel/preset-env", { targets: { node: "current" } }]], babelrc: false, configFile: false,
   }).code, file);
 };
-const { createBookChallenge, challengeMatches } = require("../../src/lib/book-practice-server");
 const { validatePracticeLines } = require("../../src/lib/book-practice-score");
 const { getBookPageQrToken, getBookPageIdentity } = require("../../src/lib/book-qr");
 const origin = process.argv[2] || "http://127.0.0.1:3102";
@@ -21,7 +20,6 @@ fs.mkdirSync(artifactRoot, { recursive: true });
 const rawBook = JSON.parse(fs.readFileSync("data/book-builder/snare-drum-book-2-tuplets/book.json"));
 const book = { ...rawBook, pages: rawBook.sections.flatMap((section) => section.pages) };
 const token = getBookPageQrToken(getBookPageIdentity(5, book));
-const challenge = createBookChallenge(book);
 
 
 async function clickText(page, text) {
@@ -63,22 +61,16 @@ async function clickText(page, text) {
     await page.screenshot({ path: `${artifactRoot}/book-practice-mobile.png` });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "no horizontal page overflow");
 
-    let verified = false;
+    let verificationCalls = 0;
     let saved = null;
     let generationCalls = 0;
-    const bookIdentity = { book: book.book, edition: book.edition, title: book.title };
     await page.setRequestInterception(true);
     const mockAccount = (scanActive) => async (request) => {
       const url = new URL(request.url());
       const respond = (payload, status = 200) => request.respond({ status, contentType: "application/json", body: JSON.stringify(payload) });
       const body = request.postData() ? JSON.parse(request.postData()) : {};
       if (url.pathname === "/api/auth/me") return respond({ user: { id: "browser-test", name: "Practice tester", email: "practice@example.com" } });
-      if (url.pathname === "/api/book-practice/access") {
-        if (request.method() === "GET") return respond({ books: [{ book: "true-chops-volume-1", edition: 1, title: "Book 1 - Rhythms" }, bookIdentity], verifiedBooks: verified ? [bookIdentity] : [], verified, scanActive });
-        if (request.method() === "POST") { const publicChallenge = { ...challenge }; delete publicChallenge.answers; return respond({ challenge: publicChallenge }); }
-        verified = challengeMatches(challenge, body.answers);
-        return respond(verified ? { verified: true } : { error: "Incorrect answers" }, verified ? 200 : 400);
-      }
+      if (url.pathname === "/api/book-practice/access") { verificationCalls++; return respond({ error:"Verification removed" },410); }
       if (url.pathname === "/api/book-practice/generate") generationCalls++;
       if (url.pathname === "/api/book-practice/sets") {
         if (request.method() === "POST") {
@@ -90,51 +82,12 @@ async function clickText(page, text) {
       return request.continue();
     };
     page.on("request", mockAccount(true));
-    // A second device has the same account, but no QR cookie. Leave its pages
-    // open before verification, then return to them after the phone verifies.
-    const laptopContext = await browser.createIncognitoBrowserContext();
-    const laptop = await laptopContext.newPage();
-    const library = await laptopContext.newPage();
-    for (const tab of [laptop, library]) {
-      tab.on("pageerror", (error) => errors.push(error.message));
-      await tab.setRequestInterception(true);
-      tab.on("request", mockAccount(false));
-    }
-    await laptop.bringToFront();
-    await laptop.goto(`${origin}/account/books?book=${book.book}`, { waitUntil: "domcontentloaded" });
-    await laptop.waitForSelector("main select");
-    assert(!(await laptop.cookies()).some((cookie) => cookie.name === "tc_book_scan"));
-    await library.bringToFront();
-    await library.goto(`${origin}/account/books`, { waitUntil: "domcontentloaded" });
-    await library.waitForSelector("main select");
-    assert.equal(await library.$('section[aria-label="Verified books"]'), null);
-    await page.bringToFront();
     await page.setViewport({ width: 1280, height: 900 });
-    await page.goto(`${origin}/account/books?book=${book.book}&returnTo=${encodeURIComponent(`/book?token=${token}`)}`, { waitUntil: "domcontentloaded" });
-    await page.waitForSelector("main select");
-    await clickText(page, "Start three rhythm matches");
-    await page.waitForSelector('input[type="radio"]');
-    assert.equal((await page.$$('input[type="radio"]')).length, 12);
-    await page.screenshot({ path: `${artifactRoot}/book-practice-verification.png`, fullPage: true });
-    for (const answer of challenge.answers) await page.click(`input[value="${answer.optionId}"]`);
-    await clickText(page, "Verify my book");
-    await page.waitForFunction(() => document.querySelector("main")?.innerText.includes("Your book is verified"));
-    assert(verified);
-    await laptop.bringToFront();
-    await laptop.evaluate(() => window.dispatchEvent(new Event("focus")));
-    await laptop.waitForSelector('section[aria-label="Verified books"]');
-    assert((await laptop.$eval('section[aria-label="Verified books"]',el=>el.innerText)).includes(book.title));
-    await clickText(laptop, "Refresh book verification");
-    await library.bringToFront();
-    await library.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
-    await library.waitForSelector('section[aria-label="Verified books"]');
-    assert((await library.$eval('section[aria-label="Verified books"]', (element) => element.innerText)).includes(book.title));
-    await library.reload({ waitUntil: "domcontentloaded" });
-    await library.waitForFunction((bookKey) => document.querySelector("main select")?.value === bookKey, {}, book.book);
-    await page.bringToFront();
-    await page.waitForFunction(() => [...document.querySelectorAll("main button")].some((button) => button.textContent === "Refresh book verification" && !button.disabled));
-    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
-    await page.waitForFunction(() => window.scrollY === 0);
+    await page.goto(`${origin}/account/books?returnTo=${encodeURIComponent(`/book?token=${token}`)}`, { waitUntil:"domcontentloaded" });
+    await page.waitForSelector('section[aria-label="Saved practice"]');
+    assert(!/verify|verification|rhythm matches/i.test(await page.$eval("main", el=>el.innerText)));
+    assert.equal(await page.$('input[type="radio"]'),null);
+    await page.screenshot({path:`${artifactRoot}/saved-practice.png`,fullPage:true});
     await page.click(`a[href="/book?token=${token}"]`);
     await page.waitForSelector("#panel-rhythms");
     await clickText(page,"Clear selection");
@@ -145,6 +98,7 @@ async function clickText(page, text) {
     await page.click('a[href="/book?set=browser-saved"]');
     await page.waitForFunction(() => document.querySelector("main")?.innerText.includes("1 of 1 rhythms selected"));
     assert.equal(await page.$("#tab-generate"), null);
+    assert.equal(verificationCalls, 0,"Book practice never requests verification");
     assert.equal(generationCalls, 0,"Book pages must never request generated exercises");
     await clickText(page,"Open in score");
     await page.waitForFunction(()=>location.pathname==="/");
@@ -156,7 +110,7 @@ async function clickText(page, text) {
     assert.equal(await page.evaluate(async()=> (await fetch('/api/book-practice/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})).status),410);
     assert(!JSON.stringify(saved).includes(token));
     assert(!errors.length, errors.join("\n"));
-    console.log("Browser checks passed: QR redirect, mobile layout, notation, modification, playback, three account matches, cross-device verification refresh, saved practice, score transfer, private defaults, and retired generation endpoint.");
+    console.log("Browser checks passed: QR redirect, mobile layout, notation, modification, playback, verification-free book account, saved practice, score transfer, private defaults, and retired generation endpoint.");
   } catch (error) {
     console.error("Browser errors:", errors);
     for (const tab of await browser.pages()) {

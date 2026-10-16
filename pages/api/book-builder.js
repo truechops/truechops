@@ -983,7 +983,7 @@ async function renderFullBookPdf(book) {
 export default async function handler(req, res) {
   try {
     // The public QR flow reads one token-addressed page. The authoring API must
-    // not expose entire books (and verification answers) on a production site.
+    // not expose entire books on a production site.
     if (process.env.NODE_ENV === "production") {
       const authors = (process.env.BOOK_BUILDER_USER_IDS || "").split(",").map((id) => id.trim()).filter(Boolean);
       const user = getSessionUser(req);

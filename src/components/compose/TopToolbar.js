@@ -114,12 +114,7 @@ export function TopToolbar(props) {
 
   const classes = useStyles();
 
-  useEffect(() => {''
-    if(!window.tcEventsAdded) {
-      addComposeEventListeners(dispatch);
-    }
-    window.tcEventsAdded = true;
-  }, [dispatch]);
+  useEffect(() => addComposeEventListeners(dispatch), [dispatch]);
 
   function rhythmLinkDialogContents(link) {
     return (

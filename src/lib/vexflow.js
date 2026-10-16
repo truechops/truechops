@@ -178,7 +178,8 @@ export function drawScore(
         measureNoteEndPadding,
         hideTimeSignature,
         effectiveMeasureGap,
-        showMeasureNumbers
+        showMeasureNumbers,
+        svgConfig.measureEditing
       );
 
       if(width + remainingWidth > maxWidth) {
@@ -226,7 +227,8 @@ export function drawScore(
       measureNoteEndPadding,
       hideTimeSignature,
       effectiveMeasureGap,
-      showMeasureNumbers
+      showMeasureNumbers,
+      svgConfig.measureEditing
     );
 
     if(width + remainingWidth > maxWidth) {
@@ -389,7 +391,8 @@ function renderStaves(
   measureNoteEndPadding,
   hideTimeSignature,
   measureGap,
-  showMeasureNumbers
+  showMeasureNumbers,
+  measureEditing
 ) {
 
   const barWidths = barRenderData.map((renderDataBar) => renderDataBar.width);
@@ -411,6 +414,27 @@ function renderStaves(
   barRenderData.forEach((renderData, renderDataIndex) => {
     const { parts, width, firstMeasure, measureIndex, timeSig } = renderData;
     let xDiff = 0;
+    if (measureEditing) {
+      const group = context.openGroup("editable-measure");
+      group.setAttribute("data-measure-index", measureIndex);
+      group.setAttribute("role", "button");
+      group.setAttribute("tabindex", "0");
+      group.setAttribute("aria-label", `Select measure ${measureIndex + 1}`);
+      group.setAttribute("aria-pressed", String(measureEditing.selected === measureIndex));
+      group.style.cursor = "pointer";
+      const background = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      const selected = measureEditing.selected === measureIndex;
+      Object.entries({ x: x + 2, y: STAVE_TOP + row * STAVE_SPACE + 2, width: width + additionalWidths[renderDataIndex] - 4,
+        height: STAVE_SPACE - 4, rx: 9, fill: selected ? "#e8f3ff" : "transparent", stroke: selected ? "#4b9bff" : "transparent", "stroke-width": 2,
+        "data-measure-background": "true" }).forEach(([name,value]) => background.setAttribute(name,value));
+      group.appendChild(background);
+      group.addEventListener("click", (event) => {
+        if (!event.target.closest(".vf-stavenote")) measureEditing.onSelect(measureIndex);
+      });
+      group.addEventListener("keydown", (event) => {
+        if (["Enter", " "].includes(event.key)) { event.preventDefault(); event.stopPropagation(); measureEditing.onSelect(measureIndex,true); }
+      });
+    }
 
     parts.forEach((part, partIndex) => {
       let systemWidth = (width + additionalWidths[renderDataIndex]);
@@ -539,6 +563,7 @@ function renderStaves(
       });
     });
 
+    if (measureEditing) context.closeGroup();
     previousTimeSig.num = timeSig.num;
     previousTimeSig.type = timeSig.type;
     x += xDiff + measureGap;

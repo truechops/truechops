@@ -10,7 +10,7 @@ Current desired changes:
 
 1. Playback position tracker.
 2. Multiple time signatures.
-3. Copy/paste
+3. Measure copy/paste (implemented in the floating measure toolbar)
 4. Exercises / Rudiments.
 5. Preview saved rhythms/exercises/playlists.
 6. Nested tuplets.
@@ -43,7 +43,7 @@ an explicitly created public profile. Existing saved scores remain private.
 The APIs reuse the Google session cookie and account ID. Public profiles live in
 `profiles`, scores remain in `rhythms`, and account-scoped bookmarks live in
 `rhythmSaves`. Saved rhythms reference their original: unpublishing or deleting
-a rhythm also removes it from other users' visible collections. Book ownership
+a rhythm also removes it from other users' visible collections. Books
 and saved book practice remain accessible through the profile's books link.
 Likes live in `rhythmLikes` (one per account/rhythm); comments live in
 `rhythmComments`. Public comments require a public profile and are limited to
@@ -56,7 +56,14 @@ Book QR pages retain selection, playback, and saved practice. Open in score send
 selected exercises to the existing editor for dynamic variations and private
 saving or publishing. The book-specific generator has been removed; its legacy
 API returns HTTP 410 with guidance to open exercises in Score. Existing QR codes
-and account verification continue to work.
+continue to work. Book verification has been removed; its legacy API also returns
+HTTP 410. No ownership check is required to practice or save book rhythms.
+
+Select a measure in Score to open its floating toolbar. Copy captures the full
+measure; Paste inserts it to the left or right of the selected measure. Duplicate
+inserts a copy to the right. Adjust offers Shuffle for stickings, accents, diddles,
+cheese, and flams. Shuffles preserve timing, rests, and unrelated markings, and
+are disabled when no different arrangement exists. All edits support Undo/Redo.
 
 Configure `MONGODB_URI`, `MONGODB_DB` (defaults to `drumtoolz`) and `AUTH_SECRET`
 in `.env.local` or deployment secrets. Do not commit connection credentials.
@@ -69,7 +76,7 @@ npm run search:setup
 Run it again to check readiness; Search builds indexes asynchronously. To apply
 changes to the versioned index definitions, run `npm run search:setup -- --update`.
 Definitions are in `src/lib/social/config.js`: explicit mappings exclude account
-credentials, emails and private verification data. The application creates the
+credentials and private account data. The application creates the
 ordinary unique/lookup indexes on first community API use. The database user
 needs collection/index creation privileges and access to MongoDB Search index
 management commands. Index provisioning never uses the legacy hardcoded URI.

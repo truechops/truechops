@@ -129,7 +129,7 @@ export default function Main(props) {
         <div className={classes.workspace}>
           <div id="score-root" className={classes.score}>
             <ErrorBoundary component="compose">
-              <Score scoreRootId="score-root" id={"vexflow"} score={score} selectedTab={selectedTab} tabPanelHidden={tabPanelHidden}
+              <Score measureTools scoreRootId="score-root" id={"vexflow"} score={score} selectedTab={selectedTab} tabPanelHidden={tabPanelHidden}
                      isDynamicRhythm={isDynamicRhythm} vexflowClass={classes.vexflow} vexflowWrapperClass={classes.vexflowWrapper} />
             </ErrorBoundary>
           </div>

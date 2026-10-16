@@ -6,6 +6,8 @@ import { appActions } from "../../store/app";
 import Dialog from '../ui/Dialog';
 import repeatHook from './buttons/mutate/common/repeat-hook';
 import { browserName } from 'react-device-detect';
+import MeasureToolbar from './MeasureToolbar';
+import measureStyles from './measure-toolbar.module.css';
 
 import _ from "lodash";
 
@@ -20,6 +22,7 @@ export default function Score(props) {
   );
 
   const repeat = useSelector((state) => state.score.present.repeat);
+  const measureSelection = useSelector((state) => state.score.present.measureSelection);
   const scoreRootId = props.scoreRootId || "score-root"
   const isDynamic = useSelector((state) => state.score.present.dynamic);
   const name = useSelector(state => state.score.present.name);
@@ -65,6 +68,12 @@ export default function Score(props) {
     },
     [dispatch, scoreRootId]
   );
+  const measureSelectedCallback = useCallback((index, keyboard = false) => {
+    const root = document.getElementById(scoreRootId);
+    dispatch(scoreActions.setScrollAmount({ top:root?.scrollTop || 0, left:root?.scrollLeft || 0 }));
+    dispatch(scoreActions.selectMeasure(index));
+    if (keyboard) requestAnimationFrame(() => root?.querySelector(`[data-measure-index="${index}"]`)?.focus());
+  }, [dispatch, scoreRootId]);
 
   useEffect(() => {
     if(_.isEqual(currentScore, props.score)) {
@@ -79,6 +88,7 @@ export default function Score(props) {
         hResize: 0.75,
         vResize: 0.75,
         ...(props.svgConfig || {}),
+        ...(props.measureTools ? { measureEditing: { selected: selectedNoteIndex?.measureIndex, onSelect: measureSelectedCallback } } : {}),
       };
 
       const { renderer, context } = initialize(props.id);
@@ -86,7 +96,7 @@ export default function Score(props) {
           renderer,
           context,
           props.score,
-          selectedNoteIndex,
+          measureSelection && props.measureTools ? null : selectedNoteIndex,
           noteSelectedCallback,
           scoreSvgConfig,
           repeat
@@ -120,6 +130,9 @@ export default function Score(props) {
     props.id,
     props.svgConfig,
     props.width,
+    props.measureTools,
+    measureSelection,
+    measureSelectedCallback,
     scoreRootId
   ]);
 
@@ -131,10 +144,11 @@ export default function Score(props) {
   return (
     <>
     {/* This wrapper and the key ensure that content isn't duplicated when the screen resizes*/}
-    <div className={props.vexflowWrapperClass}>
+    <div className={`${props.vexflowWrapperClass || ""} ${props.measureTools ? measureStyles.editor : ""}`}>
       {props.showTitle !== false && <h2 style={{textAlign: 'center', margin: 0}}>{name}</h2>}
       <div className={props.vexflowClass} id={props.id || "vexflow"} key={Math.random().toString()} />
     </div>
+    {props.measureTools && <MeasureToolbar scoreId={props.id || "vexflow"} score={props.score} selectedIndex={selectedNoteIndex?.measureIndex} />}
 
     <Dialog
     isOpen={repeatDialogOpen && (dontUseSafariShown == "init" || dontUseSafariShown == "false")}
@@ -153,4 +167,3 @@ export default function Score(props) {
   </>
   );
 }
-   

@@ -10,9 +10,10 @@ Module._extensions[".js"] = (module, file) => {
     presets: [["@babel/preset-env", { targets: { node: "current" } }]], babelrc: false, configFile: false,
   }).code, file);
 };
-const { createPracticeService, createBookChallenge, challengeMatches, practiceHandler } = require("../../src/lib/book-practice-server");
+const { createPracticeService, practiceHandler } = require("../../src/lib/book-practice-server");
 const { createSessionCookie, createBookScanCookie, hasBookScan } = require("../../src/lib/auth/session");
 const { validatePracticeLines, modifyPracticeScore, practicePlayback } = require("../../src/lib/book-practice-score");
+const retiredVerification = require("../../pages/api/book-practice/access").default;
 const retiredBookGenerator = require("../../pages/api/book-practice/generate").default;
 const genericGenerator = require("../../pages/api/exercise-generator").default;
 const copy = (value) => structuredClone(value);
@@ -62,102 +63,21 @@ function memoryDb() {
 }
 function setup() {
   const db = memoryDb();
-  let date = new Date("2026-10-10T00:00:00Z");
-  let calls = 0;
-  const api = createPracticeService({ db, now: () => date,
-    loadBook: async (book) => [fixture.book, "other-book"].includes(book) ? { ...copy(fixture), book } : null,
-    catalog: async () => [{ book: fixture.book, title: fixture.title, edition: 1 }],
-    resolve: async (token) => ["page-token", "other-token"].includes(token) ? { pageRef: { book: token === "page-token" ? fixture.book : "other-book", edition: 1, page: 1 } } : null,
-    generate: (book, page, count) => { calls++; return { lines: Array.from({ length: count }, (_, i) => ({ score: score(i + 1) })) }; },
-  });
-  async function verify(user = "owner") {
-    const { challenge } = await api.startVerification(user, fixture.book);
-    const stored = [...db.collection("bookVerificationChallenges").documents.values()].find((item) => item.userId === user);
-    return api.finishVerification(user, fixture.book, challenge.id, stored.answers);
-  }
-  return { db, api, verify, calls: () => calls, advance: (ms) => { date = new Date(date.getTime() + ms); } };
+  return { db, api: createPracticeService({ db }) };
 }
 const rejectsStatus = (promise, status) => assert.rejects(promise, (error) => error.status === status);
 const response = () => ({ statusCode: 200, headers: {}, setHeader(key, value) { this.headers[key] = value; }, status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; } });
 
-test("verification uses three different printed pages and visually unique opaque choices", () => {
-  const challenge = createBookChallenge(fixture);
-  assert.equal(challenge.questions.length, 3);
-  assert.equal(new Set(challenge.questions.map((question) => question.page)).size, 3);
-  for (const question of challenge.questions) {
-    assert.equal(new Set(question.options.map((option) => JSON.stringify(option.score))).size, 4);
-    assert(question.options.every((option) => !option.lineNumber && !option.exerciseShortForm));
-    const solution = challenge.answers.find((answer) => answer.questionId === question.id);
-    const correct = question.options.find((option) => option.id === solution.optionId);
-    const printed = fixture.pages.find((page) => page.pageNumber === question.page).lines.find((line) => line.lineNumber === question.rhythm);
-    assert.deepEqual(correct.score, validatePracticeLines([printed])[0].score);
+test("book verification is retired for every legacy method without authentication or database access", async () => {
+  for (const method of ["GET", "POST", "PUT"]) {
+    const res = response();
+    await retiredVerification({ method, headers: {}, body: {} }, res);
+    assert.equal(res.statusCode, 410);
+    assert(res.body.error.includes("QR practice page"));
   }
-  assert(challengeMatches(challenge, challenge.answers));
-  assert(!challengeMatches(challenge, [challenge.answers[0], challenge.answers[0], challenge.answers[0]]));
-  assert(!challengeMatches(challenge, challenge.answers.slice(0, 2)));
-});
-
-test("verification solutions are private; failures consume checks and successes belong only to that account/book", async () => {
-  const { db, api, verify } = setup();
-  const { challenge } = await api.startVerification("owner", fixture.book);
-  assert(!challenge.answers);
-  const secret = [...db.collection("bookVerificationChallenges").documents.values()][0];
-  await rejectsStatus(api.finishVerification("stranger", fixture.book, challenge.id, secret.answers), 410);
-  await rejectsStatus(api.finishVerification("owner", fixture.book, challenge.id, []), 400);
-  await rejectsStatus(api.finishVerification("owner", fixture.book, challenge.id, secret.answers), 410);
-  assert.equal((await api.status("owner", "page-token")).verified, false);
-  await verify();
-  assert.equal((await api.status("owner", "page-token")).verified, true);
-  assert.equal((await api.status("stranger", "page-token")).verified, false);
-  assert.equal((await api.status("owner", "other-token")).verified, false);
-});
-
-test("verification is shared by separate signed-in devices even without an active QR scan", async () => {
-  const { db, api } = setup();
-  const handler = practiceHandler("access", { service: async () => api });
-  const phoneCookie = `${createSessionCookie({ id: "owner", name: "Phone session" }).split(";")[0]}; ${createBookScanCookie("page-token").split(";")[0]}`;
-  const laptopCookie = createSessionCookie({ id: "owner", name: "Laptop session" }).split(";")[0];
-  const phone = { method: "POST", headers: { host: "localhost", cookie: phoneCookie }, query: {}, body: { book: fixture.book } };
-  let res = response(); await handler(phone, res); assert.equal(res.statusCode, 200);
-  const challenge = [...db.collection("bookVerificationChallenges").documents.values()][0];
-  phone.method = "PUT";
-  phone.body = { book: fixture.book, challengeId: challenge.id, answers: challenge.answers };
-  res = response(); await handler(phone, res); assert.equal(res.statusCode, 200); assert.equal(res.body.verified, true);
-  const laptop = { method: "GET", headers: { host: "localhost", cookie: laptopCookie }, query: { token: "page-token" } };
-  res = response(); await handler(laptop, res);
-  assert.equal(res.statusCode, 200);
-  assert.equal(res.body.verified, true);
-  assert.equal(res.body.scanActive, false);
-  assert.equal(res.body.verifiedBooks[0].book, fixture.book);
-  laptop.query = {};
-  res = response(); await handler(laptop, res);
-  assert.equal(res.body.verifiedBooks.length, 1, "the account library requires no scan or page token");
-  const realNow = Date.now;
-  try {
-    Date.now = () => realNow() + 3 * 60 * 60 * 1000;
-    phone.method = "GET"; phone.query = { token: "page-token" };
-    res = response(); await handler(phone, res);
-    assert.equal(res.body.verified, true, "book verification survives an expired QR session");
-    assert.equal(res.body.scanActive, false);
-  } finally { Date.now = realNow; }
-  laptop.headers.cookie = createSessionCookie({ id: "different-account" }).split(";")[0];
-  res = response(); await handler(laptop, res);
-  assert.deepEqual(res.body.verifiedBooks, []);
-});
-
-test("expired checks, replaced checks, concurrent answers and guessing limits are enforced", async () => {
-  const { db, api, advance } = setup();
-  const first = await api.startVerification("owner", fixture.book);
-  const second = await api.startVerification("owner", fixture.book);
-  const secret = [...db.collection("bookVerificationChallenges").documents.values()][0];
-  await rejectsStatus(api.finishVerification("owner", fixture.book, first.challenge.id, secret.answers), 410);
-  const results = await Promise.allSettled([1, 2].map(() => api.finishVerification("owner", fixture.book, second.challenge.id, secret.answers)));
-  assert.equal(results.filter((result) => result.status === "fulfilled").length, 1);
-  const expired = await api.startVerification("other", fixture.book);
-  advance(11 * 60 * 1000);
-  await rejectsStatus(api.finishVerification("other", fixture.book, expired.challenge.id, []), 410);
-  for (let i = 0; i < 4; i++) await api.startVerification("other", fixture.book);
-  await rejectsStatus(api.startVerification("other", "other-book"), 429);
+  const { api } = setup();
+  assert.equal(api.startVerification, undefined);
+  assert.equal(api.finishVerification, undefined);
 });
 
 test("book generation is retired and sends clients to the score without database access", async () => {
@@ -171,7 +91,7 @@ test("book generation is retired and sends clients to the score without database
   }
 });
 
-test("saved sets preserve notation and tempo, strip generation rights, and enforce account isolation", async () => {
+test("unverified accounts can save sets with notation and tempo while account isolation remains enforced", async () => {
   const { api } = setup();
   const saved = await api.save("owner", { name: "My practice", tempo: 95, token: "page-token", config: {}, userId: "stranger", lines: [{ score: score(7), token: "page-token" }] });
   const reopened = (await api.get("owner", saved.id)).set;
@@ -195,8 +115,7 @@ test("QR grants are signed, expire, are page-specific, and cannot replace accoun
   const realNow = Date.now;
   try { Date.now = () => realNow() + 3 * 60 * 60 * 1000; assert(!hasBookScan({ headers: { cookie } }, "page-token")); }
   finally { Date.now = realNow; }
-  const { api, verify } = setup();
-  await verify();
+  const { api } = setup();
   const handler = practiceHandler("sets", { service: async () => api });
   const req = { method: "POST", headers: { host: "localhost", cookie }, query: {}, body: { name:"Saved practice",tempo:80,lines:[{score:score(7)}] } };
   let res = response(); await handler(req, res); assert.equal(res.statusCode, 401);

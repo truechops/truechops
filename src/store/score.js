@@ -15,6 +15,7 @@ import { addMeasure as addMeasureService,
          deleteMeasure as deleteMeasureService,
         updateTimeSig as updateTimeSigService } from '../services/measure-service';
 import { getEmptyMeasure } from "../helpers/score";
+import { shuffleMeasure, insertCopiedMeasure } from "../services/measure-editing";
 import _ from "lodash";
 import { createSelector } from "reselect";
 import { start as startToneJs, stop as stopToneJs } from "../lib/tone";
@@ -195,6 +196,7 @@ const scoreSlice = createSlice({
       setRepeat(state, "end");
     },
     selectNote(state, action) {
+      state.measureSelection = false;
       const { measureIndex, partIndex, voiceIndex, noteIndex } = action.payload;
 
       //If the user is selecting the same note in the score, unselect the note
@@ -216,10 +218,29 @@ const scoreSlice = createSlice({
       //update the selected timeSig
       state.timeSig = state.score.measures[measureIndex].timeSig;
     },
+    selectMeasure(state, action) {
+      const measure = state.score.measures[action.payload];
+      if (!measure) { state.selectedNoteIndex = null; return; }
+      const partIndex = Math.max(0, measure.parts.findIndex((part) => state.score.parts[part.instrument]?.enabled));
+      state.selectedNoteIndex = { measureIndex: action.payload, partIndex, voiceIndex: 0, noteIndex: 0 };
+      state.selectedPartIndex = partIndex;
+      state.measureSelection = true;
+      state.timeSig = measure.timeSig;
+    },
+    shuffleSelectedMeasure(state, action) {
+      const index = state.selectedNoteIndex?.measureIndex;
+      if (!state.score.measures[index]) return;
+      state.score.measures[index] = shuffleMeasure(state.score.measures[index], action.payload);
+    },
+    pasteMeasure(state, action) {
+      insertCopiedMeasure(state, action.payload.measure, state.selectedNoteIndex?.measureIndex, action.payload.side);
+    },
     selectPreviousNote(state) {
+      state.measureSelection = false;
       incDecSelectedNote(state, false);
     },
     selectNextNote(state) {
+      state.measureSelection = false;
       incDecSelectedNote(state, true);
     },
     toggleAccent(state) {

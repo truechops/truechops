@@ -10,6 +10,15 @@ export default function addComposeEventListeners(dispatch) {
   }
 
   function handleKeyEvents(event) {
+    if (event.target.closest?.("input,textarea,select,[contenteditable=true]")) return;
+    if (event.ctrlKey || event.metaKey) {
+      if (!score.modalShown && ["z","y"].includes(event.key.toLowerCase())) {
+        event.preventDefault();
+        dispatch(event.key.toLowerCase() === "y" || event.shiftKey ? ActionCreators.redo() : ActionCreators.undo());
+      }
+      return;
+    }
+    if (event.target.closest?.("button,[role=button],[role=menuitem],[role=menu],[data-measure-toolbar]")) return;
     if (!score.modalShown) {
       if (event.keyCode === 32) {
         //spacebar
@@ -198,4 +207,5 @@ export default function addComposeEventListeners(dispatch) {
     }
   }
   window.addEventListener("keydown", handleKeyEvents);
+  return () => window.removeEventListener("keydown", handleKeyEvents);
 }

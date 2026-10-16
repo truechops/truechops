@@ -60,6 +60,7 @@
     "test:book": "node --test scripts/tests/book-builder.test.js",
     "test:book-practice": "node --test scripts/tests/book-practice.test.js",
     "test:social": "node --test scripts/tests/social.test.js",
+    "test:measures": "node --test scripts/tests/measure-editing.test.js",
     "media:cleanup": "node scripts/cleanup-rhythm-media.js",
     "search:setup": "node scripts/setup-social-search.js",
     "pdf:hybrid-rudiments": "node scripts/generate-hybrid-rudiments-pdf.js",
