@@ -10,7 +10,7 @@ import styles from "./measure-toolbar.module.css";
 
 const options = [["stickings","Stickings","R L"],["accents","Accents",">"],["diddles","Diddles","≋"],["cheese","Cheese","♬"],["flams","Flams","♮"]];
 
-export default function MeasureToolbar({ scoreId, score, selectedIndex }) {
+export default function MeasureToolbar({ scoreId, score, selectedIndex, open, onClose }) {
   const dispatch = useDispatch();
   const [clipboard,setClipboard] = useState(null), [notice,setNotice] = useState("");
   const [menu,setMenu] = useState(null), [category,setCategory] = useState("");
@@ -36,22 +36,29 @@ export default function MeasureToolbar({ scoreId, score, selectedIndex }) {
     window.addEventListener("resize",positionToolbar);
     window.addEventListener("scroll",positionToolbar,true);
     return () => { cancelAnimationFrame(frame); observer.disconnect(); window.removeEventListener("resize",positionToolbar); window.removeEventListener("scroll",positionToolbar,true); };
-  },[scoreId,score,selectedIndex]);
+  },[scoreId,score,selectedIndex,open]);
 
-  useEffect(() => { closeMenu(); setNotice(""); },[selectedIndex]);
+  useEffect(() => { closeMenu(); setNotice(""); },[selectedIndex,open]);
   useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => setNotice(""),2200);
     return () => clearTimeout(timer);
   },[notice]);
   useEffect(() => {
-    if (!measure) return;
+    if (!measure || !open) return;
     function dismiss(event) {
-      if (event.key === "Escape" && !menu) { dispatch(scoreActions.selectMeasure(null)); }
+      if (event.key === "Escape" && !menu) {
+        onClose();
+        document.getElementById(scoreId)?.querySelector(`[data-measure-index="${selectedIndex}"] [data-measure-trigger]`)?.focus();
+      }
+    }
+    function clickAway(event) {
+      if (!event.composedPath().some((element) => element.matches?.("[data-measure-toolbar],[data-measure-trigger],.MuiPopover-root"))) onClose();
     }
     window.addEventListener("keydown",dismiss);
-    return () => window.removeEventListener("keydown",dismiss);
-  },[dispatch,measure,menu]);
+    window.addEventListener("click",clickAway);
+    return () => { window.removeEventListener("keydown",dismiss); window.removeEventListener("click",clickAway); };
+  },[measure,menu,open,onClose,scoreId,selectedIndex]);
 
   function copy() { setClipboard(JSON.parse(JSON.stringify(measure))); setNotice("Measure copied"); }
   function paste(side, source = clipboard) {
@@ -61,7 +68,7 @@ export default function MeasureToolbar({ scoreId, score, selectedIndex }) {
   function openMenu(event,type) { setCategory(""); setMenu({ anchor:event.currentTarget,type }); }
   const label = options.find(([value]) => value === category)?.[1];
 
-  if (!measure || !position) return null;
+  if (!measure || !position || !open) return null;
   return createPortal(<>
     <div ref={toolbar} className={styles.toolbar} style={position} role="toolbar" aria-label={`Measure ${selectedIndex+1} tools`} data-measure-toolbar>
       <button onClick={copy}><FiCopy aria-hidden="true" /><span>Copy</span></button>
@@ -69,7 +76,7 @@ export default function MeasureToolbar({ scoreId, score, selectedIndex }) {
       <button onClick={() => paste("right",measure)}><FiLayers aria-hidden="true" /><span>Duplicate</span></button>
       <span className={styles.divider} />
       <button className={styles.adjust} aria-haspopup="menu" aria-expanded={menu?.type === "adjust"} onClick={(event) => openMenu(event,"adjust")}><FiSliders aria-hidden="true" /><span>Adjust</span><FiChevronDown aria-hidden="true" /></button>
-      <button className={styles.dismiss} aria-label="Deselect measure" onClick={() => dispatch(scoreActions.selectMeasure(null))}><FiX aria-hidden="true" /></button>
+      <button className={styles.dismiss} aria-label="Close measure tools" onClick={onClose}><FiX aria-hidden="true" /></button>
       <span className={styles.notice} role="status">{notice}</span>
     </div>
     <Menu anchorEl={menu?.anchor} open={Boolean(menu)} onClose={closeMenu} transitionDuration={120}

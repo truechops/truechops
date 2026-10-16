@@ -59,7 +59,9 @@ API returns HTTP 410 with guidance to open exercises in Score. Existing QR codes
 continue to work. Book verification has been removed; its legacy API also returns
 HTTP 410. No ownership check is required to practice or save book rhythms.
 
-Select a measure in Score to open its floating toolbar. Copy captures the full
+Hover over a measure in Score and click its small adjustment icon to open the
+floating toolbar. The icon is also available by keyboard and stays visible on
+touchscreens. Copy captures the full
 measure; Paste inserts it to the left or right of the selected measure. Duplicate
 inserts a copy to the right. Adjust offers Shuffle for stickings, accents, diddles,
 cheese, and flams. Shuffles preserve timing, rests, and unrelated markings, and

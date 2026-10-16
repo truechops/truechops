@@ -30,8 +30,6 @@ const UNACCENTED_TUPLET_NOTEWARD_OFFSET = -5;
 const FIRST_NOTE_FORMAT_X = 8;
 const MEASURE_RIGHT_EDGE_GUARD = 6;
 const TICK_CONTEXT_MIN_GAP = 2;
-const STAVE_NOTE_START_ESTIMATE = 10;
-const TIME_SIGNATURE_WIDTH_ESTIMATE = 30;
 const LONGEST_UNBEAMED_TUPLET_DURATION = 4;
 const MEASURE_NUMBER_FONT_SIZE = 15;
 const MEASURE_NUMBER_GAP = 6;
@@ -76,8 +74,8 @@ export function drawScore(
     hResize,
     vResize,
     justifyLastRow,
-    measureNoteStartPadding,
-    measureNoteEndPadding,
+    measureNoteStartPadding = 0,
+    measureNoteEndPadding = 0,
     measureGap = 0,
     minimumNoteSpacing = 0,
     maxMeasureWidth,
@@ -145,13 +143,20 @@ export function drawScore(
       MIN_BAR_SIZE
     ));
 
-    systemWidth = minTotalWidth + FORMAT_PADDING;
-    const naturalBarWidth = systemWidth + (firstMeasure ? 20 : 0);
+    const timeSig = score.measures[measureIndex].timeSig;
+    const sizingStave = new VF.Stave(0,0,100);
+    if (!hideTimeSignature && !_.isEqual(score.measures[measureIndex-1]?.timeSig,timeSig)) sizingStave.addTimeSignature(`${timeSig.num}/${timeSig.type}`);
+    if (repeatIncludesMeasure(repeat.start,measureIndex)) sizingStave.setBegBarType(VF.Barline.type.REPEAT_BEGIN);
+    if (repeatIncludesMeasure(repeat.end,measureIndex)) sizingStave.setEndBarType(VF.Barline.type.REPEAT_END);
+    const stavePadding = sizingStave.getNoteStartX() + 100 - sizingStave.getNoteEndX() + measureNoteStartPadding + measureNoteEndPadding;
+    const minWidth = getTickContextsMinWidth(voices.flat()) + FIRST_NOTE_FORMAT_X + MEASURE_RIGHT_EDGE_GUARD + FORMAT_PADDING + stavePadding;
+    systemWidth = minTotalWidth + FORMAT_PADDING + FIRST_NOTE_FORMAT_X + MEASURE_RIGHT_EDGE_GUARD + stavePadding;
+    const naturalBarWidth = Math.max(systemWidth,minWidth);
     const configuredMaxMeasureWidth = Number(maxMeasureWidth);
     const naturalOrCappedBarWidth = Number.isFinite(configuredMaxMeasureWidth) && configuredMaxMeasureWidth > 0
       ? Math.min(naturalBarWidth, configuredMaxMeasureWidth)
       : naturalBarWidth;
-    const barWidth = fixedMeasureWidth || naturalOrCappedBarWidth;
+    const barWidth = fixedMeasureWidth || Math.max(naturalOrCappedBarWidth,minWidth);
 
     const gapBeforeMeasure = barRenderData.length ? effectiveMeasureGap : 0;
 
@@ -197,9 +202,7 @@ export function drawScore(
       parts: measureParts,
       width: barWidth,
       // The narrowest stave that still holds every note and grace note.
-      minWidth: getTickContextsMinWidth(voices.flat()) + FIRST_NOTE_FORMAT_X + MEASURE_RIGHT_EDGE_GUARD + FORMAT_PADDING +
-        STAVE_NOTE_START_ESTIMATE + (measureNoteStartPadding || 0) + (measureNoteEndPadding || 0) +
-        (firstMeasure ? TIME_SIGNATURE_WIDTH_ESTIMATE : 0),
+      minWidth,
       firstMeasure,
       measureIndex,
       timeSig: score.measures[measureIndex].timeSig,
@@ -417,10 +420,9 @@ function renderStaves(
     if (measureEditing) {
       const group = context.openGroup("editable-measure");
       group.setAttribute("data-measure-index", measureIndex);
-      group.setAttribute("role", "button");
-      group.setAttribute("tabindex", "0");
-      group.setAttribute("aria-label", `Select measure ${measureIndex + 1}`);
-      group.setAttribute("aria-pressed", String(measureEditing.selected === measureIndex));
+      group.setAttribute("role", "group");
+      group.setAttribute("aria-label", `Measure ${measureIndex + 1}`);
+      group.setAttribute("data-selected", String(measureEditing.selected === measureIndex));
       group.style.cursor = "pointer";
       const background = document.createElementNS("http://www.w3.org/2000/svg", "rect");
       const selected = measureEditing.selected === measureIndex;
@@ -430,9 +432,6 @@ function renderStaves(
       group.appendChild(background);
       group.addEventListener("click", (event) => {
         if (!event.target.closest(".vf-stavenote")) measureEditing.onSelect(measureIndex);
-      });
-      group.addEventListener("keydown", (event) => {
-        if (["Enter", " "].includes(event.key)) { event.preventDefault(); event.stopPropagation(); measureEditing.onSelect(measureIndex,true); }
       });
     }
 
@@ -465,10 +464,8 @@ function renderStaves(
       const { voices, notes, beams, instrument, tuplets } = part;
       var formatter = new VF.Formatter();
 
-      let widthDiff = 0;
       if (!hideTimeSignature && !_.isEqual(previousTimeSig, timeSig)) {
         stave.addTimeSignature(`${timeSig.num}/${timeSig.type}`);
-        widthDiff = stave.getNoteStartX() - stave.getX();
       }
 
       if (firstMeasure) {
@@ -477,14 +474,12 @@ function renderStaves(
           stave.setText(instrument, Vex.Flow.Modifier.Position.LEFT);
         }
 
-        widthDiff = stave.getNoteStartX() - stave.getX();
       }
 
       stave.setWidth(systemWidth);
 
       if (measureNoteStartPadding) {
         stave.setNoteStartX(stave.getNoteStartX() + measureNoteStartPadding);
-        widthDiff = stave.getNoteStartX() - stave.getX();
       }
 
       stave.setContext(context).draw();
@@ -507,7 +502,7 @@ function renderStaves(
         context.restore();
       }
 
-      const availableNoteWidth = systemWidth - widthDiff - FORMAT_PADDING -
+      const availableNoteWidth = stave.getNoteEndX() - stave.getNoteStartX() - FORMAT_PADDING -
         measureNoteEndPadding;
       formatter.format(
         voices,
@@ -516,10 +511,10 @@ function renderStaves(
           1
         )
       );
-      alignFirstNotePosition(voices);
+      const firstNoteOffset = alignFirstNotePosition(voices);
       fitTickContextsToWidth(
         voices,
-        availableNoteWidth - FIRST_NOTE_FORMAT_X - MEASURE_RIGHT_EDGE_GUARD
+        availableNoteWidth - firstNoteOffset - MEASURE_RIGHT_EDGE_GUARD
       );
 
       xDiff = systemWidth;
@@ -563,7 +558,28 @@ function renderStaves(
       });
     });
 
-    if (measureEditing) context.closeGroup();
+    if (measureEditing) {
+      const trigger = context.openGroup("measure-trigger");
+      trigger.setAttribute("data-measure-trigger", "true");
+      trigger.setAttribute("role", "button");
+      trigger.setAttribute("tabindex", "0");
+      trigger.setAttribute("aria-label", `Modify measure ${measureIndex + 1}`);
+      trigger.setAttribute("aria-haspopup", "true");
+      trigger.setAttribute("transform", `translate(${x + xDiff - 33},${STAVE_TOP + row * STAVE_SPACE + 2})`);
+      const add = (tag, attributes) => {
+        const element = document.createElementNS("http://www.w3.org/2000/svg",tag);
+        Object.entries(attributes).forEach(([name,value]) => element.setAttribute(name,value));
+        trigger.appendChild(element);
+      };
+      add("rect",{width:30,height:28,rx:7,fill:"#fff",stroke:"#e3e0e7"});
+      // A small sliders icon; it stays outside the notes and ornaments.
+      add("path",{d:"M8 9H22 M8 18H22 M12 6V12 M18 15V21",fill:"none",stroke:"#78717d","stroke-width":1.5,"stroke-linecap":"round"});
+      const activate = (event) => { event.preventDefault(); event.stopPropagation(); measureEditing.onOpen(measureIndex,event.type === "keydown"); };
+      trigger.addEventListener("click",activate);
+      trigger.addEventListener("keydown",(event) => { if (["Enter"," "].includes(event.key)) activate(event); });
+      context.closeGroup();
+      context.closeGroup();
+    }
     previousTimeSig.num = timeSig.num;
     previousTimeSig.type = timeSig.type;
     x += xDiff + measureGap;
@@ -815,16 +831,18 @@ function alignFirstNotePosition(voices) {
     });
   });
 
-  const orderedContexts = [...tickContexts].sort((left, right) => left.getX() - right.getX());
+  const orderedContexts = [...tickContexts].sort((left, right) => left.getCurrentTick().value() - right.getCurrentTick().value());
   const firstContext = orderedContexts[0];
   if (!firstContext) {
-    return;
+    return FIRST_NOTE_FORMAT_X;
   }
 
-  const xShift = FIRST_NOTE_FORMAT_X - firstContext.getX();
+  const firstNoteOffset = FIRST_NOTE_FORMAT_X + firstContext.getMetrics().totalLeftPx;
+  const xShift = firstNoteOffset - firstContext.getX();
   orderedContexts.forEach((tickContext) => {
     tickContext.setX(tickContext.getX() + xShift);
   });
+  return firstNoteOffset;
 }
 
 // With a fixed number of measures per line, a crowded measure borrows width from
@@ -853,23 +871,22 @@ function balanceRowWidths(bars) {
 function getTickContextLayout(voices) {
   const contexts = [...new Set(voices.flatMap((voice) =>
     voice.getTickables().map((tickable) => tickable.getTickContext()).filter(Boolean)
-  ))].sort((left, right) => left.getX() - right.getX());
+  ))].sort((left, right) => left.getCurrentTick().value() - right.getCurrentTick().value());
   const metrics = contexts.map((context) => context.getMetrics());
   const rightEdge = (index) => metrics[index].notePx + metrics[index].totalRightPx;
   // Room each note needs after the previous one: its notehead, modifiers, and grace notes.
   const needs = contexts.slice(1).map((_, index) =>
     rightEdge(index) + metrics[index + 1].totalLeftPx + TICK_CONTEXT_MIN_GAP
   );
-  return { contexts, needs, lastRightEdge: contexts.length ? rightEdge(contexts.length - 1) : 0 };
+  return { contexts, needs, firstLeftEdge: metrics[0]?.totalLeftPx || 0, lastRightEdge: contexts.length ? rightEdge(contexts.length - 1) : 0 };
 }
 
 function getTickContextsMinWidth(voices) {
-  const { needs, lastRightEdge } = getTickContextLayout(voices);
-  return needs.reduce((sum, need) => sum + need, lastRightEdge);
+  const { needs, firstLeftEdge, lastRightEdge } = getTickContextLayout(voices);
+  return firstLeftEdge + needs.reduce((sum, need) => sum + need, lastRightEdge);
 }
 
 function fitTickContextsToWidth(voices, width) {
-  // Callers that omit padding settings pass no usable width; keep VexFlow's layout.
   if (!Number.isFinite(width)) return;
   const { contexts, needs, lastRightEdge } = getTickContextLayout(voices);
   if (contexts.length < 2) return;
