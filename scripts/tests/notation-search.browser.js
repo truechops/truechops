@@ -42,7 +42,7 @@ async function clickText(page, text, selector = "button,a,[role=menuitem]") {
     await clickText(page, "Open in score");
     await page.waitForSelector("#vexflow [data-measure-index='1']");
     await page.click("[data-measure-index='1'] [data-measure-background]");
-    await clickText(page, "Measure"); await clickText(page, "More"); await clickText(page, "Find matching rhythms");
+    await clickText(page, "Measure"); await clickText(page, "Find similar");
     await page.waitForSelector("a[aria-label='Open A matching rhythm']");
     await page.waitForSelector("[aria-label='Search notation'] .vf-stavenote");
     await page.waitForSelector("[aria-label='Matching notation from A matching rhythm'] .vf-stavenote");

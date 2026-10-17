@@ -5,6 +5,7 @@ import { scoreActions, selectNote } from "../../store/score";
 import { appActions } from "../../store/app";
 import Dialog from '../ui/Dialog';
 import repeatHook from './buttons/mutate/common/repeat-hook';
+import MeasureMenu from './MeasureMenu';
 import { browserName } from 'react-device-detect';
 
 import _ from "lodash";
@@ -26,6 +27,7 @@ export default function Score(props) {
   const name = useSelector(state => state.score.present.name);
   const [promptedForRepeat, setPromptedForRepeat] = useState(false);
   const [repeatDialogOpen, setRepeatDialogOpen] = useState(false);
+  const [measureMenu, setMeasureMenu] = useState(null);
   const { formControl: repeatFormControl, numRepeats } = repeatHook();
   
   const dontUseSafariShown = useSelector(state => state.app.dontUseSafariShown);
@@ -72,6 +74,10 @@ export default function Score(props) {
     dispatch(scoreActions.selectMeasure(index));
     if (keyboard) requestAnimationFrame(() => root?.querySelector(`[data-measure-index="${index}"]`)?.focus());
   }, [dispatch, scoreRootId]);
+  const openMeasureMenu = useCallback((index, position) => {
+    measureSelectedCallback(index);
+    setMeasureMenu(position);
+  }, [measureSelectedCallback]);
 
   useEffect(() => {
     if(_.isEqual(currentScore, props.score)) {
@@ -89,7 +95,7 @@ export default function Score(props) {
         vResize: 0.75,
         ...(props.svgConfig || {}),
         ...(props.measureTools ? {
-          measureEditing: { selected: selectedNoteIndex?.measureIndex, onSelect: measureSelectedCallback },
+          measureEditing: { selected: selectedNoteIndex?.measureIndex, onSelect: measureSelectedCallback, onOpen: openMeasureMenu },
           maxMeasuresPerLine: Math.max(1, Math.min(4, Math.floor(width / 380))),
           partLabelsOnEveryRow: true,
         } : {}),
@@ -138,6 +144,7 @@ export default function Score(props) {
     props.measureTools,
     measureSelection,
     measureSelectedCallback,
+    openMeasureMenu,
     scoreRootId
   ]);
 
@@ -152,6 +159,7 @@ export default function Score(props) {
       {props.showTitle !== false && name && <h2 className={props.titleClass}>{name}</h2>}
       <div className={props.vexflowClass} id={props.id || "vexflow"} />
     </div>
+    {props.measureTools && <MeasureMenu anchor={measureMenu} onClose={() => setMeasureMenu(null)} />}
 
     <Dialog
     isOpen={repeatDialogOpen && (dontUseSafariShown == "init" || dontUseSafariShown == "false")}

@@ -1,14 +1,12 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useRouter } from "next/router";
 import Tooltip from "@mui/material/Tooltip";
 import MenuItem from "@mui/material/MenuItem";
-import Divider from "@mui/material/Divider";
-import { FiShuffle, FiMoreHorizontal, FiLayers, FiSearch, FiHelpCircle } from "react-icons/fi";
+import { FiShuffle, FiMoreHorizontal, FiLayers, FiHelpCircle } from "react-icons/fi";
 import { scoreActions, getScoreVoices } from "../../store/score";
 import { DEFAULT_MUTATION_NUM_REPEATS } from "../../consts/score";
-import { canAdjustMeasure, getVariationInstruments, getVariationOptions, instrumentLabel } from "../../services/rhythm-variations";
-import { openNotationSearch } from "../../services/notation-search";
+import { instrumentLabel } from "../../services/rhythm-variations";
+import { useVariations, VARIATION_SYMBOLS } from "./score-tools";
 import useRepeat from "./buttons/mutate/common/repeat-hook";
 import MeasureVariationDialog from "./MeasureVariationDialog";
 import Dialog from "../ui/Dialog";
@@ -17,25 +15,22 @@ import styles from "./score-workspace.module.css";
 
 const TYPES = [["swap", "Swap"], ["shuffle", "Shuffle"], ["reverse", "Reverse"]];
 const GRIDS = [["4", "4th"], ["8", "8th"], ["16", "16th"], ["32", "32nd"]];
-const symbols = { stickings: "R L", accents: ">", diddles: "≋", cheese: "♬", flams: "♮", kick: "K", snare: "S", hiHat: "HH", ride: "R", hiHatFoot: "HF", tom1: "T1", tom2: "T2", tom3: "T3", tom4: "T4" };
-// Variation types shown as tiles; any others (the drum set's toms) are under More.
-const INLINE_VARIATIONS = 5;
 const HELP = "Generate repeats the whole score, then swaps, shuffles or reverses its notes on the chosen grid. "
   + "The variation buttons reshuffle one kind of marking (or drum voice) in the measures chosen here, without changing the rhythm.";
 
 // Mutate mode's two toolbar rows: which measures variations apply to (where the
 // edit tabs sit), then the Generate settings and variation buttons as tiles.
-export default function MutateTools({ notice, setNotice }) {
-  const dispatch = useDispatch(), router = useRouter();
+export default function MutateTools() {
+  const dispatch = useDispatch();
   const mutation = useSelector((state) => state.score.present.mutations[0]);
   const voices = useSelector((state) => getScoreVoices(state.score.present));
   const score = useSelector((state) => state.score.present.score);
-  const index = useSelector((state) => state.score.present.selectedNoteIndex?.measureIndex);
-  const selectedPartIndex = useSelector((state) => state.score.present.selectedPartIndex);
   const { numRepeats, setNumRepeats, repeatOptions } = useRepeat(DEFAULT_MUTATION_NUM_REPEATS);
   const [onePartOnly, setOnePartOnly] = useState(false);
-  const [applyTo, setApplyTo] = useState("selected"), [requested, setRequested] = useState(null);
+  const [applyTo, setApplyTo] = useState("selected");
   const [menu, setMenu] = useState(null), [browse, setBrowse] = useState(null);
+  const variations = useVariations(applyTo === "all");
+  const { index, measure, instrument, instruments, options, available } = variations;
 
   const numParts = Object.values(score.parts).filter((part) => part != null).length;
   const repeats = Math.min(Number(numRepeats), repeatOptions.length) || 1;
@@ -46,23 +41,9 @@ export default function MutateTools({ notice, setNotice }) {
     ["Grid", String(mutation.grid), GRIDS, (value) => dispatch(scoreActions.updateMutateGrid(value))],
     ["Repeat", String(repeats), repeatOptions.map((count) => [String(count), count]), (value) => setNumRepeats(Number(value))],
   ];
-
-  const measure = score.measures[index];
-  const instruments = getVariationInstruments(score);
-  const selectedInstrument = measure?.parts[selectedPartIndex]?.instrument;
-  const instrument = instruments.includes(requested) ? requested : instruments.includes(selectedInstrument) ? selectedInstrument : instruments[0];
-  const options = getVariationOptions(instrument);
-  const indexes = useMemo(() => applyTo === "all" ? score.measures.map((_, i) => i) : measure ? [index] : [], [applyTo, score, measure, index]);
-  const available = useMemo(() => new Set(options.filter(([category]) =>
-    indexes.some((i) => canAdjustMeasure(score.measures[i], category, instrument))).map(([category]) => category)), [options, indexes, score, instrument]);
-  const unavailable = (name) => indexes.length ? `No ${name.toLowerCase()} to vary here` : "Select a measure first";
+  // The drum set has more voices than fit beside the settings; the rest are under More.
+  const inline = options.length > 5 ? options.slice(0, 4) : options, overflow = options.slice(inline.length);
   const closeMenu = () => setMenu(null);
-
-  function vary(category, name) {
-    closeMenu();
-    dispatch(scoreActions.adjustMeasures({ category, instrument, indexes }));
-    setNotice(`${name} varied in ${applyTo === "all" ? "every measure" : `measure ${index + 1}`}`);
-  }
 
   return <>
     <div className={styles.scope}>
@@ -72,7 +53,7 @@ export default function MutateTools({ notice, setNotice }) {
           <option value="all">All measures</option>
         </select>
       </label>
-      {instruments.length > 1 && <select aria-label="Variation part" title="Part to vary" value={instrument} onChange={(event) => setRequested(event.target.value)}>
+      {instruments.length > 1 && <select aria-label="Variation part" title="Part to vary" value={instrument} onChange={(event) => variations.setInstrument(event.target.value)}>
         {instruments.map((value) => <option key={value} value={value}>{instrumentLabel(value)}</option>)}
       </select>}
       <Tooltip title={HELP} describeChild arrow><button type="button" className={styles.help} aria-label="How mutate works"><FiHelpCircle /></button></Tooltip>
@@ -88,21 +69,19 @@ export default function MutateTools({ notice, setNotice }) {
       <Tile label="Generate" className={styles.generate} onClick={() => numParts > 1 ? setOnePartOnly(true) : dispatch(scoreActions.mutateNotes(repeats))}><FiShuffle /></Tile>
       <span className={styles.divider} />
       <div className={`${styles.groupItems} ${styles.tileGroup}`} role="group" aria-label="Vary the measure">
-        {options.slice(0, INLINE_VARIATIONS).map(([category, name]) => <Tile key={category} label={name} aria-label={name} disabled={!available.has(category)}
-          title={available.has(category) ? `Vary ${name.toLowerCase()}` : unavailable(name)} onClick={() => vary(category, name)}>
-          <span className={styles.badge} data-category={category}>{symbols[category]}</span>
+        {inline.map(([category, name]) => <Tile key={category} label={name} aria-label={name} disabled={!available.has(category)}
+          title={available.has(category) ? `Vary ${name.toLowerCase()}` : variations.unavailableReason(name)} onClick={() => variations.vary(category, name)}>
+          <span className={styles.badge} data-category={category}>{VARIATION_SYMBOLS[category]}</span>
         </Tile>)}
-        <Tile label="More" aria-haspopup="menu" aria-expanded={Boolean(menu)} onClick={(event) => setMenu({ anchor: event.currentTarget, type: "more" })}><FiMoreHorizontal /></Tile>
+        {overflow.length > 0 && <Tile label="More" aria-haspopup="menu" aria-expanded={Boolean(menu)} onClick={(event) => setMenu({ anchor: event.currentTarget, type: "more" })}><FiMoreHorizontal /></Tile>}
       </div>
-      <span className={styles.notice} role="status">{notice}</span>
+      <Tile label="Variations" disabled={!measure} title={measure ? `Browse variations of measure ${index + 1}` : "Select a measure first"}
+        onClick={() => setBrowse({ score, measure, index, instrument })}><FiLayers /></Tile>
 
       <ToolMenu menu={menu} type="more" onClose={closeMenu} label="More variations">
-        {options.slice(INLINE_VARIATIONS).map(([category, name]) => <MenuItem key={category} disabled={!available.has(category)} onClick={() => vary(category, name)}>
-          <span className={styles.badge} data-category={category} aria-hidden="true">{symbols[category]}</span>{name}
+        {overflow.map(([category, name]) => <MenuItem key={category} aria-label={name} disabled={!available.has(category)} onClick={() => { closeMenu(); variations.vary(category, name); }}>
+          <span className={styles.badge} data-category={category} aria-hidden="true">{VARIATION_SYMBOLS[category]}</span>{name}
         </MenuItem>)}
-        {options.length > INLINE_VARIATIONS && <Divider />}
-        <MenuItem disabled={!measure} onClick={() => { closeMenu(); setBrowse({ score, measure, index, instrument }); }}><FiLayers />Browse variations</MenuItem>
-        <MenuItem disabled={!measure} onClick={async () => { closeMenu(); try { await openNotationSearch(router, { ...score, measures: [measure] }, `Measure ${index + 1}`); } catch { setNotice("Couldn't open notation search. Please try again."); } }}><FiSearch />Find matching rhythms</MenuItem>
       </ToolMenu>
       {browse && <MeasureVariationDialog source={browse} onClose={() => setBrowse(null)} />}
       <Dialog onOk={() => setOnePartOnly(false)} message="Mutate can only be used with one part." isOpen={onePartOnly} />

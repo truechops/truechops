@@ -447,8 +447,9 @@ function renderStaves(
   barRenderData.forEach((renderData, renderDataIndex) => {
     const { parts, width, firstMeasure, measureIndex, timeSig } = renderData;
     let xDiff = 0;
+    let measureGroup;
     if (measureEditing) {
-      const group = context.openGroup("editable-measure");
+      const group = measureGroup = context.openGroup("editable-measure");
       group.setAttribute("data-measure-index", measureIndex);
       const selected = measureEditing.selected === measureIndex;
       group.setAttribute("role", "button");
@@ -602,6 +603,32 @@ function renderStaves(
       });
     });
 
+    if (measureEditing?.onOpen) {
+      // A "…" button in the measure's top-right corner opens its menu. The stylesheet
+      // shows it on hover; right-click or the context-menu key opens the same menu.
+      const trigger = context.openGroup("measure-trigger");
+      trigger.setAttribute("data-measure-trigger", "true");
+      trigger.setAttribute("aria-hidden", "true");
+      trigger.setAttribute("transform", `translate(${x + xDiff - 44},${STAVE_TOP + row * STAVE_SPACE + 7})`);
+      const add = (tag, attributes) => {
+        const element = document.createElementNS("http://www.w3.org/2000/svg", tag);
+        Object.entries(attributes).forEach(([name, value]) => element.setAttribute(name, value));
+        trigger.appendChild(element);
+      };
+      add("rect", { width: 38, height: 26, rx: 8, fill: "#fff", stroke: "#d9d4dd" });
+      [12, 19, 26].forEach((cx) => add("circle", { cx, cy: 13, r: 2.2, fill: "#4d4753" }));
+      const openBelowTrigger = () => {
+        const box = trigger.getBoundingClientRect();
+        measureEditing.onOpen(measureIndex, { top: box.bottom + 4, left: box.right, align: "right" });
+      };
+      trigger.addEventListener("click", (event) => { event.stopPropagation(); openBelowTrigger(); });
+      measureGroup.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+        if (event.clientX || event.clientY) measureEditing.onOpen(measureIndex, { top: event.clientY, left: event.clientX, align: "left" });
+        else openBelowTrigger();
+      });
+      context.closeGroup();
+    }
     if (measureEditing) context.closeGroup();
     previousTimeSig.num = timeSig.num;
     previousTimeSig.type = timeSig.type;

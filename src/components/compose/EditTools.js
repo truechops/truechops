@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useRouter } from "next/router";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
-import Divider from "@mui/material/Divider";
-import { FiCopy, FiClipboard, FiChevronDown, FiMoreHorizontal, FiLayers, FiSearch, FiTrash2, FiCheck, FiSliders, FiArrowLeft, FiArrowRight } from "react-icons/fi";
+import { FiCopy, FiClipboard, FiChevronDown, FiPlusSquare, FiSearch, FiTrash2, FiCheck, FiSliders, FiArrowLeft, FiArrowRight } from "react-icons/fi";
 import ReactGA from "react-ga";
 import { scoreActions, getSelectedNote, modifyNote, ACCENT, BUZZ, FLAM, DIDDLE, CHEESE, LEFT_STICKING, RIGHT_STICKING } from "../../store/score";
-import { openNotationSearch } from "../../services/notation-search";
+import { useMeasureActions } from "./score-tools";
 import useInstruments from "./buttons/instruments-hook";
 import TimeSigMenu from "./menus/TimeSigMenu";
 import TupletPickerPopover from "./popovers/TupletPickerPopover";
@@ -94,18 +92,17 @@ export function EditTabs({ tab, onTabChange }) {
   </div>;
 }
 
-export default function EditTools({ tab, clipboard, setClipboard, notice, setNotice }) {
-  const dispatch = useDispatch(), router = useRouter();
+export default function EditTools({ tab }) {
+  const dispatch = useDispatch();
   const [menu, setMenu] = useState(null);
-  const present = useSelector((state) => state.score.present);
+  const { dotSelected, tuplet } = useSelector((state) => state.score.present);
   const selectedNote = useSelector((state) => getSelectedNote(state.score.present));
   const { voiceButtons } = useInstruments();
-  const { score, repeat, isPlaying, dotSelected, tuplet } = present;
-  const index = present.selectedNoteIndex?.measureIndex;
-  const measure = score.measures[index];
-  const timeSig = measure?.timeSig || present.timeSig;
+  const measureActions = useMeasureActions();
+  const { index, measure, isPlaying, clipboard, timeSig } = measureActions;
   const openMenu = (event, type) => setMenu({ anchor: event.currentTarget, type });
   const closeMenu = () => setMenu(null);
+  const run = (action) => () => { closeMenu(); action(); };
   const noMeasure = measure ? undefined : "Select a measure first";
   const has = (ornament) => Boolean(selectedNote?.ornaments?.includes(ornament));
 
@@ -117,47 +114,39 @@ export default function EditTools({ tab, clipboard, setClipboard, notice, setNot
     ReactGA.event({ category: "ornament", action: `toggle ${label.toLowerCase()}` });
     dispatch(scoreActions[action]());
   }
-  function paste(side, source = clipboard) {
-    closeMenu();
-    dispatch(scoreActions.pasteMeasure({ measure: source, side }));
-    setNotice(side === "left" ? "Inserted before" : "Inserted after");
-  }
 
   let tools;
   if (tab === 0) {
-    const repeatHere = measure && (repeat.start === index || repeat.end === index);
+    const repeatHere = measure && (measureActions.isRepeat("start") || measureActions.isRepeat("end"));
     tools = <>
-      <Tile icon={AddMeasureLeftIcon} viewBox="0 0 90 52" label="Add before" disabled={isPlaying} onClick={() => dispatch(scoreActions.addMeasure(false))} />
-      <Tile icon={AddMeasureRightIcon} viewBox="0 0 88 52" label="Add after" disabled={isPlaying} onClick={() => dispatch(scoreActions.addMeasure(true))} />
-      <Tile icon={DeleteMeasureIcon} viewBox="0 0 68.2 52.01" label="Delete" disabled={isPlaying || !measure} title={noMeasure} onClick={() => dispatch(scoreActions.deleteMeasure())} />
-      <Tile label="Copy" disabled={!measure} title={noMeasure} onClick={() => { setClipboard(JSON.parse(JSON.stringify(measure))); setNotice(`Measure ${index + 1} copied`); }}><FiCopy /></Tile>
+      <Tile icon={AddMeasureLeftIcon} viewBox="0 0 90 52" label="Add before" disabled={isPlaying} onClick={() => measureActions.addMeasure(false)} />
+      <Tile icon={AddMeasureRightIcon} viewBox="0 0 88 52" label="Add after" disabled={isPlaying} onClick={() => measureActions.addMeasure(true)} />
+      <Tile label="Duplicate" disabled={!measure || isPlaying} title={noMeasure} onClick={measureActions.duplicate}><FiPlusSquare /></Tile>
+      <Tile icon={DeleteMeasureIcon} viewBox="0 0 68.2 52.01" label="Delete" disabled={isPlaying || !measure} title={noMeasure} onClick={measureActions.deleteMeasure} />
+      <Tile label="Copy" disabled={!measure} title={noMeasure} onClick={measureActions.copy}><FiCopy /></Tile>
       <Tile label="Paste" caret disabled={!clipboard || !measure || isPlaying} title={!clipboard ? "Copy a measure first" : noMeasure}
         aria-haspopup="menu" aria-expanded={menu?.type === "paste"} onClick={(event) => openMenu(event, "paste")}><FiClipboard /></Tile>
       <Tile icon={RepeatStartIcon} viewBox="0 0 68.2 52.01" label="Repeat" caret aria-pressed={Boolean(repeatHere)} disabled={isPlaying}
         aria-haspopup="menu" aria-expanded={menu?.type === "repeat"} onClick={(event) => openMenu(event, "repeat")} />
       <Tile label="Time sig" caret disabled={!measure || isPlaying} title={noMeasure} aria-haspopup="menu" aria-expanded={menu?.type === "timeSig"}
         aria-label={`Time signature ${timeSig.num}/${timeSig.type}`} onClick={(event) => openMenu(event, "timeSig")}><span className={styles.timeSig}>{timeSig.num}/{timeSig.type}</span></Tile>
-      <Tile label="More" aria-haspopup="menu" aria-expanded={menu?.type === "more"} onClick={(event) => openMenu(event, "more")}><FiMoreHorizontal /></Tile>
+      <Tile label="Find similar" disabled={!measure} title={measure ? "Find rhythms matching this measure" : noMeasure} onClick={measureActions.findSimilar}><FiSearch /></Tile>
+      <span className={styles.divider} />
+      <Tile label="Clear score" disabled={isPlaying} onClick={measureActions.clearScore}><FiTrash2 /></Tile>
 
       <ToolMenu menu={menu} type="paste" onClose={closeMenu} label="Paste measure">
-        <MenuItem onClick={() => paste("left")}><FiArrowLeft />Paste before</MenuItem>
-        <MenuItem onClick={() => paste("right")}><FiArrowRight />Paste after</MenuItem>
+        <MenuItem onClick={run(() => measureActions.paste("left"))}><FiArrowLeft />Paste before</MenuItem>
+        <MenuItem onClick={run(() => measureActions.paste("right"))}><FiArrowRight />Paste after</MenuItem>
       </ToolMenu>
       <ToolMenu menu={menu} type="repeat" onClose={closeMenu} label="Repeat">
-        {[["start", "Start repeat", "setRepeatStart"], ["end", "End repeat", "setRepeatEnd"]].map(([edge, label, action]) =>
-          <MenuItem key={edge} role="menuitemcheckbox" aria-checked={measure ? repeat[edge] === index : edge in repeat} onClick={() => { closeMenu(); dispatch(scoreActions[action]()); }}>
+        {[["start", "Start repeat"], ["end", "End repeat"]].map(([edge, label]) =>
+          <MenuItem key={edge} role="menuitemcheckbox" aria-checked={measureActions.isRepeat(edge)} onClick={run(() => measureActions.toggleRepeat(edge))}>
             {label} {measure ? `at measure ${index + 1}` : edge === "start" ? "at the beginning" : "at the end"}
-            {(measure ? repeat[edge] === index : edge in repeat) && <FiCheck className={styles.check} aria-hidden="true" />}
+            {measureActions.isRepeat(edge) && <FiCheck className={styles.check} aria-hidden="true" />}
           </MenuItem>)}
       </ToolMenu>
       <TimeSigMenu isOpen={menu?.type === "timeSig"} anchorEl={menu?.anchor} onClose={closeMenu} className={styles.menu}
-        onChange={(value) => { const [num, type] = value.split("/"); dispatch(scoreActions.updateTimeSig({ num, type })); closeMenu(); }} />
-      <ToolMenu menu={menu} type="more" onClose={closeMenu} label="More measure tools">
-        <MenuItem disabled={!measure || isPlaying} onClick={() => { paste("right", measure); setNotice("Measure duplicated"); }}><FiLayers />Duplicate measure</MenuItem>
-        <MenuItem disabled={!measure} onClick={async () => { closeMenu(); try { await openNotationSearch(router, { ...score, measures: [measure] }, `Measure ${index + 1}`); } catch { setNotice("Couldn't open notation search. Please try again."); } }}><FiSearch />Find matching rhythms</MenuItem>
-        <Divider />
-        <MenuItem disabled={isPlaying} onClick={() => { closeMenu(); dispatch(scoreActions.clearScore()); }}><FiTrash2 />Clear score</MenuItem>
-      </ToolMenu>
+        onChange={(value) => { closeMenu(); measureActions.setTimeSig(value); }} />
     </>;
   } else if (tab === 1) {
     tools = <>
@@ -192,6 +181,5 @@ export default function EditTools({ tab, clipboard, setClipboard, notice, setNot
 
   return <div id="edit-tools" className={`${styles.tools} ${tab === 1 ? styles.noteTools : ""}`} role="tabpanel" aria-labelledby={`edit-tab-${tab}`}>
     {tools}
-    <span className={styles.notice} role="status">{notice}</span>
   </div>;
 }

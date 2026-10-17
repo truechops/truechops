@@ -6,7 +6,7 @@
 
 /* Toolbar card: mode switch | tabs or variation scope | actions, with one row of tools underneath.
    Both rows have fixed heights in every mode and tab, so the score below never moves. */
-.toolbar { container:toolbar / inline-size; position:relative; flex:none; background:#fff; border:1px solid var(--line); border-radius:16px; box-shadow:0 2px 10px #2421290a; padding:12px 14px; }
+.toolbar { container:toolbar / inline-size; position:relative; z-index:2; flex:none; background:#fff; border:1px solid var(--line); border-radius:16px; box-shadow:0 2px 10px #2421290a; padding:12px 14px; }
 .toolbarGrid { display:grid; grid-template-columns:auto minmax(0,1fr) auto; grid-template-areas:"mode primary actions" "mode secondary secondary"; column-gap:18px; row-gap:14px; align-items:center; }
 .modes { grid-area:mode; align-self:stretch; display:flex; flex-direction:column; gap:8px; padding-right:18px; border-right:1px solid var(--line); }
 .workspace .mode { flex:1; display:flex; align-items:center; justify-content:center; gap:10px; min-width:132px; min-height:48px; padding:0 18px; border:0; border-radius:12px; background:var(--soft); color:#4d4753; font-size:16px; font-weight:500; cursor:pointer; }
@@ -35,7 +35,8 @@
 .workspace .play:hover { background:#b01a36; }
 .play svg { fill:currentColor; }
 .actionDivider { width:1px; height:24px; margin:0 2px; background:var(--line); }
-.status { grid-column:1 / -1; margin:0; font-size:12.5px; color:var(--muted); }
+/* Messages float just below the toolbar so they never change its height. */
+.status { position:absolute; z-index:5; top:calc(100% + 8px); right:14px; margin:0; padding:8px 12px; border:1px solid var(--line); border-radius:10px; background:#fff; box-shadow:0 6px 20px #211c2915; font-size:12.5px; color:var(--muted); }
 .status a { color:var(--accent); }
 .status button { margin-left:8px; padding:2px 8px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--muted); font-size:12px; cursor:pointer; }
 
@@ -90,8 +91,20 @@
 .menu ul { padding:6px; }
 .menu li { gap:10px; min-height:40px; padding:8px 10px; border-radius:8px; font-size:14px; }
 .menu li svg { flex:none; width:16px; height:16px; }
-.menu .check { margin-left:auto; padding-left:12px; color:var(--accent, #b71836); }
+.menu .check { margin-left:auto; color:var(--accent, #b71836); }
 .menu hr { margin:6px 4px; }
+.menu li svg.glyph { width:24px; height:16px; }
+.menu .menuTitle { padding:4px 10px; line-height:24px; font-size:12px; font-weight:600; color:#78717d; }
+.menu .chevron { margin-left:auto; }
+.menu li.expanded { background:rgba(0,0,0,.04); }
+/* Flyouts line their first item up with the item that opened them. */
+.menu.submenu { min-width:150px; margin-top:-7px; }
+.menu.submenu[data-side=right] { margin-left:4px; }
+.menu.submenu[data-side=left] { margin-left:-4px; }
+.menuTimeSig { width:24px; text-align:center; font-family:Georgia,"Times New Roman",serif; font-size:13px; font-weight:700; }
+.menu .menuField { padding:6px 10px; font-size:13px; color:#78717d; list-style:none; }
+.menuField label { display:flex; align-items:center; gap:10px; }
+.menuField select { padding:5px 6px; border:1px solid #e9e8ed; border-radius:6px; background:#fff; font:inherit; color:#221e27; }
 .helpCard { max-width:340px; padding:16px 18px; font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:#221e27; }
 .helpCard h3 { margin:0 0 8px; font-size:13px; }
 .helpCard h3 + dl { margin-bottom:14px; }
@@ -106,6 +119,11 @@
 .scoreCard [data-measure-index] { outline:none; }
 .scoreCard [data-measure-index][data-selected=false]:hover [data-measure-background] { fill:#f6f9fd; }
 .scoreCard [data-measure-index]:focus-visible [data-measure-background] { stroke:#4b9bff; stroke-dasharray:5 4; }
+/* Each measure's "…" button appears on hover; touch screens show it on the selected measure. */
+.scoreCard [data-measure-trigger] { opacity:0; pointer-events:none; cursor:pointer; transition:opacity .12s ease; }
+.scoreCard [data-measure-index]:hover [data-measure-trigger] { opacity:1; pointer-events:auto; }
+.scoreCard [data-measure-trigger]:hover rect { fill:#f5f4f7; stroke:#c9c2cd; }
+@media (hover:none) { .scoreCard [data-measure-index][data-selected=true] [data-measure-trigger] { opacity:1; pointer-events:auto; } }
 
 @container toolbar (max-width:1240px) {
   .actionLabel { display:none; }

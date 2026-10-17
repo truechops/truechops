@@ -39,7 +39,7 @@ async function clickText(page,text,selector="button,[role=menuitem]") {
     await clickText(page,"Open in score");
     await page.waitForSelector("#vexflow [data-measure-index='3']");
     await page.waitForSelector("button[aria-label=save]");
-    assert.equal(await page.$("[data-measure-trigger]"),null,"Measures have no hover trigger; the score toolbar holds the tools");
+    assert.equal(await page.$eval("[data-measure-index='1'] [data-measure-trigger]",el=>getComputedStyle(el).opacity),"0","Each measure's … button stays hidden until hovered");
     const checkBounds=async()=>{
       const overflow=await page.$$eval("#vexflow [data-measure-index]",groups=>groups.flatMap(group=>{
         const bar=group.querySelector("[data-measure-background]").getBoundingClientRect();
@@ -56,6 +56,17 @@ async function clickText(page,text,selector="button,[role=menuitem]") {
     };
     const mode=async(name)=>{ await clickText(page,name); await page.waitForFunction((label)=>[...document.querySelectorAll("[aria-label=Mode] button")].some(el=>el.textContent===label&&el.getAttribute("aria-pressed")==="true"),{},name); };
     const menuOpen=async()=>{ await page.waitForSelector("[role=menu]"); await page.waitForFunction(()=>getComputedStyle(document.querySelector("[role=menu]").parentElement).opacity==="1"); };
+    const openMeasureMenu=async(index)=>{
+      await page.hover(`[data-measure-index='${index}'] [data-measure-background]`);
+      await page.waitForFunction((i)=>getComputedStyle(document.querySelector(`[data-measure-index='${i}'] [data-measure-trigger]`)).opacity==="1",{},index);
+      await page.click(`[data-measure-index='${index}'] [data-measure-trigger]`); await menuOpen();
+    };
+    const menuItem=(label)=>clickText(page,label,"[role=menu] [role=menuitem],[role=menu] [role=menuitemcheckbox]");
+    const hoverMenuItem=async(label)=>{
+      for(const item of await page.$$("[role=menu] [role=menuitem]")) if(await item.evaluate((el,text)=>el.textContent.trim().endsWith(text),label)){ await item.hover(); return item; }
+      throw new Error(`Missing menu item: ${label}`);
+    };
+    const menuCount=(count)=>page.waitForFunction((n)=>document.querySelectorAll("[role=menu]").length===n,{},count);
     const save=async()=>{
       await page.waitForFunction(()=>!document.querySelector("[role=menu]"));
       snapshot=null; await page.click("button[aria-label=save]"); await page.waitForSelector("#rhythm-dialog-title");
@@ -80,14 +91,12 @@ async function clickText(page,text,selector="button,[role=menuitem]") {
     for(const tab of ["Measure","Notes","Ornaments"]){ await clickText(page,tab); layouts[tab]=await toolbarLayout(); }
     await mode("Mutate"); layouts.Mutate=await toolbarLayout();
     assert.deepEqual(Object.values(layouts),Object.values(layouts).map(()=>({...layouts.Measure,overflow:false})),"Toolbar height and actions are identical in every tab and mode");
-    assert.deepEqual(await page.$$eval("[aria-label='Vary the measure'] button",els=>els.map(el=>el.getAttribute("aria-label")||el.textContent.trim())),["Stickings","Accents","Diddles","Cheese","Flams","More"]);
-    await clickText(page,"More"); await menuOpen();
-    assert.deepEqual(await page.$$eval("[role=menuitem]",els=>els.map(el=>el.textContent.trim())),["Browse variations","Find matching rhythms"]);
+    assert.deepEqual(await page.$$eval("[aria-label='Vary the measure'] button",els=>els.map(el=>el.getAttribute("aria-label")||el.textContent.trim())),["Stickings","Accents","Diddles","Cheese","Flams"],"No More menu when every variation fits");
+    assert(await page.$("button[title='Browse variations of measure 2']"),"Variations is its own button");
     await page.screenshot({path:`${folder}/mutate-desktop.png`});
-    await page.keyboard.press("Escape");
-    await page.waitForFunction(()=>!document.querySelector("[role=menu]"));
     await clickText(page,"Accents");
     const shuffled=await save();
+    assert.equal((await toolbarLayout()).height,layouts.Measure.height,"Save messages float below the toolbar instead of growing it");
     assert.notDeepEqual(shuffled.measures[1],score.measures[1]);
     assert.deepEqual(shuffled.measures.filter((_,i)=>i!==1),score.measures.filter((_,i)=>i!==1),"Only the selected measure changes");
     await checkBounds();
@@ -95,26 +104,60 @@ async function clickText(page,text,selector="button,[role=menuitem]") {
     await page.click("button[aria-label=redo]"); assert.deepEqual(await save(),shuffled,"Redo restores the same variation");
     await mode("Edit"); await clickText(page,"Measure");
     await select(0); await clickText(page,"Copy");
+    assert(await page.$eval("section[aria-label='Score tools'] > [role=status]",el=>{const b=el.getBoundingClientRect();el.style.pointerEvents="auto";const onTop=el.contains(document.elementFromPoint(b.left+b.width/2,b.top+b.height/2));el.style.pointerEvents="";return el.textContent==="Measure 1 copied"&&onTop;}),"The copy notice shows above the score");
     await select(2); await clickText(page,"Paste"); await clickText(page,"Paste before");
     await page.waitForFunction(()=>document.querySelectorAll("[data-measure-index]").length===5);
     const left=await save(); assert.deepEqual(left.measures[2],score.measures[0]); assert.deepEqual(left.measures[3],score.measures[2]);
     await clickText(page,"Paste"); await clickText(page,"Paste after");
     await page.waitForFunction(()=>document.querySelectorAll("[data-measure-index]").length===6);
     const right=await save(); assert.deepEqual(right.measures[3],score.measures[0]);
-    await clickText(page,"More"); await clickText(page,"Duplicate measure"); await page.waitForFunction(()=>document.querySelectorAll("[data-measure-index]").length===7);
+    await clickText(page,"Duplicate"); await page.waitForFunction(()=>document.querySelectorAll("[data-measure-index]").length===7);
     const duplicate=await save(); assert.deepEqual(duplicate.measures[4],score.measures[0]);
     await page.focus("button[aria-label=redo]");
     await page.keyboard.down("Control"); await page.keyboard.press("z"); await page.keyboard.up("Control");
     assert.deepEqual(await save(),right,"Inserted measures support keyboard undo while a button has focus");
     await page.click("button[aria-label=redo]"); assert.deepEqual(await save(),duplicate);
     await checkBounds();
+    // Each measure's … button offers the measure tools and variations too.
+    await openMeasureMenu(5);
+    assert.equal(await page.$eval("[data-measure-index='5']",el=>el.dataset.selected),"true","Opening the menu selects its measure");
+    const menuItems=await page.$$eval("[role=menu] li",els=>els.map(el=>el.textContent.trim()));
+    for(const label of ["Measure 6","Add measure before","Add measure after","Duplicate","Copy","Paste before","Paste after","Delete","Start repeat here","End repeat here","Vary","Browse variations","Find similar rhythms"]) assert(menuItems.includes(label),`… menu offers ${label}`);
+    // Items with more options expand beside the menu on hover.
+    await hoverMenuItem("Time signature");
+    await page.waitForSelector("[role=menu][aria-label='Time signature']");
+    assert(await page.$$eval("[role=menu][aria-label='Time signature'] [role=menuitemradio]",els=>els.some(el=>el.textContent.trim()==="4/4")),"Hovering Time signature lists the time signatures");
+    await menuCount(2);
+    await page.screenshot({path:`${folder}/measure-menu.png`});
+    await hoverMenuItem("Copy"); await menuCount(1);
+    await hoverMenuItem("Vary"); await page.waitForSelector("[role=menu][aria-label='Vary measure 6']");
+    await page.screenshot({path:`${folder}/measure-menu-vary.png`});
+    await menuItem("Accents");
+    const viaMenu=await save();
+    assert.notDeepEqual(viaMenu.measures[5],duplicate.measures[5]);
+    assert.deepEqual(viaMenu.measures.filter((_,i)=>i!==5),duplicate.measures.filter((_,i)=>i!==5),"The … menu varies only its measure");
+    await page.click("button[aria-label=undo]"); assert.deepEqual(await save(),duplicate);
+    // → opens a flyout and moves into it; ← returns to the menu.
+    await openMeasureMenu(0);
+    const vary=await hoverMenuItem("Vary"); await page.waitForSelector("[role=menu][aria-label='Vary measure 1']");
+    await hoverMenuItem("Copy"); await menuCount(1);
+    await vary.focus(); await page.keyboard.press("ArrowRight");
+    await page.waitForFunction(()=>document.activeElement?.closest("[role=menu]")?.getAttribute("aria-label")==="Vary measure 1","→ moves focus into the flyout");
+    await page.keyboard.press("ArrowLeft"); await menuCount(1);
+    assert.equal(await page.evaluate(()=>document.activeElement?.textContent.trim()),"Vary","← returns to the item that opened the flyout");
+    await menuItem("Duplicate");
+    await page.waitForFunction(()=>document.querySelectorAll("[data-measure-index]").length===8&&!document.querySelector("[role=menu]"));
+    await page.click("button[aria-label=undo]"); await page.waitForFunction(()=>document.querySelectorAll("[data-measure-index]").length===7);
+    await page.click("[data-measure-index='1'] [data-measure-background]",{button:"right"}); await menuOpen();
+    assert(await page.$$eval("[role=menu] li",els=>els.some(el=>el.textContent.trim()==="Measure 2")),"Right-click opens the same menu");
+    await page.keyboard.press("Escape"); await page.waitForFunction(()=>!document.querySelector("[role=menu]"));
     await mode("Mutate");
     await select(6);
     assert.equal(await page.$eval("button[aria-label=Accents]",el=>el.disabled),true,"Absent markings cannot be shuffled");
     await clickText(page,"Diddles");
     const introduced=await save();
     assert(introduced.measures[6].parts[0].voices[0].notes.some(note=>note.ornaments.includes("d")),"Varying introduces missing diddles");
-    await clickText(page,"More"); await clickText(page,"Browse variations");
+    await clickText(page,"Variations");
     await page.waitForSelector("#measure-variations-title");
     await page.waitForSelector("button[aria-label='Preview stickings variation 1']");
     await page.click("button[aria-label='Preview stickings variation 1']");
@@ -137,11 +180,15 @@ async function clickText(page,text,selector="button,[role=menuitem]") {
     await page.setViewport({width:390,height:844});
     await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
     await checkBounds();
-    await select(0); await clickText(page,"More"); await menuOpen();
+    await select(0); await openMeasureMenu(0);
     assert(await page.$eval("section[aria-label='Score tools']",el=>{const b=el.getBoundingClientRect();return b.left>=0&&b.right<=innerWidth;}),"Toolbar fits a phone");
     assert(await page.$eval("[role=menu]",el=>{const b=el.getBoundingClientRect();return b.left>=0&&b.right<=innerWidth&&b.bottom<=innerHeight;}),"Menu fits a phone");
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),"No sideways page scroll on a phone");
     await page.screenshot({path:`${folder}/mutate-mobile.png`});
+    await menuItem("Vary"); await page.waitForSelector("[role=menu][aria-label='Vary measure 1']");
+    await menuCount(1);
+    assert(await page.$eval("[role=menu]",el=>{const b=el.getBoundingClientRect();return b.left>=0&&b.right<=innerWidth;}),"Without room for a flyout, Vary opens in place");
+    await menuItem("Vary"); await page.waitForSelector("[role=menu][aria-label='Measure 1 options']");
     await page.keyboard.press("Escape");
     await page.waitForFunction(()=>!document.querySelector("[role=menu]"));
     await page.$eval("[data-measure-index='1']",el=>el.focus()); await page.keyboard.press("Enter");
@@ -156,7 +203,7 @@ async function clickText(page,text,selector="button,[role=menuitem]") {
     await touch.tap("[data-measure-index='0'] [data-measure-background]");
     await touch.waitForFunction(()=>document.querySelector("[data-measure-index='0']")?.dataset.selected==="true");
     assert.deepEqual(errors,[]);
-    console.log("Passed: in-place selection, notation containment, scoped and all-measure variations, clipboard insertion on both sides, duplication, undo/redo, saving, keyboard selection, and phone layout.");
+    console.log("Passed: in-place selection, notation containment, scoped and all-measure variations, the … measure menu, clipboard insertion on both sides, duplication, undo/redo, saving, keyboard selection, and phone layout.");
   }catch(error){console.error(errors);await page.screenshot({path:`${folder}/failure.png`,fullPage:true});throw error;}
   finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

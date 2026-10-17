@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { useSelector } from "react-redux";
 import Score from "./Score";
 import ScoreToolbar from "./ScoreToolbar";
+import { ScoreToolsProvider } from "./score-tools";
 import ErrorBoundary from "../error/ErrorBoundary";
 import BookBuilderPanel from "../book-builder/Main";
 import styles from "./score-workspace.module.css";
@@ -27,23 +28,25 @@ export default function Main(props) {
   }, []);
 
   return (
-    <main className={styles.workspace}>
-      <ErrorBoundary component="compose toolbar">
-        <ScoreToolbar initialTab={props && props.initialTab != null ? props.initialTab : 1} />
-      </ErrorBoundary>
-      <div className={styles.body}>
-        <section id="score-root" ref={scoreRoot} className={styles.scoreCard} aria-label="Score">
-          <ErrorBoundary component="compose">
-            {scoreWidth > 0 && <Score measureTools scoreRootId="score-root" id={"vexflow"} score={score} containerWidth={scoreWidth}
-              isDynamicRhythm={isDynamicRhythm} titleClass={styles.scoreTitle} />}
-          </ErrorBoundary>
-        </section>
-        {bookOpen && (
-          <ErrorBoundary component="book builder">
-            <BookBuilderPanel />
-          </ErrorBoundary>
-        )}
-      </div>
-    </main>
+    <ScoreToolsProvider>
+      <main className={styles.workspace}>
+        <ErrorBoundary component="compose toolbar">
+          <ScoreToolbar initialTab={props && props.initialTab != null ? props.initialTab : 1} />
+        </ErrorBoundary>
+        <div className={styles.body}>
+          <section id="score-root" ref={scoreRoot} className={styles.scoreCard} aria-label="Score">
+            <ErrorBoundary component="compose">
+              {scoreWidth > 0 && <Score measureTools scoreRootId="score-root" id={"vexflow"} score={score} containerWidth={scoreWidth}
+                isDynamicRhythm={isDynamicRhythm} titleClass={styles.scoreTitle} />}
+            </ErrorBoundary>
+          </section>
+          {bookOpen && (
+            <ErrorBoundary component="book builder">
+              <BookBuilderPanel />
+            </ErrorBoundary>
+          )}
+        </div>
+      </main>
+    </ScoreToolsProvider>
   );
 }

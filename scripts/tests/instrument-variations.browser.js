@@ -78,8 +78,7 @@ const choose = (page, name) => page.$$eval(`${types} button`, (buttons, label) =
       await page.waitForSelector(vary);
     };
     const browse = async () => {
-      await clickText(page, "More"); await page.waitForSelector("[role=menu][aria-label='More variations']");
-      await clickText(page, "Browse variations");
+      await clickText(page, "Variations");
     };
     const save = async () => {
       await page.waitForSelector("button[aria-label=save]");
@@ -88,9 +87,9 @@ const choose = (page, name) => page.$$eval(`${types} button`, (buttons, label) =
       assert(snapshot); return structuredClone(snapshot);
     };
     await openTools();
-    assert.deepEqual(await page.$$eval(vary, buttons => buttons.map(button => button.getAttribute("aria-label") || button.textContent.trim())), [...options.slice(0, 5), "More"]);
+    assert.deepEqual(await page.$$eval(vary, buttons => buttons.map(button => button.getAttribute("aria-label") || button.textContent.trim())), [...options.slice(0, 4), "More"]);
     await clickText(page, "More"); await page.waitForSelector("[role=menu][aria-label='More variations']");
-    assert.deepEqual(await page.$$eval("[role=menuitem]", items => items.map(item => item.textContent.trim().replace(/^T\d/, ""))), [...options.slice(5), "Browse variations", "Find matching rhythms"], "Toms are under More");
+    assert.deepEqual(await page.$$eval("[role=menuitem]", items => items.map(item => item.getAttribute("aria-label"))), options.slice(4), "Other drum voices are under More");
     await page.keyboard.press("Escape"); await page.waitForFunction(() => !document.querySelector("[role=menu]"));
     await clickText(page, "Kick");
     const shuffled = await save(); assert.notDeepEqual(shuffled, kit);
