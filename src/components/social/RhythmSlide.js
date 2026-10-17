@@ -21,6 +21,7 @@ export default function RhythmSlide({ id, active, onLoaded, onChanged, onClose }
   const comments = useResource(isPublic && active && panel === "comments" ? `rhythms/${encodeURIComponent(id)}/comments?page=${commentPage}` : null, user?.id);
   const [text, setText] = useState(""), [busy, setBusy] = useState(""), [error, setError] = useState(""), [notice, setNotice] = useState(""), [editing, setEditing] = useState(false);
   const [variation, setVariation] = useState(null);
+  const [variationsExpanded, setVariationsExpanded] = useState(false);
   const revision = useRef(0), panelRef = useRef(null), commentsTrigger = useRef(null), variationsTrigger = useRef(null);
   useEffect(() => { if (rhythm) onLoaded?.(rhythm); }, [rhythm, onLoaded]);
   useEffect(() => {
@@ -29,6 +30,7 @@ export default function RhythmSlide({ id, active, onLoaded, onChanged, onClose }
     return () => { revision.current = current + 1; };
   }, [user?.id, id]);
   useEffect(() => { if (!active) { setPanel(null); setVariation(null); } }, [active]);
+  useEffect(() => { if (panel !== "variations") setVariationsExpanded(false); }, [panel]);
   useEffect(() => { if (panel) panelRef.current?.focus({ preventScroll: true }); }, [panel]);
   const recordings = rhythm?.media || [];
   const video = recordings.find((item) => item.status === "ready" && item.kind === "video");
@@ -37,8 +39,9 @@ export default function RhythmSlide({ id, active, onLoaded, onChanged, onClose }
   useMediaStatus(active ? rhythm : null, resource.refresh);
   const signIn = `/api/auth/google?returnTo=${encodeURIComponent(`/rhythms/${id}`)}`;
   function closePanel() {
-    (panel === "comments" ? commentsTrigger : variationsTrigger).current?.focus({ preventScroll: true });
     setPanel(null);
+    setVariationsExpanded(false);
+    requestAnimationFrame(() => (panel === "comments" ? commentsTrigger : variationsTrigger).current?.focus({ preventScroll: true }));
   }
   async function mutate(action, run) {
     const current = revision.current;
@@ -78,7 +81,7 @@ export default function RhythmSlide({ id, active, onLoaded, onChanged, onClose }
     {video?.thumbnailUrl && <div className={styles.ambience} style={{ backgroundImage: `url(${JSON.stringify(video.thumbnailUrl)})` }} aria-hidden="true" />}
     <Status error={resource.error} loading={!rhythm && !resource.error} retry={resource.refresh} />
     {rhythm && <>
-      <header className={styles.metadata}>
+      <header className={styles.metadata} inert={variationsExpanded ? "" : undefined}>
         <div className={styles.identity}>{rhythm.creator ? <Link href={`/u/${rhythm.creator.handle}`}><Avatar profile={rhythm.creator} /><span><strong>{rhythm.creator.displayName}</strong><small>@{rhythm.creator.handle}</small></span></Link> : <span>Your private composition</span>}</div>
         <h1 id={active ? "rhythm-post-title" : undefined}>{rhythm.name}</h1>
         <div className={styles.badges}><span data-instrument>{rhythm.instruments.map((instrument) => instrument === "drumset" ? "Drum set" : instrument).join(" / ")}</span><span>{rhythm.tempo} BPM</span>{!isPublic && <span><FiLock /> Private</span>}</div>
@@ -86,7 +89,7 @@ export default function RhythmSlide({ id, active, onLoaded, onChanged, onClose }
         <div className={styles.metadataActions}><button className={styles.openScore} onClick={practice} disabled={Boolean(busy)}>Open in score <FiArrowUpRight /></button>{rhythm.isOwner && <button onClick={() => setEditing(true)}>Edit details</button>}</div>
         {(notice || error || engagement.error) && <div className={styles.feedback}>{notice && <p role="status">{notice}</p>}{(error || engagement.error) && <p role="alert">{error || engagement.error}{error.includes("public profile") && <> <Link href="/profile">Set up your profile</Link></>}</p>}</div>}
       </header>
-      <section className={styles.content} aria-label="Exercise content">
+      <section className={styles.content} aria-label="Exercise content" inert={variationsExpanded ? "" : undefined}>
         {primaryRecording && <div className={styles.video}>{active ? <RhythmMedia key={primaryRecording.id} rhythmId={rhythm.id} media={primaryRecording} /> : video?.thumbnailUrl ? <img src={video.thumbnailUrl} alt="" /> : null}</div>}
         <div className={`${styles.notation} ${!primaryRecording ? styles.notationOnly : ""}`}>
           {variation && <div className={styles.previewLabel}><span>Variation preview</span><button onClick={() => setVariation(null)}>Original rhythm</button></div>}
@@ -96,16 +99,16 @@ export default function RhythmSlide({ id, active, onLoaded, onChanged, onClose }
         {recordings.some((item) => ["uploading", "processing"].includes(item.status)) && <p className={styles.mediaStatus} role="status">Your recording is processing.</p>}
         {recordings.some((item) => item.status === "failed") && <p className={styles.mediaStatus} role="status">A recording couldn&apos;t be processed.{rhythm.isOwner && " Choose a new file in Edit details."}</p>}
       </section>
-      <nav className={styles.rail} aria-label="Rhythm actions">
+      <nav className={styles.rail} aria-label="Rhythm actions" inert={variationsExpanded ? "" : undefined}>
         {isPublic && <>{user ? <button onClick={like} aria-label={engagement.data?.liked ? "Unlike rhythm" : "Like rhythm"} aria-pressed={Boolean(engagement.data?.liked)} disabled={Boolean(busy) || !engagement.data}><FiHeart /><span>{engagement.data?.likeCount ?? 0}</span></button> : <a href={signIn} aria-label="Sign in to like"><FiHeart /><span>{engagement.data?.likeCount ?? 0}</span></a>}
           <button ref={commentsTrigger} onClick={() => panel === "comments" ? closePanel() : setPanel("comments")} aria-label="Comments" aria-expanded={panel === "comments"} aria-controls={`rhythm-panel-${id}`}><FiMessageCircle /><span>{engagement.data?.commentCount ?? 0}</span></button></>}
         <button ref={variationsTrigger} onClick={() => panel === "variations" ? closePanel() : setPanel("variations")} aria-label="Variations" aria-expanded={panel === "variations"} aria-controls={`rhythm-panel-${id}`}><FiLayers /><span>Variations</span></button>
         {rhythm.isOwner ? <Link href="/profile" aria-label="In your profile" title="This rhythm is already in your profile"><FiBookmark /><span>In profile</span></Link> : user ? <button onClick={save} disabled={Boolean(busy)} aria-label={rhythm.saved ? "Unsave rhythm" : "Save rhythm"} aria-pressed={Boolean(rhythm.saved)}><FiBookmark /><span>{rhythm.saved ? "Saved" : "Save"}</span></button> : <a href={signIn} aria-label="Sign in to save"><FiBookmark /><span>Save</span></a>}
         <button onClick={share} disabled={Boolean(busy)} aria-label="Copy rhythm link"><FiSend /><span>Share</span></button>
       </nav>
-      {panel && <aside className={styles.panel} ref={panelRef} id={`rhythm-panel-${id}`} tabIndex={-1} aria-label={panel === "comments" ? "Comments panel" : "Variations panel"} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); closePanel(); } }}>
+      {panel && <aside className={`${styles.panel} ${variationsExpanded ? styles.panelExpanded : ""}`} ref={panelRef} id={`rhythm-panel-${id}`} tabIndex={-1} aria-label={panel === "comments" ? "Comments panel" : "Variations panel"} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); closePanel(); } }}>
         <div className={styles.panelHeader}><div>{isPublic && <button onClick={() => setPanel("comments")} aria-pressed={panel === "comments"}><FiMessageCircle /> Comments {engagement.data ? `(${engagement.data.commentCount})` : ""}</button>}<button onClick={() => setPanel("variations")} aria-pressed={panel === "variations"}><FiLayers /> Variations</button></div><button onClick={closePanel} aria-label="Close side panel"><FiX /></button></div>
-        {panel === "variations" ? <RhythmVariations rhythm={rhythm} user={user} signIn={signIn} onSelect={setVariation} onSaved={onChanged} /> : <>
+        {panel === "variations" ? <RhythmVariations rhythm={rhythm} user={user} signIn={signIn} onSelect={setVariation} onSaved={onChanged} expanded={variationsExpanded} onToggleExpand={() => setVariationsExpanded((value) => !value)} /> : <>
           <div className={styles.comments}>
             <Status error={comments.error} loading={!comments.data && !comments.error} retry={comments.refresh} />
             {comments.data?.items.map((entry) => <article className={styles.comment} key={entry.id}><Avatar profile={entry.author} /><div><div className={styles.commentByline}>{entry.author ? <Link href={`/u/${entry.author.handle}`}><strong>{entry.author.handle || entry.author.displayName}</strong></Link> : <strong>Community member</strong>}<time dateTime={entry.createdAt}>{new Date(entry.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</time></div><p>{entry.text}</p></div>{entry.canDelete && <button disabled={Boolean(busy)} onClick={() => removeComment(entry.id)} aria-label="Delete comment"><FiTrash2 /></button>}</article>)}

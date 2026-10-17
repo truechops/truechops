@@ -1,4 +1,14 @@
 .page, .socialDialog { --ink:#221e27; --accent:#b71836; --muted:#78717d; --paper:#faf7f8; color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+.notationSearchHeading { display:flex; justify-content:space-between; gap:16px; margin-bottom:24px; font-size:13px; }
+.notationSearchHeading a { display:flex; align-items:center; gap:7px; }
+.notationSearch { border:1px solid #eae4e8; border-radius:14px; padding:20px; margin-bottom:24px; }
+.notationSearch>div:first-child { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.notationSearch h1 { margin:0; font-size:25px; }
+.notationSearch p { color:var(--muted); font-size:13px; line-height:1.6; }
+.notationSearch button { display:flex; align-items:center; gap:8px; font-size:12px; }
+.notationSearch label { display:flex; align-items:center; gap:8px; margin-top:15px; font-size:13px; }
+.notationSearch input { accent-color:var(--accent); }
+.notationLink { display:inline-flex; align-items:center; gap:7px; font-size:12px; white-space:nowrap; padding:10px 12px; border:1px solid #eae4e8; border-radius:20px; }
 .page { max-width:1440px; margin:0 auto; padding:40px 32px 80px; min-height:calc(100vh - 56px); }
 .page *, .form * { box-sizing:border-box; }
 .page a { color:inherit; text-decoration:none; }

@@ -135,3 +135,7 @@
   .viewer .next button,.next { font-size:10px; }
 }
 @media(prefers-reduced-motion:reduce) { .feed { scroll-behavior:auto; } }
+.slide .panelExpanded { position:absolute; grid-column:auto; grid-row:auto; inset:0; width:auto; z-index:4; background:#101317; border:0; border-radius:0; }
+.viewer:has(.panelExpanded)>.close { visibility:hidden; }
+.frame:has(.panelExpanded) .next { visibility:hidden; }
+.viewer:has(.panelExpanded) .feed { overflow:hidden; }

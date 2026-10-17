@@ -7,7 +7,7 @@ Module._extensions[".js"] = (module,file) => {
   module._compile(babel.transformSync(fs.readFileSync(file,"utf8"),{presets:[["@babel/preset-env",{targets:{node:"current"}}]],babelrc:false,configFile:false}).code,file);
 };
 const { shuffleMeasure, canShuffleMeasure, insertCopiedMeasure } = require("../../src/services/measure-editing");
-const { rhythmVariations } = require("../../src/services/rhythm-variations");
+const { rhythmVariations, seededRandom, adjustMeasure, canAdjustMeasure } = require("../../src/services/rhythm-variations");
 const copy = (value) => structuredClone(value);
 const measure = () => ({timeSig:{num:2,type:4},parts:[{instrument:"snare",voices:[{
   notes:["ra","ld","rc","lf","r","l","ra",""].map((ornaments,i)=>({notes:i===7?[]:["C5"],duration:16,dots:0,ornaments,velocity:.5})),
@@ -28,6 +28,38 @@ test("variation previews are unique, change one measure, and leave the original 
   }
   assert.deepEqual(score,before);
   assert.deepEqual(rhythmVariations(score,"unknown"),[]);
+});
+
+test("missing ornaments are created, combinations stay legal, and successive variation pages keep generating",()=>{
+  const bare=measure();bare.parts[0].voices[0].notes.forEach(note=>note.ornaments="");
+  const source={parts:{snare:{enabled:true}},measures:[bare]}, before=copy(source);
+  for(const [category,letter] of [["diddles","d"],["cheese","c"],["flams","f"]]) {
+    assert(canAdjustMeasure(bare,category));
+    assert(adjustMeasure(bare,category,seededRandom(5)).parts[0].voices[0].notes.some(note=>note.ornaments.includes(letter)));
+    const filled=copy(bare);
+    filled.parts[0].voices[0].notes.filter(note=>note.notes.length).forEach(note=>note.ornaments=letter==="f"?"c":"f");
+    const replaced=adjustMeasure(filled,category,seededRandom(5)).parts[0].voices[0].notes;
+    assert(replaced.some(note=>note.ornaments.includes(letter)),"Selected ornaments can be introduced when all notes have another ornament");
+    assert(replaced.every(note=>[...note.ornaments].filter(mark=>"dcf".includes(mark)).length<=1));
+  }
+  const signatures=new Set();
+  for(let page=1;page<=30;page++) {
+    const variations=rhythmVariations(source,Object.keys(letters),12,seededRandom(page*7919));
+    assert.equal(variations.length,12);
+    for(const row of variations) {
+      const notes=row.measure.parts[0].voices[0].notes;
+      for(const letter of "adcf")assert(notes.some(note=>note.ornaments.includes(letter)));
+      notes.forEach((note,index)=>{
+        assert.equal(note.duration,bare.parts[0].voices[0].notes[index].duration);
+        assert.deepEqual(note.notes,bare.parts[0].voices[0].notes[index].notes);
+        assert([...note.ornaments].filter(letter=>"dcf".includes(letter)).length<=1);
+        if(!note.notes.length)assert.equal(note.ornaments,"");
+      });
+      signatures.add(row.key);
+    }
+  }
+  assert(signatures.size>300); assert.deepEqual(source,before);
+  assert.deepEqual(rhythmVariations(source,[]),[]);
 });
 
 for (const [category,target] of Object.entries(letters)) test(`${category}: shuffle preserves timing, rests, other markings, and counts`,()=>{

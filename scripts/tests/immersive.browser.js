@@ -74,6 +74,21 @@ async function fits(page) {
     await page.screenshot({path:`${folder}/comments-desktop.png`});
     await page.click(`${active} button[aria-label='Variations']`);
     await page.waitForSelector("button[aria-label='Preview stickings variation 1'] .vf-stavenote");
+    const firstNotation=await page.$("button[aria-label='Preview stickings variation 1'] svg");
+    await page.$eval('[data-variation-list]',el=>el.scrollTop=30);
+    await page.waitForFunction(()=>document.querySelector('[data-variation-list]').scrollTop===30);
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    assert(await firstNotation.evaluate(el=>el.isConnected),"Scrolling reuses existing notation instead of redrawing it");
+    const initialCount=await page.$eval("[data-variation-list]",el=>Number(el.dataset.generatedCount));
+    for(let i=0;i<5;i++) {
+      const before=await page.$eval("[data-variation-list]",el=>Number(el.dataset.generatedCount));
+      await page.$eval("[data-variation-list]",el=>el.scrollTop=el.scrollHeight);
+      await page.waitForFunction(count=>Number(document.querySelector('[data-variation-list]').dataset.generatedCount)>count,{},before);
+    }
+    assert(await page.$eval("[data-variation-list]",(el,count)=>Number(el.dataset.generatedCount)>=count+60,initialCount),"Scrolling keeps creating variations");
+    assert((await page.$$('[data-variation-number]')).length<20,"Long browsing sessions keep the rendered notation bounded");
+    await page.$eval("[data-variation-list]",el=>el.scrollTop=0);
+    await page.waitForSelector("button[aria-label='Preview stickings variation 1']");
     await page.click("button[aria-label='Preview stickings variation 1']");
     await page.waitForFunction(()=>document.querySelector('[aria-label="Exercise content"]').innerText.includes("Variation preview"));
     await page.click("button[aria-label='Play variation 1']");
@@ -85,6 +100,20 @@ async function fits(page) {
     await page.$eval("[aria-label='stickings variations']",el=>el.scrollTop=400);
     assert.equal(await page.$eval("[aria-label='Rhythms and similar rhythms']",el=>el.scrollTop),0,"Variations scroll independently");
     await page.screenshot({path:`${folder}/variations-desktop.png`});
+    await page.click("button[aria-label='Maximize variations']");
+    await page.waitForFunction(()=>{const b=document.querySelector("aside[aria-label='Variations panel']").getBoundingClientRect();return b.width>=innerWidth-1&&b.height>=innerHeight-1;});
+    await page.$eval("[data-variation-list]",el=>el.scrollTop=0);
+    await page.waitForFunction(()=>{const cards=[...document.querySelectorAll('[data-variation-number]')];return cards.length>1&&Math.abs(cards[0].getBoundingClientRect().top-cards[1].getBoundingClientRect().top)<2&&cards[1].getBoundingClientRect().left>cards[0].getBoundingClientRect().left;});
+    await page.screenshot({path:`${folder}/variations-fullscreen-grid.png`});
+    for(const name of ["Diddles","Cheese","Flams"]) await page.$$eval('[aria-label="Variation types"] button',(buttons,label)=>buttons.find(button=>button.textContent===label).click(),name);
+    assert.equal(await page.$$eval('[aria-label="Variation types"] [aria-pressed=true]',els=>els.length),4);
+    await page.waitForSelector("button[aria-label='Save variation 1']");
+    await page.click("button[aria-label='Save variation 1']");
+    await page.waitForFunction(()=>document.querySelector("button[aria-label='Variation 1 saved']"));
+    const mixed=creations.at(-1).score.measures[0].parts[0].voices[0].notes;
+    for(const letter of "dcf") assert(mixed.some(note=>note.ornaments.includes(letter)),"Each selected ornament is present");
+    await page.keyboard.press("Escape");
+    await page.waitForSelector("button[aria-label='Maximize variations']");
     await page.keyboard.press("Escape");
     await page.waitForFunction(()=>!document.querySelector("aside[aria-label$='panel']"));
     assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute("aria-label")),"Variations");
@@ -97,6 +126,16 @@ async function fits(page) {
       await page.waitForSelector("aside[aria-label='Variations panel']");
       assert(await page.$eval("aside",el=>{const b=el.getBoundingClientRect();return b.right<=innerWidth&&b.left>=0&&b.bottom<=innerHeight&&b.width>=Math.min(290,innerWidth-24);}),"Side panel stays readable and fits viewport");
       await page.screenshot({path:`${folder}/variations-${viewport.width}.png`});
+      if([900,390].includes(viewport.width)) {
+        await page.click("button[aria-label='Maximize variations']");
+        await page.waitForFunction(()=>{const b=document.querySelector("aside[aria-label='Variations panel']").getBoundingClientRect();return b.width>=innerWidth-1&&b.height>=innerHeight-1;});
+        await page.waitForFunction(columns=>{const cards=[...document.querySelectorAll('[data-variation-number]')],top=cards[0]?.getBoundingClientRect().top;return cards.filter(card=>Math.abs(card.getBoundingClientRect().top-top)<2).length===columns;},{},viewport.width===900?2:1);
+        assert(await page.$eval('[data-variation-browser]',el=>el.scrollWidth<=el.clientWidth+1),"Full-screen variation controls fit smaller screens");
+        const before=await page.$eval('[data-variation-list]',el=>Number(el.dataset.generatedCount));
+        await page.$eval('[data-variation-list]',el=>el.scrollTop=el.scrollHeight);
+        await page.waitForFunction(count=>Number(document.querySelector('[data-variation-list]').dataset.generatedCount)>count,{},before);
+        await page.screenshot({path:`${folder}/variations-fullscreen-${viewport.width}.png`});
+      }
       await page.click("button[aria-label='Close side panel']");
       await page.waitForFunction(()=>!document.querySelector("aside[aria-label$='panel']"));
     }

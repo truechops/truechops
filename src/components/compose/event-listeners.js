@@ -10,6 +10,7 @@ export default function addComposeEventListeners(dispatch) {
   }
 
   function handleKeyEvents(event) {
+    if (document.getElementById("measure-variations-title")) return;
     if (event.target.closest?.("input,textarea,select,[contenteditable=true]")) return;
     if (event.ctrlKey || event.metaKey) {
       if (!score.modalShown && ["z","y"].includes(event.key.toLowerCase())) {

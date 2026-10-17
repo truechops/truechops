@@ -7,11 +7,17 @@ import RhythmCard, { PersonCard } from "./RhythmCard";
 import { useRhythmModal } from "./RhythmPost";
 import { Shell, Status, Empty, Pagination, useAccount, useResource } from "./shared";
 import styles from "./social.module.css";
+import NotationSearch from "./NotationSearch";
 
 const scalar = (value) => typeof value === "string" ? value : "";
 const categories = [["all", "All"], ["rhythms", "Rhythms"], ["users", "People"]];
 
 export default function Discover() {
+  const router = useRouter();
+  return router.query.notation === "1" ? <NotationSearch /> : <TextDiscover />;
+}
+
+function TextDiscover() {
   const router = useRouter(), { user, loaded } = useAccount();
   const q = scalar(router.query.q);
   const type = ["rhythms", "users"].includes(router.query.type) ? router.query.type : "all";
@@ -84,6 +90,7 @@ export default function Discover() {
         {[["","All instruments"],...INSTRUMENTS.map((value) => [value,value === "drumset" ? "Drum Set" : value.charAt(0).toUpperCase()+value.slice(1)])].map(([value,label]) =>
           <button key={value} aria-pressed={instrument === value} onClick={() => navigate({ instrument:value, q:input.trim() })}>{label}</button>)}
       </div>
+      <Link className={styles.notationLink} href="/discover?notation=1&type=rhythms"><FiSearch aria-hidden="true" /> Search by notation</Link>
     </div>
 
     <div id="search-results" className={`${styles.exploreResults} ${pending ? styles.resultsPending : ""}`} role="tabpanel"

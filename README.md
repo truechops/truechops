@@ -37,11 +37,15 @@ Feed cards show only exercise content. Opening a card uses a shareable `?rhythm=
 immersive viewer over the feed; Escape/Back restores the feed and keyboard focus.
 The viewer places creator and rhythm metadata at the top left, video and notation
 in the center, and comments, variations, and save controls on the right. Comments
-and variations open an independently scrolling side panel; Escape closes that
-panel first. Variations shuffle one measure's stickings, accents, diddles, cheese,
-or flams, preserving timing and other markings. Preview or play a variation, save
-it privately to your profile, or open it in Score. Categories without different
-markings show an empty state instead of inventing variations.
+and variations open an independently scrolling side panel. Select any combination
+of stickings, accents, diddles, cheese, and flams to generate variations continuously
+as you scroll. Missing ornaments are introduced; incompatible ornaments occupy
+separate notes. Timing and rests stay unchanged. Preview or play a variation,
+save it privately to your profile, or open it in Score. Maximize fills the screen
+with a responsive grid of up to three variations per row. Escape restores the
+panel before closing it. Only visible rows are rendered and generation pages are
+cached in bounded memory; small patterns may recur because their possibilities
+are finite.
 Scroll the viewer vertically for similar public rhythms, matched by instrument
 and ranked by tags, meter, and tempo among the latest 200 candidates. Offscreen
 players are removed to stop playback. Its Open in score action copies the current
@@ -73,8 +77,21 @@ floating toolbar. The icon is also available by keyboard and stays visible on
 touchscreens. Copy captures the full
 measure; Paste inserts it to the left or right of the selected measure. Duplicate
 inserts a copy to the right. Adjust offers Shuffle for stickings, accents, diddles,
-cheese, and flams. Shuffles preserve timing, rests, and unrelated markings, and
-are disabled when no different arrangement exists. All edits support Undo/Redo.
+cheese, and flams. Missing diddles, cheese, and flams are introduced. Existing
+markings are shuffled while preserving timing and rests. Adjust also offers
+Browse variations: preview, play, combine categories, or maximize to a full-screen
+grid, then choose Use variation to apply to that measure. All edits support Undo/Redo.
+
+Find matching rhythms in the measure's Adjust menu searches public rhythms by
+that measure's actual notation. The search icon in Score's toolbar uses the whole
+score; Search by notation on the community page opens the same flow. The query
+matches note lengths, dots, rests, meter, and tuplets, including contiguous passages
+inside longer rhythms. Optionally require matching stickings and ornaments.
+Tempo, pitch, title, and creator do not affect a match. Multiple parts and voices
+retain their written order. Result cards preview the matching passage; opening
+one shows the complete rhythm. The notation snapshot stays in tab storage, with
+Use current score available to refresh it. This read-only search uses the existing
+scores directly and requires no new search index or data migration.
 
 Configure `MONGODB_URI`, `MONGODB_DB` (defaults to `drumtoolz`) and `AUTH_SECRET`
 in `.env.local` or deployment secrets. Do not commit connection credentials.
@@ -92,7 +109,7 @@ ordinary unique/lookup indexes on first community API use. The database user
 needs collection/index creation privileges and access to MongoDB Search index
 management commands. Index provisioning never uses the legacy hardcoded URI.
 
-Nonempty searches use MongoDB Search `$search`, combining autocomplete and text
+Nonempty text searches use MongoDB Search `$search`, combining autocomplete and text
 relevance with visibility/instrument/difficulty filters. Source-document access
 checks run after search to account for index update lag. There is no Algolia or
 regex fallback. With no query, users can browse recently added public content;
@@ -104,10 +121,14 @@ Validation:
 
 ```sh
 npm run test:social
+npm run test:measures
 npm run test:book-practice
 node node_modules/next/dist/bin/next build
 # With a local Next server running (browser API fixtures; no database writes):
 node scripts/tests/social.browser.js http://127.0.0.1:3104
+node scripts/tests/immersive.browser.js http://127.0.0.1:3104
+node scripts/tests/measure-editing.browser.js http://127.0.0.1:3104
+node scripts/tests/notation-search.browser.js http://127.0.0.1:3104
 node scripts/tests/book-practice.browser.js http://127.0.0.1:3104
 ```
 

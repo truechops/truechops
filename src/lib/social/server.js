@@ -6,6 +6,7 @@ import { publicRhythmFilter, searchPipeline } from "./search";
 import { SEARCH_INDEXES } from "./config";
 import { createEngagementService } from "./engagement";
 import { createMediaService } from "./media";
+import { notationShape, notationProjection, notationMatch } from "../../services/notation-search";
 
 export function idFilter(id) {
   const value = string(id, 80, "rhythm ID", true);
@@ -58,6 +59,26 @@ export function createSocialService(db, { now = () => new Date(), ensureSearch =
       const rows = await (options.type === "users" ? profiles : rhythms).aggregate(searchPipeline(options), { maxTimeMS: 5000 }).toArray();
       const page = pageResult(rows,options.page,options.limit);
       return { ...page, type: options.type, items: options.type === "users" ? page.items.map(publicProfile) : await cards(page.items,user?.id) };
+    },
+    async searchNotation(user, body) {
+      const { score } = validateScore(body.score), { page, limit, instrument } = searchOptions({ page: body.page, instrument: body.instrument });
+      const includeMarkings = body.includeMarkings === true;
+      const shape = notationShape(score, includeMarkings);
+      const rows = await rhythms.aggregate([
+        { $match: publicRhythmFilter(instrument ? { instruments: instrument } : {}) },
+        { $set: { notationShape: notationProjection(includeMarkings) } },
+        { $match: { $expr: notationMatch(shape) } },
+        { $sort: { updatedAt: -1, _id: -1 } },
+        { $skip: (page - 1) * limit }, { $limit: limit + 1 },
+      ], { maxTimeMS: 5000 }).toArray();
+      const result = pageResult(rows, page, limit);
+      const previews = await cards(result.items, user?.id);
+      const target = JSON.stringify(shape);
+      return { ...result, type: "rhythms", items: previews.map((card, index) => {
+        const row = result.items[index];
+        const matchMeasureIndex = row.notationShape.findIndex((_, start) => JSON.stringify(row.notationShape.slice(start, start + shape.length)) === target);
+        return { ...card, matchMeasureIndex, score: { ...card.score, measures: row.score.measures.slice(matchMeasureIndex, matchMeasureIndex + Math.min(2, shape.length)) } };
+      }) };
     },
     async myProfile(user) {
       const userId = requireUser(user);
@@ -197,6 +218,7 @@ export function socialHandler({ service = productionSocialService, session = get
     const route = req.query.route || [], [area,id,action,commentId,mediaAction] = route;
     const allowed = route.length === 1 ? { search: ["GET"], profile: ["GET","PUT"], library: ["GET"], rhythms: ["POST"] }[area]
       : route.length === 2 && area === "profiles" ? ["GET"]
+      : route.length === 2 && area === "search" && id === "notation" ? ["POST"]
       : route.length === 2 && area === "rhythms" ? ["GET","PATCH","DELETE"]
       : route.length === 3 && area === "rhythms" ? { save: ["PUT","DELETE"], like: ["PUT","DELETE"], comments: ["GET","POST"], engagement: ["GET"], similar: ["GET"], media: ["POST"] }[action]
       : route.length === 4 && area === "rhythms" && action === "comments" ? ["DELETE"]
@@ -206,14 +228,15 @@ export function socialHandler({ service = productionSocialService, session = get
     if (!allowed.includes(req.method)) { res.setHeader("Allow",allowed.join(", ")); return res.status(405).json({ error: "Method not allowed." }); }
     try {
       const user = session(req), method = req.method;
-      if (method !== "GET") { checkOrigin(req); requireUser(user); }
+      const notationSearch = area === "search" && id === "notation";
+      if (method !== "GET") { checkOrigin(req); if (!notationSearch) requireUser(user); }
       if (area === "library" || area === "profile") requireUser(user);
       // Next parses bodyless requests without a JSON content type as an empty string.
       const body = req.body == null || req.body === "" ? {} : req.body;
       if (typeof body !== "object" || Array.isArray(body)) fail(400,"Invalid request.");
       const api = await service();
       let result;
-      if (area === "search") result = await api.search(user,req.query);
+      if (area === "search") result = notationSearch ? await api.searchNotation(user,body) : await api.search(user,req.query);
       if (area === "profile") result = method === "GET" ? await api.myProfile(user) : await api.saveProfile(user,body);
       if (area === "profiles") result = await api.profile(user,id,req.query);
       if (area === "library") result = await api.library(user,req.query);
@@ -233,7 +256,7 @@ export function socialHandler({ service = productionSocialService, session = get
         else if (method === "PATCH") result = await api.updateRhythm(user,id,body);
         else result = await api.removeRhythm(user,id);
       }
-      return res.status(method === "POST" ? 201 : 200).json(result);
+      return res.status(method === "POST" && !notationSearch ? 201 : 200).json(result);
     } catch (error) {
       return res.status(error instanceof SocialError ? error.status : 503).json({ error: error instanceof SocialError ? error.message : "Community is temporarily unavailable. Please try again shortly." });
     }

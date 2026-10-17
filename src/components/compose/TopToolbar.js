@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState, useCallback } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { ActionCreators } from "redux-undo";
 import IconButton from "@mui/material/IconButton";
 import { update as updateToneJs, setSamplers } from "../../lib/tone";
@@ -15,8 +15,10 @@ import { copyToClipboard } from "../../helpers/browser";
 import _ from "lodash";
 import { score } from '../../consts/score';
 
-import { FaUndo, FaRedo, FaPlay, FaStop, FaSave, FaLink, FaPlus, FaTimes, FaDownload } from "react-icons/fa";
-import { FiCopy } from "react-icons/fi";
+import { FaUndo, FaRedo, FaPlay, FaStop, FaSave, FaLink, FaPlus, FaTimes } from "react-icons/fa";
+import { FiCopy, FiSearch } from "react-icons/fi";
+import { useRouter } from "next/router";
+import { openNotationSearch } from "../../services/notation-search";
 import { GiMetronome } from "react-icons/gi";
 import RhythmDialog from "../social/RhythmDialog";
 import Link from "next/link";
@@ -33,6 +35,7 @@ import dynamic from "next/dynamic";
 const DynamicComposeSidebar = dynamic(() => import("./Sidebar"));
 
 export function TopToolbar(props) {
+  const router = useRouter(), [searchError, setSearchError] = useState("");
   const {
     setSampler,
     snareSampler,
@@ -57,18 +60,6 @@ export function TopToolbar(props) {
   const currentUser = useSelector((state) => state.realm.currentUser);
   const scoreData = useSelector((state) => state.score.present);
 
-  function downloadScoreJson() {
-    const { score, name, tempo } = scoreData;
-    const filename = (name || "score") + ".json";
-    const json = JSON.stringify({ name, tempo, score }, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
   const [logInToSaveRhythmModalOpen, setLogInToSaveRhythmModalOpen] =
     useState(false);
   const [logInToAddLinkModalOpen, setLogInToAddLinkModalOpen] = useState(false);
@@ -293,6 +284,7 @@ export function TopToolbar(props) {
         <IconButton color="inherit" aria-label="save" onClick={onSave}>
           <FaSave size={iconSize} />
         </IconButton>
+        <IconButton color="inherit" aria-label="Find rhythms matching this score" title="Find rhythms matching this score" onClick={async () => { try { await openNotationSearch(router, scoreData.score, scoreData.name || "Your score"); } catch { setSearchError("Couldn't open notation search. Please try again."); } }}><FiSearch size={iconSize} /></IconButton>
         <IconButton color="inherit" aria-label="link" onClick={onAddLink}>
           <FaLink size={iconSize} />
         </IconButton>
@@ -308,6 +300,7 @@ export function TopToolbar(props) {
         onClose={() => setSaveRhythmModalOpen(false)}
         onSaved={() => { setSaveRhythmModalOpen(false); setSavedNotice(true); }}
       />}
+      {searchError && <p role="alert" style={{ textAlign: "center" }}>{searchError}</p>}
       {savedNotice && <p role="status" style={{ textAlign: "center", fontSize: 13 }}>Saved to your profile. <Link href="/profile">View your rhythms</Link> <button onClick={() => setSavedNotice(false)} aria-label="Dismiss saved message">Dismiss</button></p>}
 
       <Dialog

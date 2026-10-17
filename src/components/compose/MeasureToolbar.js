@@ -1,17 +1,21 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useDispatch } from "react-redux";
+import { useRouter } from "next/router";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
-import { FiCopy, FiClipboard, FiLayers, FiSliders, FiChevronDown, FiChevronRight, FiArrowLeft, FiArrowRight, FiShuffle, FiX } from "react-icons/fi";
+import { FiCopy, FiClipboard, FiLayers, FiSliders, FiChevronDown, FiChevronRight, FiArrowLeft, FiArrowRight, FiShuffle, FiX, FiSearch } from "react-icons/fi";
 import { scoreActions } from "../../store/score";
-import { canShuffleMeasure } from "../../services/measure-editing";
+import { canAdjustMeasure } from "../../services/rhythm-variations";
+import { openNotationSearch } from "../../services/notation-search";
+import MeasureVariationDialog from "./MeasureVariationDialog";
 import styles from "./measure-toolbar.module.css";
 
 const options = [["stickings","Stickings","R L"],["accents","Accents",">"],["diddles","Diddles","≋"],["cheese","Cheese","♬"],["flams","Flams","♮"]];
 
 export default function MeasureToolbar({ scoreId, score, selectedIndex, open, onClose }) {
   const dispatch = useDispatch();
+  const router = useRouter(), [browse, setBrowse] = useState(null);
   const [clipboard,setClipboard] = useState(null), [notice,setNotice] = useState("");
   const [menu,setMenu] = useState(null), [category,setCategory] = useState("");
   const [position,setPosition] = useState(null);
@@ -47,18 +51,18 @@ export default function MeasureToolbar({ scoreId, score, selectedIndex, open, on
   useEffect(() => {
     if (!measure || !open) return;
     function dismiss(event) {
-      if (event.key === "Escape" && !menu) {
+      if (event.key === "Escape" && !menu && !browse) {
         onClose();
         document.getElementById(scoreId)?.querySelector(`[data-measure-index="${selectedIndex}"] [data-measure-trigger]`)?.focus();
       }
     }
     function clickAway(event) {
-      if (!event.composedPath().some((element) => element.matches?.("[data-measure-toolbar],[data-measure-trigger],.MuiPopover-root"))) onClose();
+      if (!browse && !event.composedPath().some((element) => element.matches?.("[data-measure-toolbar],[data-measure-trigger],.MuiPopover-root,.MuiDialog-root"))) onClose();
     }
     window.addEventListener("keydown",dismiss);
     window.addEventListener("click",clickAway);
     return () => { window.removeEventListener("keydown",dismiss); window.removeEventListener("click",clickAway); };
-  },[measure,menu,open,onClose,scoreId,selectedIndex]);
+  },[measure,menu,open,onClose,scoreId,selectedIndex,browse]);
 
   function copy() { setClipboard(JSON.parse(JSON.stringify(measure))); setNotice("Measure copied"); }
   function paste(side, source = clipboard) {
@@ -87,9 +91,13 @@ export default function MeasureToolbar({ scoreId, score, selectedIndex, open, on
         <MenuItem key="right" onClick={() => paste("right")}><FiArrowRight />Paste to the right</MenuItem>
       ] : category ? [
         <MenuItem key="back" onClick={() => setCategory("")}><FiArrowLeft />{label}</MenuItem>,
-        <MenuItem key="shuffle" disabled={!canShuffleMeasure(measure,category)} onClick={() => { dispatch(scoreActions.shuffleSelectedMeasure(category)); closeMenu(); setNotice(`${label} shuffled`); }}><FiShuffle />Shuffle</MenuItem>,
-        !canShuffleMeasure(measure,category) && <li key="hint" className={styles.menuHint}>No different pattern to shuffle. Add or vary these markings first.</li>
-      ] : options.map(([value,name,symbol]) => <MenuItem key={value} aria-label={name} onClick={() => setCategory(value)} aria-haspopup="menu"><span className={styles.categoryIcon} data-category={value} aria-hidden="true">{symbol}</span>{name}<FiChevronRight className={styles.chevron} /></MenuItem>)}
+        <MenuItem key="shuffle" disabled={!canAdjustMeasure(measure,category)} onClick={() => { dispatch(scoreActions.shuffleSelectedMeasure(category)); closeMenu(); setNotice(`${label} adjusted`); }}><FiShuffle />Shuffle</MenuItem>,
+        !canAdjustMeasure(measure,category) && <li key="hint" className={styles.menuHint}>No available notes for this adjustment.</li>
+      ] : [...options.map(([value,name,symbol]) => <MenuItem key={value} aria-label={name} onClick={() => setCategory(value)} aria-haspopup="menu"><span className={styles.categoryIcon} data-category={value} aria-hidden="true">{symbol}</span>{name}<FiChevronRight className={styles.chevron} /></MenuItem>),
+        <MenuItem key="browse" aria-label="Browse variations" onClick={() => { setBrowse({ score, measure, index: selectedIndex }); closeMenu(); }}><FiLayers />Browse variations</MenuItem>,
+        <MenuItem key="search" aria-label="Find matching rhythms" onClick={async () => { closeMenu(); try { await openNotationSearch(router, { ...score, measures: [measure] }, `Measure ${selectedIndex + 1}`); } catch { setNotice("Couldn't open notation search. Please try again."); } }}><FiSearch />Find matching rhythms</MenuItem>,
+      ]}
     </Menu>
+    {browse && <MeasureVariationDialog source={browse} onClose={() => { setBrowse(null); requestAnimationFrame(() => toolbar.current?.querySelector("button")?.focus()); }} />}
   </>,document.body);
 }

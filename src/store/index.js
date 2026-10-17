@@ -10,7 +10,7 @@ const includeActions = [scoreActions.toggleAccent, scoreActions.toggleFlam, scor
                        scoreActions.addMeasure, scoreActions.deleteMeasure, scoreActions.modifyNote,
                        scoreActions.updateScore, scoreActions.togglePartEnabled, scoreActions.deletePart, 
                        scoreActions.addPart, scoreActions.mutateNotes, scoreActions.updateTimeSig, scoreActions.clearScore,
-                       scoreActions.shuffleSelectedMeasure, scoreActions.pasteMeasure
+                       scoreActions.shuffleSelectedMeasure, scoreActions.pasteMeasure, scoreActions.replaceMeasure
                     ].map(action => action.type);
 
 const store = configureStore({

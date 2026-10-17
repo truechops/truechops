@@ -15,7 +15,8 @@ import { addMeasure as addMeasureService,
          deleteMeasure as deleteMeasureService,
         updateTimeSig as updateTimeSigService } from '../services/measure-service';
 import { getEmptyMeasure } from "../helpers/score";
-import { shuffleMeasure, insertCopiedMeasure } from "../services/measure-editing";
+import { insertCopiedMeasure } from "../services/measure-editing";
+import { adjustMeasure } from "../services/rhythm-variations";
 import _ from "lodash";
 import { createSelector } from "reselect";
 import { start as startToneJs, stop as stopToneJs } from "../lib/tone";
@@ -27,7 +28,6 @@ import {
   NOTE_CONFIG,
 } from "../consts/score";
 import {
-  INSTRUMENT_NOTE_TO_VOICE_MAP,
   DEFAULT_MUTATION,
   DEFAULT_TIME_SIG,
 } from "../consts/score";
@@ -230,7 +230,12 @@ const scoreSlice = createSlice({
     shuffleSelectedMeasure(state, action) {
       const index = state.selectedNoteIndex?.measureIndex;
       if (!state.score.measures[index]) return;
-      state.score.measures[index] = shuffleMeasure(state.score.measures[index], action.payload);
+      state.score.measures[index] = adjustMeasure(state.score.measures[index], action.payload);
+    },
+    replaceMeasure(state, action) {
+      const { index, measure, expected } = action.payload;
+      if (!measure || !_.isEqual(state.score.measures[index], expected)) return;
+      state.score.measures[index] = _.cloneDeep(measure);
     },
     pasteMeasure(state, action) {
       insertCopiedMeasure(state, action.payload.measure, state.selectedNoteIndex?.measureIndex, action.payload.side);

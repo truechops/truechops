@@ -20,6 +20,8 @@ const { webhookHandler, config:webhookConfig } = require("../../pages/api/media/
 const { createSessionCookie } = require("../../src/lib/auth/session");
 const { config: socialApiConfig } = require("../../pages/api/social/[...route]");
 const defaultScore = require("../../src/consts/default-score").default;
+const evaluate = require("./mongo-expressions");
+const { notationShape, notationProjection } = require("../../src/services/notation-search");
 const clone = (v) => JSON.parse(JSON.stringify(v));
 const at = (row,key) => key.split(".").reduce((value,part)=>value?.[part],row);
 function assign(row,key,value) { const parts=key.split(".");const last=parts.pop();let parent=row;for(const part of parts)parent=parent[part]||(parent[part]={});parent[last]=value; }
@@ -27,6 +29,7 @@ function unset(row,key) { const parts=key.split(".");const last=parts.pop();cons
 function equal(a,b) { return String(a) === String(b); }
 function matches(row,query) {
   return Object.entries(query).every(([key,value]) => {
+    if (key === "$expr") return evaluate(value, row);
     if (key === "$or") return value.some((q) => matches(row,q));
     if (key === "$and") return value.every((q) => matches(row,q));
     if (value && typeof value === "object" && "$in" in value) return value.$in.some((v) => (Array.isArray(at(row,key)) ? at(row,key) : [at(row,key)]).some((item) => equal(item,v)));
@@ -69,6 +72,7 @@ function database() {
           traces.push(pipeline);
           let result=clone(rows);
           for(const stage of pipeline) {
+            if(stage.$set) result=result.map(row=>({...row,...Object.fromEntries(Object.entries(stage.$set).map(([key,expression])=>[key,evaluate(expression,row)]))}));
             // Simulate a stale search index that still returns all documents.
             if(stage.$match) result=result.filter((r)=>matches(r,stage.$match));
             if(stage.$sort) { const spec=stage.$sort;result.sort((a,b)=>{for(const [k,d] of Object.entries(spec)) if(typeof d==='number' && a[k]!==b[k])return (a[k]<b[k]?-1:1)*d;return 0;}); }
@@ -160,6 +164,33 @@ test("private scores stay private across detail, profile, search and another acc
   assert(!JSON.stringify(await api.search(visitor,{q:"rhythm"})).includes(owner.id));
   assert.equal((await api.getRhythm(owner,privateRhythm.id)).rhythm.score.measures.length,composition.score.measures.length);
 });
+test("notation search matches the written score inside longer rhythms, with optional markings and private-score protection",async(t)=>{
+  const {api,publicRhythm,privateRhythm}=await fixture();
+  const pattern={...clone(composition.score),measures:[clone(composition.score.measures[0])]};
+  const different=clone(pattern.measures[0]); different.parts[0].voices[0].notes[0].notes=[];
+  const longer=(await api.createRhythm(owner,{...composition,name:"Unrelated title",score:{...pattern,measures:[different,different,different,...pattern.measures]},visibility:"public"})).rhythm;
+  const plain=clone(pattern);plain.measures[0].parts[0].voices[0].notes.forEach(note=>note.ornaments="");
+  const unmarked=(await api.createRhythm(owner,{...composition,name:"No markings",score:plain,visibility:"public"})).rhythm;
+  const wrong=(await api.createRhythm(owner,{...composition,name:publicRhythm.name,score:{...pattern,measures:[different]},visibility:"public"})).rhythm;
+  for(const includeMarkings of [false,true])assert.deepEqual(evaluate(notationProjection(includeMarkings),{score:pattern}),notationShape(pattern,includeMarkings));
+  const broad=await api.searchNotation(null,{score:pattern});
+  assert(broad.items.some(row=>row.id===longer.id));assert(broad.items.some(row=>row.id===unmarked.id));
+  const matchingCard=broad.items.find(row=>row.id===longer.id);
+  assert.equal(matchingCard.matchMeasureIndex,3);
+  assert.deepEqual(notationShape(matchingCard.score),notationShape(pattern),"Results preview the actual matching passage, even beyond the first two measures");
+  assert(!broad.items.some(row=>[privateRhythm.id,wrong.id].includes(row.id)));
+  const exact=await api.searchNotation(visitor,{score:pattern,includeMarkings:true});
+  assert(exact.items.some(row=>row.id===publicRhythm.id));assert(!exact.items.some(row=>row.id===unmarked.id));
+  assert.equal((await api.searchNotation(null,{score:pattern,instrument:"bass"})).items.length,0);
+  await api.updateRhythm(owner,longer.id,{visibility:"private"});
+  assert(!(await api.searchNotation(null,{score:pattern})).items.some(row=>row.id===longer.id));
+  await rejects(api.searchNotation(null,{score:{measures:[]}}),400);
+  const request=await httpApi(t,async()=>api);
+  const response=await request("search/notation",{user:null,method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({score:pattern})});
+  assert.equal(response.status,200);assert(response.body.items.some(row=>row.id===publicRhythm.id));
+  assert.equal((await request("search/notation",{user:null,method:"GET"})).status,405);
+});
+
 test("similar rhythms rank matching public scores, paginate without repeats, and respect privacy",async()=>{
   const {api,db,publicRhythm,privateRhythm}=await fixture();
   const close=(await api.createRhythm(owner,{...composition,name:"Similar triplets",visibility:"public",tags:["triplets"],tempo:92})).rhythm;

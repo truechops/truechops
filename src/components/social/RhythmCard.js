@@ -38,15 +38,16 @@ export default function RhythmCard({ rhythm, onOpen }) {
   const [thumbnailFailed,setThumbnailFailed] = useState(false);
   useEffect(() => setThumbnailFailed(false),[video?.thumbnailUrl]);
   const previewScore = useMemo(() => ({ ...rhythm.score, measures: rhythm.score.measures.slice(0,1) }),[rhythm.score]);
+  const notationLabel = `${rhythm.matchMeasureIndex != null ? "Matching notation from" : "First measure of"} ${rhythm.name}`;
   return <article className={styles.exerciseCard}>
     <Link href={`/rhythms/${rhythm.id}`} onClick={onOpen ? (event) => onOpen(event,rhythm) : undefined} className={styles.exerciseLink} aria-label={`Open ${rhythm.name}`}>
       <div className={`${styles.exercisePreview} ${video ? styles.videoPreview : ""}`}>
         {video ? video.thumbnailUrl && !thumbnailFailed ? <img src={video.thumbnailUrl} alt={`Video demonstration of ${rhythm.name}`} loading="lazy" onError={() => setThumbnailFailed(true)} /> : <span className={styles.videoPlaceholder}>Video demonstration</span> :
-          <div role="img" aria-label={`First measure of ${rhythm.name}`}><RhythmPreview score={previewScore} minWidth={260} fit compact /></div>}
+          <div role="img" aria-label={notationLabel}><RhythmPreview score={previewScore} minWidth={260} fit compact /></div>}
         {video ? <span className={styles.mediaBadge}><FiPlay aria-hidden="true" /><span className={styles.srOnly}>Video</span></span> :
           audio && <span className={styles.mediaBadge}><FiHeadphones aria-hidden="true" /><span className={styles.srOnly}>Audio recording</span></span>}
       </div>
-      {video && <div className={styles.cardNotation} role="img" aria-label={`First measure of ${rhythm.name}`}><RhythmPreview score={previewScore} minWidth={260} fit compact maxHeight="86px" /></div>}
+      {video && <div className={styles.cardNotation} role="img" aria-label={notationLabel}><RhythmPreview score={previewScore} minWidth={260} fit compact maxHeight="86px" /></div>}
       <div className={styles.exerciseCaption}><h2>{rhythm.name}</h2>
         <div className={styles.exerciseBadges}><span data-instrument>{rhythm.instruments.map((name) => name === "drumset" ? "Drum set" : name).join(" / ")}</span>
           {rhythm.visibility === "private" && <span><FiLock aria-hidden="true" /> Private</span>}

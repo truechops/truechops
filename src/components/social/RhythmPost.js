@@ -37,6 +37,8 @@ export default function RhythmPost({ id, onClose, onChanged, standalone = false 
     function escape(event) {
       if (event.key !== "Escape" || document.getElementById("rhythm-dialog-title")) return;
       event.preventDefault(); event.stopPropagation();
+      const restore = feed.current?.querySelector('[data-active="true"] button[aria-label="Restore variations"]');
+      if (restore) { restore.click(); return; }
       const closePanel = feed.current?.querySelector('[data-active="true"] button[aria-label="Close side panel"]');
       if (closePanel) closePanel.click(); else onClose();
     }
