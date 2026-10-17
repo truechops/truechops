@@ -1,341 +1,99 @@
-import { useEffect, useLayoutEffect, useState, useCallback } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { scoreActions } from "../../store/score";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useDispatch } from "react-redux";
 import { useRouter } from "next/router";
-import { makeStyles, useTheme } from "@mui/styles";
-import Box from "@mui/material/Box";
-import ErrorBoundary from "../error/ErrorBoundary";
-import Legend from "../../../data/byos/alphabet/legend.js";
-import LegendDialog from "./legend-dialog.js";
-import Dialog from '../ui/Dialog';
+import { FiArrowUp, FiArrowUpRight, FiBookOpen, FiChevronDown, FiChevronUp, FiGrid, FiPlus, FiX } from "react-icons/fi";
+import { scoreActions } from "../../store/score";
+import { buildByosScore, byosLetters, BYOS_PHRASE_LIMIT, BYOS_TEMPO } from "../../lib/byos";
+import byosAlphabet from "../../../data/byos/alphabet/all";
+import RhythmPreview from "../book-builder/RhythmPreview";
+import { Shell } from "../social/shared";
+import LegendDialog from "./legend-dialog";
+import libraryStyles from "../practice/practice.module.css";
+import styles from "./byos.module.css";
 
-import $ from "jquery";
-import Paper from "@mui/material/Paper";
-import { DEFAULT_TEMPO } from "../../consts/score";
-
-import byosAlphabet from "../../../data/byos/alphabet/all.js";
-import { scrubTypename } from "../../helpers/mongodb";
-import { appActions } from "../../store/app";
-import { drawScore, initialize } from "../../lib/vexflow";
-import Score from "../compose/Score";
-import { map as byosAlphabetMap } from "../../../data/byos/alphabet/all.js";
-import backstickHead from "../../../data/byos/custom-heads/backstick.js";
-import { browserName } from 'react-device-detect';
-
-function getSvgConfig() {
-  return { width: 530, scale: 0.7, hResize: 0.75, vResize: 0.75 };
+function LetterCard({ rhythm, used, disabled, onAdd }) {
+  const root = useRef(null);
+  const [visible, setVisible] = useState(false);
+  const letter = rhythm.name.toUpperCase();
+  useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setVisible(true); observer.disconnect(); }
+    }, { rootMargin: "250px" });
+    observer.observe(root.current);
+    return () => observer.disconnect();
+  }, []);
+  return <button ref={root} type="button" className={styles.letterCard} data-used={used} disabled={disabled} onClick={onAdd} aria-label={`Add ${letter} to phrase`}>
+    <span className={styles.cardTop}><span className={styles.letter}>{letter}</span><span className={styles.cardAction}>Add <FiPlus aria-hidden="true" /></span></span>
+    <div className={styles.cardNotation} role="img" aria-label={`Rhythm for ${letter}`}>
+      {visible && <RhythmPreview score={rhythm.score} minWidth={260} fit compact maxHeight="110px" />}
+    </div>
+  </button>;
 }
 
 export default function Main() {
-  const [svgConfig, setSvgConfig] = useState(getSvgConfig());
-  const [alphabetRendered, setAlphabetRendered] = useState(false);
-  const [legendOpen, setLegendOpen] = useState(false);
-  const dontUseSafariShown = useSelector(state => state.app.dontUseSafariShown);
-
-  useEffect(() => {
-    if(browserName.indexOf('Safari') >= 0 && dontUseSafariShown == "init") {
-      //dispatch(appActions.setDontUseSafariShown("true"));
-    }
-  }, [dontUseSafariShown]);
-
-  // -- Track the word input in state
   const [word, setWord] = useState("");
-
-  const [scorePreview, setScorePreview] = useState(null);
-  const [alphabetShown, setAlphabetShown] = useState(true);
-
-  const router = useRouter();
-  const dispatch = useDispatch();
-  const repeat = useSelector((state) => state.score.present.repeat);
-  const theme = useTheme();
-
-  function getHeight() {
-    return window.innerHeight - theme.mixins.toolbar.minHeight - 28;
-  }
-
-  // Update the "word" in local state and build the combined "score"
-  function updateScoreFromWord(e) {
-    const inputValue = e.target.value;
-    setWord(inputValue);
-
-    if (!inputValue) {
-      // If input is empty, clear the preview
-      setScorePreview(null);
-      return;
-    }
-
-    let composedScore = null;
-    for (let c = 0; c < inputValue.length; c++) {
-      const char = inputValue[c];
-
-      // Skip unknown characters
-      if (!byosAlphabetMap[char]) continue;
-
-      if (c === 0) {
-        composedScore = { ...byosAlphabetMap[char].score };
-      } else {
-        composedScore.measures = composedScore.measures.concat(
-          ...byosAlphabetMap[char].score.measures.map((m) => ({ ...m }))
-        );
-      }
-    }
-    if (composedScore) {
-      practiceRhythm(composedScore);
-    } else {
-      setScorePreview(null);
-    }
-  }
-
-  function practiceRhythm(score) {
-    const scrubbedScore = scrubTypename(score);
-    setScorePreview(scrubbedScore);
-  }
-
-  function updateScore() {
-    const scrubbedScore = scrubTypename(scorePreview);
-    dispatch(
-      scoreActions.updateScore({
-        score: scrubbedScore,
-        name: word,
-        tempo: 120,
-        mutations: [],
-      })
-    );
-    router.push("/");
-  }
-
-  const useStyles = makeStyles((theme) => ({
-    root: {
-      height: getHeight(window),
-      minHeight: "100vh",
-      backgroundImage: `url(/assets/byos-poster.png);`,
-      backgroundColor: "rgba(255,255,255,0.95);",
-      backgroundBlendMode: "lighten",
-      backgroundSize: "cover",
-      backgroundPosition: "center",
-    },
-    alphabet: {
-      height: "45vh",
-      overflow: "scroll",
-    },
-    alphabetHeader: {
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      gap: "12px",
-      position: 'sticky',
-      top: 0,
-      background: 'lightgray',
-      border: '1px solid gray'
-    },
-    byosButton: {
-      height: "30px",
-      fontSize: "20px",
-    },
-    wordInput: {
-      margin: "8px 8px 20px 8px;",
-      height: "30px",
-      fontSize: "20px",
-      padding: "4px",
-      "&::placeholder": {
-        fontStyle: "italic", // Makes placeholder italic
-      },
-    },
-    listItem: {
-      cursor: "pointer",
-      margin: theme.spacing(1),
-    },
-    listItemText: {
-      color: "black",
-    },
-  }));
-
-  const useTabStyles2 = makeStyles((theme) => ({
-    buttons: {
-      position: "fixed",
-      left: "51%",
-      transform: "translateX(-50%)",
-      bottom: 0,
-    },
-    root: {
-      flexDirection: "column",
-      display: "flex",
-    },
-    score: {
-      width: "100%",
-      overflow: "auto",
-      height: alphabetShown ? '32vh' : '78vh',
-      flex: 1,
-      zIndex: 1,
-    },
-    vexflowWrapper: {
-      [theme.breakpoints.down("sm")]: {
-        height: `calc(${window.innerHeight}px - 32px - ${
-          3 * theme.mixins.toolbar.minHeight
-        }px - 12px)`,
-      },
-      [theme.breakpoints.up("sm")]: {
-        height: `calc(${window.innerHeight}px - 32px - ${
-          3 * theme.mixins.toolbar.minHeight
-        }px - 12px)`,
-      },
-    },
-    vexflow: {
-      [theme.breakpoints.down("sm")]: {
-        height: `100%`,
-      },
-      [theme.breakpoints.up("sm")]: {
-        height: `100%`,
-      },
-    },
-    toolbar: {
-      display: "flex",
-      justifyContent: "center",
-    },
-  }));
-
-  const classes = useStyles();
-  const classes2 = useTabStyles2();
-
-  useLayoutEffect(() => {
-    if (!alphabetRendered) {
-      for (let rhythm of byosAlphabet) {
-        const container = document.getElementById(`rhythm-${rhythm.id}`);
-        if (container) {
-          container.innerHTML = "";
-        }
-
-        const { renderer, context } = initialize(`rhythm-${rhythm.id}`);
-        const draw = async () => {
-          drawScore(renderer, context, rhythm.score, 0, () => {}, svgConfig, repeat);
-          // $('.vf-notehead path').replaceWith(backstickHead)
-        };
-        draw();
-      }
-
-      setAlphabetRendered(true);
-    }
-
-    dispatch(appActions.setPageLoaded());
-  }, [alphabetShown, dispatch, repeat, svgConfig]);
-
-  const updateDimensions = useCallback(() => {
-    setSvgConfig(getSvgConfig());
-  }, []);
-
+  const [alphabetShown, setAlphabetShown] = useState(true), [legendOpen, setLegendOpen] = useState(false);
+  const [opening, setOpening] = useState(false), [error, setError] = useState("");
+  const [controlsAbove, setControlsAbove] = useState(false);
+  const input = useRef(null), controls = useRef(null), router = useRouter(), dispatch = useDispatch();
+  const score = useMemo(() => buildByosScore(word), [word]);
+  const usedLetters = new Set(byosLetters(word));
   useEffect(() => {
-    window.addEventListener("resize", updateDimensions);
-    return () => {
-      window.removeEventListener("resize", updateDimensions);
-    };
-  }, [updateDimensions]);
-
-  return (
-    <>
-      <section style={{ textAlign: "center", overflowY: "auto" }} className={classes.root}>
-        <div className={classes.alphabetHeader}>
-          <h2>BYOS Alphabet</h2>
-          <button className={classes.byosButton} onClick={() => setAlphabetShown(!alphabetShown)}>
-            {alphabetShown ? "Hide" : "Show"}
-          </button>
-          <button className={classes.byosButton} onClick={() => setLegendOpen(true)}>
-            Legend
-          </button>
-        </div>
-
-        {/* Alphabet grid */}
-        <div className={classes.alphabet} style={{ display: alphabetShown ? "" : "none" }}>
-          <div style={{ width: "100%" }}>
-            <Box
-              display="flex"
-              flexWrap="wrap"
-              justifyContent="center"
-              p={1}
-              m={1}
-              sx={{ background: "inherit" }}
-            >
-              {byosAlphabet.map((rhythm) => (
-                <Box p={1} key={`box-${rhythm.id}`}>
-                  <Paper
-                    style={{ cursor: "pointer", border: "1px solid" }}
-                    onClick={practiceRhythm.bind(
-                      null,
-                      rhythm.score,
-                      rhythm.name,
-                      rhythm.tempo ?? DEFAULT_TEMPO,
-                      rhythm.mutations
-                    )}
-                  >
-                    <div id={`rhythm-${rhythm.id}`} key={`rhythm-${rhythm.id}`} />
-                  </Paper>
-                  <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-                    {rhythm.name.toUpperCase()}
-                  </div>
-                </Box>
-              ))}
-            </Box>
+    const observer = new IntersectionObserver(([entry]) => setControlsAbove(entry.boundingClientRect.bottom < 64), { rootMargin: "-64px 0px 0px" });
+    observer.observe(controls.current);
+    return () => observer.disconnect();
+  }, []);
+  function changeWord(value) { setWord(value.slice(0, BYOS_PHRASE_LIMIT)); setError(""); }
+  async function practice(event) {
+    event.preventDefault();
+    if (!score || opening) return;
+    setOpening(true); setError("");
+    try {
+      dispatch(scoreActions.updateScore({ score, name: word.trim(), tempo: BYOS_TEMPO, mutations: [] }));
+      await router.push("/");
+    } catch { setError("Could not open your rhythm. Please try again."); }
+    finally { setOpening(false); }
+  }
+  return <Shell title="BYOS" description="Turn words into rhythms with the BYOS alphabet. Build a phrase and practice it in Score." className={styles.page}>
+    <header className={libraryStyles.heading}>
+      <div><p className={libraryStyles.eyebrow}>Practice library</p><h1>BYOS</h1><p className={libraryStyles.description}>Your words. Your rhythm. Build a phrase with the BYOS alphabet.</p></div>
+      <span className={libraryStyles.headingIcon} aria-hidden="true"><FiGrid /></span>
+    </header>
+    <section className={styles.builder} aria-label="Phrase builder">
+      <form ref={controls} className={styles.builderControls} onSubmit={practice}>
+        <div className={styles.labelRow}><label htmlFor="byosWord">Your phrase</label><span className={styles.counter}>{word.length} / {BYOS_PHRASE_LIMIT}</span></div>
+        <div className={styles.inputRow}>
+          <div className={styles.inputWrap}><input ref={input} id="byosWord" type="text" value={word} maxLength={BYOS_PHRASE_LIMIT} onChange={(event) => changeWord(event.target.value)} placeholder="Type a word, like howdy" autoComplete="off" spellCheck={false} aria-describedby="byos-phrase-help" />
+            {word && <button type="button" className={styles.clear} aria-label="Clear phrase" onClick={() => { changeWord(""); input.current?.focus(); }}><FiX aria-hidden="true" /></button>}
           </div>
+          <button type="submit" className={styles.practice} disabled={!score || opening}>{opening ? "Opening…" : "Open in score"}<FiArrowUpRight aria-hidden="true" /></button>
         </div>
-
-        {/* Word input & Practice button */}
-        <input
-          id="byosWord"
-          placeholder="enter word here"
-          className={classes.wordInput}
-          type="text"
-          value={word}
-          onChange={updateScoreFromWord}
-        />
-        <button
-          className={classes.byosButton}
-          onClick={updateScore}
-          disabled={!scorePreview}
-        >
-          Practice
-        </button>
-
-        {/* Score preview */}
-        {scorePreview && (
-          <div id="byos-score-root" className={classes2.score}>
-            <ErrorBoundary component="compose">
-              <Score
-                scoreRootId="byos-score-root"
-                id={"vexflow"}
-                score={scorePreview}
-                selectedTab={1}
-                tabPanelHidden={false}
-                isDynamicRhythm={false}
-                vexflowClass={classes2.vexflow}
-                vexflowWrapperClass={classes2.vexflowWrapper}
-              />
-            </ErrorBoundary>
-          </div>
-        )}
-      </section>
-
-      {/* Legend in a fixed container */}
-      <div
-        style={{
-          position: "fixed",
-          bottom: "20px",
-          right: "20px",
-          zIndex: 999,
-          backgroundColor: "white",
-          border: "1px solid #ccc",
-          borderRadius: "4px",
-          padding: "8px",
-        }}
-      >
-        <LegendDialog open={legendOpen} onClose={() => setLegendOpen(false)} />
+        <p className={styles.help} id="byos-phrase-help">Type A–Z or add letters below. Spaces, numbers, and punctuation are skipped.</p>
+        {!word && <div className={styles.examples}><span>Try a phrase</span>{["HOWDY", "CHOPS", "GROOVE"].map((example) => <button type="button" key={example} onClick={() => changeWord(example)}>{example}</button>)}</div>}
+        {error && <p className={styles.error} role="alert">{error}</p>}
+      </form>
+      <div className={styles.preview}>
+        {score ? <><div className={styles.previewHeader}><h2>Your rhythm</h2><span className={styles.tempo}>{BYOS_TEMPO} BPM</span></div>
+          <div className={styles.score} role="img" aria-label="Your BYOS rhythm"><RhythmPreview score={score} minWidth={260} fit compact /></div></> :
+          <div className={styles.empty}><div className={styles.emptyLetters} aria-hidden="true"><span>A</span><span>B</span><span>C</span></div><h2>A little word. A new rhythm.</h2><p>{word ? "Add a letter from A–Z to start your rhythm." : "Your notation will appear here as you build your phrase."}</p></div>}
       </div>
-
-       {/*This needs to be put into a more central location */}
-      <Dialog
-    isOpen={dontUseSafariShown == "true"}
-    message={"TrueChops does not work well with Safari. Please use another browser."}
-    onOk={() => {
-      dispatch(appActions.setDontUseSafariShown("false"));
-    }}/>
-    </>
-  );
+    </section>
+    <div className={styles.alphabetHeader}>
+      <div><h2 id="byos-alphabet-title">The alphabet</h2><p>26 letters. Choose one to add its rhythm to your phrase.</p></div>
+      <div className={styles.alphabetActions}>
+        <button onClick={() => setLegendOpen(true)}><FiBookOpen aria-hidden="true" />Notation guide</button>
+        <button onClick={() => setAlphabetShown((shown) => !shown)} aria-expanded={alphabetShown} aria-controls="byos-alphabet">{alphabetShown ? "Hide alphabet" : "Show alphabet"}{alphabetShown ? <FiChevronUp aria-hidden="true" /> : <FiChevronDown aria-hidden="true" />}</button>
+      </div>
+    </div>
+    {alphabetShown && <section id="byos-alphabet" className={styles.alphabet} aria-labelledby="byos-alphabet-title">
+      {byosAlphabet.map((rhythm) => <LetterCard key={rhythm.id} rhythm={rhythm} used={usedLetters.has(rhythm.name)} disabled={word.length >= BYOS_PHRASE_LIMIT || opening} onAdd={() => changeWord(word + rhythm.name.toUpperCase())} />)}
+    </section>}
+    {controlsAbove && score && <aside className={styles.phraseDock} aria-label="Phrase quick actions">
+      <button className={styles.phraseJump} aria-label="Back to phrase" onClick={() => { controls.current?.scrollIntoView({ block: "center" }); input.current?.focus({ preventScroll: true }); }}>
+        <FiArrowUp aria-hidden="true" /><span><small>Your phrase</small><strong aria-live="polite">{word.trim()}</strong></span>
+      </button>
+      <button className={styles.practice} onClick={practice} disabled={opening}>{opening ? "Opening…" : "Open in score"}<FiArrowUpRight aria-hidden="true" /></button>
+    </aside>}
+    <LegendDialog open={legendOpen} onClose={() => setLegendOpen(false)} />
+  </Shell>;
 }

@@ -1,16 +1,16 @@
-export default function legend() {
+export default function Legend({ symbol = null }) {
   return <svg version="1.1"
   xmlns="http://www.w3.org/2000/svg"
-  width="600"
-  height="200"
-  viewBox="0 0 600 200">
+  width={symbol == null ? 600 : 50}
+  height={symbol == null ? 200 : 70}
+  viewBox={symbol == null ? "0 0 600 200" : `${75 + symbol * 100} 65 50 70`}>
 
 <g transform="translate(100,100)">
  <g transform="translate(-63.2185, -45.027)">
    <path d="M68.337 56L68.337 25"
          fill="none"
          stroke="black"
-         stroke-width="1.5" />
+         strokeWidth="1.5" />
    <path d="M68.862 64.015
             L64.061 60
             L68.862 55.956
@@ -36,9 +36,9 @@ export default function legend() {
          stroke="none" />
  </g>
  <text x="0" y="60"
-       text-anchor="middle"
-       font-family="Arial"
-       font-size="14">
+       textAnchor="middle"
+       fontFamily="Arial"
+       fontSize="14">
    <tspan x="0" dy="0em">Rim Click (F5)</tspan>
    <tspan x="0" dy="1.2em">Ping (E5)</tspan>
  </text>
@@ -49,7 +49,7 @@ export default function legend() {
    <path d="M87.956 80L87.956 40"
          fill="none"
          stroke="black"
-         stroke-width="1.5" />
+         strokeWidth="1.5" />
    <path d="M88.706 80.054
             L82.669 69.946
             L76.856 80.054"
@@ -57,9 +57,9 @@ export default function legend() {
          stroke="none" />
  </g>
  <text x="0" y="60"
-       text-anchor="middle"
-       font-family="Arial"
-       font-size="14">
+       textAnchor="middle"
+       fontFamily="Arial"
+       fontSize="14">
    <tspan x="0" dy="0em">Butt of</tspan>
    <tspan x="0" dy="1.2em">the stick</tspan>
  </text>
@@ -70,7 +70,7 @@ export default function legend() {
    <path d="M107.575 80L107.575 40"
          fill="none"
          stroke="black"
-         stroke-width="1.5" />
+         strokeWidth="1.5" />
    <path d="M102.85 69.946
             C102.709 69.946,102.541 70.03,102.485 70.142
             L96.813 79.409
@@ -89,9 +89,9 @@ export default function legend() {
          stroke="none" />
  </g>
  <text x="0" y="60"
-       text-anchor="middle"
-       font-family="Arial"
-       font-size="14">
+       textAnchor="middle"
+       fontFamily="Arial"
+       fontSize="14">
    Backstick
  </text>
 </g>
@@ -101,7 +101,7 @@ export default function legend() {
    <path d="M127.194 71L127.194 40"
          fill="none"
          stroke="black"
-         stroke-width="1.5" />
+         strokeWidth="1.5" />
    <path d="M122.722 69.946
             C122.497 69.946,122.244 70.03,122.048 70.226
             L120.307 72.248
@@ -142,9 +142,9 @@ export default function legend() {
          stroke="none" />
  </g>
  <text x="0" y="60"
-       text-anchor="middle"
-       font-family="Arial"
-       font-size="14">
+       textAnchor="middle"
+       fontFamily="Arial"
+       fontSize="14">
    Crossover
  </text>
 </g>
@@ -154,7 +154,7 @@ export default function legend() {
    <path d="M146.813 60L146.813 25"
          fill="none"
          stroke="black"
-         stroke-width="1.5" />
+         strokeWidth="1.5" />
    <path d="M142.509 54.946
             C139.757 54.946,137.483 57.22,137.483 60
             C137.483 62.78,139.757 65.054,142.509 65.054
@@ -184,9 +184,9 @@ export default function legend() {
          stroke="none" />
  </g>
  <text x="0" y="60"
-       text-anchor="middle"
-       font-family="Arial"
-       font-size="14">
+       textAnchor="middle"
+       fontFamily="Arial"
+       fontSize="14">
    Stick Click
  </text>
 </g>

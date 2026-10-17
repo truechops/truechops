@@ -140,6 +140,7 @@ node scripts/tests/instrument-variations.browser.js http://127.0.0.1:3104
 node scripts/tests/notation-search.browser.js http://127.0.0.1:3104
 node scripts/tests/book-practice.browser.js http://127.0.0.1:3104
 node scripts/tests/practice-catalog.browser.js http://127.0.0.1:3104
+node scripts/tests/byos.browser.js http://127.0.0.1:3104
 ```
 
 Browser screenshots are generated under `book-output/community-practice-preview/` and use
@@ -152,6 +153,16 @@ name search at the top. Notation fits inside each card and is drawn as cards
 approach the viewport. Open in score preserves the rhythm, tempo and dynamic
 settings. Drills also retain their shuffle action; shuffling a preview never
 changes the bundled source rhythm.
+
+BYOS uses the same practice-library styling. Type a phrase or add letters from
+the alphabet to build a live notation preview, then open it in Score at 120 BPM.
+Both letter cases work; spaces, numbers and punctuation are skipped, including
+at the beginning of a phrase. Phrases allow up to 64 characters. Each occurrence
+of a letter becomes an independent measure, so editing one never changes another
+or the alphabet. A compact phrase bar keeps Score and the current phrase within
+reach while browsing the alphabet. The notation guide works on mobile and can
+be closed with Escape. Run the phrase-building checks with
+`node --test scripts/tests/byos.test.js`.
 
 ## YouTube demonstrations
 
