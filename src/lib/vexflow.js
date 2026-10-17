@@ -83,6 +83,10 @@ export function drawScore(
     hideTimeSignature = false,
     showMeasureNumbers = false,
     systemSpacing,
+    // Unlike measuresPerLine, measures keep their natural widths: a row breaks
+    // early when it is full and is then justified.
+    maxMeasuresPerLine,
+    partLabelsOnEveryRow = false,
   } = svgConfig;
   let { measures } = score;
   let systemWidth = 0;
@@ -113,9 +117,31 @@ export function drawScore(
     ? (svgWidth - effectiveMeasureGap * (effectiveMeasuresPerLine - 1)) /
       effectiveMeasuresPerLine
     : null;
+  const configuredMaxMeasuresPerLine = Number.parseInt(maxMeasuresPerLine, 10);
+  const effectiveMaxMeasuresPerLine = configuredMaxMeasuresPerLine > 0
+    ? configuredMaxMeasuresPerLine
+    : Number.POSITIVE_INFINITY;
+  // Room for the part names before a row's first measure.
+  const partLabelWidth = measurePartsArray[0].length > 1 ? 100 : 0;
 
   let barRenderData = [];
-  let width = measurePartsArray[0].length > 1 ? 100 : 0;
+  let width = partLabelWidth;
+
+  // With a measure cap, a row's measures share its width equally, as far as each
+  // measure's notes allow. A short last row gets the measure width of a full row.
+  function equalizeRow(isLastRow) {
+    if (!Number.isFinite(effectiveMaxMeasuresPerLine)) return false;
+    const labelWidth = row === 0 || partLabelsOnEveryRow ? partLabelWidth : 0;
+    const gaps = effectiveMeasureGap * (barRenderData.length - 1);
+    const rowSpace = svgWidth - labelWidth - gaps;
+    const fullRowBarWidth = (svgWidth - labelWidth - effectiveMeasureGap * (effectiveMaxMeasuresPerLine - 1)) / effectiveMaxMeasuresPerLine;
+    const naturalWidth = barRenderData.reduce((sum, bar) => sum + bar.width, 0);
+    const total = isLastRow ? Math.min(rowSpace, Math.max(naturalWidth, fullRowBarWidth * barRenderData.length)) : rowSpace;
+    if (barRenderData.reduce((sum, bar) => sum + bar.minWidth, 0) > total) return false;
+    equalizeRowWidths(barRenderData, total);
+    width = labelWidth + gaps + total;
+    return true;
+  }
   let row = 0;
   let firstMeasure = true;
   let previousTimeSig = {};
@@ -164,11 +190,12 @@ export function drawScore(
       barRenderData.length &&
       (
         barRenderData.length >= effectiveMeasuresPerLine ||
+        barRenderData.length >= effectiveMaxMeasuresPerLine ||
         (!Number.isFinite(effectiveMeasuresPerLine) &&
           width + gapBeforeMeasure + barWidth > svgWidth)
       )
     ) {
-      const remainingWidth = Math.max(svgWidth - width, 0);
+      const remainingWidth = equalizeRow(false) ? 0 : Math.max(svgWidth - width, 0);
       if (fixedMeasureWidth) balanceRowWidths(barRenderData);
       renderStaves(
         barRenderData,
@@ -184,7 +211,8 @@ export function drawScore(
         hideTimeSignature,
         effectiveMeasureGap,
         showMeasureNumbers,
-        svgConfig.measureEditing
+        svgConfig.measureEditing,
+        partLabelsOnEveryRow
       );
 
       if(width + remainingWidth > maxWidth) {
@@ -192,7 +220,7 @@ export function drawScore(
       }
 
       barRenderData = [];
-      width = 0;
+      width = partLabelsOnEveryRow ? partLabelWidth : 0;
       row += 1;
     }
 
@@ -214,7 +242,7 @@ export function drawScore(
   }
 
   if (barRenderData.length) {
-    const remainingWidth = justifyLastRow ? Math.max(svgWidth - width, 0) : 0;
+    const remainingWidth = equalizeRow(!justifyLastRow) ? 0 : justifyLastRow ? Math.max(svgWidth - width, 0) : 0;
     if (fixedMeasureWidth) balanceRowWidths(barRenderData);
 
     renderStaves(
@@ -231,7 +259,8 @@ export function drawScore(
       hideTimeSignature,
       effectiveMeasureGap,
       showMeasureNumbers,
-      svgConfig.measureEditing
+      svgConfig.measureEditing,
+      partLabelsOnEveryRow
     );
 
     if(width + remainingWidth > maxWidth) {
@@ -395,7 +424,8 @@ function renderStaves(
   hideTimeSignature,
   measureGap,
   showMeasureNumbers,
-  measureEditing
+  measureEditing,
+  partLabelsOnEveryRow
 ) {
 
   const barWidths = barRenderData.map((renderDataBar) => renderDataBar.width);
@@ -409,7 +439,7 @@ function renderStaves(
   let x = PADDING / 2;
   const numParts = barRenderData[0].parts.length;
 
-  if (row === 0 && numParts > 1) {
+  if ((row === 0 || partLabelsOnEveryRow) && numParts > 1) {
     x += 100;
   }
 
@@ -420,18 +450,23 @@ function renderStaves(
     if (measureEditing) {
       const group = context.openGroup("editable-measure");
       group.setAttribute("data-measure-index", measureIndex);
-      group.setAttribute("role", "group");
+      const selected = measureEditing.selected === measureIndex;
+      group.setAttribute("role", "button");
+      group.setAttribute("tabindex", "0");
       group.setAttribute("aria-label", `Measure ${measureIndex + 1}`);
-      group.setAttribute("data-selected", String(measureEditing.selected === measureIndex));
+      group.setAttribute("aria-pressed", String(selected));
+      group.setAttribute("data-selected", String(selected));
       group.style.cursor = "pointer";
       const background = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      const selected = measureEditing.selected === measureIndex;
       Object.entries({ x: x + 2, y: STAVE_TOP + row * STAVE_SPACE + 2, width: width + additionalWidths[renderDataIndex] - 4,
         height: STAVE_SPACE - 4, rx: 9, fill: selected ? "#e8f3ff" : "transparent", stroke: selected ? "#4b9bff" : "transparent", "stroke-width": 2,
         "data-measure-background": "true" }).forEach(([name,value]) => background.setAttribute(name,value));
       group.appendChild(background);
       group.addEventListener("click", (event) => {
         if (!event.target.closest(".vf-stavenote")) measureEditing.onSelect(measureIndex);
+      });
+      group.addEventListener("keydown", (event) => {
+        if (["Enter", " "].includes(event.key)) { event.preventDefault(); measureEditing.onSelect(measureIndex, true); }
       });
     }
 
@@ -468,10 +503,11 @@ function renderStaves(
         stave.addTimeSignature(`${timeSig.num}/${timeSig.type}`);
       }
 
-      if (firstMeasure) {
+      if (firstMeasure || (partLabelsOnEveryRow && renderDataIndex === 0)) {
         //We don't need the measure label if it is the only instrument in the score.
         if (parts.length > 1) {
-          stave.setText(instrument, Vex.Flow.Modifier.Position.LEFT);
+          const label = instrument === "drumset" ? "Drum Set" : instrument.charAt(0).toUpperCase() + instrument.slice(1);
+          stave.setText(label, Vex.Flow.Modifier.Position.LEFT);
         }
 
       }
@@ -483,6 +519,14 @@ function renderStaves(
       }
 
       stave.setContext(context).draw();
+
+      if (measureEditing && partIndex === 0) {
+        context.save();
+        context.setFont("Arial", 16, "");
+        context.setFillStyle(measureEditing.selected === measureIndex ? "#2b6fd6" : "#8a8490");
+        context.fillText(String(measureIndex + 1), stave.getX() + 6, stave.getYForLine(0) - 36);
+        context.restore();
+      }
 
       if (showMeasureNumbers && partIndex === 0 && renderDataIndex === 0) {
         const measureNumber = String(measureIndex + 1);
@@ -558,28 +602,7 @@ function renderStaves(
       });
     });
 
-    if (measureEditing) {
-      const trigger = context.openGroup("measure-trigger");
-      trigger.setAttribute("data-measure-trigger", "true");
-      trigger.setAttribute("role", "button");
-      trigger.setAttribute("tabindex", "0");
-      trigger.setAttribute("aria-label", `Modify measure ${measureIndex + 1}`);
-      trigger.setAttribute("aria-haspopup", "true");
-      trigger.setAttribute("transform", `translate(${x + xDiff - 33},${STAVE_TOP + row * STAVE_SPACE + 2})`);
-      const add = (tag, attributes) => {
-        const element = document.createElementNS("http://www.w3.org/2000/svg",tag);
-        Object.entries(attributes).forEach(([name,value]) => element.setAttribute(name,value));
-        trigger.appendChild(element);
-      };
-      add("rect",{width:30,height:28,rx:7,fill:"#fff",stroke:"#e3e0e7"});
-      // A small sliders icon; it stays outside the notes and ornaments.
-      add("path",{d:"M8 9H22 M8 18H22 M12 6V12 M18 15V21",fill:"none",stroke:"#78717d","stroke-width":1.5,"stroke-linecap":"round"});
-      const activate = (event) => { event.preventDefault(); event.stopPropagation(); measureEditing.onOpen(measureIndex,event.type === "keydown"); };
-      trigger.addEventListener("click",activate);
-      trigger.addEventListener("keydown",(event) => { if (["Enter"," "].includes(event.key)) activate(event); });
-      context.closeGroup();
-      context.closeGroup();
-    }
+    if (measureEditing) context.closeGroup();
     previousTimeSig.num = timeSig.num;
     previousTimeSig.type = timeSig.type;
     x += xDiff + measureGap;
@@ -851,7 +874,11 @@ function balanceRowWidths(bars) {
   if (bars.every((bar) => bar.minWidth <= bar.width)) return;
   const total = bars.reduce((sum, bar) => sum + bar.width, 0);
   if (bars.reduce((sum, bar) => sum + bar.minWidth, 0) > total) return;
+  equalizeRowWidths(bars, total);
+}
 
+// Splits total equally, raising crowded measures to their minimum width.
+function equalizeRowWidths(bars, total) {
   const atMinimum = new Set();
   for (;;) {
     const others = bars.filter((bar) => !atMinimum.has(bar));

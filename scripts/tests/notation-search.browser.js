@@ -41,9 +41,8 @@ async function clickText(page, text, selector = "button,a,[role=menuitem]") {
     await page.goto(`${origin}/rhythms/editor`, { waitUntil: "networkidle0" });
     await clickText(page, "Open in score");
     await page.waitForSelector("#vexflow [data-measure-index='1']");
-    await page.hover("[data-measure-index='1'] [data-measure-background]");
-    await page.click("[data-measure-index='1'] [data-measure-trigger]");
-    await clickText(page, "Adjust"); await clickText(page, "Find matching rhythms");
+    await page.click("[data-measure-index='1'] [data-measure-background]");
+    await clickText(page, "Measure"); await clickText(page, "More"); await clickText(page, "Find matching rhythms");
     await page.waitForSelector("a[aria-label='Open A matching rhythm']");
     await page.waitForSelector("[aria-label='Search notation'] .vf-stavenote");
     await page.waitForSelector("[aria-label='Matching notation from A matching rhythm'] .vf-stavenote");

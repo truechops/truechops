@@ -19,7 +19,7 @@ export default function addComposeEventListeners(dispatch) {
       }
       return;
     }
-    if (event.target.closest?.("button,[role=button],[role=menuitem],[role=menu],[data-measure-toolbar]")) return;
+    if (event.target.closest?.("button,[role=button],[role=menuitem],[role=menu]")) return;
     if (!score.modalShown) {
       if (event.keyCode === 32) {
         //spacebar

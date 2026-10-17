@@ -1,149 +1,48 @@
-import Buttons from "./Buttons";
-import { makeStyles } from "@mui/styles";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
-import Score from "./Score";
-import ErrorBoundary from "../error/ErrorBoundary";
-import $ from 'jquery';
 import { useSelector } from "react-redux";
+import Score from "./Score";
+import ScoreToolbar from "./ScoreToolbar";
+import ErrorBoundary from "../error/ErrorBoundary";
 import BookBuilderPanel from "../book-builder/Main";
-
-import dynamic from "next/dynamic";
-//Each page has its own top toolbar. Render it dynamically based on which page you are on.
-const DynamicComposeTopToolbar = dynamic(() => import("../compose/TopToolbar"));
+import styles from "./score-workspace.module.css";
 
 export default function Main(props) {
   const router = useRouter();
-  const initialTab = props && props.initialTab != null ? props.initialTab : 1;
   const isDynamicRhythm = props && props.isDynamicRhythm;
   const bookOpen = Boolean((props && props.showBookBuilder) || router.query.b === '1');
-  const [selectedTab, setSelectedTab] = useState(initialTab);
-  const [tabPanelHidden, setTabPanelHidden] = useState(false);
   const score = useSelector((state) => state.score.present.score);
+  const scoreRoot = useRef(null);
+  const [scoreWidth, setScoreWidth] = useState(null);
 
-  const calculateButtonsHeight = (theme, isMobile) => {
-    let buttonsHeight = 0;
-    const chipHeight = theme.components.MuiChip.styleOverrides.root.minHeight;
-    const rowBottomMargin = theme.compose.buttons.row.marginBottom;
-    const spacing = 8;
-    const buttonsContainerPadding = theme.compose.buttons.container.padding;
+  // The score is laid out to the card's width, so it reflows when the card resizes.
+  useEffect(() => {
+    const element = scoreRoot.current;
+    const observer = new ResizeObserver(() => {
+      const style = getComputedStyle(element);
+      setScoreWidth(Math.floor(element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)));
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
-    /* If the tab panel is hidden, the buttons are hidden. So, button height = 0.
-     * In this case, the score will be right below the tabs, which is right
-     * below the toolbar.
-     */
-    if (!tabPanelHidden) {
-      if(selectedTab == 3) {
-        //JARED_TODO: cleanup magic constant
-        buttonsHeight = theme.mixins.toolbar.minHeight - 10;
-      } else {
-        const paddingHeight = 2 * spacing * buttonsContainerPadding;
-              //The first tab is the notes tab
-              const numChips = selectedTab === 1 ? (isMobile ? 4 : 2) : 1;
-              
-              //JARED_TODO: cleanup magic constant
-              buttonsHeight = paddingHeight + numChips * (chipHeight + rowBottomMargin) - 32;
-      }
-    } else {
-      buttonsHeight = theme.compose.score.tabsHiddenTopPadding
-      
-      //JARED_TODO: magic constant
-      buttonsHeight = buttonsHeight - (selectedTab === 3 ? 10 : 32)
-    }
-
-    return buttonsHeight;
-  };
-
-  const onTabSelected = (event, newValue) => {
-    if (newValue === selectedTab) {
-      $("#composeButtonsTabPanel").toggle();
-      setTabPanelHidden((hidden) => !hidden);
-    } else {
-      $("#composeButtonsTabPanel").show();
-      setTabPanelHidden(false);
-      setSelectedTab(newValue);
-    }
-  };
-
-  const useTabStyles = makeStyles((theme) => ({
-    buttons: {
-      position: "fixed",
-      left: bookOpen ? "25%" : "51%",
-      transform: "translateX(-50%)",
-      bottom: 0,
-      maxWidth: bookOpen ? "50%" : "100%",
-      width: bookOpen ? "50%" : "auto",
-      zIndex: 20,
-    },
-    root: {
-      flexDirection: "column",
-      display: "flex",
-      height: "100%"
-    },
-    workspace: {
-      display: "flex",
-      flex: 1,
-      minHeight: 0,
-      width: "100%",
-      [theme.breakpoints.down("md")]: {
-        flexDirection: "column",
-      },
-    },
-    score: {
-      width: '100%',
-      overflow: "auto",
-      flex: bookOpen ? "0 0 50%" : 1,
-      zIndex: 1
-    },
-    vexflowWrapper: {
-      [theme.breakpoints.down("sm")]: {
-        height: `calc(${window.innerHeight}px - ${calculateButtonsHeight(theme, true)}px - ${3 * theme.mixins.toolbar.minHeight}px - 12px)`,
-      },
-      [theme.breakpoints.up("sm")]: {
-        height: `calc(${window.innerHeight}px - ${calculateButtonsHeight(theme, false)}px - ${3 * theme.mixins.toolbar.minHeight}px - 12px)`,
-      },
-    }
-,    vexflow: {
-      [theme.breakpoints.down("sm")]: {
-        height: `100%`,
-      },
-      [theme.breakpoints.up("sm")]: {
-        height: `100%`,
-      }, 
-    },
-    toolbar: {
-      display: 'flex',
-      justifyContent: 'center'
-    }
-  }));
-
-  const classes = useTabStyles();
   return (
-    <main>
-      <div className={classes.root}>
-        <div className={classes.toolbar}>
-          <ErrorBoundary component="compose toolbar">
-            <DynamicComposeTopToolbar />
+    <main className={styles.workspace}>
+      <ErrorBoundary component="compose toolbar">
+        <ScoreToolbar initialTab={props && props.initialTab != null ? props.initialTab : 1} />
+      </ErrorBoundary>
+      <div className={styles.body}>
+        <section id="score-root" ref={scoreRoot} className={styles.scoreCard} aria-label="Score">
+          <ErrorBoundary component="compose">
+            {scoreWidth > 0 && <Score measureTools scoreRootId="score-root" id={"vexflow"} score={score} containerWidth={scoreWidth}
+              isDynamicRhythm={isDynamicRhythm} titleClass={styles.scoreTitle} />}
           </ErrorBoundary>
-        </div>
-        <div className={classes.workspace}>
-          <div id="score-root" className={classes.score}>
-            <ErrorBoundary component="compose">
-              <Score measureTools scoreRootId="score-root" id={"vexflow"} score={score} selectedTab={selectedTab} tabPanelHidden={tabPanelHidden}
-                     isDynamicRhythm={isDynamicRhythm} vexflowClass={classes.vexflow} vexflowWrapperClass={classes.vexflowWrapper} />
-            </ErrorBoundary>
-          </div>
-          {bookOpen && (
-            <ErrorBoundary component="book builder">
-              <BookBuilderPanel />
-            </ErrorBoundary>
-          )}
-        </div>
-        <div className={classes.buttons}>
-          <ErrorBoundary component="compose buttons">
-            <Buttons compact={bookOpen} selectedTab={selectedTab} onTabSelected={onTabSelected} />
+        </section>
+        {bookOpen && (
+          <ErrorBoundary component="book builder">
+            <BookBuilderPanel />
           </ErrorBoundary>
-        </div>
+        )}
       </div>
     </main>
   );

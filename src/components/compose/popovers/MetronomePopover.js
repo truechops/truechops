@@ -21,9 +21,9 @@ const useStyles = makeStyles((theme) => ({
 
 export default function MetronomePopover(props) {
   const classes = useStyles();
-  const [value, setValue] = useState(90);
   const dispatch = useDispatch();
   const tempo = useSelector((state) => state.score.present.tempo);
+  const [value, setValue] = useState(tempo);
 
   const open = Boolean(props.anchorEl);
 
@@ -62,6 +62,8 @@ export default function MetronomePopover(props) {
       }}
       open={open}
       anchorEl={props.anchorEl}
+      anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+      PaperProps={{ style: { marginTop: 6 } }}
       onClose={props.handlePopoverClose}
       disableRestoreFocus
     >

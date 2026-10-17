@@ -5,9 +5,10 @@ import { FormControl, FormHelperText, Select } from "@mui/material";
 export default function useRepeat(repeat) {
   const [numRepeats, setNumRepeats] = useState(repeat);
   const numMeasures = useSelector(state => state.score.present.score.measures.length);
-  let options = [...Array(numMeasures > 16? 16 : Math.floor(16 / numMeasures)).keys()].map((num) => (
-    <option key={Math.random().toString()} value={num + 1}>
-      {num + 1}
+  const repeatOptions = [...Array(numMeasures > 16? 16 : Math.floor(16 / numMeasures)).keys()].map((num) => num + 1);
+  let options = repeatOptions.map((num) => (
+    <option key={num} value={num}>
+      {num}
     </option>
   ));
 
@@ -23,5 +24,5 @@ export default function useRepeat(repeat) {
       <FormHelperText>repeat</FormHelperText>
     </FormControl>
   );
-  return { formControl, numRepeats };
+  return { formControl, numRepeats, setNumRepeats, repeatOptions };
 }

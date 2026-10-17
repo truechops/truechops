@@ -36,7 +36,7 @@ export default function TupletPickerPopover(props) {
     select: {
       textAlign: "left",
       margin: theme.spacing(2),
-      width: 50
+      width: 72
     }
   }));
 
@@ -49,15 +49,16 @@ export default function TupletPickerPopover(props) {
       anchorEl={props.tupletPickerAnchorEl}
       onClose={props.handleTupletPickerClose}
       anchorOrigin={{
-        vertical: "top",
-        horizontal: "right",
+        vertical: "bottom",
+        horizontal: "left",
       }}
       transformOrigin={{
         vertical: "top",
-        horizontal: "right",
+        horizontal: "left",
       }}
     >
       <Select
+        inputProps={{ "aria-label": "Tuplet notes played" }}
         value={actualDuration}
         className={classes.select}
         onChange={onChangeActualDuration}
@@ -71,6 +72,7 @@ export default function TupletPickerPopover(props) {
       </Select>
       :
       <Select
+        inputProps={{ "aria-label": "In the time of" }}
         value={normalDuration}
         onChange={onChangeNormalDuration}
         className={classes.select}
@@ -83,6 +85,7 @@ export default function TupletPickerPopover(props) {
         ))}
       </Select>
       <Select
+        inputProps={{ "aria-label": "Tuplet note value" }}
         value={type}
         onChange={onChangeType}
         className={classes.select}

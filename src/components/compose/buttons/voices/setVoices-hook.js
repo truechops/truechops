@@ -1,6 +1,5 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { scoreActions } from '../../../../store/score';
-import Button from '../../../ui/Button';
 
 export default function useSetVoices() {
     const { kickSelected,
@@ -50,15 +49,7 @@ export default function useSetVoices() {
           text: "HF",
           selected: hiHatFootSelected,
         },
-      ].map((props) => (
-        <Button
-          key={Math.random().toString()}
-          onClick={props.onClick}
-          selected={props.selected}
-        >
-          {props.text}
-        </Button>
-      ));
+      ];
     
       const instrumentsRow2 = [
         {
@@ -89,15 +80,7 @@ export default function useSetVoices() {
           text: "T4",
           selected: tom4Selected,
         }
-      ].map((props) => (
-        <Button
-          key={Math.random().toString()}
-          onClick={props.onClick}
-          selected={props.selected}
-        >
-          {props.text}
-        </Button>
-      ));
+      ];
 
-      return [instrumentsRow1, instrumentsRow2];
+      return [...instrumentsRow1, ...instrumentsRow2];
 }

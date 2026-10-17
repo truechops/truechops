@@ -11,16 +11,18 @@ export default function TimeSigMenu(props) {
       anchorEl={props.anchorEl}
       onClose={props.onClose}
       anchorOrigin={{
-        vertical: "top",
-        horizontal: "right",
+        vertical: "bottom",
+        horizontal: "left",
       }}
       transformOrigin={{
         vertical: "top",
-        horizontal: "right",
+        horizontal: "left",
       }}
+      PaperProps={{ className: props.className }}
+      MenuListProps={{ "aria-label": "Time signature" }}
     >
         {options.map((timeSig) => (
-          <MenuItem onClick={props.onChange.bind(null, timeSig)} key={Math.random().toString()} value={timeSig}>
+          <MenuItem onClick={props.onChange.bind(null, timeSig)} key={timeSig} value={timeSig}>
             {timeSig}
           </MenuItem>
         ))}

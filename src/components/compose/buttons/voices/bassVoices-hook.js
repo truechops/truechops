@@ -1,6 +1,5 @@
 import { useDispatch, useSelector } from "react-redux";
 import { scoreActions } from "../../../../store/score";
-import Button from "../../../ui/Button";
 
 export default function useBassVoices() {
   const { b1Selected, b2Selected, b3Selected, b4Selected, b5Selected } =
@@ -43,15 +42,7 @@ export default function useBassVoices() {
       text: "B5",
       selected: b5Selected,
     },
-  ].map((props) => (
-    <Button
-      key={Math.random().toString()}
-      onClick={props.onClick}
-      selected={props.selected}
-    >
-      {props.text}
-    </Button>
-  ));
+  ];
 
-  return [buttons.slice(0, 2), buttons.slice(2)];
+  return buttons;
 }

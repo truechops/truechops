@@ -1,91 +1,39 @@
-import { useState, useEffect } from "react";
-import { Popover, ClickAwayListener } from "@mui/material";
-import { makeStyles, useTheme } from "@mui/styles";
-import { BiHelpCircle } from 'react-icons/bi';
-import useInstruments from '../buttons/instruments-hook';
+import Popover from "@mui/material/Popover";
+import useInstruments from "../buttons/instruments-hook";
+import { instrumentLabel } from "../../../services/rhythm-variations";
+import styles from "../score-workspace.module.css";
 
-const useStyles = makeStyles((theme) => ({
-  popover: {
-    pointerEvents: "none"
-  },
-  paper: {
-    padding: theme.spacing(1)
-  }
-}));
+const SHORTCUTS = [
+  ["← →", "Previous / next note"],
+  ["A", "Accent"],
+  ["F", "Flam"],
+  ["D", "Diddle"],
+  ["C", "Cheese"],
+  ["R / L", "Right / left sticking"],
+  ["Space", "Play or stop the score"],
+  ["1 2 3 4", "Quarter, 8th, 16th, 32nd note"],
+  ["5 6 7 8", "Quarter, 8th, 16th, 32nd rest"],
+  ["9 / 0", "Whole / half note"],
+  ["- / =", "Whole / half rest"],
+  ["Ctrl+Z / Ctrl+Y", "Undo / redo"],
+];
 
-export default function MouseOverPopover() {
-  const classes = useStyles();
-  const theme = useTheme();
-  const [anchorEl, setAnchorEl] = useState(null);
-  const { tooltipText } = useInstruments();
-
-  const handlePopoverOpen = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handlePopoverClose = () => {
-    setAnchorEl(null);
-  };
-
-  const open = Boolean(anchorEl);
+export default function HelpPopover({ anchorEl, onClose }) {
+  const { instrument, legend } = useInstruments();
 
   return (
-    
-      <>
-      <div style={{marginRight: theme.compose.buttons.tooltip.marginRight}}
-        aria-owns={open ? "instrument-help-popover" : undefined}
-        aria-haspopup="true"
-        onMouseEnter={handlePopoverOpen}
-        onClick={handlePopoverOpen}
-        onMouseLeave={handlePopoverClose}
-      >
-        <BiHelpCircle size={25}/>
-      </div>
-      
-      <Popover
-        id="instrument-help-popover"
-        className={classes.popover}
-        classes={{
-          paper: classes.paper
-        }}
-        open={open}
-        anchorEl={anchorEl}
-        onClose={handlePopoverClose}
-        disableRestoreFocus
-      >
-        <ClickAwayListener onClickAway={() => {
-      setAnchorEl(null)
-      }}>
-        <div id ="instrumentTooltipText">
-       {tooltipText}
-       <br />
-       <br />
-       -----KEYBOARD SHORTCUTS-----
-       <br />
-       left/right arrow - note navigation
-       <br />
-       a - accent
-       <br />
-       f - flam
-       <br />
-       d - diddle
-       <br />
-       c - cheese
-       <br />
-       R/L - stickings
-       <br />
-       space - play score
-       <br />
-       0-9, -, + notes
-       <br />
-       ctrl+z, ctrl+y - undo/redo
-       </div>
-       
-
-
-       </ClickAwayListener>
-      </Popover>
-      </>
-      
+    <Popover
+      open={Boolean(anchorEl)}
+      anchorEl={anchorEl}
+      onClose={onClose}
+      anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      transformOrigin={{ vertical: "top", horizontal: "right" }}
+      PaperProps={{ className: `${styles.menu} ${styles.helpCard}`, role: "dialog", "aria-label": "Help and shortcuts" }}
+    >
+      <h3>{instrumentLabel(instrument)} voices</h3>
+      <dl>{legend.map(([key, name]) => <div key={key} style={{ display: "contents" }}><dt>{key}</dt><dd>{name}</dd></div>)}</dl>
+      <h3>Keyboard shortcuts</h3>
+      <dl>{SHORTCUTS.map(([key, action]) => <div key={key} style={{ display: "contents" }}><dt>{key}</dt><dd>{action}</dd></div>)}</dl>
+    </Popover>
   );
 }

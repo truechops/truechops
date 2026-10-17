@@ -6,109 +6,28 @@ import useCymbalVoices from "./voices/cymbalVoices-hook";
 import { getSelectedInstrument } from "../../../store/score";
 import { useSelector } from "react-redux";
 
+// [button text, voice name] for the selected instrument's help legend.
+const legends = {
+  drumset: [["K", "Kick"], ["S", "Snare"], ["HH", "Hi-hat"], ["R", "Ride"], ["HF", "Hi-hat foot"],
+    ["T1", "Tom 1 (high tom)"], ["T2", "Tom 2 (middle tom)"], ["T3", "Tom 3 (low tom)"], ["T4", "Tom 4 (floor tom)"]],
+  snare: [["Snare", "Snare"], ["Ping", "Ping"], ["Rim", "Rim"], ["Butt", "Butt end"], ["Back", "Backstick"], ["Cross", "Crossover"], ["Click", "Stick click"]],
+  tenors: [["Spock", "Spock"], ["T1", "Tenor 1"], ["T2", "Tenor 2"], ["T3", "Tenor 3"], ["T4", "Tenor 4"]],
+  bass: [["B1", "Bass 1"], ["B2", "Bass 2"], ["B3", "Bass 3"], ["B4", "Bass 4"], ["B5", "Bass 5"]],
+  cymbals: [["Choke", "Choke"], ["Crash", "Crash"]],
+};
+
 export default function useInstruments() {
-  const setVoices = useSetVoices();
-  const snareVoices = useSnareVoices();
-  const tenorVoices = useTenorVoices();
-  const bassVoices = useBassVoices();
-  const crashVoices = useCymbalVoices();
+  const voices = {
+    drumset: useSetVoices(),
+    snare: useSnareVoices(),
+    tenors: useTenorVoices(),
+    bass: useBassVoices(),
+    cymbals: useCymbalVoices(),
+  };
 
   const selectedInstrument = useSelector((state) => {
     return getSelectedInstrument(state.score.present);
   });
 
-  const drumsetTooltipText = (
-    <>
-      K = Kick
-      <br />
-      S = Snare
-      <br />
-      HH = HiHat
-      <br />
-      R = Ride
-      <br />
-      HF = Hi Hat Foot
-      <br />
-      T1 = Tom 1 (High Tom)
-      <br />
-      T2 = Tom 2 (Middle Tom)
-      <br />
-      T3 = Tom 3 (Low Tom)
-      <br />
-      T4 = Tom 4 (Floor Tom){" "}
-    </>
-  );
-
-  const snareTooltipText = 
-  <>
-  Snare = Snare
-      <br />
-      Ping = Ping
-      <br />
-      Rim = Rim
-  </>;
-
-  const tenorsTooltipText = (
-    <>
-      Spock = Spock
-      <br />
-      T1 = Tenor 1
-      <br />
-      T2 = Tenor 2
-      <br />
-      T3 = Tenor 3
-      <br />
-      T4 = Tenor 4
-    </>
-  );
-
-  const bassTooltipText = (
-    <>
-      B1 = Bass 1
-      <br />
-      B2 = Bass 2
-      <br />
-      B3 = Bass 3
-      <br />
-      B4 = Bass 4
-      <br />
-      B5 = Bass 5
-    </>
-  );
-
-  const cymbalTooltipText = (
-    <>
-      Choke = Choke
-      <br />
-      Crash = Crash
-      <br />
-    </>
-  );
-
-  const instrumentData = {
-    drumset: {
-      voiceButtons: setVoices,
-      tooltipText: drumsetTooltipText
-    },
-    snare: {
-      voiceButtons: snareVoices,
-      tooltipText: snareTooltipText
-    },
-    tenors: {
-      voiceButtons: tenorVoices,
-      tooltipText: tenorsTooltipText
-    },
-    bass: {
-      voiceButtons: bassVoices,
-      tooltipText: bassTooltipText
-    },
-    cymbals: {
-      voiceButtons: crashVoices,
-      tooltipText: cymbalTooltipText
-    },
-  };
-
-  const data = instrumentData[selectedInstrument];
-
-  return { voiceButtons: data.voiceButtons, tooltipText: data.tooltipText };
+  return { instrument: selectedInstrument, voiceButtons: voices[selectedInstrument], legend: legends[selectedInstrument] };
 }

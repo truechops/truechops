@@ -1,6 +1,5 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { scoreActions } from '../../../../store/score';
-import Button from '../../../ui/Button';
 
 export default function useTenorVoices() {
     const { spockSelected, t1Selected, t2Selected, t3Selected, t4Selected } = useSelector(state => state.score.present.voices.tenors);
@@ -42,15 +41,7 @@ export default function useTenorVoices() {
           text: "T4",
           selected: t4Selected,
         },
-      ].map((props) => (
-        <Button
-          key={Math.random().toString()}
-          onClick={props.onClick}
-          selected={props.selected}
-        >
-          {props.text}
-        </Button>
-      ));
+      ];
 
-      return [buttons.slice(0, 2), buttons.slice(2)];
+      return buttons;
 }

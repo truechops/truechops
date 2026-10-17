@@ -227,12 +227,13 @@ const scoreSlice = createSlice({
       state.measureSelection = true;
       state.timeSig = measure.timeSig;
     },
-    shuffleSelectedMeasure(state, action) {
-      const index = state.selectedNoteIndex?.measureIndex;
-      if (!state.score.measures[index]) return;
-      const { category, instrument } = typeof action.payload === "string" ? { category: action.payload, instrument: state.score.measures[index].parts[state.selectedPartIndex]?.instrument } : action.payload;
+    // One undoable edit that varies the given measures, e.g. every measure in the score.
+    adjustMeasures(state, action) {
+      const { category, instrument, indexes } = action.payload;
       if (state.score.parts[instrument]?.enabled === false) return;
-      state.score.measures[index] = adjustMeasure(state.score.measures[index], category, Math.random, instrument);
+      for (const index of indexes) {
+        if (state.score.measures[index]) state.score.measures[index] = adjustMeasure(state.score.measures[index], category, Math.random, instrument);
+      }
     },
     replaceMeasure(state, action) {
       const { index, measure, expected } = action.payload;

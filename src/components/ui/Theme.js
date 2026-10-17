@@ -76,27 +76,8 @@ export default createTheme({
     },
   },
   buttons: {
-    root: {
-      "&:hover": {
-        backgroundColor: "red",
-      },
-    },
     topToolbar: {
       iconSize: 20,
-    },
-    svg: {
-      root: {
-        height: 50,
-        width: 50,
-      },
-      htmlColor: {
-        selected: "white",
-        notSelected: primary,
-      },
-    },
-    selected: {
-      backgroundColor: primary,
-      color: "white !important",
     },
   },
   sidebar: {
@@ -109,37 +90,6 @@ export default createTheme({
     marginLeft: -20
   },
   compose: {
-    buttons: {
-      row: {
-        marginBottom: spacing,
-      },
-      container: {
-        padding: 2, //Theme spacing multiplier. Right now used with <Box p={padding}></Box>
-      },
-      tooltip: {
-        marginRight: 10,
-      },
-      note: {
-        marginRight: "0 5px",
-        minWidth: 34,
-        borderRadius: "50rem",
-        padding: "3px 11px",
-        marginLeft: spacing,
-        //height: 32
-      },
-      wholeNote: {
-        bottom: 10,
-        height: 13,
-        width: 13,
-      },
-      chip: {
-        margin: "0 5px",
-      },
-    },
-    wholeNote: {},
-    score: {
-      tabsHiddenTopPadding: spacing * 2,
-    },
     sidebar: {
       icons: {
         size: 18,

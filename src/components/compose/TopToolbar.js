@@ -15,8 +15,7 @@ import { copyToClipboard } from "../../helpers/browser";
 import _ from "lodash";
 import { score } from '../../consts/score';
 
-import { FaUndo, FaRedo, FaPlay, FaStop, FaSave, FaLink, FaPlus, FaTimes } from "react-icons/fa";
-import { FiCopy, FiSearch } from "react-icons/fi";
+import { FiCopy, FiSearch, FiRotateCcw, FiRotateCw, FiHelpCircle, FiPlay, FiSquare, FiPlus, FiLink, FiSave } from "react-icons/fi";
 import { useRouter } from "next/router";
 import { openNotationSearch } from "../../services/notation-search";
 import { GiMetronome } from "react-icons/gi";
@@ -24,7 +23,9 @@ import RhythmDialog from "../social/RhythmDialog";
 import Link from "next/link";
 import useLinkMutations from "../../graphql/link/useLinkMutations";
 import MetronomePopover from "./popovers/MetronomePopover";
+import HelpPopover from "./popovers/InstrumentHelpPopover";
 import addComposeEventListeners from "./event-listeners";
+import styles from "./score-workspace.module.css";
 import {
   FormControlLabel,
   Switch,
@@ -49,7 +50,8 @@ export function TopToolbar(props) {
   const toneJs = props.toneJs;
   const repeat = props.repeat;
   const startStop = props.startStop;
-  const clearScore = props.clearScore;
+  const tempo = useSelector((state) => state.score.present.tempo);
+  const [helpAnchorEl, setHelpAnchorEl] = useState(null);
   const prevRepeatRef = useRef();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [savedNotice, setSavedNotice] = useState(false);
@@ -261,47 +263,26 @@ export function TopToolbar(props) {
 
   return (
     <>
-      <div className="top-toolbar" style={{ width: "auto", margin: "12px" }}>
-        <IconButton color="inherit" aria-label="parts" onClick={clearScore}>
-          <FaTimes size={iconSize} />
-        </IconButton>
-        <IconButton color="inherit" aria-label="undo" onClick={props.undo}>
-          <FaUndo size={iconSize} />
-        </IconButton>
-        <IconButton color="inherit" aria-label="redo" onClick={props.redo}>
-          <FaRedo size={iconSize} />
-        </IconButton>
-        <IconButton
-          color="inherit"
-          aria-label="metronome"
-          onClick={handleMetronomePopoverOpen}
-        >
-          <GiMetronome size={iconSize + 6} />
-        </IconButton>
-        <IconButton color="inherit" aria-label="play" onClick={startStop}>
-          {!isPlaying ? <FaPlay size={iconSize} /> : <FaStop size={iconSize} />}
-        </IconButton>
-        <IconButton color="inherit" aria-label="save" onClick={onSave}>
-          <FaSave size={iconSize} />
-        </IconButton>
-        <IconButton color="inherit" aria-label="Find rhythms matching this score" title="Find rhythms matching this score" onClick={async () => { try { await openNotationSearch(router, scoreData.score, scoreData.name || "Your score"); } catch { setSearchError("Couldn't open notation search. Please try again."); } }}><FiSearch size={iconSize} /></IconButton>
-        <IconButton color="inherit" aria-label="link" onClick={onAddLink}>
-          <FaLink size={iconSize} />
-        </IconButton>
-        {/* <IconButton color="inherit" aria-label="download-json" onClick={downloadScoreJson}>
-          <FaDownload size={iconSize} />
-        </IconButton> */}
-        <IconButton color="inherit" aria-label="parts" onClick={() => setSheetOpen(true)}>
-          <FaPlus size={iconSize} />
-        </IconButton>
+      <div className={styles.actions}>
+        <button type="button" className={`${styles.action} ${styles.iconAction}`} aria-label="undo" title="Undo (Ctrl+Z)" onClick={props.undo}><FiRotateCcw aria-hidden="true" /></button>
+        <button type="button" className={`${styles.action} ${styles.iconAction}`} aria-label="redo" title="Redo (Ctrl+Y)" onClick={props.redo}><FiRotateCw aria-hidden="true" /></button>
+        <button type="button" className={`${styles.action} ${styles.iconAction}`} aria-label="Help and shortcuts" title="Help and shortcuts" aria-haspopup="dialog" onClick={(event) => setHelpAnchorEl(event.currentTarget)}><FiHelpCircle aria-hidden="true" /></button>
+        <span className={styles.actionDivider} />
+        <button type="button" className={styles.action} aria-label={`Tempo ${tempo} BPM`} aria-haspopup="dialog" onClick={handleMetronomePopoverOpen}><GiMetronome aria-hidden="true" />{tempo} BPM</button>
+        <button type="button" className={`${styles.action} ${styles.play}`} onClick={startStop}>{!isPlaying ? <FiPlay aria-hidden="true" /> : <FiSquare aria-hidden="true" />}{!isPlaying ? "Play" : "Stop"}</button>
+        <button type="button" className={styles.action} aria-label="Parts" title="Parts" onClick={() => setSheetOpen(true)}><FiPlus aria-hidden="true" /><span className={styles.actionLabel}>Parts</span></button>
+        <button type="button" className={styles.action} aria-label="Find rhythms matching this score" title="Find rhythms matching this score" onClick={async () => { try { await openNotationSearch(router, scoreData.score, scoreData.name || "Your score"); } catch { setSearchError("Couldn't open notation search. Please try again."); } }}><FiSearch aria-hidden="true" /><span className={styles.actionLabel}>Find</span></button>
+        <button type="button" className={styles.action} aria-label="Share" title="Share a link" onClick={onAddLink}><FiLink aria-hidden="true" /><span className={styles.actionLabel}>Share</span></button>
+        <button type="button" className={styles.action} aria-label="save" title="Save" onClick={onSave}><FiSave aria-hidden="true" /><span className={styles.actionLabel}>Save</span></button>
       </div>
       {saveRhythmModalOpen && <RhythmDialog
         composition={{ ...scoreData, mutations: numParts === 1 ? scoreData.mutations : [] }}
         onClose={() => setSaveRhythmModalOpen(false)}
         onSaved={() => { setSaveRhythmModalOpen(false); setSavedNotice(true); }}
       />}
-      {searchError && <p role="alert" style={{ textAlign: "center" }}>{searchError}</p>}
-      {savedNotice && <p role="status" style={{ textAlign: "center", fontSize: 13 }}>Saved to your profile. <Link href="/profile">View your rhythms</Link> <button onClick={() => setSavedNotice(false)} aria-label="Dismiss saved message">Dismiss</button></p>}
+      {searchError && <p role="alert" className={styles.status}>{searchError}</p>}
+      {savedNotice && <p role="status" className={styles.status}>Saved to your profile. <Link href="/profile">View your rhythms</Link> <button onClick={() => setSavedNotice(false)} aria-label="Dismiss saved message">Dismiss</button></p>}
+      <HelpPopover anchorEl={helpAnchorEl} onClose={() => setHelpAnchorEl(null)} />
 
       <Dialog
         isOpen={addLinkModalOpen}
@@ -319,10 +300,10 @@ export function TopToolbar(props) {
         isOpen={rhythmLink.length > 0}
       />
 
-      <MetronomePopover
+      {metronomeAnchorEl && <MetronomePopover
         anchorEl={metronomeAnchorEl}
         handlePopoverClose={handleMetronomePopoverClose}
-      />
+      />}
       <Drawer
             anchor="right"
             open={sheetOpen}
@@ -349,7 +330,6 @@ const mapDispatchToProps = (dispatch) => {
     startStop: () => dispatch(scoreActions.startStop()),
     undo: () => dispatch(ActionCreators.undo()),
     redo: () => dispatch(ActionCreators.redo()),
-    clearScore: () => dispatch(scoreActions.clearScore())
   };
 };
 

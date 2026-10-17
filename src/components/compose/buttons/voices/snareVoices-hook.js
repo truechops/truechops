@@ -1,7 +1,5 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { scoreActions } from '../../../../store/score';
-import Button from '../../../ui/Button';
-import { ThemeProvider } from '@mui/material/styles';
 
 export default function useSnareVoices() {
     const { snareSelected, pingSelected, rimSelected, 
@@ -59,15 +57,7 @@ export default function useSnareVoices() {
           text: "Click",
           selected: stickClickSelected,
         },
-      ].map((props) => (
-        <Button
-          key={Math.random().toString()}
-          onClick={props.onClick}
-          selected={props.selected}
-        >
-          {props.text}
-        </Button>
-      ));
+      ];
 
-      return [buttons.slice(0, 4), buttons.slice(4)];
+      return buttons;
 }

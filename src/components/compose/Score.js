@@ -6,8 +6,6 @@ import { appActions } from "../../store/app";
 import Dialog from '../ui/Dialog';
 import repeatHook from './buttons/mutate/common/repeat-hook';
 import { browserName } from 'react-device-detect';
-import MeasureToolbar from './MeasureToolbar';
-import measureStyles from './measure-toolbar.module.css';
 
 import _ from "lodash";
 
@@ -28,7 +26,6 @@ export default function Score(props) {
   const name = useSelector(state => state.score.present.name);
   const [promptedForRepeat, setPromptedForRepeat] = useState(false);
   const [repeatDialogOpen, setRepeatDialogOpen] = useState(false);
-  const [measureToolsOpen, setMeasureToolsOpen] = useState(false);
   const { formControl: repeatFormControl, numRepeats } = repeatHook();
   
   const dontUseSafariShown = useSelector(state => state.app.dontUseSafariShown);
@@ -54,7 +51,6 @@ export default function Score(props) {
 
   const noteSelectedCallback = useCallback(
     (note) => {
-      setMeasureToolsOpen(false);
       const scoreRootElement = document.getElementById(scoreRootId);
       dispatch(
         selectNote({
@@ -71,17 +67,11 @@ export default function Score(props) {
     [dispatch, scoreRootId]
   );
   const measureSelectedCallback = useCallback((index, keyboard = false) => {
-    setMeasureToolsOpen(false);
     const root = document.getElementById(scoreRootId);
     dispatch(scoreActions.setScrollAmount({ top:root?.scrollTop || 0, left:root?.scrollLeft || 0 }));
     dispatch(scoreActions.selectMeasure(index));
     if (keyboard) requestAnimationFrame(() => root?.querySelector(`[data-measure-index="${index}"]`)?.focus());
   }, [dispatch, scoreRootId]);
-  const openMeasureTools = useCallback((index, keyboard = false) => {
-    measureSelectedCallback(index);
-    setMeasureToolsOpen(true);
-    if (keyboard) requestAnimationFrame(() => requestAnimationFrame(() => document.querySelector("[data-measure-toolbar] button")?.focus()));
-  }, [measureSelectedCallback]);
 
   useEffect(() => {
     if(_.isEqual(currentScore, props.score)) {
@@ -90,13 +80,19 @@ export default function Score(props) {
       //JARED_TODO: I shouldn't have to render the score two times. Do something about that.
     }
 
+      // Lay the score out to fill its container: the SVG is (width + padding) * hResize wide.
+      const width = props.containerWidth ? props.containerWidth / 0.75 - 50 : props.width || windowWidth;
       const scoreSvgConfig = {
-        width: props.width || windowWidth,
+        width,
         scale: 0.75,
         hResize: 0.75,
         vResize: 0.75,
         ...(props.svgConfig || {}),
-        ...(props.measureTools ? { measureEditing: { selected: selectedNoteIndex?.measureIndex, onSelect: measureSelectedCallback, onOpen: openMeasureTools } } : {}),
+        ...(props.measureTools ? {
+          measureEditing: { selected: selectedNoteIndex?.measureIndex, onSelect: measureSelectedCallback },
+          maxMeasuresPerLine: Math.max(1, Math.min(4, Math.floor(width / 380))),
+          partLabelsOnEveryRow: true,
+        } : {}),
       };
 
       const scoreElement = document.getElementById(props.id || "vexflow");
@@ -130,8 +126,6 @@ export default function Score(props) {
     selectedNoteIndex,
     repeat,
     dispatch,
-    props.selectedTab,
-    props.tabPanelHidden,
     scrollAmount,
     promptedForRepeat,
     isDynamic,
@@ -140,10 +134,10 @@ export default function Score(props) {
     props.id,
     props.svgConfig,
     props.width,
+    props.containerWidth,
     props.measureTools,
     measureSelection,
     measureSelectedCallback,
-    openMeasureTools,
     scoreRootId
   ]);
 
@@ -154,11 +148,10 @@ export default function Score(props) {
 
   return (
     <>
-    <div className={`${props.vexflowWrapperClass || ""} ${props.measureTools ? measureStyles.editor : ""}`}>
-      {props.showTitle !== false && <h2 style={{textAlign: 'center', margin: 0}}>{name}</h2>}
+    <div className={props.vexflowWrapperClass}>
+      {props.showTitle !== false && name && <h2 className={props.titleClass}>{name}</h2>}
       <div className={props.vexflowClass} id={props.id || "vexflow"} />
     </div>
-    {props.measureTools && <MeasureToolbar scoreId={props.id || "vexflow"} score={props.score} selectedIndex={selectedNoteIndex?.measureIndex} open={measureToolsOpen} onClose={() => setMeasureToolsOpen(false)} />}
 
     <Dialog
     isOpen={repeatDialogOpen && (dontUseSafariShown == "init" || dontUseSafariShown == "false")}

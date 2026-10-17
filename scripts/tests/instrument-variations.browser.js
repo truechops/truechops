@@ -69,11 +69,17 @@ const choose = (page, name) => page.$$eval(`${types} button`, (buttons, label) =
     await clickText(page, "Original rhythm");
     await clickText(page, "Open in score");
     await page.waitForSelector("#vexflow [data-measure-index='0']");
-    assert.deepEqual(await page.$$eval('[role=tab]', tabs => tabs.map(tab => tab.textContent)), ["Measure", "Notes", "Ornaments", "Mutate"], "Generate is removed from Score");
+    assert.deepEqual(await page.$$eval('[role=tab]', tabs => tabs.map(tab => tab.textContent)), ["Measure", "Notes", "Ornaments", "Sticking"], "Edit tabs; Mutate is its own mode");
+    const vary = "[aria-label='Vary the measure'] button";
     const openTools = async () => {
-      await page.hover("#vexflow [data-measure-background]");
-      await page.click("#vexflow [data-measure-trigger]"); await clickText(page, "Adjust");
-      await page.waitForSelector("[aria-label='Adjust measure']");
+      await page.click("#vexflow [data-measure-index='0'] [data-measure-background]");
+      await page.waitForFunction(() => document.querySelector("#vexflow [data-measure-index='0']")?.dataset.selected === "true");
+      if (!await page.$(vary)) await clickText(page, "Mutate");
+      await page.waitForSelector(vary);
+    };
+    const browse = async () => {
+      await clickText(page, "More"); await page.waitForSelector("[role=menu][aria-label='More variations']");
+      await clickText(page, "Browse variations");
     };
     const save = async () => {
       await page.waitForSelector("button[aria-label=save]");
@@ -82,12 +88,12 @@ const choose = (page, name) => page.$$eval(`${types} button`, (buttons, label) =
       assert(snapshot); return structuredClone(snapshot);
     };
     await openTools();
-    assert.deepEqual(await page.$$eval('[role=menuitem]', items => items.map(item => item.getAttribute("aria-label"))), [...options, "Browse variations", "Find matching rhythms"]);
-    await clickText(page, "Kick"); await clickText(page, "Shuffle");
+    assert.deepEqual(await page.$$eval(vary, buttons => buttons.map(button => button.getAttribute("aria-label") || button.textContent.trim())), [...options, "More"]);
+    await clickText(page, "Kick");
     const shuffled = await save(); assert.notDeepEqual(shuffled, kit);
     assert.deepEqual(without(shuffled.measures[0].parts[0], ["F4"]), without(kit.measures[0].parts[0], ["F4"]));
     await page.click("button[aria-label=undo]"); assert.deepEqual(await save(), kit);
-    await openTools(); await clickText(page, "Browse variations");
+    await openTools(); await browse();
     await page.waitForSelector("#measure-variations-title"); await choose(page, "Snare");
     assert.deepEqual(await pressed(page), ["Kick", "Snare"]);
     await page.click("button[aria-label='Preview kick + snare variation 1']"); await clickText(page, "Use variation");
@@ -102,13 +108,13 @@ const choose = (page, name) => page.$$eval(`${types} button`, (buttons, label) =
     assert.deepEqual(await pressed(page), ["Kick"], "Changing instruments clears incompatible selections");
     assert.equal(await page.$('[data-variation-number][data-selected=true]'), null);
     await page.click("button[aria-label='Close side panel']"); await clickText(page, "Open in score");
-    await page.waitForSelector("#vexflow [data-measure-trigger]"); await openTools();
-    await page.select('[aria-label="Adjustment instrument"]', "drumset");
-    await clickText(page, "Kick"); await clickText(page, "Shuffle");
+    await page.waitForSelector("#vexflow [data-measure-index='0']"); await openTools();
+    await page.select('[aria-label="Variation part"]', "drumset");
+    await clickText(page, "Kick");
     const mixedShuffled = await save();
     assert.deepEqual(mixedShuffled.measures[0].parts[0], mixed.measures[0].parts[0]);
     assert.deepEqual(without(mixedShuffled.measures[0].parts[1], ["F4"]), without(mixed.measures[0].parts[1], ["F4"]));
-    await openTools(); await page.select('[aria-label="Adjustment instrument"]', "drumset"); await clickText(page, "Browse variations");
+    await openTools(); await page.select('[aria-label="Variation part"]', "drumset"); await browse();
     await page.waitForSelector("#measure-variations-title"); assert.deepEqual(await pressed(page), ["Kick"]);
     await page.setViewport({ width: 390, height: 844 });
     await page.click("button[aria-label='Maximize variations']");
@@ -117,7 +123,7 @@ const choose = (page, name) => page.$$eval(`${types} button`, (buttons, label) =
     assert(await page.$eval('[data-variation-browser]', el => el.scrollWidth <= el.clientWidth + 1));
     await page.screenshot({ path: `${folder}/kit-score-mobile.png` });
     assert.deepEqual(errors, []); assert.deepEqual(unexpected, []);
-    console.log("Passed: two-selection limits, instrument detection, drum voice preservation/playback/save, kit measure shuffles and undo, applying variants, mixed-part targeting, full-screen/mobile layouts, and Generate removal.");
+    console.log("Passed: two-selection limits, instrument detection, drum voice preservation/playback/save, kit measure shuffles and undo, applying variants, mixed-part targeting, and full-screen/mobile layouts.");
   } catch (error) { console.error(errors, unexpected); await page.screenshot({ path: `${folder}/failure.png`, fullPage: true }); throw error; }
   finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
