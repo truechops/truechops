@@ -22,6 +22,9 @@ const { config: socialApiConfig } = require("../../pages/api/social/[...route]")
 const defaultScore = require("../../src/consts/default-score").default;
 const evaluate = require("./mongo-expressions");
 const { notationShape, notationProjection } = require("../../src/services/notation-search");
+const { parseYouTubeUrl, videoForRhythm } = require("../../src/lib/social/youtube");
+const { mutate: mutateDrill } = require("../../src/services/mutate/mutate-service");
+const { getScoreVoices } = require("../../src/utils/score");
 const clone = (v) => JSON.parse(JSON.stringify(v));
 const at = (row,key) => key.split(".").reduce((value,part)=>value?.[part],row);
 function assign(row,key,value) { const parts=key.split(".");const last=parts.pop();let parent=row;for(const part of parts)parent=parent[part]||(parent[part]={});parent[last]=value; }
@@ -103,6 +106,54 @@ async function fixture(options) {
 }
 const rejects=(promise,status)=>assert.rejects(promise,(error)=>error.status===status);
 const response=()=>({ statusCode:200, headers:{}, setHeader(k,v){this.headers[k]=v;},status(n){this.statusCode=n;return this;},json(value){this.body=value;return this;} });
+
+test("shuffled snare and drum-set drills retain durations accepted by rhythm saves",async()=>{
+  const {api}=await fixture();
+  for(const collection of [require("../../data/exercises/snare/all").default,require("../../data/exercises/drumset/all").default]) {
+    for(const drill of collection) {
+      const score=clone(drill.score);
+      mutateDrill(score,drill.mutations,1,Object.keys(getScoreVoices(score)));
+      assert.doesNotThrow(()=>validateScore(score),drill.name);
+      const {rhythm}=await api.createRhythm(owner,{name:drill.name,tempo:drill.tempo,score,mutations:drill.mutations});
+      assert.equal(rhythm.score.measures.length,score.measures.length);
+    }
+  }
+});
+
+test("YouTube links normalize supported formats without accepting arbitrary embeds",()=>{
+  for(const input of ["https://www.youtube.com/watch?v=abcdefghijk&list=ignored", "https://youtu.be/abcdefghijk?si=ignored", "youtube.com/shorts/abcdefghijk", "https://m.youtube.com/live/abcdefghijk", "https://www.youtube-nocookie.com/embed/abcdefghijk"]) {
+    const video=parseYouTubeUrl(input);
+    assert.equal(video.id,"abcdefghijk");assert.equal(video.url,"https://www.youtube.com/watch?v=abcdefghijk");
+    assert.equal(video.embedUrl,"https://www.youtube-nocookie.com/embed/abcdefghijk?playsinline=1");
+  }
+  for(const timestamp of ["t=1m30s", "t=90", "start=90"]) assert.equal(parseYouTubeUrl(`https://youtu.be/abcdefghijk?${timestamp}`).start,90);
+  assert.equal(parseYouTubeUrl("https://youtube.com/watch?v=abcdefghijk#t=1h2m3s").start,3723);
+  for(const input of [null,{},"", "<iframe src='https://youtube.com/embed/abcdefghijk'>", "https://youtube.com.evil.test/watch?v=abcdefghijk", "https://youtube.com@evil.test/abcdefghijk", "https://user:password@youtube.com/watch?v=abcdefghijk", "javascript:alert(1)", "https://youtube.com/playlist?list=abcdefghijk", "https://youtu.be/bad", "https://youtu.be/abcdefghijk?t=-1"]) assert.equal(parseYouTubeUrl(input),null,JSON.stringify(input));
+  assert.throws(()=>normalizeMetadata({...composition,youtubeUrl:"https://example.test/video"}),/YouTube/);
+  assert.equal(normalizeMetadata(composition).youtubeUrl,"");
+  const oldVideo={id:"legacy",kind:"video",status:"ready"};
+  assert.equal(videoForRhythm({media:[oldVideo]}),oldVideo);
+  assert.equal(videoForRhythm({media:[oldVideo],youtubeUrl:"https://youtu.be/abcdefghijk"}).provider,"youtube");
+});
+
+test("YouTube metadata survives saving, search, profiles and editing without an upload provider",async()=>{
+  const {api,db}=await fixture({bunny:{config(){throw new Error("YouTube must not require Bunny");}}});
+  const youtubeUrl="https://www.youtube.com/watch?v=abcdefghijk&t=90s";
+  const {rhythm}=await api.createRhythm(owner,{...composition,youtubeUrl:"https://youtu.be/abcdefghijk?t=1m30s"});
+  assert.equal(rhythm.youtubeUrl,youtubeUrl);assert.deepEqual(rhythm.media,[]);
+  await rejects(api.getRhythm(visitor,rhythm.id),404);
+  await rejects(api.updateRhythm(visitor,rhythm.id,{youtubeUrl:""}),404);
+  await api.updateRhythm(owner,rhythm.id,{visibility:"public"});
+  assert.equal((await api.getRhythm(null,rhythm.id)).rhythm.youtubeUrl,youtubeUrl);
+  for(const response of [await api.search(null,{}),await api.profile(null,profile.handle,{}),await api.library(owner,{tab:"created"}),await api.searchNotation(null,{score:composition.score})]) {
+    assert.equal(response.items.find((item)=>item.id===rhythm.id).youtubeUrl,youtubeUrl);
+  }
+  await rejects(api.updateRhythm(owner,rhythm.id,{youtubeUrl:"https://evil.test/"}),400);
+  assert.equal((await api.getRhythm(owner,rhythm.id)).rhythm.youtubeUrl,youtubeUrl);
+  assert.equal((await api.updateRhythm(owner,rhythm.id,{youtubeUrl:"https://youtube.com/shorts/lmnopqrstuv"})).rhythm.youtubeUrl,"https://www.youtube.com/watch?v=lmnopqrstuv");
+  assert.equal((await api.updateRhythm(owner,rhythm.id,{youtubeUrl:""})).rhythm.youtubeUrl,"");
+  assert.equal(db.collection("rhythmMedia").rows.length,0);
+});
 
 function mediaProvider() {
   const config={libraryId:"123",apiKey:"test-library-secret",tokenKey:"test-token-secret",hostname:"test.b-cdn.net"};

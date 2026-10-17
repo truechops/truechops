@@ -30,7 +30,7 @@ export function createSocialService(db, { now = () => new Date(), ensureSearch =
     const creators = await profiles.find({ userId: { $in: [...new Set(rows.map((r) => r._userId))] } }).toArray();
     const saved = userId ? await saves.find({ userId, rhythmId: { $in: rows.map((r) => String(r._id)) } }).toArray() : [];
     const recordings = await media.mediaCards(rows);
-    return rows.map((r) => ({ media:recordings.get(String(r._id)) || [], id: String(r._id), name: r.name, description: r.description || "", tags: r.tags || [],
+    return rows.map((r) => ({ media:recordings.get(String(r._id)) || [], youtubeUrl:r.youtubeUrl || "", id: String(r._id), name: r.name, description: r.description || "", tags: r.tags || [],
       instruments: r.instruments || Object.keys(r.score?.parts || {}).filter((key) => r.score.parts[key]), difficulty: r.difficulty || "",
       visibility: r.visibility === "public" ? "public" : "private", tempo: r.tempo || 90, createdAt: r.date,
       measureCount: r.score?.measures?.length || 0,
@@ -146,7 +146,7 @@ export function createSocialService(db, { now = () => new Date(), ensureSearch =
       const userId = requireUser(user), filter = { ...idFilter(id), _userId: userId, type: "saved" };
       const row = await rhythms.findOne(filter);
       if (!row) fail(404,"Rhythm not found in your library.");
-      const data = normalizeMetadata({ ...row, ...Object.fromEntries(["name","description","tags","tempo","difficulty","visibility"].filter((key) => Object.hasOwn(body,key)).map((key) => [key,body[key]])) });
+      const data = normalizeMetadata({ ...row, ...Object.fromEntries(["name","description","tags","tempo","difficulty","visibility","youtubeUrl"].filter((key) => Object.hasOwn(body,key)).map((key) => [key,body[key]])) });
       await requireProfile(userId,data.visibility);
       const result = await rhythms.updateOne(filter, { $set: { ...data, instruments: row.instruments || Object.keys(row.score.parts).filter((key) => row.score.parts[key]), updatedAt: now() } });
       if (!result.matchedCount) fail(404,"Rhythm no longer available.");

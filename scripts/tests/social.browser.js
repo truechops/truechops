@@ -93,7 +93,7 @@ async function field(page,label,value) {
     assert.equal(await page.$(".MuiAppBar-root"),null,"Navigation lives only in the sidebar");
     assert.equal(await page.$("#site-navigation a[href='/about']"),null,"About has been removed");
     assert.equal(await page.$("select[aria-label='Difficulty'], main [data-level]"),null,"Levels are hidden");
-    assert.equal(await page.$("#site-navigation a[href='/account/books']"),null,"Books live in the profile");
+    assert.equal(await page.$("#site-navigation a[href='/account/books']"),null,"Books are absent from navigation");
     await page.waitForFunction(()=>document.querySelector("#site-navigation")?.closest(".MuiDrawer-paper")?.getBoundingClientRect().width===80);
     await page.hover("#site-navigation a[aria-label='Search']");
     await page.waitForFunction(()=>document.querySelector("#site-navigation").closest(".MuiDrawer-paper").getBoundingClientRect().width===244);
@@ -213,7 +213,7 @@ async function field(page,label,value) {
     await page.$eval("form",form=>form.requestSubmit());
     await page.waitForFunction(()=>document.querySelector("main")?.innerText.includes("Your public profile is saved."));
     assert.equal(myProfile.handle,"alex_beats");
-    await page.waitForSelector("main a[href='/account/books']");
+    assert.equal(await page.$("main a[href='/account/books']"),null,"Books & saved practice has been removed from Profile");
     await page.screenshot({path:`${folder}/profile-rhythms.png`,fullPage:true});
     await clickText(page,"Saved");await page.waitForSelector("main article");
     assert((await page.$eval("main",el=>el.innerText)).includes("The space between"));

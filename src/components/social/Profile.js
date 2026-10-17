@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { FiArrowUpRight, FiLock, FiGrid, FiBookmark, FiBookOpen, FiPlus } from "react-icons/fi";
+import { FiArrowUpRight, FiLock, FiGrid, FiBookmark, FiPlus } from "react-icons/fi";
 import { INSTRUMENTS } from "../../lib/social/config";
 import { socialRequest } from "./api";
 import RhythmCard from "./RhythmCard";
@@ -68,7 +68,6 @@ export default function Profile({ publicView = false }) {
         <div className={styles.profileTabs} aria-label="Your collection">
           <button aria-pressed={tab === "created"} onClick={() => navigate({ tab: "created" })}><FiGrid aria-hidden="true" /> Rhythms</button>
           <button aria-pressed={tab === "saved"} onClick={() => navigate({ tab: "saved" })}><FiBookmark aria-hidden="true" /> Saved</button>
-          <Link href="/account/books"><FiBookOpen aria-hidden="true" /> Books &amp; saved practice</Link>
         </div>
         {tab === "saved" && <p className={styles.collectionPrivacy}><FiLock aria-hidden="true" /> Only you can see your saved rhythms.</p>}
       </>}

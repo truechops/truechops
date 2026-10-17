@@ -1,0 +1,10 @@
+.player { position:relative; width:100%; height:100%; min-height:0; background:#08090b; overflow:hidden; }
+.player .poster { position:relative; display:grid; place-items:center; flex:1; width:100%; min-height:0; padding:0; border:0; border-radius:0; background:#08090b; color:white; }
+.poster img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
+.play { display:grid; place-items:center; position:relative; width:64px; height:64px; border-radius:50%; background:#c7163c; box-shadow:0 4px 30px #0005; }
+.play svg { width:26px; height:26px; margin-left:3px; fill:currentColor; }
+.caption { position:absolute; bottom:18px; font-size:12px; padding:6px 12px; border-radius:16px; background:#08090bbf; }
+.player .external { display:flex; flex-shrink:0; justify-content:flex-end; align-items:center; gap:5px; padding:7px 12px; font-size:10px; color:#c9cbd1; background:#111317; }
+.player .external:hover { color:white; }
+.player .poster:focus-visible { outline:2px solid #ff5c7e; outline-offset:-4px; }
+@media(prefers-reduced-motion:no-preference) { .play { transition:transform .15s; } .poster:hover .play { transform:scale(1.08); } }

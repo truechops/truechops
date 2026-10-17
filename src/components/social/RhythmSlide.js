@@ -7,6 +7,8 @@ import { scoreActions } from "../../store/score";
 import RhythmPreview from "../book-builder/RhythmPreview";
 import RhythmDialog from "./RhythmDialog";
 import RhythmMedia, { useMediaStatus } from "./RhythmMedia";
+import YouTubeVideo from "./YouTubeVideo";
+import { videoForRhythm } from "../../lib/social/youtube";
 import RhythmVariations from "./RhythmVariations";
 import { Avatar, Status, useAccount, useResource } from "./shared";
 import { socialRequest } from "./api";
@@ -22,6 +24,7 @@ export default function RhythmSlide({ id, active, onLoaded, onChanged, onClose }
   const [text, setText] = useState(""), [busy, setBusy] = useState(""), [error, setError] = useState(""), [notice, setNotice] = useState(""), [editing, setEditing] = useState(false);
   const [variation, setVariation] = useState(null);
   const [variationsExpanded, setVariationsExpanded] = useState(false);
+  const [extraAudioOpen, setExtraAudioOpen] = useState(false);
   const revision = useRef(0), panelRef = useRef(null), commentsTrigger = useRef(null), variationsTrigger = useRef(null);
   useEffect(() => { if (rhythm) onLoaded?.(rhythm); }, [rhythm, onLoaded]);
   useEffect(() => {
@@ -33,7 +36,7 @@ export default function RhythmSlide({ id, active, onLoaded, onChanged, onClose }
   useEffect(() => { if (panel !== "variations") setVariationsExpanded(false); }, [panel]);
   useEffect(() => { if (panel) panelRef.current?.focus({ preventScroll: true }); }, [panel]);
   const recordings = rhythm?.media || [];
-  const video = recordings.find((item) => item.status === "ready" && item.kind === "video");
+  const video = videoForRhythm(rhythm);
   const audio = recordings.find((item) => item.status === "ready" && item.kind === "audio");
   const primaryRecording = video || audio;
   useMediaStatus(active ? rhythm : null, resource.refresh);
@@ -90,12 +93,12 @@ export default function RhythmSlide({ id, active, onLoaded, onChanged, onClose }
         {(notice || error || engagement.error) && <div className={styles.feedback}>{notice && <p role="status">{notice}</p>}{(error || engagement.error) && <p role="alert">{error || engagement.error}{error.includes("public profile") && <> <Link href="/profile">Set up your profile</Link></>}</p>}</div>}
       </header>
       <section className={styles.content} aria-label="Exercise content" inert={variationsExpanded ? "" : undefined}>
-        {primaryRecording && <div className={styles.video}>{active ? <RhythmMedia key={primaryRecording.id} rhythmId={rhythm.id} media={primaryRecording} /> : video?.thumbnailUrl ? <img src={video.thumbnailUrl} alt="" /> : null}</div>}
+        {primaryRecording && <div className={styles.video}>{active ? video?.provider === "youtube" ? <YouTubeVideo key={`${video.id}:${video.start}`} video={video} name={rhythm.name} /> : <RhythmMedia key={primaryRecording.id} rhythmId={rhythm.id} media={primaryRecording} /> : video?.thumbnailUrl ? <img src={video.thumbnailUrl} alt="" loading="lazy" /> : null}</div>}
         <div className={`${styles.notation} ${!primaryRecording ? styles.notationOnly : ""}`}>
           {variation && <div className={styles.previewLabel}><span>Variation preview</span><button onClick={() => setVariation(null)}>Original rhythm</button></div>}
           <div role="img" aria-label="Exercise notation"><RhythmPreview score={variation || rhythm.score} minWidth={260} fit compact maxHeight={primaryRecording ? "min(180px, 22dvh)" : "65dvh"} /></div>
         </div>
-        {video && audio && <details className={styles.extraAudio}><summary>Audio recording</summary>{active && <RhythmMedia rhythmId={rhythm.id} media={audio} />}</details>}
+        {video && audio && <details className={styles.extraAudio} onToggle={(event) => setExtraAudioOpen(event.currentTarget.open)}><summary>Audio recording</summary>{active && extraAudioOpen && <RhythmMedia rhythmId={rhythm.id} media={audio} />}</details>}
         {recordings.some((item) => ["uploading", "processing"].includes(item.status)) && <p className={styles.mediaStatus} role="status">Your recording is processing.</p>}
         {recordings.some((item) => item.status === "failed") && <p className={styles.mediaStatus} role="status">A recording couldn&apos;t be processed.{rhythm.isOwner && " Choose a new file in Edit details."}</p>}
       </section>

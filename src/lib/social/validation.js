@@ -1,6 +1,7 @@
 import { INSTRUMENTS, DIFFICULTIES } from "./config";
 import { noteQuarterDuration } from "../book-practice-score";
 import * as automataTypes from "../../consts/raTypes";
+import { parseYouTubeUrl } from "./youtube";
 
 export class SocialError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -28,7 +29,11 @@ export function normalizeMetadata(body) {
   const tags = [...new Set(rawTags.map((tag) => string(tag, 24, "tag", true).toLowerCase()))];
   const tempo = body.tempo ?? 90;
   if (!Number.isFinite(tempo) || tempo < 20 || tempo > 300) fail(400, "Tempo must be between 20 and 300 BPM.");
+  const youtubeInput = string(body.youtubeUrl, 2048, "YouTube link");
+  const youtube = parseYouTubeUrl(youtubeInput);
+  if (youtubeInput && !youtube) fail(400, "Enter a valid YouTube video link (watch, share, Shorts or live).");
   return { name: string(body.name, 100, "rhythm title", true), description: string(body.description, 1000, "description"), tags,
+    youtubeUrl: youtube?.url || "",
     tempo, difficulty: enumValue(body.difficulty || "beginner", DIFFICULTIES, "difficulty"),
     visibility: enumValue(body.visibility || "private", ["private", "public"], "visibility") };
 }

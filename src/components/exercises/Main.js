@@ -1,102 +1,12 @@
-import { useState, useEffect } from "react";
-import Tabs from "@mui/material/Tabs";
-import Tab from "@mui/material/Tab";
-import { makeStyles, useTheme } from "@mui/styles";
-import { useDispatch } from "react-redux";
-import { appActions } from "../../store/app";
+import PracticeCatalog from "../practice/PracticeCatalog";
 import drumsetExercises from "../../../data/exercises/drumset/all";
 import snareExercises from "../../../data/exercises/snare/all";
-import dynamic from "next/dynamic";
 
-const DynamicMain = dynamic(() => import("../rhythms/Main"), {
-  ssr: false,
-});
+const categories = [
+  { label: "Snare", rhythms: snareExercises },
+  { label: "Drum set", rhythms: drumsetExercises },
+];
 
-function getSvgConfig(windowWidth) {
-  return { width: 530, scale: 0.75, hResize: 0.75, vResize: 0.75 };
-}
-
-const useTabStyles = makeStyles((theme) => ({
-  root: {
-    justifyContent: "center",
-    width: "calc(100% - var(--site-sidebar-width))",
-    right: 0,
-    position: "fixed",
-    background: "#fafafa",
-    bottom: 0,
-  },
-  flexContainer: {
-    display: "flex",
-    justifyContent: "center",
-  },
-  scroller: {
-    flexGrow: "0",
-  },
-}));
-
-function a11yProps(index) {
-  return {
-    id: `simple-tab-${index}`,
-    "aria-controls": `simple-tabpanel-${index}`,
-  };
-}
-
-export default function main() {
-  const dispatch = useDispatch();
-  const theme = useTheme();
-  useEffect(() => {
-    dispatch(appActions.setPageLoaded());
-  }, [dispatch]);
-
-  const classes = useTabStyles();
-  const [selectedExercises, setSelectedExercises] = useState(0);
-
-  function changeSelectedRudiments(event, newValue) {
-    setSelectedExercises(newValue);
-  }
-
-  function getHeight(window) {
-    return window.innerHeight - theme.mixins.toolbar.minHeight - 28;
-  }
-
-  function getExercises() {
-    if (selectedExercises == 0) {
-      return (
-        <DynamicMain
-          getHeight={getHeight}
-          rhythms={snareExercises}
-          getSvgConfig={getSvgConfig}
-        />
-      );
-    } else {
-      return (
-        <DynamicMain
-          rhythms={drumsetExercises}
-          getHeight={getHeight}
-          getSvgConfig={getSvgConfig}
-        />
-      );
-    }
-  }
-
-  return (
-    <>
-      <Tabs
-        // style={{ position: "fixed", bottom: 0, marginBottom:  }}
-        classes={{ root: classes.root, flexContainer: classes.flexContainer }}
-        value={selectedExercises}
-        // classes={{ root: classes.root, flexContainer: classes.flexContainer }}
-        onChange={changeSelectedRudiments}
-        // aria-label="simple tabs example"
-        // classes={{ root: classes.tabs, scroller: classes.scroller }}
-        //variant={"scrollable"}
-        scrollButtons={"auto"}
-        centered
-      >
-        <Tab key={"exercises-snare"} label="SNARE" {...a11yProps(0)} />
-        <Tab key={"exercises-drumset"} label="DRUMSET" {...a11yProps(1)} />
-      </Tabs>
-      {getExercises()}
-    </>
-  );
+export default function Main() {
+  return <PracticeCatalog title="Drills" description="Find your focus. Practice control, coordination, and a little something new." categories={categories} drills />;
 }

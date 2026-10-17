@@ -30,11 +30,11 @@ export function useResource(path, accountKey = "", { keepPreviousData = false } 
     update: (change) => setResult((current) => current.key === key && current.data ? { ...current, data: change(current.data) } : current),
   };
 }
-export function Shell({ title, children, className = "" }) {
+export function Shell({ title, children, className = "", description = "Find your next rhythm. Explore the TrueChops community, meet drummers, and build your practice collection." }) {
   const dispatch = useDispatch();
   useEffect(() => { dispatch(appActions.setPageLoaded()); },[dispatch]);
   return <main className={`${styles.page} ${className}`}>
-    <Head><title>{title} | TrueChops</title><meta name="description" content="Find your next rhythm. Explore the TrueChops community, meet drummers, and build your practice collection." /></Head>
+    <Head><title>{`${title} | TrueChops`}</title><meta name="description" content={description} /></Head>
     {children}
   </main>;
 }

@@ -6,11 +6,12 @@ import DialogContent from "@mui/material/DialogContent";
 import { socialRequest } from "./api";
 import { MEDIA_TYPES, mediaFileInfo } from "../../lib/social/media-config";
 import { uploadRecording } from "./media-upload";
+import { parseYouTubeUrl } from "../../lib/social/youtube";
 import styles from "./social.module.css";
 
 export default function RhythmDialog({ rhythm, composition, onClose, onSaved }) {
   const source = rhythm || composition || {};
-  const [values,setValues] = useState({ name: source.name || "", tags: (source.tags || []).join(", "), visibility: source.visibility || "private" });
+  const [values,setValues] = useState({ name: source.name || "", tags: (source.tags || []).join(", "), visibility: source.visibility || "private", youtubeUrl: source.youtubeUrl || "" });
   const [busy,setBusy] = useState(false), [error,setError] = useState("");
   const [saveMutations,setSaveMutations] = useState(false), [confirmDelete,setConfirmDelete] = useState(false);
   const [attached,setAttached] = useState(source.media || []);
@@ -28,8 +29,21 @@ export default function RhythmDialog({ rhythm, composition, onClose, onSaved }) 
     catch (failure) { setError(failure.message); event.target.value = ""; }
   }
   function update(key) { return (event) => setValues((v) => ({ ...v, [key]: event.target.value })); }
+  function recordingField(kind, allowUpload = true) {
+    const spec = MEDIA_TYPES[kind], existing = attached.find((item) => item.kind === kind);
+    if (!allowUpload && !existing) return null;
+    return <div className={styles.mediaField}>
+      {allowUpload && <label>{spec.label}<input type="file" accept={spec.accept} aria-label={`Upload ${kind}`} onChange={(event) => chooseFile(kind,event)} />
+        <small>{spec.accept.replaceAll(".","").toUpperCase()} &middot; up to {spec.maxBytes/1024/1024} MB</small></label>}
+      {files[kind] ? <div><span>{files[kind].name}</span><button type="button" onClick={() => setFiles((current) => {const next = {...current};delete next[kind];return next;})}>Clear file</button></div> :
+        existing && <div><span>{existing.name}{removed.includes(existing.id) ? " (will remove)" : ` (${existing.status})`}</span>
+          <button type="button" onClick={() => setRemoved((current) => current.includes(existing.id) ? current.filter((id) => id !== existing.id) : [...current,existing.id])}>{removed.includes(existing.id) ? "Keep recording" : `Remove ${kind}`}</button></div>}
+    </div>;
+  }
   async function submit(event) {
-    event.preventDefault(); setBusy(true); setError("");
+    event.preventDefault();
+    if (values.youtubeUrl.trim() && !parseYouTubeUrl(values.youtubeUrl)) { setError("Enter a valid YouTube video link (watch, share, Shorts or live)."); return; }
+    setBusy(true); setError("");
     controller.current = new AbortController();
     const signal = controller.current.signal;
     try {
@@ -74,17 +88,15 @@ export default function RhythmDialog({ rhythm, composition, onClose, onSaved }) 
       {!rhythm && composition?.mutations?.length > 0 && <label className={styles.check}><input type="checkbox" checked={saveMutations} onChange={(e) => setSaveMutations(e.target.checked)} />Keep dynamic rhythm settings</label>}
       <fieldset className={styles.mediaFields} disabled={busy}>
         <legend>Recordings <span>optional</span></legend>
-        <p>Add a demonstration or a recording to practice along with.</p>
-        {Object.entries(MEDIA_TYPES).map(([kind,spec]) => {
-          const existing = attached.find((item) => item.kind === kind);
-          return <div className={styles.mediaField} key={kind}>
-            <label>{spec.label}<input type="file" accept={spec.accept} aria-label={`Upload ${kind}`} onChange={(event) => chooseFile(kind,event)} />
-              <small>{spec.accept.replaceAll(".","").toUpperCase()} &middot; up to {spec.maxBytes/1024/1024} MB</small></label>
-            {files[kind] ? <div><span>{files[kind].name}</span><button type="button" onClick={() => setFiles((current) => {const next = {...current};delete next[kind];return next;})}>Clear file</button></div> :
-              existing && <div><span>{existing.name}{removed.includes(existing.id) ? " (will remove)" : ` (${existing.status})`}</span>
-                <button type="button" onClick={() => setRemoved((current) => current.includes(existing.id) ? current.filter((id) => id !== existing.id) : [...current,existing.id])}>{removed.includes(existing.id) ? "Keep recording" : `Remove ${kind}`}</button></div>}
-          </div>;
-        })}
+        <p>Add a video demonstration or audio to practice along with.</p>
+        <label>YouTube link<input inputMode="url" autoComplete="off" maxLength={2048} value={values.youtubeUrl} onChange={update("youtubeUrl")} placeholder="https://www.youtube.com/watch?v=..." />
+          <small>Paste a video or Shorts link. It will appear above your rhythm.</small></label>
+        {values.youtubeUrl && <button type="button" onClick={() => setValues((current) => ({...current,youtubeUrl:""}))}>Remove YouTube link</button>}
+        {/* Video uploads are paused. Restore this call to re-enable the existing upload flow:
+          {recordingField("video")}
+        */}
+        {recordingField("video", false)}
+        {recordingField("audio")}
       </fieldset>
       {progress && <div className={styles.uploadProgress} role="status"><span>Uploading {progress.kind}: {progress.percent}%</span><progress max="100" value={progress.percent} />
         <button type="button" onClick={() => controller.current?.abort()}>Stop upload</button></div>}

@@ -8,6 +8,7 @@ import RhythmPreview from "../book-builder/RhythmPreview";
 import { socialRequest } from "./api";
 import { Avatar, useAccount } from "./shared";
 import styles from "./social.module.css";
+import { videoForRhythm } from "../../lib/social/youtube";
 
 export function RhythmActions({ rhythm, onSaved, full = false, action = "practice" }) {
   const { user } = useAccount(), router = useRouter(), dispatch = useDispatch();
@@ -33,7 +34,7 @@ export function RhythmActions({ rhythm, onSaved, full = false, action = "practic
   </div>{error && <p role="alert" className={styles.inlineError}>{error}</p>}</div>;
 }
 export default function RhythmCard({ rhythm, onOpen }) {
-  const video = rhythm.media?.find((item) => item.kind === "video" && item.status === "ready");
+  const video = videoForRhythm(rhythm);
   const audio = rhythm.media?.some((item) => item.kind === "audio" && item.status === "ready");
   const [thumbnailFailed,setThumbnailFailed] = useState(false);
   useEffect(() => setThumbnailFailed(false),[video?.thumbnailUrl]);

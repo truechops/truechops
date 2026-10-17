@@ -278,7 +278,8 @@ function addDuration(measureNotes, index, previousNoteIndex) {
       dotted = true;
     }
 
-    note.duration = duration;
+    // VexFlow duration names are strings; saved score durations are numbers.
+    note.duration = Number(duration);
     if (dotted) {
       note.dots = 1;
     }

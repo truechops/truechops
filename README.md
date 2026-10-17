@@ -30,7 +30,7 @@ and category are reflected in the URL; changing categories preserves the query.
 All shows both result types, with independent loading and retry states.
 `/profile` and `/library`
 show the signed-in account's creations and privately saved community rhythms.
-The profile has Rhythms and Saved tabs, plus Books & saved practice. Navigation
+The profile has Rhythms and Saved tabs. Navigation
 lives in the left sidebar; smaller screens open it with the menu button.
 Public profiles use `/u/:handle`; individual rhythms use `/rhythms/:id`.
 Feed cards show only exercise content. Opening a card uses a shareable `?rhythm=`
@@ -62,8 +62,8 @@ an explicitly created public profile. Existing saved scores remain private.
 The APIs reuse the Google session cookie and account ID. Public profiles live in
 `profiles`, scores remain in `rhythms`, and account-scoped bookmarks live in
 `rhythmSaves`. Saved rhythms reference their original: unpublishing or deleting
-a rhythm also removes it from other users' visible collections. Books
-and saved book practice remain accessible through the profile's books link.
+a rhythm also removes it from other users' visible collections. Books and saved
+book practice are no longer linked from Profile or the sidebar.
 Likes live in `rhythmLikes` (one per account/rhythm); comments live in
 `rhythmComments`. Public comments require a public profile and are limited to
 1,000 characters and ten posts per minute. Comment authors and rhythm owners can
@@ -139,20 +139,49 @@ node scripts/tests/measure-editing.browser.js http://127.0.0.1:3104
 node scripts/tests/instrument-variations.browser.js http://127.0.0.1:3104
 node scripts/tests/notation-search.browser.js http://127.0.0.1:3104
 node scripts/tests/book-practice.browser.js http://127.0.0.1:3104
+node scripts/tests/practice-catalog.browser.js http://127.0.0.1:3104
 ```
 
 Browser screenshots are generated under `book-output/community-practice-preview/` and use
 explicit test fixtures, not real community members or production seed records.
 
-## Bunny Stream recordings
+## Practice library
 
-Rhythms can have one video demonstration and one audio recording. Add or replace
-files in the composer's Save dialog or a rhythm's Edit details dialog. New rhythms
+Rudiments and Drills share a responsive card layout with category controls and
+name search at the top. Notation fits inside each card and is drawn as cards
+approach the viewport. Open in score preserves the rhythm, tempo and dynamic
+settings. Drills also retain their shuffle action; shuffling a preview never
+changes the bundled source rhythm.
+
+## YouTube demonstrations
+
+Paste a YouTube link in the composer's Save dialog or a rhythm's Edit details.
+Watch, share (`youtu.be`), Shorts, live and embed links are supported, including
+start times. Links are validated on both client and server and stored as a
+canonical `youtubeUrl` with the rhythm. No API key or YouTube metadata request
+is needed. Clear the field or choose Remove YouTube link to detach the video.
+
+Search/profile cards use lazy thumbnail images with notation underneath.
+The immersive viewer uses a thumbnail until Play is clicked, then mounts a
+privacy-enhanced YouTube iframe. Leaving that rhythm unmounts the player.
+Notation remains beneath the video; Watch on YouTube opens the original video
+if the creator has disabled embedding. A YouTube link takes precedence over an
+older uploaded video. YouTube availability and embedding permissions remain
+controlled by the video owner.
+
+The video upload UI is commented out in `RhythmDialog.js` for later restoration.
+Its upload code, API routes and existing Bunny video playback are retained.
+Audio uploads remain available.
+
+## Bunny Stream recordings (audio and existing video)
+
+Rhythms can retain one uploaded video and one audio recording. Add or replace
+audio in the composer's Save dialog or a rhythm's Edit details dialog. New rhythms
 with files are first saved as private drafts. Only after successful uploads does
 the final save apply the selected visibility. Failed uploads can be retried in
 the same dialog without creating another draft or uploading completed files again.
 
-Video cards show Bunny thumbnails with notation directly beneath them in the
+Existing uploaded video cards show Bunny thumbnails with notation directly beneath them in the
 community and tempo in the lower right;
 levels are hidden from cards, filters, and editing. Opening a card displays its
 Bunny recordings and full notation together, with notation below the video and
