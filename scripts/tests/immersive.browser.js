@@ -105,13 +105,14 @@ async function fits(page) {
     await page.$eval("[data-variation-list]",el=>el.scrollTop=0);
     await page.waitForFunction(()=>{const cards=[...document.querySelectorAll('[data-variation-number]')];return cards.length>1&&Math.abs(cards[0].getBoundingClientRect().top-cards[1].getBoundingClientRect().top)<2&&cards[1].getBoundingClientRect().left>cards[0].getBoundingClientRect().left;});
     await page.screenshot({path:`${folder}/variations-fullscreen-grid.png`});
-    for(const name of ["Diddles","Cheese","Flams"]) await page.$$eval('[aria-label="Variation types"] button',(buttons,label)=>buttons.find(button=>button.textContent===label).click(),name);
-    assert.equal(await page.$$eval('[aria-label="Variation types"] [aria-pressed=true]',els=>els.length),4);
+    for(const name of ["Cheese","Flams"]) await page.$$eval('[aria-label="Variation types"] button',(buttons,label)=>buttons.find(button=>button.textContent===label).click(),name);
+    assert.equal(await page.$$eval('[aria-label="Variation types"] [aria-pressed=true]',els=>els.length),2);
+    assert(await page.$$eval('[aria-label="Variation types"] button',buttons=>buttons.find(button=>button.textContent==="Flams").disabled),"A third selection is unavailable until one is deselected");
     await page.waitForSelector("button[aria-label='Save variation 1']");
     await page.click("button[aria-label='Save variation 1']");
     await page.waitForFunction(()=>document.querySelector("button[aria-label='Variation 1 saved']"));
     const mixed=creations.at(-1).score.measures[0].parts[0].voices[0].notes;
-    for(const letter of "dcf") assert(mixed.some(note=>note.ornaments.includes(letter)),"Each selected ornament is present");
+    assert(mixed.some(note=>note.ornaments.includes("c")),"Selected cheese is present");
     await page.keyboard.press("Escape");
     await page.waitForSelector("button[aria-label='Maximize variations']");
     await page.keyboard.press("Escape");

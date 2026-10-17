@@ -27,4 +27,6 @@
 .categoryIcon[data-category=flams] { background:#e5f7f1; color:#26a17d; font-size:26px; }
 .chevron { margin-left:auto; }
 .menu .menuHint { list-style:none; max-width:250px; font-size:12px; color:#78717d; line-height:1.5; }
+.menuHint label { display:flex; align-items:center; gap:10px; }
+.menuHint select { border:1px solid #e9e8ed; border-radius:6px; padding:6px; background:white; }
 @media(max-width:480px) { .toolbar { padding:8px; gap:0; } .toolbar button { padding:5px 7px; font-size:11px; } .toolbar .adjust { gap:5px; font-size:12px; } .divider { margin:0 3px; } }

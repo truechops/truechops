@@ -16,7 +16,7 @@ export default function MeasureVariationDialog({ source, onClose }) {
   }
   return <Dialog open fullWidth maxWidth="sm" fullScreen={expanded} onClose={() => expanded ? setExpanded(false) : onClose()} aria-labelledby="measure-variations-title" PaperProps={{ className: expanded ? undefined : styles.dialog }}>
     <header className={styles.dialogHeader}><div><h2 id="measure-variations-title">Measure {source.index + 1} variations</h2><p>Choose a variation, then apply it to this measure.</p></div><button onClick={onClose} aria-label="Close measure variations"><FiX /></button></header>
-    <VariationBrowser score={previewScore} tempo={tempo} onSelect={setSelected} light expanded={expanded} onToggleExpand={() => setExpanded((value) => !value)} />
+    <VariationBrowser score={previewScore} tempo={tempo} initialInstrument={source.instrument} onSelect={setSelected} light expanded={expanded} onToggleExpand={() => setExpanded((value) => !value)} />
     <footer className={styles.dialogFooter}><span>{selected ? `Variation ${selected.number} selected` : "Your score stays unchanged until you apply."}</span><button disabled={!selected} onClick={apply}>Use variation</button></footer>
   </Dialog>;
 }

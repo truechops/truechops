@@ -230,7 +230,9 @@ const scoreSlice = createSlice({
     shuffleSelectedMeasure(state, action) {
       const index = state.selectedNoteIndex?.measureIndex;
       if (!state.score.measures[index]) return;
-      state.score.measures[index] = adjustMeasure(state.score.measures[index], action.payload);
+      const { category, instrument } = typeof action.payload === "string" ? { category: action.payload, instrument: state.score.measures[index].parts[state.selectedPartIndex]?.instrument } : action.payload;
+      if (state.score.parts[instrument]?.enabled === false) return;
+      state.score.measures[index] = adjustMeasure(state.score.measures[index], category, Math.random, instrument);
     },
     replaceMeasure(state, action) {
       const { index, measure, expected } = action.payload;

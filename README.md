@@ -37,7 +37,7 @@ Feed cards show only exercise content. Opening a card uses a shareable `?rhythm=
 immersive viewer over the feed; Escape/Back restores the feed and keyboard focus.
 The viewer places creator and rhythm metadata at the top left, video and notation
 in the center, and comments, variations, and save controls on the right. Comments
-and variations open an independently scrolling side panel. Select any combination
+and variations open an independently scrolling side panel. Select one or two
 of stickings, accents, diddles, cheese, and flams to generate variations continuously
 as you scroll. Missing ornaments are introduced; incompatible ornaments occupy
 separate notes. Timing and rests stay unchanged. Preview or play a variation,
@@ -46,6 +46,12 @@ with a responsive grid of up to three variations per row. Escape restores the
 panel before closing it. Only visible rows are rendered and generation pages are
 cached in bounded memory; small patterns may recur because their possibilities
 are finite.
+For drum-set rhythms, the choices are Kick, Snare, Hi-hat, Ride, Hi-hat Foot,
+and Toms 1–4, with the same two-selection limit. These variations move the selected
+voices' hits between existing rhythmic positions, introduce missing voices, or
+thin a continuous pattern. Other voices, note durations, and tuplets stay intact.
+Scores with multiple enabled instruments offer an instrument selector; only that
+part is adjusted. Changing instruments clears the previous variation selection.
 Scroll the viewer vertically for similar public rhythms, matched by instrument
 and ranked by tags, meter, and tempo among the latest 200 candidates. Offscreen
 players are removed to stop playback. Its Open in score action copies the current
@@ -77,10 +83,12 @@ floating toolbar. The icon is also available by keyboard and stays visible on
 touchscreens. Copy captures the full
 measure; Paste inserts it to the left or right of the selected measure. Duplicate
 inserts a copy to the right. Adjust offers Shuffle for stickings, accents, diddles,
-cheese, and flams. Missing diddles, cheese, and flams are introduced. Existing
+cheese, and flams, or individual kit voices for drum-set parts. Missing diddles,
+cheese, and flams are introduced. Existing
 markings are shuffled while preserving timing and rests. Adjust also offers
 Browse variations: preview, play, combine categories, or maximize to a full-screen
 grid, then choose Use variation to apply to that measure. All edits support Undo/Redo.
+The Score tabs are Measure, Notes, Ornaments, and Mutate; Generate has been removed.
 
 Find matching rhythms in the measure's Adjust menu searches public rhythms by
 that measure's actual notation. The search icon in Score's toolbar uses the whole
@@ -128,6 +136,7 @@ node node_modules/next/dist/bin/next build
 node scripts/tests/social.browser.js http://127.0.0.1:3104
 node scripts/tests/immersive.browser.js http://127.0.0.1:3104
 node scripts/tests/measure-editing.browser.js http://127.0.0.1:3104
+node scripts/tests/instrument-variations.browser.js http://127.0.0.1:3104
 node scripts/tests/notation-search.browser.js http://127.0.0.1:3104
 node scripts/tests/book-practice.browser.js http://127.0.0.1:3104
 ```

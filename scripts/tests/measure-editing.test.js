@@ -7,7 +7,7 @@ Module._extensions[".js"] = (module,file) => {
   module._compile(babel.transformSync(fs.readFileSync(file,"utf8"),{presets:[["@babel/preset-env",{targets:{node:"current"}}]],babelrc:false,configFile:false}).code,file);
 };
 const { shuffleMeasure, canShuffleMeasure, insertCopiedMeasure } = require("../../src/services/measure-editing");
-const { rhythmVariations, seededRandom, adjustMeasure, canAdjustMeasure } = require("../../src/services/rhythm-variations");
+const { rhythmVariations, seededRandom, adjustMeasure, canAdjustMeasure, varyMeasure, getVariationOptions, getVariationInstruments } = require("../../src/services/rhythm-variations");
 const copy = (value) => structuredClone(value);
 const measure = () => ({timeSig:{num:2,type:4},parts:[{instrument:"snare",voices:[{
   notes:["ra","ld","rc","lf","r","l","ra",""].map((ornaments,i)=>({notes:i===7?[]:["C5"],duration:16,dots:0,ornaments,velocity:.5})),
@@ -44,11 +44,11 @@ test("missing ornaments are created, combinations stay legal, and successive var
   }
   const signatures=new Set();
   for(let page=1;page<=30;page++) {
-    const variations=rhythmVariations(source,Object.keys(letters),12,seededRandom(page*7919));
+    const variations=rhythmVariations(source,["stickings","diddles"],12,seededRandom(page*7919));
     assert.equal(variations.length,12);
     for(const row of variations) {
       const notes=row.measure.parts[0].voices[0].notes;
-      for(const letter of "adcf")assert(notes.some(note=>note.ornaments.includes(letter)));
+      assert(notes.some(note=>note.ornaments.includes("d")));
       notes.forEach((note,index)=>{
         assert.equal(note.duration,bare.parts[0].voices[0].notes[index].duration);
         assert.deepEqual(note.notes,bare.parts[0].voices[0].notes[index].notes);
@@ -60,6 +60,75 @@ test("missing ornaments are created, combinations stay legal, and successive var
   }
   assert(signatures.size>300); assert.deepEqual(source,before);
   assert.deepEqual(rhythmVariations(source,[]),[]);
+});
+
+test("variation generation accepts one or two types and rejects larger combinations",()=>{
+  const source={parts:{snare:{enabled:true}},measures:[measure()]};
+  const keys=Object.keys(letters);
+  for(let i=0;i<keys.length;i++)for(let j=i+1;j<keys.length;j++) {
+    assert(rhythmVariations(source,[keys[i],keys[j]],12,seededRandom(51)).length>0);
+  }
+  assert.deepEqual(rhythmVariations(source,["stickings","accents","cheese"]),[]);
+  assert.equal(varyMeasure(measure(),["stickings","diddles","flams"]),null);
+});
+
+const drumMeasure=()=>({timeSig:{num:4,type:4},parts:[{instrument:"drumset",voices:[{notes:Array.from({length:8},(_,i)=>({
+  notes:["E5",...(i%4===0?["F4"]:[]),...(i%4===2?["C5"]:[])],duration:8,dots:0,ornaments:i%4===0?"a":"",velocity:.5,
+})),tuplets:[]}]}]});
+const withoutPitches=(part,pitches)=>({...part,voices:part.voices.map(voice=>({...voice,notes:voice.notes.map(note=>({...note,notes:note.notes.filter(pitch=>!pitches.includes(pitch))}))}))});
+
+test("drum-set variations move only the selected voices, preserving chords, timing, and other parts",()=>{
+  const source={parts:{drumset:{enabled:true},snare:{enabled:true}},measures:[drumMeasure()]};
+  source.measures[0].parts.push(measure().parts[0]);
+  const before=copy(source), options=getVariationOptions("drumset").map(([key])=>key);
+  assert.deepEqual(options,["kick","snare","hiHat","ride","hiHatFoot","tom1","tom2","tom3","tom4"]);
+  assert.deepEqual(getVariationInstruments(source),["drumset","snare"]);
+  const rows=rhythmVariations(source,["kick","snare"],12,seededRandom(17));
+  assert.equal(rows.length,12);
+  for(const row of rows) {
+    assert.deepEqual(withoutPitches(row.measure.parts[0],["F4","C5"]),withoutPitches(before.measures[0].parts[0],["F4","C5"]));
+    assert.deepEqual(row.measure.parts[1],before.measures[0].parts[1]);
+    assert.deepEqual(row.measure.timeSig,before.measures[0].timeSig);
+    for(const pitch of ["F4","C5"]) {
+      const beforeHits=before.measures[0].parts[0].voices[0].notes.map(note=>note.notes.includes(pitch));
+      const afterHits=row.measure.parts[0].voices[0].notes.map(note=>note.notes.includes(pitch));
+      assert.notDeepEqual(afterHits,beforeHits);assert.equal(afterHits.filter(Boolean).length,beforeHits.filter(Boolean).length);
+    }
+  }
+  assert.deepEqual(source,before);
+  assert.deepEqual(rhythmVariations(source,["kick","snare","hiHat"]),[]);
+  assert.deepEqual(rhythmVariations(source,["stickings"]),[],"Snare ornaments are unavailable for a drum-set target");
+  const snare=rhythmVariations(source,["stickings","accents"],12,seededRandom(8),"snare");
+  assert(snare.length);for(const row of snare)assert.deepEqual(row.measure.parts[0],source.measures[0].parts[0]);
+  source.parts.drumset.enabled=false;
+  assert.deepEqual(getVariationInstruments(source),["snare"]);
+  assert.deepEqual(rhythmVariations(source,["kick"],12,seededRandom(8),"drumset"),[]);
+});
+
+test("kit variants can thin a steady hi-hat, introduce absent voices, and keep notation voices separate",()=>{
+  const measure=drumMeasure(), source={parts:{drumset:{enabled:true}},measures:[measure]};
+  for(const [key,pitch] of [["hiHat","E5"],["ride","F5"],["hiHatFoot","D4"],["tom1","D5"],["tom2","B4"],["tom3","A4"],["tom4","G4"]]) {
+    const rows=rhythmVariations(source,[key],8,seededRandom(10));assert(rows.length>0);
+    for(const row of rows) {
+      assert(row.measure.parts[0].voices[0].notes.some(note=>note.notes.includes(pitch)));
+      assert.deepEqual(withoutPitches(row.measure.parts[0],[pitch]),withoutPitches(measure.parts[0],[pitch]));
+    }
+    assert(canAdjustMeasure(measure,key));assert.notDeepEqual(adjustMeasure(measure,key,seededRandom(10)),measure);
+  }
+  const separate=drumMeasure();
+  separate.parts[0].voices.push({...copy(separate.parts[0].voices[0]),notes:separate.parts[0].voices[0].notes.map((note,i)=>({...note,notes:i%2?["F5"]:[]}))});
+  const changed=varyMeasure(separate,["ride"],seededRandom(7));
+  assert.deepEqual(changed.parts[0].voices[0],separate.parts[0].voices[0],"A voice already written separately stays in its notation voice");
+  assert.notDeepEqual(changed.parts[0].voices[1],separate.parts[0].voices[1]);
+  const tuplets=drumMeasure();tuplets.parts[0].voices[0].tuplets=[{start:0,end:3,actual:3,normal:2}];
+  assert.deepEqual(varyMeasure(tuplets,["kick","snare"],seededRandom(12)).parts[0].voices[0].tuplets,tuplets.parts[0].voices[0].tuplets);
+  const rests=drumMeasure();rests.parts[0].voices[0].notes.forEach(note=>note.notes=[]);
+  const added=varyMeasure(rests,["kick","snare"],seededRandom(11));
+  for(const pitch of ["F4","C5"])assert(added.parts[0].voices[0].notes.some(note=>note.notes.includes(pitch)));
+  const full=drumMeasure();full.parts[0].voices[0].notes.forEach(note=>note.notes=["D4","F4","C5","E5","F5","D5","B4","A4"]);
+  assert(!canAdjustMeasure(full,"tom4"),"A missing voice cannot exceed the supported eight-pitch chord limit");
+  const bounded=varyMeasure(full,["kick","tom4"],seededRandom(3));
+  assert(bounded.parts[0].voices[0].notes.every(note=>note.notes.length<=8));
 });
 
 for (const [category,target] of Object.entries(letters)) test(`${category}: shuffle preserves timing, rests, other markings, and counts`,()=>{
