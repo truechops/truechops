@@ -69,7 +69,17 @@ async function clickText(page,text,selector="button,[role=menuitem]") {
     await select(1);
     assert.equal(await page.$eval("[data-measure-index='1']",el=>el.getAttribute("aria-pressed")),"true");
     await page.screenshot({path:`${folder}/measure-selected.png`});
-    await mode("Mutate");
+    // Every tab and mode keeps its tools on one row, so the toolbar never changes
+    // height and the score actions never move.
+    const toolbarLayout=()=>page.evaluate(()=>{
+      const toolbar=document.querySelector("section[aria-label='Score tools']").getBoundingClientRect(), save=document.querySelector("button[aria-label=save]").getBoundingClientRect();
+      const tools=[...document.querySelectorAll("section[aria-label='Score tools'] [class*=tools]")];
+      return {height:Math.round(toolbar.height),save:[Math.round(save.left),Math.round(save.top),Math.round(save.width)],overflow:tools.some(row=>row.scrollWidth>row.clientWidth)};
+    });
+    const layouts={};
+    for(const tab of ["Measure","Notes","Ornaments"]){ await clickText(page,tab); layouts[tab]=await toolbarLayout(); }
+    await mode("Mutate"); layouts.Mutate=await toolbarLayout();
+    assert.deepEqual(Object.values(layouts),Object.values(layouts).map(()=>({...layouts.Measure,overflow:false})),"Toolbar height and actions are identical in every tab and mode");
     assert.deepEqual(await page.$$eval("[aria-label='Vary the measure'] button",els=>els.map(el=>el.getAttribute("aria-label")||el.textContent.trim())),["Stickings","Accents","Diddles","Cheese","Flams","More"]);
     await clickText(page,"More"); await menuOpen();
     assert.deepEqual(await page.$$eval("[role=menuitem]",els=>els.map(el=>el.textContent.trim())),["Browse variations","Find matching rhythms"]);

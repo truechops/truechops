@@ -69,7 +69,7 @@ const choose = (page, name) => page.$$eval(`${types} button`, (buttons, label) =
     await clickText(page, "Original rhythm");
     await clickText(page, "Open in score");
     await page.waitForSelector("#vexflow [data-measure-index='0']");
-    assert.deepEqual(await page.$$eval('[role=tab]', tabs => tabs.map(tab => tab.textContent)), ["Measure", "Notes", "Ornaments", "Sticking"], "Edit tabs; Mutate is its own mode");
+    assert.deepEqual(await page.$$eval('[role=tab]', tabs => tabs.map(tab => tab.textContent)), ["Measure", "Notes", "Ornaments"], "Edit tabs; Mutate is its own mode");
     const vary = "[aria-label='Vary the measure'] button";
     const openTools = async () => {
       await page.click("#vexflow [data-measure-index='0'] [data-measure-background]");
@@ -88,7 +88,10 @@ const choose = (page, name) => page.$$eval(`${types} button`, (buttons, label) =
       assert(snapshot); return structuredClone(snapshot);
     };
     await openTools();
-    assert.deepEqual(await page.$$eval(vary, buttons => buttons.map(button => button.getAttribute("aria-label") || button.textContent.trim())), [...options, "More"]);
+    assert.deepEqual(await page.$$eval(vary, buttons => buttons.map(button => button.getAttribute("aria-label") || button.textContent.trim())), [...options.slice(0, 5), "More"]);
+    await clickText(page, "More"); await page.waitForSelector("[role=menu][aria-label='More variations']");
+    assert.deepEqual(await page.$$eval("[role=menuitem]", items => items.map(item => item.textContent.trim().replace(/^T\d/, ""))), [...options.slice(5), "Browse variations", "Find matching rhythms"], "Toms are under More");
+    await page.keyboard.press("Escape"); await page.waitForFunction(() => !document.querySelector("[role=menu]"));
     await clickText(page, "Kick");
     const shuffled = await save(); assert.notDeepEqual(shuffled, kit);
     assert.deepEqual(without(shuffled.measures[0].parts[0], ["F4"]), without(kit.measures[0].parts[0], ["F4"]));

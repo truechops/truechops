@@ -37,7 +37,7 @@ import CheeseIcon from "../../../icons/ornaments/cheese.svg";
 import LeftStickingIcon from "../../../icons/ornaments/leftSticking.svg";
 import RightStickingIcon from "../../../icons/ornaments/rightSticking.svg";
 
-export const EDIT_TABS = ["Measure", "Notes", "Ornaments", "Sticking"];
+export const EDIT_TABS = ["Measure", "Notes", "Ornaments"];
 
 // [type, label, note icon, note viewBox, rest icon, rest viewBox, note key, rest key]
 const DURATIONS = [
@@ -57,8 +57,8 @@ const ORNAMENTS = [
   ["Cheese", CHEESE, "toggleCheese", CheeseIcon, "0 0 66.8 50", "C"],
 ];
 const STICKINGS = [
-  ["Right", RIGHT_STICKING, "toggleRightSticking", RightStickingIcon, "0 0 39.33 49.55", "R"],
-  ["Left", LEFT_STICKING, "toggleLeftSticking", LeftStickingIcon, "0 0 39.33 50", "L"],
+  ["Right sticking", RIGHT_STICKING, "toggleRightSticking", RightStickingIcon, "0 0 39.33 49.55", "R"],
+  ["Left sticking", LEFT_STICKING, "toggleLeftSticking", LeftStickingIcon, "0 0 39.33 50", "L"],
 ];
 
 // Clicking a tool must not move focus off the score, or the keyboard
@@ -183,10 +183,11 @@ export default function EditTools({ tab, clipboard, setClipboard, notice, setNot
       <TupletPickerPopover tupletPickerOpen={menu?.type === "tuplet"} tupletPickerAnchorEl={menu?.anchor} handleTupletPickerClose={closeMenu} />
     </>;
   } else {
-    tools = (tab === 2 ? ORNAMENTS : STICKINGS).map((item) => {
+    const ornamentTile = (item) => {
       const [label, ornament, , icon, viewBox, shortcut] = item;
       return <Tile key={label} icon={icon} viewBox={viewBox} label={label} aria-pressed={has(ornament)} title={shortcut && `${label} (${shortcut})`} onClick={() => toggle(item)} />;
-    });
+    };
+    tools = <>{ORNAMENTS.map(ornamentTile)}<span className={styles.divider} />{STICKINGS.map(ornamentTile)}</>;
   }
 
   return <div id="edit-tools" className={`${styles.tools} ${tab === 1 ? styles.noteTools : ""}`} role="tabpanel" aria-labelledby={`edit-tab-${tab}`}>

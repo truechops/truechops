@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { FiEdit2, FiShuffle } from "react-icons/fi";
 import EditTools, { EditTabs } from "./EditTools";
-import { MutateSettings, VariationTools } from "./MutateTools";
+import MutateTools from "./MutateTools";
 import TopToolbar from "./TopToolbar";
 import styles from "./score-workspace.module.css";
 
-// Tabs used to be Measure, Notes, Ornaments, Mutate; Mutate is now its own mode.
+// initialTab predates the modes: 3 was the Mutate tab.
 const MUTATE_TAB = 3;
 
 export default function ScoreToolbar({ initialTab = 1 }) {
@@ -29,10 +29,7 @@ export default function ScoreToolbar({ initialTab = 1 }) {
       {mode === "edit" ? <>
         <EditTabs tab={tab} onTabChange={setTab} />
         <EditTools tab={tab} clipboard={clipboard} setClipboard={setClipboard} notice={notice} setNotice={setNotice} />
-      </> : <>
-        <MutateSettings />
-        <VariationTools notice={notice} setNotice={setNotice} />
-      </>}
+      </> : <MutateTools notice={notice} setNotice={setNotice} />}
       <TopToolbar />
     </div>
   </section>;
